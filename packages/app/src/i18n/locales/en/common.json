@@ -99,6 +99,9 @@
   },
   "modelNotFound": "Model Not Found!",
   "noMCPConfig": "No MCP servers configured. Click + to add one, or edit the JSON directly.",
+  "labels": {
+    "pttKey": "PTT Key"
+  },
   "login": {
     "title": "WarpCore",
     "description": "Enter your access token to continue",
