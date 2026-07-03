@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ISettings, IHubModel, IDownload } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { HubModelCard } from './HubModelCard';
 import { HubModelDetail } from './HubModelDetail';
@@ -42,6 +43,7 @@ const SORT_FIELD_OPTIONS: { value: EHubSortField; label: string }[] = [
 const PARAM_STEPS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 17, 20, 24, 27, 30, 36, 45, 90, 140, 280, 560, 1000];
 
 export const HubPage = React.memo(() => {
+	const { t } = useTranslation('hub');
 	const { toast } = useToast();
 	const navigate = useNavigate();
 	const settings = useStore(s => s.settings);
@@ -124,7 +126,7 @@ export const HubPage = React.memo(() => {
 	if (!hasModelDirs) {
 		return (
 			<Box>
-				<PageHeader title="Hub" subtitle="Browse and download models from HuggingFace" icon={<Globe size={20} />} />
+				<PageHeader title={t('title')} subtitle="Browse and download models from HuggingFace" icon={<Globe size={20} />} />
 				<Flex h="calc(100vh - 89px)" alignItems="center" justifyContent="center">
 					<VStack gap="4" maxW="400px" textAlign="center">
 						<Flex w="14" h="14" borderRadius="xl" alignItems="center" justifyContent="center" bg="var(--wc-accent-yellow-bg-8)" borderWidth="1px" borderColor="var(--wc-accent-yellow-border)">
@@ -148,13 +150,13 @@ export const HubPage = React.memo(() => {
 	return (
 		<Box>
 			<PageHeader
-				title="HuggingFace"
+				title={t('title')}
 				icon={<Globe size={20} />}
 				actions={
 					<HStack gap="3">
 						<Box position="relative">
 							<Input
-								placeholder="Search models or users..."
+								placeholder={t('searchPlaceholder')}
 								size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)"
 								color="var(--wc-text-primary)" fontSize="13px" borderRadius="lg" pl="9"
 								_placeholder={{ color: 'var(--wc-text-faint)' }}
@@ -210,7 +212,7 @@ export const HubPage = React.memo(() => {
 						onClick={() => setShowDownloads(!showDownloads)}
 					>
 						<Download size={14} />
-						Downloads
+						{t('sections.downloads')}
 						{activeDownloadCount > 0 && (
 							<Badge px="1.5" py="0" borderRadius="full" fontSize="10px" bg="var(--wc-accent-blue-bg-10)" color="var(--wc-accent-blue)" ml="1">
 								{activeDownloadCount}

@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Badge, Button, Input, InputGroup, Combobox, createListCollection, Portal, Link as ChakraLink } from '@chakra-ui/react';
 import { Play, Plus, Edit, Trash2, ScrollText, Lock, AlertCircle, CheckCircle, XCircle, Search, ChevronDown, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { useMutation } from '../../hooks/useQuery';
@@ -12,13 +13,8 @@ import { RecipeEditorDialog } from './RecipeEditorDialog';
 import { RunRecipeDialog } from './RunRecipeDialog';
 import { ERecipeRunStatus, type IRecipe, type TRecipeSortField } from '@warpcore/shared';
 
-const RECIPE_FIELD_LABELS: Record<TRecipeSortField, string> = {
-	name: 'Name',
-	createdAt: 'Creation date',
-	updatedAt: 'Update date',
-};
-
 export function RecipesPage() {
+	const { t } = useTranslation('recipes');
 	const recipes = useStore((s) => s.recipes);
 	const recipesArr = useMemo(() => Object.values(recipes), [recipes]);
 	const activeRun = useStore((s) => s.activeRun);
@@ -80,14 +76,14 @@ export function RecipesPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Recipes"
-				subtitle={`${recipes.length} Pipelines`}
+				title={t('title')}
+				subtitle={t('subtitle', { count: recipes.length })}
 				icon={<ScrollText size={20} />}
 				actions={
 					<HStack gap="3">
 						<InputGroup startElement={<Search size={14} color="var(--wc-text-muted)" />} w="200px">
 							<Input
-								placeholder="Search recipes..."
+								placeholder={t('searchPlaceholder')}
 								size="sm"
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
@@ -103,7 +99,7 @@ export function RecipesPage() {
 						<HStack gap="3">
 							{(() => {
 								const sortCollection = createListCollection({
-									items: (Object.keys(RECIPE_FIELD_LABELS) as TRecipeSortField[]).map(f => ({ value: f, label: RECIPE_FIELD_LABELS[f] })),
+									items: (['name', 'createdAt', 'updatedAt'] as TRecipeSortField[]).map(f => ({ value: f, label: (['Name', 'Creation date', 'Update date'] as const)[['name', 'createdAt', 'updatedAt'].indexOf(f)] })),
 									itemToString: (item) => item.label ?? '',
 								});
 								return (
@@ -128,7 +124,7 @@ export function RecipesPage() {
 													fontSize="13px"
 													borderRadius="lg"
 												>
-													{RECIPE_FIELD_LABELS[sortField]}
+													{(['Name', 'Creation date', 'Update date'] as const)[['name', 'createdAt', 'updatedAt'].indexOf(sortField)]}
 													<ChevronDown size={14} />
 												</Button>
 											</Combobox.Trigger>
