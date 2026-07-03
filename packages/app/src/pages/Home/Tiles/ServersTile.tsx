@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Button } from '@chakra-ui/react';
 import { Server, Play, Mic } from 'lucide-react';
 import React, { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store';
 import { useMutation } from '@/hooks/useQuery';
@@ -25,6 +26,7 @@ const statusToState = (status: EServerStatus): 'online' | 'loading' | 'error' | 
 };
 
 export const ServersTile = React.memo(() => {
+	const { t } = useTranslation('home');
 	const navigate = useNavigate();
 	const servers = useStore((s) => s.servers);
 	const whisperServers = useStore((s) => s.whisperServers);
@@ -96,13 +98,13 @@ export const ServersTile = React.memo(() => {
 	return (
 		<TileContainer
 			icon={<Server size={18} />}
-			label="Servers"
+			label={t('tiles.servers.title')}
 			statusDot={errors.length > 0 ? 'error' : running.length > 0 ? 'online' : 'offline'}
 			onClick={() => navigate('/servers')}
 		>
 			{!hasServers ? (
 				<Text fontSize="13px" color="var(--wc-text-muted)">
-					No servers configured
+					{t('tiles.servers.noServers')}
 				</Text>
 			) : (
 				<VStack align="stretch" gap="2" w="100%">
@@ -141,7 +143,7 @@ bg="var(--wc-accent-blue-bg-8)"
 										disabled={loadingLlama || loadingWhisper}
 									>
 										<Play size={12} />
-										Start
+										{t('tiles.servers.start')}
 									</Button>
 								)}
 							</Flex>

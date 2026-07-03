@@ -1,31 +1,41 @@
 {
   "title": "Home",
-  "subtitle": "Welcome back",
+  "greeting": "Welcome",
+  "readyStatus": "warpdrv is ready!",
+  "setupStatus": "Setup",
+  "details": "Details",
   "tiles": {
     "servers": {
       "title": "Servers",
+      "noServers": "No servers configured",
+      "start": "Start",
       "subtitle": "{{count}} servers, {{running}} running"
     },
     "models": {
       "title": "Models",
+      "llms": "LLMs",
       "subtitle": "{{count}} models scanned"
     },
     "backends": {
       "title": "Backends",
+      "llamaBuilds": "llama.cpp Builds",
       "subtitle": "{{count}} backends, {{devices}} devices"
     },
     "proxy": {
-      "title": "Router",
+      "title": "Proxy",
+      "openaiEndpoint": "OpenAI Compatible Chat Endpoint",
       "subtitle_running": "Running on port {{port}}",
       "subtitle_stopped": "Stopped"
     },
     "appServer": {
-      "title": "API Server",
+      "title": "App Server",
+      "remotePort": "Remote Port",
       "subtitle_enabled": "Listening on {{host}}:{{port}}",
       "subtitle_disabled": "Not configured"
     },
     "mcp": {
       "title": "MCP",
+      "mcpServersConnected": "MCP Servers Connected",
       "subtitle": "{{count}} servers"
     },
     "downloads": {
@@ -34,6 +44,7 @@
     },
     "kokoro": {
       "title": "Kokoro TTS",
+      "voicesAvailable": "Voices Available",
       "subtitle_ready": "Ready",
       "subtitle_notReady": "Not ready"
     }
@@ -45,5 +56,39 @@
     "notConfigured": "Not Configured",
     "connected": "Connected",
     "disconnected": "Disconnected"
+  },
+  "steps": {
+    "registerBackend": {
+      "title_done": "Backend Registered",
+      "title_todo": "Add a LLaMA Backend",
+      "step1": "1. Visit <linkReleases>LLaMA.cpp releases</linkReleases> and download a prebuilt binary for your hardware.",
+      "step1note": "<strong>Note:</strong> You can also <code> git clone https://github.com/ggml-org/llama.cpp.git </code> into a folder and build from source. See <linkRecipes>Recipes Guide</linkRecipes>.",
+      "step2": "2. Open the <linkBackends>Backends page</linkBackends> and add a new backend.",
+      "step3": "3. Open the file picker, navigate to the llama.cpp folder you downloaded and unzipped, then select the <code>llama-server</code> binary.",
+      "step4": "4. Save the backend. It should auto-validate your system and detect the hardware."
+    },
+    "loadModel": {
+      "title_done": "Models Added",
+      "title_todo": "Download a Model from HuggingFace and Add it",
+      "step1": "1. Go to <linkSettings>Settings</linkSettings> and select the folder where you want to keep your GGUF model files (if not already chosen).",
+      "step2": "2. Navigate to the <linkHub>Hub</linkHub> page.",
+      "step3": "3. Search for a model family name such as Qwen, Mistral, or Gemma.",
+      "step4": "4. Click on a model from the results list on the left panel. Choose a model released in the last 6 months for best capabilities.",
+      "step4note": "<strong>Note:</strong> Llama Models are different from Whisper Models. For whisper, search for \"ggml\" .bin models.",
+      "step5": "5. On the right panel, open the dropdown for model files, and choose a quantized GGUF file that can fit into your VRAM with some space left over.",
+      "step6": "6. Click download. The download progress window will be shown. You can pause and resume large downloads.",
+      "step7": "7. Once download finishes, navigate to the <linkModels>Models</linkModels> page and click Rescan Models button to add the model."
+    },
+    "createServer": {
+      "title_done": "Server created",
+      "title_todo": "Create a server",
+      "step1": "1. Navigate to the <linkServers>Servers</linkServers> page.",
+      "step2": "2. Click Launch Server.",
+      "step3": "3. Select the model you added from the dropdown list of models.",
+      "step4": "4. Select the backend you registered from the dropdown list of backends.",
+      "step5": "5. Select the device to load the model on.",
+      "step6": "6. Configure params such as context length, number of threads, and GPU layers. Adjust these based on your hardware - more GPU layers means faster inference but requires more VRAM.",
+      "step7": "7. Click Launch to start the server."
+    }
   }
 }
