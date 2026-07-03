@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { useToast } from './components/ToastProvider';
@@ -7,9 +7,27 @@ import { useChatEventsStream } from './hooks/useChatEventsStream';
 import { useStore } from './store';
 import { fetchKokoroStatus, updateSettings } from './api/services';
 import { ETheme } from '@warpcore/shared';
+import { initI18n, type SupportedLocale } from './i18n';
+
 export function App() {
 	const { toast } = useToast();
 	const theme = useStore(s => s.settings.theme ?? ETheme.DARK);
+	const locale = useStore(s => s.settings.locale);
+	const [i18nReady, setI18nReady] = useState(false);
+
+	useEffect(() => {
+		initI18n(locale as SupportedLocale).then(() => setI18nReady(true));
+	}, []);
+
+	useEffect(() => {
+		if (i18nReady) {
+			import('i18next').then(({ default: i18n }) => {
+				if (i18n.language !== locale) {
+					i18n.changeLanguage(locale as string);
+				}
+			});
+		}
+	}, [locale, i18nReady]);
 
 	// Initialize SSE connection for control plane
 	useEventSource();
@@ -59,6 +77,8 @@ export function App() {
 
 	// Fetch kokoro status on mount
 	useEffect(() => { fetchKokoroStatus(); }, []);
+
+	if (!i18nReady) return null;
 
 	return (
 		<Routes>
