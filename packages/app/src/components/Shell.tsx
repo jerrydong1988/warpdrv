@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDependantState } from '../hooks/useDependantState';
 import { Box, Flex, Text, VStack, HStack, Image } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
 	Cpu,
 	FolderOpen,
@@ -120,120 +121,124 @@ function StatusDot({ online, hasError }: { online: boolean; hasError?: boolean }
 	);
 }
 
-const NAV_ITEMS: INavItem[] = [
-	{ path: '/home', label: 'Home', icon: <Home size={18} /> },
-	{ isSeparator: true },
-	{
-		path: '/servers',
-		label: 'Servers',
-		icon: <Server size={18} />,
-		badge: (s) => s ? <StatusDot online={s.servers.running > 0} hasError={s.servers.errors > 0} /> : null,
-	},
-	{
-		path: '/proxy',
-		label: 'Router',
-		icon: <BsRouter size={18} />,
-		badge: (s) => s ? <StatusDot online={s.router.online} hasError={s.router.hasError} /> : null,
-	},
-	{ path: '/checkpoints', label: 'Checkpoints', icon: <Save size={18} /> },
-	{ isSeparator: true },
-
-	{ path: '/backends', label: 'Backends', icon: <Blocks size={18} /> },
-	{ path: '/recipes', label: 'Recipes', icon: <ScrollText size={18} /> },
-	{ isSeparator: true },
-
-	{ path: '/models', label: 'Models', icon: <FolderOpen size={18} /> },
-	{
-		path: '/hub',
-		label: 'Hub',
-		icon: <Globe size={18} />,
-		badge: (s) => {
-			if ((s?.downloads.active ?? 0) > 0) {
-				return (
-					<Box
-						w="5px"
-						h="5px"
-						borderRadius="full"
-						bg="#3381ff"
-						boxShadow="0 0 6px rgba(51, 129, 255, 0.6)"
-						ml="auto"
-						flexShrink={0}
-					/>
-				);
-			}
-			if ((s?.downloads.completed ?? 0) > 0) {
-				return (
-					<Box
-						w="5px"
-						h="5px"
-						borderRadius="full"
-						bg="#22c55e"
-						boxShadow="0 0 6px rgba(34, 197, 94, 0.5)"
-						ml="auto"
-						flexShrink={0}
-					/>
-				);
-			}
-			return null;
+function buildNavItems(t: (key: string) => string): INavItem[] {
+	return [
+		{ path: '/home', label: t('navigation.home'), icon: <Home size={18} /> },
+		{ isSeparator: true },
+		{
+			path: '/servers',
+			label: t('navigation.servers'),
+			icon: <Server size={18} />,
+			badge: (s) => s ? <StatusDot online={s.servers.running > 0} hasError={s.servers.errors > 0} /> : null,
 		},
-	},
-	{ isSeparator: true },
-
-	{
-		path: '/mcp',
-		label: 'MCP',
-		icon: <Plug size={18} />,
-		badge: (s) => {
-			if (s == null || s.mcp.total === 0) return null;
-			if (s.mcp.connecting > 0) {
-				return (
-					<Box
-						w="5px"
-						h="5px"
-						borderRadius="full"
-						bg="#f59e0b"
-						boxShadow="0 0 6px rgba(245, 158, 11, 0.6)"
-						ml="auto"
-						flexShrink={0}
-					/>
-				);
-			}
-			if (s.mcp.error > 0) {
-				return (
-					<Box
-						w="5px"
-						h="5px"
-						borderRadius="full"
-						bg="#ef4444"
-						boxShadow="0 0 6px rgba(239, 68, 68, 0.6)"
-						ml="auto"
-						flexShrink={0}
-					/>
-				);
-			}
-			if (s.mcp.connected === s.mcp.total) {
-				return (
-					<Box
-						w="5px"
-						h="5px"
-						borderRadius="full"
-						bg="#22c55e"
-						boxShadow="0 0 6px rgba(34, 197, 94, 0.5)"
-						ml="auto"
-						flexShrink={0}
-					/>
-				);
-			}
-			return null;
+		{
+			path: '/proxy',
+			label: t('navigation.router'),
+			icon: <BsRouter size={18} />,
+			badge: (s) => s ? <StatusDot online={s.router.online} hasError={s.router.hasError} /> : null,
 		},
-	},
-	{ path: '/chat', label: 'Chat', icon: <MessageSquare size={18} /> },
-];
+		{ path: '/checkpoints', label: t('navigation.checkpoints'), icon: <Save size={18} /> },
+		{ isSeparator: true },
 
-const NAV_ITEMS_BOTTOM: INavItem[] = [
-	{ path: '/settings', label: 'Settings', icon: <Settings size={18} /> },
-	{ path: '/about', label: 'About', icon: <Info size={18} /> },
-];
+		{ path: '/backends', label: t('navigation.backends'), icon: <Blocks size={18} /> },
+		{ path: '/recipes', label: t('navigation.recipes'), icon: <ScrollText size={18} /> },
+		{ isSeparator: true },
+
+		{ path: '/models', label: t('navigation.models'), icon: <FolderOpen size={18} /> },
+		{
+			path: '/hub',
+			label: t('navigation.hub'),
+			icon: <Globe size={18} />,
+			badge: (s) => {
+				if ((s?.downloads.active ?? 0) > 0) {
+					return (
+						<Box
+							w="5px"
+							h="5px"
+							borderRadius="full"
+							bg="#3381ff"
+							boxShadow="0 0 6px rgba(51, 129, 255, 0.6)"
+							ml="auto"
+							flexShrink={0}
+						/>
+					);
+				}
+				if ((s?.downloads.completed ?? 0) > 0) {
+					return (
+						<Box
+							w="5px"
+							h="5px"
+							borderRadius="full"
+							bg="#22c55e"
+							boxShadow="0 0 6px rgba(34, 197, 94, 0.5)"
+							ml="auto"
+							flexShrink={0}
+						/>
+					);
+				}
+				return null;
+			},
+		},
+		{ isSeparator: true },
+
+		{
+			path: '/mcp',
+			label: t('navigation.mcp'),
+			icon: <Plug size={18} />,
+			badge: (s) => {
+				if (s == null || s.mcp.total === 0) return null;
+				if (s.mcp.connecting > 0) {
+					return (
+						<Box
+							w="5px"
+							h="5px"
+							borderRadius="full"
+							bg="#f59e0b"
+							boxShadow="0 0 6px rgba(245, 158, 11, 0.6)"
+							ml="auto"
+							flexShrink={0}
+						/>
+					);
+				}
+				if (s.mcp.error > 0) {
+					return (
+						<Box
+							w="5px"
+							h="5px"
+							borderRadius="full"
+							bg="#ef4444"
+							boxShadow="0 0 6px rgba(239, 68, 68, 0.6)"
+							ml="auto"
+							flexShrink={0}
+						/>
+					);
+				}
+				if (s.mcp.connected === s.mcp.total) {
+					return (
+						<Box
+							w="5px"
+							h="5px"
+							borderRadius="full"
+							bg="#22c55e"
+							boxShadow="0 0 6px rgba(34, 197, 94, 0.5)"
+							ml="auto"
+							flexShrink={0}
+						/>
+					);
+				}
+				return null;
+			},
+		},
+		{ path: '/chat', label: t('navigation.chat'), icon: <MessageSquare size={18} /> },
+	];
+}
+
+function buildNavItemsBottom(t: (key: string) => string): INavItem[] {
+	return [
+		{ path: '/settings', label: t('navigation.settings'), icon: <Settings size={18} /> },
+		{ path: '/about', label: t('navigation.about'), icon: <Info size={18} /> },
+	];
+}
 
 function SidebarLink({
 	item,
@@ -302,6 +307,7 @@ function SidebarLink({
 }
 
 export const Shell = React.memo(() => {
+	const { t } = useTranslation('common');
 	const { data: summary } = useSummary();
 	const location = useLocation();
 	const currentPath = location.pathname;
@@ -310,6 +316,9 @@ export const Shell = React.memo(() => {
 	// const [collapsed] = useDependantState(settings.sidebarCollapsed);
 
 	const isCollapsed = true;
+
+	const navItems = useMemo(() => buildNavItems(t), [t]);
+	const navItemsBottom = useMemo(() => buildNavItemsBottom(t), [t]);
 
 	const {
 		installHook,
@@ -357,7 +366,7 @@ export const Shell = React.memo(() => {
 
 					{/* Nav */}
 					<VStack gap="1" align="stretch" flex="1">
-						{NAV_ITEMS.map(item => (
+						{navItems.map(item => (
 							<SidebarLink key={item.path} item={item} collapsed={!!isCollapsed} summary={summary} />
 						))}
 					</VStack>
@@ -365,7 +374,7 @@ export const Shell = React.memo(() => {
 					{/* Footer */}
 					<Box px={isCollapsed ? '0' : '2'} py="2">
 						<VStack gap="1" align="stretch">
-							{NAV_ITEMS_BOTTOM.map(item => (
+							{navItemsBottom.map(item => (
 								<SidebarLink key={item.path} item={item} collapsed={!!isCollapsed} summary={summary} />
 							))}
 						</VStack>

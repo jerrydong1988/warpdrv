@@ -1,1 +1,62 @@
-{}
+{
+  "title": "Backends",
+  "sections": {
+    "llmBackends": "LLM Backends",
+    "backendGroups": "Backend Groups",
+    "whisperBackends": "Whisper Backends"
+  },
+  "sortFields": {
+    "name": "Name",
+    "createdAt": "Creation date",
+    "updatedAt": "Update date"
+  },
+  "actions": {
+    "addBackend": "Add Backend",
+    "addWhisperBackend": "Add Whisper Backend",
+    "addGroup": "Add Group",
+    "edit": "Edit",
+    "delete": "Delete",
+    "validate": "Validate",
+    "setActive": "Set Active",
+    "activating": "Activating...",
+    "validating": "Validating..."
+  },
+  "status": {
+    "validated": "Validated",
+    "notValidated": "Not validated",
+    "failing": "Failing"
+  },
+  "labels": {
+    "devices": "{{count}} devices",
+    "defaultPort": "Port: {{port}}",
+    "active": "ACTIVE",
+    "noBackends": "No backends configured yet",
+    "noBackendsDesc": "Add a backend to start running models",
+    "noGroups": "No backend groups configured yet",
+    "noWhisper": "No whisper backends configured yet",
+    "validationFailed": "Could not validate"
+  },
+  "dialogs": {
+    "deleteBackendTitle": "Delete Backend?",
+    "deleteBackendMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "deleteWhisperTitle": "Delete Whisper Backend?",
+    "deleteWhisperMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "deleteGroupTitle": "Delete Backend Group?",
+    "deleteGroupMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "confirmDelete": "Delete"
+  },
+  "dialog": {
+    "backendInfo": "Backend Info",
+    "backendGroupInfo": "Backend Group",
+    "whisperBackendInfo": "Whisper Backend Info",
+    "editBackend": "Edit Backend",
+    "editGroup": "Edit Backend Group",
+    "editWhisper": "Edit Whisper Backend"
+  },
+  "toast": {
+    "backendSaved": "Backend added",
+    "backendUpdated": "Backend updated",
+    "saveFailed": "Failed to save backend"
+  },
+  "searchPlaceholder": "Search backends..."
+}

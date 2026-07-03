@@ -1,1 +1,54 @@
-{}
+{
+  "title": "Chat",
+  "actions": {
+    "newChat": "New Chat",
+    "deleteChat": "Delete Chat",
+    "send": "Send",
+    "stop": "Stop",
+    "regenerate": "Regenerate",
+    "copyMessage": "Copy message",
+    "editMessage": "Edit message",
+    "deleteMessage": "Delete message",
+    "clearChat": "Clear chat",
+    "search": "Search conversations",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "labels": {
+    "noChats": "No conversations yet",
+    "noChatsDesc": "Start a new conversation to begin",
+    "thinking": "Thinking...",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier",
+    "noMessages": "No messages yet",
+    "contextTokens": "{{used}}/{{total}} tokens",
+    "serverOffline": "Server offline",
+    "selectServer": "Select a server to chat with",
+    "chatWith": "Chat with {{model}}",
+    "unsaved": "Unsaved conversations",
+    "searchResults": "Search results",
+    "noSearchResults": "No results found"
+  },
+  "threadList": {
+    "editThread": "Edit conversation",
+    "deleteThread": "Delete conversation"
+  },
+  "composer": {
+    "placeholder": "Type a message...",
+    "attachFile": "Attach file",
+    "voiceInput": "Voice input",
+    "stopRecording": "Stop recording",
+    "recording": "Recording..."
+  },
+  "dialogs": {
+    "deleteThreadTitle": "Delete conversation?",
+    "deleteThreadMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+  },
+  "toast": {
+    "messageCopied": "Message copied",
+    "threadDeleted": "Conversation deleted",
+    "titleGenerated": "Title generated"
+  }
+}

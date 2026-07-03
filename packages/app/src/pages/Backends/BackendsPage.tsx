@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Badge, Button, Input, Collapsible, InputGroup, Combobox, createListCollection, Portal, Link as ChakraLink } from '@chakra-ui/react';
 import { Blocks, Plus, Terminal, Layers, ChevronDown, ChevronRight, Search, ArrowUpAZ, ArrowDownZA, CheckCircle, AlertCircle, Edit, Trash2, Mic } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/Card';
@@ -20,13 +21,8 @@ import { EValidationStatus } from '@warpcore/shared';
 import { removeWhisperBackend, createWhisperBackend } from '../../api/whisperServices';
 import { EServerStatus } from '@warpcore/shared';
 
-const FIELD_LABELS: Record<TBackendSortField, string> = {
-	name: 'Name',
-	createdAt: 'Creation date',
-	updatedAt: 'Update date',
-};
-
 export function BackendsPage() {
+	const { t } = useTranslation('backends');
 	const backends = useStore((s) => s.backends);
 	const groups = useStore((s) => s.backendGroups);
 	const whisperBackends = useStore((s) => s.whisperBackends);
@@ -187,14 +183,14 @@ export function BackendsPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Llamas"
+				title={t('title')}
 				subtitle={` ${backendsArr.length} Builds, ${groupsArr.length} Groups`}
 				icon={<Blocks size={20} />}
 				actions={
 					<HStack gap="3">
 						<InputGroup startElement={<Search size={14} color="var(--wc-text-muted)" />} w="220px">
 							<Input
-								placeholder="Search backends and groups"
+								placeholder={t('searchPlaceholder')}
 								size="sm"
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
@@ -210,7 +206,7 @@ export function BackendsPage() {
 						<HStack gap="3">
 							{(() => {
 								const sortCollection = createListCollection({
-									items: (Object.keys(FIELD_LABELS) as TBackendSortField[]).map(f => ({ value: f, label: FIELD_LABELS[f] })),
+									items: (['name', 'createdAt', 'updatedAt'] as TBackendSortField[]).map(f => ({ value: f, label: t(`sortFields.${f}` as any) })),
 									itemToString: (item) => item.label ?? '',
 								});
 								return (
@@ -235,7 +231,7 @@ export function BackendsPage() {
 													fontSize="13px"
 													borderRadius="lg"
 												>
-													{FIELD_LABELS[sortField]}
+													{t(`sortFields.${sortField}` as any)}
 													<ChevronDown size={14} />
 												</Button>
 											</Combobox.Trigger>

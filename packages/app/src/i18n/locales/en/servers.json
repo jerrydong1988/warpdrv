@@ -1,1 +1,65 @@
-{}
+{
+  "title": "Servers",
+  "subtitle": "{{count}} servers, {{running}} running",
+  "actions": {
+    "launchServer": "Launch Server",
+    "startServer": "Start Server",
+    "stopServer": "Stop Server",
+    "editServer": "Edit Server",
+    "deleteServer": "Delete Server",
+    "relaunchServer": "Relaunch Server",
+    "viewLogs": "View Logs",
+    "saveCheckpoint": "Save Checkpoint",
+    "loadCheckpoint": "Load Checkpoint"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "starting": "Starting...",
+    "error": "Error",
+    "launching": "Launching..."
+  },
+  "labels": {
+    "noServers": "No servers launched yet",
+    "noServersDesc": "Launch a server to start chatting with models",
+    "serverDetails": "Server Details",
+    "model": "Model",
+    "backend": "Backend",
+    "port": "Port",
+    "slots": "Slots",
+    "context": "Context",
+    "status": "Status",
+    "parameters": "Parameters"
+  },
+  "launch": {
+    "title": "Launch New Server",
+    "editTitle": "Edit Server Configuration",
+    "modelPicker": "Select Model",
+    "backendPicker": "Select Backend",
+    "noModels": "No models available",
+    "noBackends": "No backends available",
+    "noBackendsDesc": "Add a backend in Settings > Backends",
+    "selectModel": "Select a model file",
+    "selectBackend": "Select a backend"
+  },
+  "dialogs": {
+    "deleteServerTitle": "Delete Server?",
+    "deleteServerMessage": "Are you sure you want to delete \"{{name}}\"? This will stop the server if running.",
+    "stopServerTitle": "Stop Server?",
+    "stopServerMessage": "Stop \"{{name}}\"? Any active connections will be terminated.",
+    "confirmDelete": "Delete",
+    "confirmStop": "Stop"
+  },
+  "toast": {
+    "serverLaunched": "Server launched",
+    "serverRelaunched": "Server relaunched",
+    "launchFailed": "Failed to launch server",
+    "startFailed": "Failed to start server",
+    "serverConfigSaved": "Server config saved",
+    "checkpointIncompatible": "Checkpoint incompatible with target server",
+    "checkpointSaved": "Checkpoint saved",
+    "checkpointLoaded": "Checkpoint loaded",
+    "deleteFailed": "Delete failed"
+  },
+  "searchPlaceholder": "Search servers..."
+}

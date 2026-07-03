@@ -1,1 +1,51 @@
-{}
+{
+  "title": "MCP Servers",
+  "subtitle": "{{count}} servers configured",
+  "actions": {
+    "addServer": "Add MCP Server",
+    "editServer": "Edit Server",
+    "deleteServer": "Delete Server",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addEnv": "Add Variable",
+    "addToolFilter": "Add Tool Filter",
+    "toggleTools": "Toggle tools",
+    "reloadConfig": "Reload Config"
+  },
+  "fields": {
+    "name": "Name",
+    "command": "Command",
+    "args": "Arguments",
+    "env": "Environment Variables",
+    "toolFilter": "Tool Filter",
+    "serverUrl": "Server URL",
+    "transport": "Transport",
+    "transportStdio": "stdio",
+    "transportHttp": "HTTP",
+    "toolAccess": "Tool Access"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "error": "Error"
+  },
+  "labels": {
+    "noServers": "No MCP servers configured",
+    "noServersDesc": "Click + to add one, or edit the JSON directly.",
+    "allToolsAvailable": "All tools available",
+    "toolsAvailable": "{{count}} tools available",
+    "noTools": "No tools",
+    "builtinServer": "Built-in Server (warpmcp)"
+  },
+  "toast": {
+    "configReloaded": "MCP config reloaded",
+    "saveFailed": "Failed to save MCP config",
+    "serverAdded": "MCP server added",
+    "serverUpdated": "MCP server updated",
+    "serverDeleted": "MCP server deleted"
+  },
+  "dialogs": {
+    "deleteServerTitle": "Delete MCP Server?",
+    "deleteServerMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+  }
+}

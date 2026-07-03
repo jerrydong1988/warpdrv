@@ -1,1 +1,49 @@
-{}
+{
+  "title": "Home",
+  "subtitle": "Welcome back",
+  "tiles": {
+    "servers": {
+      "title": "Servers",
+      "subtitle": "{{count}} servers, {{running}} running"
+    },
+    "models": {
+      "title": "Models",
+      "subtitle": "{{count}} models scanned"
+    },
+    "backends": {
+      "title": "Backends",
+      "subtitle": "{{count}} backends, {{devices}} devices"
+    },
+    "proxy": {
+      "title": "Router",
+      "subtitle_running": "Running on port {{port}}",
+      "subtitle_stopped": "Stopped"
+    },
+    "appServer": {
+      "title": "API Server",
+      "subtitle_enabled": "Listening on {{host}}:{{port}}",
+      "subtitle_disabled": "Not configured"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "{{count}} servers"
+    },
+    "downloads": {
+      "title": "Downloads",
+      "subtitle": "{{count}} active"
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "subtitle_ready": "Ready",
+      "subtitle_notReady": "Not ready"
+    }
+  },
+  "status": {
+    "ok": "OK",
+    "running": "Running",
+    "stopped": "Stopped",
+    "notConfigured": "Not Configured",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  }
+}

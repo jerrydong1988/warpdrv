@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Badge, Button, Spinner, Collapsible, SimpleGrid } from '@chakra-ui/react';
 import { Blocks, CheckCircle, Trash2, Edit, RefreshCw, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../../store';
 import { DeviceCard } from './DeviceCard';
 import { STATUS_COLORS } from './backendsUtils';
@@ -16,6 +17,7 @@ interface IBackendRowProps {
 }
 
 export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
+	const { t } = useTranslation('backends');
 	const backend = useStore((s) => s.backends[backendId]);
 	const devices = useStore((s) => s.devices);
 	const servers = useStore((s) => s.servers);
@@ -83,7 +85,7 @@ export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
 										{backend.gitCommit && <Text fontSize="11px" fontWeight="400" fontFamily='"Geist Mono", monospace' color="var(--wc-text-faint)">[{backend.gitCommit.substring(0, 7)}]</Text>}
 									</HStack>
 									{deviceCount > 0 && (
-										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue-hover)" fontSize="10px" fontWeight="600">{deviceCount} Device(s)</Badge>
+										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue-hover)" fontSize="10px" fontWeight="600">{t('labels.devices', { count: deviceCount })}</Badge>
 									)}
 									{totalServerCount > 0 && (
 										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-purple-bg-15)" color="var(--wc-accent-purple)" fontSize="10px" fontWeight="600">{totalServerCount} Server(s)</Badge>
@@ -118,7 +120,7 @@ export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
 				<Box px="3" pb="3" pt="2" border={"1px solid var(--wc-border-overlay)"} borderTop={"none"} borderBottomRadius={"8px"} borderTopRadius={"0"}>
 					{deviceCount === 0 ? (
 						<Flex h="60px" alignItems="center" justifyContent="center">
-							<Text fontSize="13px" color="var(--wc-text-faint)">No devices detected for this backend</Text>
+							<Text fontSize="13px" color="var(--wc-text-faint)">{t('labels.validationFailed')}</Text>
 						</Flex>
 					) : (
 						<SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="3" mt="2">

@@ -1,1 +1,44 @@
-{}
+{
+  "title": "Recipes",
+  "subtitle": "{{count}} recipes",
+  "actions": {
+    "runRecipe": "Run Recipe",
+    "editRecipe": "Edit Recipe",
+    "deleteRecipe": "Delete Recipe",
+    "createRecipe": "Create Recipe",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addStep": "Add Step",
+    "removeStep": "Remove Step",
+    "run": "Run",
+    "stop": "Stop",
+    "selectServer": "Select Server",
+    "noServers": "No healthy servers available"
+  },
+  "fields": {
+    "name": "Name",
+    "description": "Description",
+    "steps": "Steps",
+    "inputLabel": "Label",
+    "inputKey": "Key",
+    "inputType": "Type",
+    "inputDefault": "Default",
+    "inputChoices": "Choices"
+  },
+  "labels": {
+    "noRecipes": "No recipes configured",
+    "builtinRecipes": "Built-in recipes",
+    "customRecipes": "Custom recipes"
+  },
+  "toast": {
+    "recipeStarted": "Recipe started",
+    "recipeCancelled": "Recipe cancelled",
+    "recipeSaved": "Recipe saved",
+    "recipeDeleted": "Recipe deleted",
+    "saveFailed": "Failed to save recipe"
+  },
+  "dialogs": {
+    "deleteRecipeTitle": "Delete Recipe?",
+    "deleteRecipeMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+  }
+}

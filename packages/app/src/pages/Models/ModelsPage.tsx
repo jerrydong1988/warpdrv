@@ -4,6 +4,7 @@ import {
 	FolderOpen as FolderIcon, Trash2, ChevronUp, ChevronDown, Mic,
 } from 'lucide-react';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { useMutation } from '../../hooks/useQuery';
 import { useStore } from '../../store';
@@ -149,7 +150,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IModel; onClose: () => 
 				}}
 			>
 				<ExternalLink size={14} />
-				<Text fontSize="12px">Open on HuggingFace</Text>
+				<Text fontSize="12px">{t('actions.openOnHuggingFace')}</Text>
 			</HStack>
 			<HStack
 				gap="2"
@@ -165,7 +166,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IModel; onClose: () => 
 				}}
 			>
 				<FolderIcon size={14} />
-				<Text fontSize="12px">Copy folder path</Text>
+				<Text fontSize="12px">{t('actions.copyFolderPath')}</Text>
 			</HStack>
 			<HStack
 				gap="2"
@@ -181,7 +182,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IModel; onClose: () => 
 				}}
 			>
 				<RefreshCw size={14} />
-				<Text fontSize="12px">Re-parse Metadata</Text>
+				<Text fontSize="12px">{t('actions.reparseMetadata')}</Text>
 			</HStack>
 			<Box h="1px" bg="var(--wc-border-subtle)" my="1" />
 			<	HStack
@@ -192,7 +193,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IModel; onClose: () => 
 				color="var(--wc-text-disabled)"
 			>
 				<Trash2 size={14} />
-				<Text fontSize="12px">Delete</Text>
+				<Text fontSize="12px">{t('actions.delete')}</Text>
 			</HStack>
 		</Box>
 	);
@@ -242,6 +243,7 @@ function SortHeader({
 // ============================================================
 
 export function ModelsPage() {
+	const { t } = useTranslation('models');
 	const modelsRecord = useStore(s => s.models);
 	const whisperModelsRecord = useStore(s => s.whisperModels);
 	const llamaModels = useMemo(() => Object.values(modelsRecord), [modelsRecord]);
@@ -304,8 +306,8 @@ export function ModelsPage() {
 	return (
 		<Box>
 <PageHeader
-				title="Models"
-				subtitle={`${models.length} ${view === 'whisper' ? 'Whisper' : 'LLM'} model${models.length !== 1 ? 's' : ''}`}
+				title={t('title')}
+				subtitle={t('subtitle', { count: models.length, type: view === 'whisper' ? t('subtitle_whisper') : t('subtitle_llm'), suffix: models.length !== 1 ? 's' : '' })}
 				icon={view === 'whisper' ? <Mic size={20} /> : <FolderOpen size={20} />}
 				actions={
 					<HStack gap="3">
@@ -324,7 +326,7 @@ export function ModelsPage() {
 						>
 							<input type="radio" name="modelView" checked={view === 'llama'} onChange={() => setView('llama')} style={{ display: 'none' }} />
 							<FolderOpen size={14} color={view === 'llama' ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} />
-							<Text fontSize="13px" fontWeight="500" color={view === 'llama' ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}>LLMs</Text>
+							<Text fontSize="13px" fontWeight="500" color={view === 'llama' ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}>{t('subtitle_llm')}s</Text>
 						</HStack>
 						<HStack
 							as="label"
@@ -341,7 +343,7 @@ export function ModelsPage() {
 						>
 							<input type="radio" name="modelView" checked={view === 'whisper'} onChange={() => setView('whisper')} style={{ display: 'none' }} />
 							<Mic size={14} color={view === 'whisper' ? 'var(--wc-accent-green)' : 'var(--wc-text-muted)'} />
-							<Text fontSize="13px" fontWeight="500" color={view === 'whisper' ? 'var(--wc-accent-green)' : 'var(--wc-text-muted)'}>Whisper</Text>
+							<Text fontSize="13px" fontWeight="500" color={view === 'whisper' ? 'var(--wc-accent-green)' : 'var(--wc-text-muted)'}>{t('subtitle_whisper')}</Text>
 						</HStack>
 						<Box position="relative">
 							<Search
@@ -356,7 +358,7 @@ export function ModelsPage() {
 								}}
 							/>
 							<Input
-								placeholder="Search models..."
+								placeholder={t('searchPlaceholder')}
 								value={search}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
 								size="sm"
@@ -389,7 +391,7 @@ export function ModelsPage() {
 						disabled={scanMut.loading}
 					>
 						{scanMut.loading ? <Spinner size="xs" /> : <Search size={15} />}
-						Re-Scan Folders
+						{t('actions.reScanFolders')}
 					</Button>
 				}
 			/>
@@ -403,14 +405,14 @@ export function ModelsPage() {
 					borderBottomWidth="1px"
 					borderColor="var(--wc-border-subtle)"
 				>
-					<Box flex={cols.name}><SortHeader label="Model" sortKey="name" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.user}><SortHeader label="User" sortKey="user" sort={sort} onSort={handleSort} /></Box>
-<Box w={cols.quant}><SortHeader label="Quant" sortKey="quant" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.vision}><SortHeader label="Vision" sortKey="vision" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.params}><SortHeader label="Params" sortKey="params" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.size}><SortHeader label="Size" sortKey="size" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.context}><SortHeader label="Context" sortKey="context" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.files}><SortHeader label="Files" sortKey="files" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box flex={cols.name}><SortHeader label={t('columns.model')} sortKey="name" sort={sort} onSort={handleSort} /></Box>
+					<Box w={cols.user}><SortHeader label={t('columns.user')} sortKey="user" sort={sort} onSort={handleSort} /></Box>
+<Box w={cols.quant}><SortHeader label={t('columns.quant')} sortKey="quant" sort={sort} onSort={handleSort} /></Box>
+				<Box w={cols.vision}><SortHeader label={t('columns.vision')} sortKey="vision" sort={sort} onSort={handleSort} /></Box>
+				<Box w={cols.params}><SortHeader label={t('columns.params')} sortKey="params" sort={sort} onSort={handleSort} /></Box>
+					<Box w={cols.size}><SortHeader label={t('columns.size')} sortKey="size" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.context}><SortHeader label={t('columns.context')} sortKey="context" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.files}><SortHeader label={t('columns.files')} sortKey="files" sort={sort} onSort={handleSort} align="right" /></Box>
 					<Box w={cols.actions} />
 				</Flex>
 
@@ -418,7 +420,7 @@ export function ModelsPage() {
 				{models.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models found. Configure a directory in Settings, then scan.
+							{t('emptyState')}
 						</Text>
 					</Flex>
 				)}
@@ -427,7 +429,7 @@ export function ModelsPage() {
 				{models.length > 0 && filtered.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models match "{search}"
+							{t('noResults', { search })}
 						</Text>
 					</Flex>
 				)}

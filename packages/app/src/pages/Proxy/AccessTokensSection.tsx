@@ -4,6 +4,7 @@ import {
 	Collapsible,
 } from '@chakra-ui/react';
 import { Key, Plus, Pencil, Trash2, ChevronDown, ChevronRight, Shield, Cpu, Wrench } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { IAccessTokenInfo } from '@warpcore/shared';
 import { useListQuery, useMutation } from '../../hooks/useQuery';
 import { fetchTokens, deleteToken } from '../../api/services';
@@ -25,7 +26,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 			>
 				<HStack gap="1">
 					<Shield size={11} />
-					<Text>Admin</Text>
+					<Text>{t('accessTokens.roles.admin')}</Text>
 				</HStack>
 			</Badge>
 		);
@@ -50,7 +51,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Cpu size={11} />
-						<Text>Inference</Text>
+						<Text>{t('accessTokens.roles.inference')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -67,7 +68,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Wrench size={11} />
-						<Text>MCP (L)</Text>
+						<Text>{t('accessTokens.roles.mcpLabelled')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -84,7 +85,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Wrench size={11} />
-						<Text>MCP (I)</Text>
+						<Text>{t('accessTokens.roles.mcpInline')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -96,7 +97,7 @@ function ScopePills({ value }: { value: true | string[] }) {
 	if (value === true) {
 		return (
 			<Text fontSize="11px" color="var(--wc-text-muted)" fontStyle="italic">
-				All
+				{t('accessTokens.roles.all')}
 			</Text>
 		);
 	}
@@ -133,6 +134,7 @@ function formatDate(ts: number): string {
 }
 
 export function AccessTokensSection() {
+	const { t } = useTranslation('proxy');
 	const [expanded, setExpanded] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingToken, setEditingToken] = useState<IAccessTokenInfo | null>(null);
@@ -191,7 +193,7 @@ export function AccessTokensSection() {
 					</Box>
 					<Key size={16} color="var(--wc-text-tertiary)" />
 					<Text fontSize="13px" fontWeight="600" color="var(--wc-text-primary)">
-						Access Tokens
+						{t('accessTokens.title')}
 					</Text>
 					<Badge
 						size="sm"
@@ -206,7 +208,7 @@ export function AccessTokensSection() {
 					</Badge>
 				</HStack>
 				<IconButton
-					aria-label="Create token"
+					aria-label={t('accessTokens.actions.createToken')}
 					size="xs"
 					variant="ghost"
 					color="var(--wc-text-tertiary)"
@@ -234,10 +236,10 @@ export function AccessTokensSection() {
 							>
 								<Key size={20} color="var(--wc-text-disabled)" />
 								<Text fontSize="12px" color="var(--wc-text-faint)">
-									No access tokens created yet
+									{t('accessTokens.empty')}
 								</Text>
 								<Text fontSize="11px" color="var(--wc-text-placeholder)">
-									Tokens are required when authentication is enabled for remote access
+									{t('accessTokens.emptyDesc')}
 								</Text>
 							</Flex>
 						) : (
@@ -251,19 +253,19 @@ export function AccessTokensSection() {
 									borderColor="var(--wc-border-subtle)"
 								>
 									<Text flex="1.2" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-										Name
+										{t('accessTokens.columns.name')}
 									</Text>
 									<Text flex="0.8" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-										Token
+										{t('accessTokens.columns.token')}
 									</Text>
 									<Text flex="1" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-										Role
+										{t('accessTokens.columns.role')}
 									</Text>
 									<Text flex="1.5" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-										Scope
+										{t('accessTokens.columns.scope')}
 									</Text>
 									<Text flex="0.6" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-										Created
+										{t('accessTokens.columns.created')}
 									</Text>
 									<Box w="60px" />
 								</HStack>
@@ -291,7 +293,7 @@ _hover={{ bg: 'var(--wc-bg-surface)' }}
 										<Box flex="1.5">
 											{token.admin ? (
 <Text fontSize="11px" color="var(--wc-text-muted)" fontStyle="italic">
-													Unrestricted
+													{t('accessTokens.roles.unrestricted')}
 												</Text>
 											) : (
 												<VStack gap="0.5" align="start">
@@ -318,7 +320,7 @@ _hover={{ bg: 'var(--wc-bg-surface)' }}
 										</Text>
 										<HStack gap="0.5" w="60px" justify="flex-end">
 											<IconButton
-												aria-label="Edit token"
+												aria-label={t('accessTokens.actions.editToken')}
 												size="xs"
 												variant="ghost"
 												color="var(--wc-text-faint)"
@@ -328,7 +330,7 @@ _hover={{ bg: 'var(--wc-bg-surface)' }}
 												<Pencil size={13} />
 											</IconButton>
 											<IconButton
-												aria-label="Delete token"
+												aria-label={t('accessTokens.actions.deleteToken')}
 												size="xs"
 												variant="ghost"
 												color="var(--wc-text-faint)"
@@ -359,9 +361,9 @@ _hover={{ bg: 'var(--wc-bg-surface)' }}
 			{deleteTarget && (
 				<ConfirmDialog
 					isOpen={!!deleteTarget}
-					title="Revoke Token"
-					message={`Revoke "${deleteTarget.name}"? Any client using this token will immediately lose access. This cannot be undone.`}
-					confirmLabel="Revoke"
+					title={t('accessTokens.dialog.revokeTitle')}
+					message={t('accessTokens.dialog.revokeMessage', { name: deleteTarget.name })}
+					confirmLabel={t('accessTokens.dialog.revokeConfirm')}
 					onConfirm={handleDelete}
 					onCancel={() => setDeleteTarget(null)}
 					isLoading={deleteMutation.loading}

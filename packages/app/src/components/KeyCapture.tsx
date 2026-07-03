@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button, Text, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 
 interface IKeyCaptureProps {
 	value: string;
@@ -27,7 +28,9 @@ function formatCombo(combo: string): string {
 		.join(' + ');
 }
 
-export function KeyCapture({ value, onChange, onDisable, label = 'PTT Key' }: IKeyCaptureProps) {
+export function KeyCapture({ value, onChange, onDisable, label }: IKeyCaptureProps) {
+	const { t } = useTranslation('common');
+	const displayLabel = label ?? t('labels.pttKey');
 	const [capturing, setCapturing] = useState(false);
 	const localKeysRef = useRef<Record<string, true>>({});
 	const onChangeRef = useRef(onChange);
@@ -64,7 +67,7 @@ export function KeyCapture({ value, onChange, onDisable, label = 'PTT Key' }: IK
 
 	return (
 		<HStack gap="3" align="center">
-			<Text fontSize="13px" color="var(--wc-text-secondary)">{label}</Text>
+			<Text fontSize="13px" color="var(--wc-text-secondary)">{displayLabel}</Text>
 			{capturing ? (
 				<Button
 					variant="outline"

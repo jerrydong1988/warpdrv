@@ -1,1 +1,31 @@
-{}
+{
+  "title": "Hub",
+  "subtitle": "{{count}} models available",
+  "searchPlaceholder": "Search models...",
+  "actions": {
+    "download": "Download",
+    "downloading": "Downloading...",
+    "cancel": "Cancel",
+    "clearHistory": "Clear History",
+    "browse": "Browse directory"
+  },
+  "sortFields": {
+    "downloads": "Downloads",
+    "likes": "Likes",
+    "lastModified": "Last Modified",
+    "createdDate": "Created Date"
+  },
+  "sections": {
+    "downloads": "Downloads",
+    "info": "Model Info"
+  },
+  "downloadManager": {
+    "noDownloads": "No active downloads",
+    "paused": "Paused",
+    "cancelDownload": "Cancel download",
+    "selectDirectory": "Select download directory"
+  },
+  "toast": {
+    "downloadHistoryCleared": "Download history cleared"
+  }
+}

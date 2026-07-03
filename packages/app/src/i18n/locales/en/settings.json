@@ -22,12 +22,31 @@
     "launchOnStartup": "Launch on Startup",
     "startMinimized": "Start Minimized",
     "onboarding": "Onboarding",
+    "fsAllowedRoots": "File-system allowed roots",
+    "holdMode": "Hold Mode",
+    "maxDiskUsage": "Max disk usage",
+    "port": "Port",
     "language": "Language"
   },
   "descriptions": {
     "appearance": "UI appearance theme",
     "zoom": "App zoom and chat message styling",
-    "modelDirs": "Folders to scan for GGUF models"
+    "modelDirs": "Folders to scan for GGUF models (user/model structure)",
+    "portRange": "Auto-assigned port range for llama-server instances",
+    "checkpoints": "KV cache checkpoint storage. Leave path blank for default.",
+    "generateTitles": "Use the loaded model to generate a concise title for new conversations. When disabled, titles are derived from your first message.",
+    "fixedChatWidth": "Max-width 960px instead of full-width",
+    "voiceInput": "Microphone device for speech-to-text",
+    "voiceOutput": "Kokoro TTS voice for reading assistant messages",
+    "dictation": "Push-to-talk key for voice dictation.",
+    "globalPtt": "OS-wide push-to-talk shortcut for dictation anywhere.",
+    "apiHost": "WarpCore API listen address",
+    "builtinMcp": "Exposes built-in tools (file_read, file_write, dir_list, shell_exec, fetch) via MCP. Restarts on port or exposure change.",
+    "router": "OpenAI-compatible proxy for routing requests by server alias",
+    "launchOnStartup": "Start WarpCore automatically when you log in",
+    "startMinimized": "Start to tray without showing window (requires Launch on Startup)",
+    "onboarding": "Re-run the setup guide",
+    "fsAllowedRoots": "file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution."
   },
   "themes": {
     "amoled": "Amoled",
@@ -38,20 +57,31 @@
     "catppuccinMacchiato": "Catppuccin (Macchiato)",
     "catppuccinMocha": "Catppuccin (Mocha)",
     "dracula": "Dracula",
+    "draculaLight": "Dracula Light",
     "everforest": "Everforest",
+    "everforestHard": "Everforest Hard",
     "githubDark": "GitHub Dark",
     "githubLight": "GitHub Light",
     "gruvbox": "Gruvbox",
+    "gruvboxHard": "Gruvbox Hard",
+    "kanagawa": "Kanagawa",
+    "kimbieDark": "Kimbie Dark",
+    "min": "Min",
     "monokai": "Monokai",
+    "monokaiPro": "Monokai Pro",
     "nord": "Nord",
+    "nordLight": "Nord Light",
+    "obsidian": "Obsidian",
     "oneDark": "One Dark",
-    "rosePine": "Rose Pine",
+    "oneLight": "One Light",
+    "palenight": "Palenight",
+    "rosePine": "Rosé Pine",
     "rosePineMoon": "Rose Pine Moon",
     "rosePineDawn": "Rose Pine Dawn",
     "solarizedDark": "Solarized Dark",
     "solarizedLight": "Solarized Light",
     "tokyoNight": "Tokyo Night",
-    "tokyoNightStorm": "Tokyo Night Storm",
+    "tokyoNightLight": "Tokyo Night Light",
     "vesper": "Vesper",
     "zenburn": "Zenburn"
   },
@@ -62,7 +92,8 @@
     "nicole": "Nicole (Female, US)",
     "michael": "Michael (Male, US)",
     "adam": "Adam (Male, US)",
-    "emma": "Emma (Female, UK)"
+    "emma": "Emma (Female, UK)",
+    "george": "George (Male, UK)"
   },
   "fonts": {
     "default": "Default (Inter)"
@@ -85,9 +116,34 @@
   },
   "placeholders": {
     "modelPath": "/path/to/models",
-    "checkpointsPath": "~/.config/warpcore/checkpoints/"
+    "checkpointsPath": "~/.config/warpcore/checkpoints/",
+    "fsRoot": "/absolute/path"
   },
   "labels": {
     "pttKey": "PTT Key"
+  },
+  "options": {
+    "defaultTheme": "Dark",
+    "defaultVoice": "Heart (Female, US)",
+    "defaultMicrophone": "Default Microphone",
+    "noMicDevices": "No microphone devices found",
+    "ttsSpeed": "TTS Speed",
+    "desktopApiUnavailable": "Desktop API not available - toggle disabled"
+  },
+  "units": {
+    "px": "px",
+    "gb": "GB",
+    "to": "to"
+  },
+  "dialog": {
+    "removeModelDirTitle": "Remove Model Directory?",
+    "removeModelDirMessage": "This will remove \"{{path}}\" from your configured model directories."
+  },
+  "toast": {
+    "settingsSaved": "Settings saved",
+    "microphoneGranted": "Microphone access granted",
+    "microphoneDenied": "Microphone access denied",
+    "directoryPickerNotSupported": "Directory picker not supported in this browser. Please type the path manually.",
+    "autostartUpdateFailed": "Failed to update autostart"
   }
 }

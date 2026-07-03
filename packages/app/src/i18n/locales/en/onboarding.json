@@ -1,1 +1,39 @@
-{}
+{
+  "title": "Onboarding",
+  "steps": {
+    "welcome": {
+      "title": "Welcome to WarpCore",
+      "subtitle": "Your personal AI platform — runs entirely on your machine",
+      "getStarted": "Let's get started"
+    },
+    "backends": {
+      "title": "Backends",
+      "subtitle": "Configure the engines that power your models",
+      "description": "Backends are compute devices that host and run models. Add your local or remote devices."
+    },
+    "modelFolders": {
+      "title": "Model Folders",
+      "subtitle": "Where are your model files stored?",
+      "description": "Add folders containing GGUF model files. WarpCore scans these folders automatically."
+    },
+    "guide": {
+      "title": "Ready to Run",
+      "subtitle": "You're all set up! Here's a quick overview:",
+      "chatDesc": "Chat with models in the Chat view",
+      "serverDesc": "Launch servers from the Servers page",
+      "hubDesc": "Download models from the Hub",
+      "settingsDesc": "Configure everything in Settings"
+    },
+    "done": {
+      "title": "All Done",
+      "subtitle": "Ready to launch your first model",
+      "startChatting": "Start Chatting"
+    }
+  },
+  "navigation": {
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "finish": "Finish"
+  }
+}

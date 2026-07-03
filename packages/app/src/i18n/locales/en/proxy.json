@@ -1,1 +1,110 @@
-{}
+{
+  "title": "Router",
+  "subtitle_running": "{{count}} sticky routes",
+  "subtitle_stopped": "Stopped",
+  "subtitle_error": "Error",
+  "status": {
+    "stopped": "Stopped",
+    "running": "Running on port {{port}}",
+    "error": "Error: {{error}}"
+  },
+  "actions": {
+    "startRouter": "Start Router",
+    "stopRouter": "Stop Router",
+    "clearAll": "Clear All",
+    "clear": "Clear"
+  },
+  "statPills": {
+    "port": "Port",
+    "routes": "Routes"
+  },
+  "auth": {
+    "sectionTitle": "Authentication",
+    "proxyAuth": "Proxy Auth",
+    "proxyAuthDesc": "Require Bearer token for /v1/* endpoints",
+    "controlApiAuth": "Control API Auth",
+    "controlApiAuthDesc": "Require auth for /api/* endpoints",
+    "requireLocalhost": "Require Auth for Localhost",
+    "requireLocalhostDesc": "Enforce auth even for localhost requests (testing)"
+  },
+  "stickyRoutes": {
+    "title": "Sticky Routes",
+    "empty": "No sticky routes yet",
+    "emptyDesc": "Sticky routes are created when requests go through the router",
+    "unknown": "Unknown"
+  },
+  "dialog": {
+    "clearAllTitle": "Clear All Sticky Routes?",
+    "clearAllMessage": "This will remove all sticky route mappings. New routes will be created on the next request.",
+    "restartTitle": "Restart Proxy Required",
+    "restartMessage": "Enabling proxy authentication requires restarting the proxy. This will terminate all existing connections. New connections will require authentication.",
+    "restartConfirmLabel": "Restart"
+  },
+  "serverAlias": "Server Alias",
+  "accessTokens": {
+    "title": "Access Tokens",
+    "empty": "No access tokens created yet",
+    "emptyDesc": "Tokens are required when authentication is enabled for remote access",
+    "columns": {
+      "name": "Name",
+      "token": "Token",
+      "role": "Role",
+      "scope": "Scope",
+      "created": "Created"
+    },
+    "roles": {
+      "admin": "Admin",
+      "inference": "Inference",
+      "mcpLabelled": "MCP (L)",
+      "mcpInline": "MCP (I)",
+      "unrestricted": "Unrestricted",
+      "all": "All"
+    },
+    "actions": {
+      "createToken": "Create token",
+      "editToken": "Edit token",
+      "deleteToken": "Delete token"
+    },
+    "dialog": {
+      "revokeTitle": "Revoke Token",
+      "revokeMessage": "Revoke \"{{name}}\"? Any client using this token will immediately lose access. This cannot be undone.",
+      "revokeConfirm": "Revoke"
+    }
+  },
+  "tokenDialog": {
+    "titleCreate": "Create Access Token",
+    "titleEdit": "Edit Token",
+    "titleCreated": "Token Created",
+    "nameField": "Name",
+    "namePlaceholder": "e.g. Mobile app, CI pipeline, Friend's access",
+    "accessLevel": "Access Level",
+    "adminRole": "Admin",
+    "adminDesc": "Full control API, inference, and MCP access",
+    "inferenceRole": "Inference",
+    "inferenceDesc": "Query models through the proxy server",
+    "serverAccess": "Server Access",
+    "allServers": "All Servers",
+    "allTools": "All Tools",
+    "specific": "Specific",
+    "serverPillPlaceholder": "Type alias or server ID, press Enter",
+    "toolPillPlaceholder": "Type tool name, press Enter",
+    "mcpLabelled": "MCP Tools (Labelled)",
+    "mcpLabelledDesc": "Allow calling MCP tools from mcp.json",
+    "mcpInline": "MCP Tools (Inline)",
+    "mcpInlineDesc": "Allow calling ephemeral MCP tools",
+    "toolAccessLabelled": "Tool Access (Labelled)",
+    "toolAccessInline": "Tool Access (Inline)",
+    "copyWarning": "Copy this token now — it will not be shown again",
+    "copyToken": "Copy token",
+    "useTokenHint": "Use this token in the Authorization header: Bearer {{prefix}}...",
+    "done": "Done",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "create": "Create Token",
+    "update": "Update Token"
+  },
+  "toast": {
+    "tokenNameRequired": "Token name is required",
+    "tokenUpdated": "Token updated"
+  }
+}
