@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Box, Text, VStack, HStack, Flex, Button, Spinner, Badge } from '@chakra-ui/react';
 import { X, Play, Square, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { parseRecipe, ERecipeRunStatus, type IRecipe, type TRecipeInputValues } from '@warpcore/shared';
 import { runRecipe, cancelRecipeRun, fetchRecipeState } from '../../api/services';
 import { useStore } from '../../store';
@@ -12,15 +13,30 @@ interface IRunRecipeDialogProps {
 	onClose: () => void;
 }
 
-const RUN_STATUS_CONFIG: Record<ERecipeRunStatus, { color: string; icon: typeof CheckCircle; label: string }> = {
-	[ERecipeRunStatus.RUNNING]: { color: 'var(--wc-accent-yellow)', icon: Play, label: 'Running' },
-	[ERecipeRunStatus.OK]: { color: 'var(--wc-accent-green)', icon: CheckCircle, label: 'Completed' },
-	[ERecipeRunStatus.FAILED]: { color: 'var(--wc-accent-red)', icon: AlertCircle, label: 'Failed' },
-	[ERecipeRunStatus.CANCELLED]: { color: 'var(--wc-text-tertiary)', icon: XCircle, label: 'Cancelled' },
+const RUN_STATUS_ICONS: Record<ERecipeRunStatus, typeof CheckCircle> = {
+	[ERecipeRunStatus.RUNNING]: Play,
+	[ERecipeRunStatus.OK]: CheckCircle,
+	[ERecipeRunStatus.FAILED]: AlertCircle,
+	[ERecipeRunStatus.CANCELLED]: XCircle,
+};
+
+const RUN_STATUS_COLORS: Record<ERecipeRunStatus, string> = {
+	[ERecipeRunStatus.RUNNING]: 'var(--wc-accent-yellow)',
+	[ERecipeRunStatus.OK]: 'var(--wc-accent-green)',
+	[ERecipeRunStatus.FAILED]: 'var(--wc-accent-red)',
+	[ERecipeRunStatus.CANCELLED]: 'var(--wc-text-tertiary)',
 };
 
 export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
+	const { t } = useTranslation('recipes');
 	const activeRun = useStore((s) => s.activeRun);
+
+	const RUN_STATUS_LABELS: Record<ERecipeRunStatus, string> = useMemo(() => ({
+		[ERecipeRunStatus.RUNNING]: t('runStatus.running'),
+		[ERecipeRunStatus.OK]: t('runStatus.completed'),
+		[ERecipeRunStatus.FAILED]: t('runStatus.failed'),
+		[ERecipeRunStatus.CANCELLED]: t('runStatus.cancelled'),
+	}), [t]);
 
 	const parseResult = useMemo(() => {
 		try { return { parsed: parseRecipe(recipe.source), error: null as string | null }; }
@@ -81,8 +97,9 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 		setCancelling(false);
 	};
 
-	const statusConfig = isThisRecipeActive ? RUN_STATUS_CONFIG[activeRun!.status] : null;
-	const StatusIcon = statusConfig?.icon;
+	const statusColor = isThisRecipeActive ? RUN_STATUS_COLORS[activeRun!.status] : null;
+	const statusLabel = isThisRecipeActive ? RUN_STATUS_LABELS[activeRun!.status] : null;
+	const StatusIcon = isThisRecipeActive ? RUN_STATUS_ICONS[activeRun!.status] : null;
 
 	const canRun = parseResult.error === null && !starting && !isRunning && !isOtherRunActive;
 
@@ -93,10 +110,10 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 				<Flex px="5" py="3" justify="space-between" align="center" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)" flexShrink={0}>
 					<HStack gap="3">
 						<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{recipe.name}</Text>
-						{statusConfig && StatusIcon && (
+						{statusColor && StatusIcon && (
 							<HStack gap="1.5" px="2" py="0.5" borderRadius="full" bg="var(--wc-bg-interactive)">
-								<Box color={statusConfig.color}><StatusIcon size={11} /></Box>
-								<Text fontSize="10px" fontWeight="600" color={statusConfig.color}>{statusConfig.label}</Text>
+								<Box color={statusColor}><StatusIcon size={11} /></Box>
+								<Text fontSize="10px" fontWeight="600" color={statusColor}>{statusLabel}</Text>
 							</HStack>
 						)}
 					</HStack>
@@ -110,7 +127,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 					{parseResult.error !== null ? (
 						<Flex h="200px" alignItems="center" justifyContent="center" direction="column" gap="2" color="var(--wc-accent-red)">
 							<AlertCircle size={32} />
-							<Text fontSize="13px">Recipe is invalid</Text>
+							<Text fontSize="13px">{t('runDialog.recipeInvalid')}</Text>
 							<Text fontSize="11px" fontFamily='"Geist Mono", monospace' color="var(--wc-accent-red-border)">{parseResult.error}</Text>
 						</Flex>
 					) : (
@@ -118,7 +135,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 							{/* Inputs */}
 							{parseResult.parsed!.inputs.length > 0 && (
 								<Box>
-									<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">Inputs</Text>
+									<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">{t('labels.inputs')}</Text>
 									<InputFormGenerator
 										inputs={parseResult.parsed!.inputs}
 										values={values}
@@ -130,7 +147,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 
 							{/* Steps */}
 							<Box>
-								<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">Steps</Text>
+								<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">{t('labels.steps')}</Text>
 								{isThisRecipeActive ? (
 									<VStack align="stretch" gap="2">
 										{activeRun!.steps.map((step) => (
@@ -165,20 +182,20 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 					) : isOtherRunActive ? (
 						<HStack gap="1.5" color="var(--wc-accent-yellow)">
 							<AlertCircle size={12} />
-							<Text fontSize="11px">Another recipe is currently running</Text>
+							<Text fontSize="11px">{t('runDialog.anotherRunning')}</Text>
 						</HStack>
 					) : <Box />}
 					<HStack gap="2">
-						<Button size="sm" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} onClick={onClose}>{isFinished || !isThisRecipeActive ? 'Close' : 'Hide'}</Button>
+						<Button size="sm" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} onClick={onClose}>{isFinished || !isThisRecipeActive ? t('actions.close') : t('actions.hide')}</Button>
 						{isRunning ? (
 							<Button size="sm" bg="var(--wc-accent-red-bg-8)" color="var(--wc-accent-red)" _hover={{ bg: 'var(--wc-accent-red-hover)' }} onClick={handleCancel} disabled={cancelling}>
 								{cancelling ? <Spinner size="xs" /> : <Square size={13} />}
-								<Text ml="1.5">Cancel</Text>
+								<Text ml="1.5">{t('actions.cancel')}</Text>
 							</Button>
 						) : (
 							<Button size="sm" bg={canRun ? 'var(--wc-accent-green-bg-8)' : 'var(--wc-bg-interactive)'} color={canRun ? 'var(--wc-accent-green)' : 'var(--wc-text-faint)'} _hover={canRun ? { bg: 'var(--wc-accent-green-hover-bg)' } : undefined} onClick={handleRun} disabled={!canRun}>
 								{starting ? <Spinner size="xs" /> : <Play size={13} />}
-								<Text ml="1.5">{isFinished ? 'Run Again' : 'Run'}</Text>
+								<Text ml="1.5">{isFinished ? t('actions.runAgain') : t('actions.run')}</Text>
 							</Button>
 						)}
 					</HStack>

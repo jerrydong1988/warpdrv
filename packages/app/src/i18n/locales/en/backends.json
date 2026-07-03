@@ -19,7 +19,10 @@
     "validate": "Validate",
     "setActive": "Set Active",
     "activating": "Activating...",
-    "validating": "Validating..."
+    "validating": "Validating...",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "createGroup": "Create Group"
   },
   "status": {
     "validated": "Validated",
@@ -34,7 +37,16 @@
     "noBackendsDesc": "Add a backend to start running models",
     "noGroups": "No backend groups configured yet",
     "noWhisper": "No whisper backends configured yet",
-    "validationFailed": "Could not validate"
+    "validationFailed": "Could not validate",
+    "unknown": "Unknown",
+    "members": "Members ({{count}})",
+    "currentActive": "CURRENT ACTIVE",
+    "current": "CURRENT",
+    "newActive": "NEW ACTIVE"
+  },
+  "device": {
+    "compute": "Compute",
+    "connection": "Connection"
   },
   "dialogs": {
     "deleteBackendTitle": "Delete Backend?",
@@ -51,12 +63,60 @@
     "whisperBackendInfo": "Whisper Backend Info",
     "editBackend": "Edit Backend",
     "editGroup": "Edit Backend Group",
-    "editWhisper": "Edit Whisper Backend"
+    "editWhisper": "Edit Whisper Backend",
+    "editGroupDesc": "Modify group settings and members",
+    "createGroupDesc": "Group multiple backends for easy switching",
+    "addBackend": "Add Backend",
+    "addWhisper": "Add Whisper Backend",
+    "groupName": "Group Name",
+    "groupNamePlaceholder": "e.g. ROCm Backends",
+    "descriptionOptional": "Description (optional)",
+    "groupDescPlaceholder": "Notes about this group...",
+    "selectBackends": "Select Backends",
+    "selectActiveBackend": "Select Active Backend",
+    "name": "Name",
+    "binaryPath": "Binary Path",
+    "binaryValidationHint": "Binary is validated and devices are discovered when saved",
+    "binaryValidationSimple": "Binary is validated when saved",
+    "registerLlamacpp": "Register a llama.cpp build",
+    "registerWhisper": "Register a whisper-server binary",
+    "backendDescPlaceholder": "Notes about this backend...",
+    "defaultArgs": "Default Arguments",
+    "defaultArgsHint": "Applied to all servers using this backend",
+    "whisperNamePlaceholder": "e.g. whisper-cuda-12",
+    "whisperPathPlaceholder": "/path/to/whisper-server"
+  },
+  "activateDialog": {
+    "title": "Switch Active Backend?",
+    "changingFrom": "Changing from",
+    "to": "to",
+    "deleted": "(deleted)",
+    "affectedServers": "Affected running servers ({{count}})",
+    "noRunningServers": "No running servers using this group",
+    "restarting": "Restarting...",
+    "restarted": "Restarted",
+    "failed": "Failed",
+    "restartFailed": "Restart failed",
+    "switchOnly": "Switch Only",
+    "switchAndRestart": "Switch & Restart"
   },
   "toast": {
     "backendSaved": "Backend added",
     "backendUpdated": "Backend updated",
-    "saveFailed": "Failed to save backend"
+    "saveFailed": "Failed to save backend",
+    "groupUpdated": "Group \"{{name}}\" updated",
+    "groupCreated": "Group \"{{name}}\" created",
+    "updateGroupFailed": "Failed to update group",
+    "createGroupFailed": "Failed to create group",
+    "filePickerNotSupported": "File picker not supported in this browser. Please type the path manually.",
+    "backendUpdatedToast": "Backend \"{{name}}\" updated",
+    "backendAddedToast": "Backend \"{{name}}\" added",
+    "whisperUpdated": "Whisper backend updated",
+    "whisperAdded": "Whisper backend added",
+    "nameAndPathRequired": "Name and path are required",
+    "backendActivated": "The active backend for this group has been updated.",
+    "backendActivatedAndRestarted": "The active backend has been updated and servers restarted.",
+    "updateActiveBackendFailed": "Unable to update the active backend. Please try again."
   },
   "searchPlaceholder": "Search backends..."
 }

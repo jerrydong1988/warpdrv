@@ -1,4 +1,5 @@
 import { Box, Text, VStack, Input, NativeSelect, Switch, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import { ERecipeInputType, type IRecipeInputDef, type TRecipeInputValues } from '@warpcore/shared';
 
 interface IInputFormGeneratorProps {
@@ -9,10 +10,11 @@ interface IInputFormGeneratorProps {
 }
 
 export function InputFormGenerator({ inputs, values, onChange, disabled = false }: IInputFormGeneratorProps) {
+	const { t } = useTranslation('recipes');
 	if (inputs.length === 0) {
 		return (
 			<Box px="3" py="4" textAlign="center">
-				<Text fontSize="12px" color="var(--wc-text-faint)">This recipe has no inputs.</Text>
+				<Text fontSize="12px" color="var(--wc-text-faint)">{t('inputForm.noInputs')}</Text>
 			</Box>
 		);
 	}

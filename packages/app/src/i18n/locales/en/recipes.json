@@ -8,9 +8,12 @@
     "createRecipe": "Create Recipe",
     "save": "Save",
     "cancel": "Cancel",
+    "close": "Close",
+    "hide": "Hide",
+    "runAgain": "Run Again",
+    "run": "Run",
     "addStep": "Add Step",
     "removeStep": "Remove Step",
-    "run": "Run",
     "stop": "Stop",
     "selectServer": "Select Server",
     "noServers": "No healthy servers available"
@@ -28,7 +31,45 @@
   "labels": {
     "noRecipes": "No recipes configured",
     "builtinRecipes": "Built-in recipes",
-    "customRecipes": "Custom recipes"
+    "customRecipes": "Custom recipes",
+    "inputs": "Inputs",
+    "steps": "Steps"
+  },
+  "stepStatus": {
+    "pending": "Pending",
+    "running": "Running",
+    "ok": "OK",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "skipped": "Skipped"
+  },
+  "runStatus": {
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "runDialog": {
+    "recipeInvalid": "Recipe is invalid",
+    "anotherRunning": "Another recipe is currently running"
+  },
+  "stepPanel": {
+    "noOutput": "No output yet..."
+  },
+  "inputForm": {
+    "noInputs": "This recipe has no inputs."
+  },
+  "editor": {
+    "editRecipe": "Edit Recipe",
+    "newRecipe": "New Recipe",
+    "namePlaceholder": "Recipe name",
+    "descriptionPlaceholder": "Description (optional)",
+    "source": "Source",
+    "valid": "Valid",
+    "preview": "Preview",
+    "fixSourceError": "Fix the source error to see preview.",
+    "inputsCount": "Inputs ({{count}})",
+    "stepsCount": "Steps ({{count}})"
   },
   "toast": {
     "recipeStarted": "Recipe started",

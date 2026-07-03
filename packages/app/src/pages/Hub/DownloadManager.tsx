@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
 	Box, Text, HStack, VStack, Flex, Button, Badge, Spinner,
 } from '@chakra-ui/react';
@@ -6,6 +6,7 @@ import {
 	X, Download, Pause, Play, Trash2, CheckCircle, AlertCircle,
 	XCircle, Clock,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EDownloadStatus, type IDownload } from '@warpcore/shared';
 import { useStore } from '../../store';
 import {
@@ -35,12 +36,20 @@ function formatEta(remainingBytes: number, speedBps: number): string {
 	return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
 }
 
-const STATUS_CONFIG: Record<EDownloadStatus, { color: string; icon: React.ReactNode; label: string }> = {
-	[EDownloadStatus.DOWNLOADING]: { color: 'var(--wc-accent-blue)', icon: <Download size={11} />, label: 'Downloading' },
-	[EDownloadStatus.PAUSED]: { color: 'var(--wc-accent-yellow)', icon: <Pause size={11} />, label: 'Paused' },
-	[EDownloadStatus.COMPLETED]: { color: 'var(--wc-accent-green)', icon: <CheckCircle size={11} />, label: 'Completed' },
-	[EDownloadStatus.FAILED]: { color: 'var(--wc-accent-red)', icon: <AlertCircle size={11} />, label: 'Failed' },
-	[EDownloadStatus.CANCELLED]: { color: 'var(--wc-text-tertiary)', icon: <XCircle size={11} />, label: 'Cancelled' },
+const STATUS_ICONS: Record<EDownloadStatus, React.ReactNode> = {
+	[EDownloadStatus.DOWNLOADING]: <Download size={11} />,
+	[EDownloadStatus.PAUSED]: <Pause size={11} />,
+	[EDownloadStatus.COMPLETED]: <CheckCircle size={11} />,
+	[EDownloadStatus.FAILED]: <AlertCircle size={11} />,
+	[EDownloadStatus.CANCELLED]: <XCircle size={11} />,
+};
+
+const STATUS_COLORS: Record<EDownloadStatus, string> = {
+	[EDownloadStatus.DOWNLOADING]: 'var(--wc-accent-blue)',
+	[EDownloadStatus.PAUSED]: 'var(--wc-accent-yellow)',
+	[EDownloadStatus.COMPLETED]: 'var(--wc-accent-green)',
+	[EDownloadStatus.FAILED]: 'var(--wc-accent-red)',
+	[EDownloadStatus.CANCELLED]: 'var(--wc-text-tertiary)',
 };
 
 interface IDownloadManagerProps {
@@ -48,8 +57,17 @@ interface IDownloadManagerProps {
 }
 
 export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) => {
+	const { t } = useTranslation('hub');
 	const { toast } = useToast();
 	const [incompleteOnly, setIncompleteOnly] = useState(false);
+
+	const STATUS_LABELS: Record<EDownloadStatus, string> = useMemo(() => ({
+		[EDownloadStatus.DOWNLOADING]: t('downloadStatus.downloading'),
+		[EDownloadStatus.PAUSED]: t('downloadStatus.paused'),
+		[EDownloadStatus.COMPLETED]: t('downloadStatus.completed'),
+		[EDownloadStatus.FAILED]: t('downloadStatus.failed'),
+		[EDownloadStatus.CANCELLED]: t('downloadStatus.cancelled'),
+	}), [t]);
 
 	const downloads = Object.values(useStore((s) => s.downloads));
 
@@ -73,7 +91,7 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 
 	const handleClearHistory = async () => {
 		await clearDownloadHistory();
-		toast('info', 'Download history cleared');
+		toast('info', t('toast.downloadHistoryCleared'));
 	};
 
 	return (
@@ -92,7 +110,7 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 				<HStack gap="2.5">
 					<Download size={14} color="var(--wc-text-tertiary)" />
 					<Text fontSize="13px" fontWeight="600" color="var(--wc-text-secondary)">
-						Downloads
+						{t('downloadManager.title')}
 					</Text>
 					{activeCount > 0 && (
 						<Badge
@@ -115,14 +133,14 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 						_hover={{ bg: 'var(--wc-bg-hover)' }}
 						onClick={() => setIncompleteOnly(!incompleteOnly)}
 					>
-						Incomplete only
+						{t('downloadManager.incompleteOnly')}
 					</Button>
 					<Button
 						size="xs" variant="ghost" color="var(--wc-text-faint)"
 						_hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }}
 						borderRadius="md" onClick={handleClearHistory} fontSize="10px"
 					>
-						Clear history
+						{t('downloadManager.clearHistory')}
 					</Button>
 					<Button
 						size="xs" variant="ghost" color="var(--wc-text-tertiary)"
@@ -140,13 +158,14 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 					<Flex h="100%" alignItems="center" justifyContent="center">
 						<VStack gap="2" color="var(--wc-text-disabled)">
 							<Download size={28} />
-							<Text fontSize="12px">{incompleteOnly ? 'No active downloads' : 'No downloads yet'}</Text>
+							<Text fontSize="12px">{incompleteOnly ? t('downloadManager.noActiveDownloads') : t('downloadManager.noDownloads')}</Text>
 						</VStack>
 					</Flex>
 				) : (
 					<VStack align="stretch" gap="2">
 						{filtered.map((dl: IDownload) => {
-							const statusConfig = STATUS_CONFIG[dl.status] ?? STATUS_CONFIG[EDownloadStatus.FAILED];
+							const statusConfig = { color: STATUS_COLORS[dl.status], icon: STATUS_ICONS[dl.status], label: STATUS_LABELS[dl.status] }
+							?? { color: STATUS_COLORS[EDownloadStatus.FAILED], icon: STATUS_ICONS[EDownloadStatus.FAILED], label: STATUS_LABELS[EDownloadStatus.FAILED] };
 							const isActive = dl.status === EDownloadStatus.DOWNLOADING;
 							const isPaused = dl.status === EDownloadStatus.PAUSED;
 							const remainingBytes = dl.fileSizeBytes - dl.downloadedBytes;

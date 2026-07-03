@@ -4,6 +4,7 @@ import {
 	Download, Heart, Clock, Calendar, CheckCircle,
 	ArrowDownToLine, FileText, Layers, ChevronDown, HardDriveDownload,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { IHubModelDetail, IHubFile } from '@warpcore/shared';
 import { Card } from '../../components/Card';
 import { DirPickerPopover } from './DirPickerPopover';
@@ -113,6 +114,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 	allFiles: IHubFile[];
 	existsInRoot: string | null;
 }) => {
+	const { t } = useTranslation('hub');
 	const { toast } = useToast();
 	const [showDirPicker, setShowDirPicker] = useState(false);
 	const [downloading, setDownloading] = useState(false);
@@ -144,9 +146,9 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 		setDownloading(false);
 		if (result.ok) {
 			const partText = fileParts.length > 1 ? ` (${fileParts.length} parts)` : '';
-			toast('success', `Downloading ${file.parentModel ?? file.filename}${partText}`);
+			toast('success', t('toast.downloading', { name: file.parentModel ?? file.filename, partText }));
 		} else {
-			toast('error', result.error ?? 'Download failed');
+			toast('error', result.error ?? t('toast.downloadFailed'));
 		}
 	};
 
@@ -184,18 +186,18 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 							{/* Show total parts if this is a multi-part file */}
 							{fileParts.length > 1 && (
 								<Text fontSize="10px" color="var(--wc-text-faint)">
-									{fileParts.length} parts
+{t('detail.partsCount', { count: fileParts.length })}
 								</Text>
 							)}
 							{/* Show directory path if file is nested */}
 							{file.filename.includes('/') && (
 								<Text fontSize="10px" color="var(--wc-text-faint)">
-									in {getDirname(file.filename)}
+									{t('detail.inDir', { dir: getDirname(file.filename) })}
 								</Text>
 							)}
 							{file.isDownloaded && file.downloadedInRoot && (
 								<Text fontSize="10px" color="var(--wc-accent-green-icon)" lineClamp={1}>
-									in {file.downloadedInRoot}
+									{t('detail.inDir', { dir: file.downloadedInRoot })}
 								</Text>
 							)}
 						</HStack>
@@ -220,7 +222,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 							bg="var(--wc-accent-green-bg-8)" color="var(--wc-accent-green)"
 							borderWidth="1px" borderColor="var(--wc-accent-green-border)"
 						>
-							<CheckCircle size={11} /> Downloaded
+							<CheckCircle size={11} /> {t('detail.downloaded')}
 						</Badge>
 					) : (
 						<Box position="relative">
@@ -233,7 +235,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 								disabled={downloading}
 							>
 								{downloading ? <Spinner size="xs" /> : <ArrowDownToLine size={12} />}
-								{fileParts.length > 1 ? `Download ${fileParts.length} parts` : 'Download'}
+								{fileParts.length > 1 ? t('detail.downloadParts', { count: fileParts.length }) : t('actions.download')}
 							</Button>
 							{showDirPicker && (
 								<DirPickerPopover
@@ -252,6 +254,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 });
 
 export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDetailProps) => {
+	const { t } = useTranslation('hub');
 	const [detail, setDetail] = useState<IHubModelDetail | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -276,7 +279,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 	if (!detail) {
 		return (
 			<Flex h="100%" alignItems="center" justifyContent="center">
-				<Text color="var(--wc-text-faint)">Failed to load model details</Text>
+				<Text color="var(--wc-text-faint)">{t('detail.failedToLoad')}</Text>
 			</Flex>
 		);
 	}
@@ -337,7 +340,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 						<HStack gap="1.5" color="var(--wc-text-muted)">
 							<Download size={13} />
 							<Text fontSize="12px" fontFamily='"Geist Mono", monospace'>{formatCount(detail.downloads)}</Text>
-							<Text fontSize="11px" color="var(--wc-text-faint)">downloads</Text>
+							<Text fontSize="11px" color="var(--wc-text-faint)">{t('detail.downloadsLabel')}</Text>
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-muted)">
 							<Heart size={13} />
@@ -345,11 +348,11 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-faint)">
 							<Calendar size={12} />
-							<Text fontSize="11px">Created {formatDate(detail.createdAt)}</Text>
+							<Text fontSize="11px">{t('detail.created', { date: formatDate(detail.createdAt) })}</Text>
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-faint)">
 							<Clock size={12} />
-							<Text fontSize="11px">Updated {formatDate(detail.lastModified)}</Text>
+							<Text fontSize="11px">{t('detail.updated', { date: formatDate(detail.lastModified) })}</Text>
 						</HStack>
 					</HStack>
 
@@ -366,7 +369,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 							))}
 							{detail.tags.length > 15 && (
 								<Text fontSize="10px" color="var(--wc-text-disabled)">
-									+{detail.tags.length - 15} more
+									{t('detail.moreTags', { count: detail.tags.length - 15 })}
 								</Text>
 							)}
 						</HStack>
@@ -396,14 +399,14 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 
 										<VStack align="start" gap="0.5">
 											<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">
-												Download Files
+												{t('detail.downloadFiles')}
 											</Text>
 											<HStack gap="2">
 												<Text fontSize="12px" color={downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} fontWeight="500">
-													{totalModels} model{totalModels !== 1 ? 's' : ''} ({totalGgufFiles} file{totalGgufFiles !== 1 ? 's' : ''})
+													{t('detail.modelFilesCount', { models: totalModels, files: totalGgufFiles })}
 												</Text>
 												<Text fontSize="12px" color="var(--wc-text-muted)">
-													({downloadedCount} downloaded)
+													{t('detail.downloadedCount', { count: downloadedCount })}
 												</Text>
 											</HStack>
 										</VStack>
@@ -441,7 +444,7 @@ bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-
 				{otherFiles.length > 0 && (
 					<Box mt="4">
 						<Text fontSize="12px" color="var(--wc-text-faint)">
-							{otherFiles.length} other file{otherFiles.length > 1 ? 's' : ''} (config, tokenizer, etc.)
+							{t('detail.otherFiles', { count: otherFiles.length })}
 						</Text>
 					</Box>
 				)}
@@ -452,7 +455,7 @@ bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-
 						<HStack gap="2" mb="3">
 							<FileText size={14} color="var(--wc-text-tertiary)" />
 							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-secondary)">
-								README
+{t('detail.readme')}
 							</Text>
 						</HStack>
 						<Box className="markdown-container">

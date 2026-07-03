@@ -19,13 +19,55 @@
     "downloads": "Downloads",
     "info": "Model Info"
   },
+  "date": {
+    "justNow": "Just now",
+    "minAgo": "{{n}}min ago",
+    "hoursAgo": "{{n}}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{{n}}d ago",
+    "monthsAgo": "{{n}}mo ago",
+    "yearsAgo": "{{n}}y ago"
+  },
+  "detail": {
+    "failedToLoad": "Failed to load model details",
+    "downloadsLabel": "downloads",
+    "created": "Created {{date}}",
+    "updated": "Updated {{date}}",
+    "moreTags": "+{{count}} more",
+    "downloadFiles": "Download Files",
+    "modelFilesCount": "{{models}} model(s) ({{files}} file(s))",
+    "downloadedCount": "({{count}} downloaded)",
+    "otherFiles": "{{count}} other file(s) (config, tokenizer, etc.)",
+    "readme": "README",
+    "downloaded": "Downloaded",
+    "downloadParts": "Download {{count}} parts",
+    "partsCount": "{{count}} parts",
+    "inDir": "in {{dir}}"
+  },
+  "dirPicker": {
+    "downloadTo": "Download to",
+    "filesAlreadyHere": "Files from this repo already here"
+  },
   "downloadManager": {
-    "noDownloads": "No active downloads",
+    "title": "Downloads",
+    "noDownloads": "No downloads yet",
+    "noActiveDownloads": "No active downloads",
     "paused": "Paused",
     "cancelDownload": "Cancel download",
-    "selectDirectory": "Select download directory"
+    "selectDirectory": "Select download directory",
+    "incompleteOnly": "Incomplete only",
+    "clearHistory": "Clear history"
+  },
+  "downloadStatus": {
+    "downloading": "Downloading",
+    "paused": "Paused",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
   },
   "toast": {
-    "downloadHistoryCleared": "Download history cleared"
+    "downloadHistoryCleared": "Download history cleared",
+    "downloading": "Downloading {{name}}{{partText}}",
+    "downloadFailed": "Download failed"
   }
 }

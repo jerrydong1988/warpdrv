@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { ChevronDown, ChevronRight, Check, X, Shield, ShieldOff, ShieldQuestion } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { McpStatusDot } from './McpStatusDot';
 import type { IMcpServerState, IToolPermission, IServerPermission as IMcpServerPermission } from '@warpcore/bridge';
 import { EMcpServerStatus, EToolApprovalMode } from '@warpcore/bridge';
@@ -10,6 +11,7 @@ function ApprovalModeButton({ mode, currentMode, onSelect }: {
 	currentMode: EToolApprovalMode;
 	onSelect: (m: EToolApprovalMode) => void;
 }) {
+	const { t } = useTranslation('mcp');
 	const isActive = mode === currentMode;
 	const icons: Record<EToolApprovalMode, React.ReactNode> = {
 		[EToolApprovalMode.ASK]: <ShieldQuestion size={12} />,
@@ -17,9 +19,9 @@ function ApprovalModeButton({ mode, currentMode, onSelect }: {
 		[EToolApprovalMode.DENIED]: <ShieldOff size={12} />,
 	};
 	const labels: Record<EToolApprovalMode, string> = {
-		[EToolApprovalMode.ASK]: 'Ask',
-		[EToolApprovalMode.ALLOWED]: 'Allow',
-		[EToolApprovalMode.DENIED]: 'Deny',
+		[EToolApprovalMode.ASK]: t('toolList.ask'),
+		[EToolApprovalMode.ALLOWED]: t('toolList.allow'),
+		[EToolApprovalMode.DENIED]: t('toolList.deny'),
 	};
 	const activeColors: Record<EToolApprovalMode, string> = {
 		[EToolApprovalMode.ASK]: 'var(--wc-accent-yellow-hover-bg)',
@@ -54,6 +56,7 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 	onToggleServer: (name: string, enabled: boolean) => void;
 	onSetToolPermission: (serverName: string, toolName: string, enabled: boolean, mode: EToolApprovalMode) => void;
 }) {
+	const { t } = useTranslation('mcp');
 	const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
 
 	const serverPermMap = new Map(serverPermissions.map(p => [p.serverName, p.enabled]));
@@ -73,7 +76,7 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 			p="3"
 		>
 			<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" mb="3" textTransform="uppercase" letterSpacing="0.05em">
-				Tools
+				{t('toolList.tools')}
 			</Text>
 
 			{serverNames.map(name => {
@@ -175,7 +178,7 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 								})}
 								{state.tools.length === 0 && (
 									<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">
-										No tools available
+										{t('toolList.noToolsAvailable')}
 									</Text>
 								)}
 							</VStack>
@@ -186,7 +189,7 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 
 			{serverNames.length === 0 && (
 				<Text fontSize="12px" color="var(--wc-text-disabled)" textAlign="center" py="4">
-					No MCP servers configured
+					{t('labels.noServers')}
 				</Text>
 			)}
 		</Box>

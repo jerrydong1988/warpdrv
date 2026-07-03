@@ -7,6 +7,7 @@
     "deleteServer": "Delete Server",
     "save": "Save",
     "cancel": "Cancel",
+    "add": "Add",
     "addEnv": "Add Variable",
     "addToolFilter": "Add Tool Filter",
     "toggleTools": "Toggle tools",
@@ -23,6 +24,28 @@
     "transportStdio": "stdio",
     "transportHttp": "HTTP",
     "toolAccess": "Tool Access"
+  },
+  "addForm": {
+    "commandPlaceholder": "Command (e.g. npx, uvx, node)",
+    "argsPlaceholder": "Arguments (space-separated)",
+    "urlPlaceholder": "URL (e.g. https://example.com/mcp)"
+  },
+  "card": {
+    "refreshTools": "Refresh tools",
+    "restartServer": "Restart server",
+    "removeServer": "Remove server"
+  },
+  "toolList": {
+    "tools": "Tools",
+    "ask": "Ask",
+    "allow": "Allow",
+    "deny": "Deny",
+    "noToolsAvailable": "No tools available"
+  },
+  "jsonEditor": {
+    "missingMcpServers": "Missing \"mcpServers\" key",
+    "invalidJson": "Invalid JSON",
+    "saveAndReload": "Save & Reload"
   },
   "status": {
     "connected": "Connected",
