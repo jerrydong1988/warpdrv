@@ -13,7 +13,7 @@ import type {
 	IRestoreCheckpointRequest,
 	IRestoreCheckpointsMappedRequest,
 } from '@warpcore/shared';
-import { SSE_CHANNELS_CHECKPOINT } from '@warpcore/shared';
+import { SSE_CHANNELS_CHECKPOINT, I18nErrorCode } from '@warpcore/shared';
 
 export const checkpointsRouter = Router();
 
@@ -70,7 +70,7 @@ checkpointsRouter.put('/:id', async (req, res) => {
 		const patch = req.body as { name?: string; notes?: string | null };
 		const updated = await updateCheckpoint(req.params.id, patch);
 		if (updated == null) {
-			res.status(404).json({ ok: false, data: null, error: 'Checkpoint not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.CHECKPOINT_NOT_FOUND });
 			return;
 		}
 		sseManager.emit(SSE_CHANNELS_CHECKPOINT.CHECKPOINT_UPDATED, { checkpoint: updated });
@@ -86,7 +86,7 @@ checkpointsRouter.delete('/:id', async (req, res) => {
 	try {
 		const removed = await deleteCheckpoint(req.params.id);
 		if (!removed) {
-			res.status(404).json({ ok: false, data: null, error: 'Checkpoint not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.CHECKPOINT_NOT_FOUND });
 			return;
 		}
 		sseManager.emit(SSE_CHANNELS_CHECKPOINT.CHECKPOINT_DELETED, { checkpointId: req.params.id });

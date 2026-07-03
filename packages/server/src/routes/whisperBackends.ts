@@ -7,7 +7,7 @@ import { validateWhisperBackend } from '../services/whisperBackendValidator';
 import { startGenericDownload } from '../services/downloadManager';
 import { fetchWhisperReleases } from '../services/releases';
 import type { IWhisperBackend, IWhisperBackendCreatePayload, IWhisperBackendUpdatePayload, IDownloadPostAction } from '@warpcore/shared';
-import { EValidationStatus, EPostActionType, EPostActionStatus } from '@warpcore/shared';
+import { EValidationStatus, EPostActionType, EPostActionStatus, I18nErrorCode } from '@warpcore/shared';
 import { sseManager } from '../services/sseManagerInstance';
 
 const PREFIX = 'whisperBackends:';
@@ -24,7 +24,7 @@ whisperBackendsRouter.get('/', async (_req, res) => {
 whisperBackendsRouter.get('/:id', async (req, res) => {
 	const backend = await store.get<IWhisperBackend>(PREFIX + req.params.id);
 	if (!backend) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_BACKEND_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: backend, error: null });
@@ -35,7 +35,7 @@ whisperBackendsRouter.post('/', async (req, res) => {
 	const payload = req.body as IWhisperBackendCreatePayload;
 
 	if (!payload.name?.trim() || !payload.path?.trim()) {
-		res.status(400).json({ ok: false, data: null, error: 'Name and path are required' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.NAME_AND_PATH_REQUIRED });
 		return;
 	}
 
@@ -65,7 +65,7 @@ whisperBackendsRouter.post('/', async (req, res) => {
 whisperBackendsRouter.put('/:id', async (req, res) => {
 	const existing = await store.get<IWhisperBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_BACKEND_NOT_FOUND });
 		return;
 	}
 
@@ -91,7 +91,7 @@ whisperBackendsRouter.put('/:id', async (req, res) => {
 whisperBackendsRouter.delete('/:id', async (req, res) => {
 	const existing = await store.get<IWhisperBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_BACKEND_NOT_FOUND });
 		return;
 	}
 	await store.del(PREFIX + req.params.id);
@@ -103,7 +103,7 @@ whisperBackendsRouter.delete('/:id', async (req, res) => {
 whisperBackendsRouter.post('/:id/validate', async (req, res) => {
 	const existing = await store.get<IWhisperBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_BACKEND_NOT_FOUND });
 		return;
 	}
 

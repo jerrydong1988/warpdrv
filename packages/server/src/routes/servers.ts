@@ -24,7 +24,7 @@ import type {
 	IBackendGroup,
 	ISettings,
 } from '@warpcore/shared';
-import { EServerStatus } from '@warpcore/shared';
+import { EServerStatus, I18nErrorCode } from '@warpcore/shared';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
 
 const PREFIX = SERVERS_PREFIX;
@@ -42,7 +42,7 @@ serversRouter.get('/', async (_req, res) => {
 serversRouter.get('/:id', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: server, error: null });
@@ -100,7 +100,7 @@ serversRouter.post('/', async (req, res) => {
 serversRouter.post('/:id/stop', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -139,7 +139,7 @@ serversRouter.post('/stop-all', async (_req, res) => {
 serversRouter.post('/:id/restart', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -158,7 +158,7 @@ serversRouter.post('/:id/restart', async (req, res) => {
 serversRouter.put('/:id', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -171,7 +171,7 @@ serversRouter.put('/:id', async (req, res) => {
 	if (updatePayload.backendGroupId) {
 		const group = await store.get<IBackendGroup>('backendGroups:' + updatePayload.backendGroupId);
 		if (!group) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend group not found' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_GROUP_NOT_FOUND });
 			return;
 		}
 		backend = await store.get<IBackend>('backends:' + group.activeBackendId);
@@ -182,7 +182,7 @@ serversRouter.put('/:id', async (req, res) => {
 	} else if (updatePayload.backendId) {
 		backend = await store.get<IBackend>('backends:' + updatePayload.backendId);
 		if (!backend) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend not found' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 			return;
 		}
 	} else {
@@ -197,7 +197,7 @@ serversRouter.put('/:id', async (req, res) => {
 			backend = await store.get<IBackend>('backends:' + server.backendId);
 		}
 		if (!backend) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend not found' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 			return;
 		}
 	}
@@ -274,7 +274,7 @@ serversRouter.put('/:id', async (req, res) => {
 serversRouter.delete('/:id', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -292,7 +292,7 @@ serversRouter.delete('/:id', async (req, res) => {
 serversRouter.get('/:id/logs', async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 

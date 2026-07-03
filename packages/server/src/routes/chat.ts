@@ -4,7 +4,7 @@ import { createSession } from 'better-sse';
 import { persistence, orchestrator, broadcaster } from '../index';
 import { store } from '../util/store';
 import type { IChatThreadCreatePayload, IChatMessageCreatePayload } from '@warpcore/shared';
-import { EServerStatus } from '@warpcore/shared';
+import { EServerStatus, I18nErrorCode } from '@warpcore/shared';
 import { EChatRole, EMessagePartType, ICompletionRequest, type IFolder } from '@warpcore/bridge';
 import { folderNameToTopic } from '@warpcore/bridge/util/topic';
 import type { IServer } from '@warpcore/shared';
@@ -60,7 +60,7 @@ chatRouter.get('/threads/:id', async (req, res) => {
 	try {
 		const thread = await persistence.getThread(req.params.id);
 		if (!thread) {
-			res.status(404).json({ ok: false, data: null, error: 'Thread not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.THREAD_NOT_FOUND });
 			return;
 		}
 		const messages = await persistence.getMessages(req.params.id);
@@ -76,12 +76,12 @@ chatRouter.get('/threads/:threadId/embeddings', async (req, res) => {
 		const threadId = req.params.threadId;
 		const serverId = req.query.serverId as string;
 		if (!serverId) {
-			res.status(400).json({ ok: false, data: null, error: 'serverId required' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.SERVER_ID_REQUIRED });
 			return;
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
 		if (!server) {
-			res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 			return;
 		}
 		const thread = await persistence.getThread(threadId);
@@ -99,14 +99,14 @@ chatRouter.post('/embedding/configure', async (req, res) => {
 	try {
 		const { serverId } = req.body as { serverId: string };
 		if (!serverId) {
-			return res.status(400).json({ ok: false, error: 'serverId required' });
+			return res.status(400).json({ ok: false, error: I18nErrorCode.SERVER_ID_REQUIRED });
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
 		if (!server) {
-			return res.status(404).json({ ok: false, error: 'Server not found' });
+			return res.status(404).json({ ok: false, error: I18nErrorCode.SERVER_NOT_FOUND });
 		}
 		if (server.status !== EServerStatus.RUNNING) {
-			return res.status(400).json({ ok: false, error: 'Server not running' });
+			return res.status(400).json({ ok: false, error: I18nErrorCode.SERVER_NOT_RUNNING });
 		}
 		await embeddingManager.configure(serverId);
 		res.json({ ok: true, error: null });
@@ -120,7 +120,7 @@ chatRouter.put('/threads/:id', async (req, res) => {
 	try {
 		const thread = await persistence.getThread(req.params.id);
 		if (!thread) {
-			res.status(404).json({ ok: false, data: null, error: 'Thread not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.THREAD_NOT_FOUND });
 			return;
 		}
 		const body = req.body as Partial<IChatThreadCreatePayload>;
@@ -189,7 +189,7 @@ chatRouter.get('/search', async (req, res) => {
 			return res.json({ ok: true, data: [], total: 0, error: null });
 		}
 		if (!mode || !['everywhere', 'threads', 'thread'].includes(mode)) {
-			return res.status(400).json({ ok: false, data: null, error: 'Invalid or missing mode' });
+			return res.status(400).json({ ok: false, data: null, error: I18nErrorCode.INVALID_OR_MISSING_MODE });
 		}
 		if (mode === 'thread' && !threadId) {
 			return res.status(400).json({ ok: false, data: null, error: 'threadId required for thread mode' });
@@ -218,7 +218,7 @@ chatRouter.post('/threads/:id/messages', async (req, res) => {
 		const threadId = req.params.id;
 		const thread = await persistence.getThread(threadId);
 		if (!thread) {
-			res.status(404).json({ ok: false, data: null, error: 'Thread not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.THREAD_NOT_FOUND });
 			return;
 		}
 		const payloads: IChatMessageCreatePayload[] = Array.isArray(req.body) ? req.body : [req.body];
@@ -252,7 +252,7 @@ chatRouter.post('/messages/:messageId/embed', async (req, res) => {
 		const messageId = req.params.messageId;
 		const message = await persistence.getMessage(messageId);
 		if (!message) {
-			return res.status(404).json({ ok: false, data: null, error: 'Message not found' });
+			return res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MESSAGE_NOT_FOUND });
 		}
 		const folderId = message.threadId ? (await persistence.getThread(message.threadId))?.folderId : null;
 		const topic = folderId ? (await persistence.getFolder(folderId))?.topic ?? 'global' : 'global';
@@ -271,7 +271,7 @@ chatRouter.delete('/messages/:messageId/embed', async (req, res) => {
 		const messageId = req.params.messageId;
 		const message = await persistence.getMessage(messageId);
 		if (!message) {
-			return res.status(404).json({ ok: false, data: null, error: 'Message not found' });
+			return res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MESSAGE_NOT_FOUND });
 		}
 		const folderId = message.threadId ? (await persistence.getThread(message.threadId))?.folderId : null;
 		const topic = folderId ? (await persistence.getFolder(folderId))?.topic ?? 'global' : 'global';
@@ -335,7 +335,7 @@ chatRouter.put('/folders/:id/topic', async (req, res) => {
 		try {
 			const { topic } = req.body as { topic: string };
 			if (!topic) {
-				return res.status(400).json({ ok: false, data: null, error: 'Topic is required' });
+				return res.status(400).json({ ok: false, data: null, error: I18nErrorCode.TOPIC_REQUIRED });
 			}
 			const folder = await persistence.getFolder(req.params.id);
 			if (!folder) {
@@ -570,7 +570,7 @@ chatRouter.put('/threads/:id/config', async (req, res) => {
 chatRouter.post('/completions', async (req, res) => {
 	const body = req.body as any;
 	if (!body.threadId) {
-		res.status(400).json({ ok: false, data: null, error: 'Missing required fields' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_REQUIRED_FIELDS });
 		return;
 	}
 
@@ -582,7 +582,7 @@ chatRouter.post('/completions', async (req, res) => {
 
 	const server = await store.get<IServer>('servers:' + body.serverId);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 	const inferenceUrl = `http://127.0.0.1:${server.port}`;
@@ -609,7 +609,7 @@ chatRouter.post('/cancel/:threadId', (req, res) => {
 		activeAborts.delete(req.params.threadId);
 		res.json({ ok: true, data: null, error: null });
 	} else {
-		res.json({ ok: true, data: null, error: 'No active completion' });
+		res.json({ ok: true, data: null, error: I18nErrorCode.NO_ACTIVE_COMPLETION });
 	}
 });
 
@@ -640,12 +640,12 @@ chatRouter.put('/messages/:id', async (req, res) => {
 		const messageId = req.params.id;
 		const msg = await persistence.getMessage(messageId);
 		if (!msg) {
-			res.status(404).json({ ok: false, data: null, error: 'Message not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MESSAGE_NOT_FOUND });
 			return;
 		}
 		const { parts } = req.body as { parts: any[] };
 		if (!parts || !Array.isArray(parts)) {
-			res.status(400).json({ ok: false, data: null, error: 'Missing parts array' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_PARTS_ARRAY });
 			return;
 		}
 		await persistence.replaceMessageParts(messageId, parts);
@@ -670,7 +670,7 @@ chatRouter.delete('/messages/:id', async (req, res) => {
 		const messageId = req.params.id;
 		const msg = await persistence.getMessage(messageId);
 		if (!msg) {
-			res.status(404).json({ ok: false, data: null, error: 'Message not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MESSAGE_NOT_FOUND });
 			return;
 		}
 		const threadId = msg.threadId;
@@ -693,7 +693,7 @@ chatRouter.put('/folders/reorder', async (req, res) => {
 	try {
 		const { updates } = req.body as { updates: Array<{ id: string; sortOrder: number }> };
 		if (!updates || !Array.isArray(updates)) {
-			res.status(400).json({ ok: false, data: null, error: 'Missing updates array' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_UPDATES_ARRAY });
 			return;
 		}
 		await persistence.reorderFolders(updates);
@@ -715,18 +715,18 @@ chatRouter.post('/tool-calls/:id/resume', async (req, res) => {
 	};
 
 	if (decision !== 'approve' && decision !== 'deny') {
-		res.status(400).json({ ok: false, data: null, error: 'Invalid decision' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.INVALID_DECISION });
 		return;
 	}
 	if (!threadId || !serverId) {
-		res.status(400).json({ ok: false, data: null, error: 'Missing threadId or serverId' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_THREAD_OR_SERVER_ID });
 		return;
 	}
 
 	// Look up inference URL from server
 	const server = await store.get<IServer>('servers:' + serverId);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 	const inferenceUrl = `http://127.0.0.1:${server.port}`;

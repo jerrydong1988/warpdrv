@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { I18nErrorCode } from '@warpcore/shared';
 
 export const updateRouter = Router();
 
@@ -46,7 +47,7 @@ updateRouter.get('/check', async (_req, res) => {
 			res.json({
 				ok: true,
 				data: { currentVersion: local.version, latestVersion: local.version, updateAvailable: false, downloadUrl: '', notes: '' },
-				error: 'Failed to check for updates',
+				error: I18nErrorCode.UPDATE_CHECK_FAILED,
 			});
 			return;
 		}

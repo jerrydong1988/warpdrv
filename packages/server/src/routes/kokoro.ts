@@ -5,6 +5,7 @@ import fs from 'fs';
 import { createSession } from 'better-sse';
 import { startDownload } from '../services/downloadManager';
 import { isKokoroReady, registerStream, abortStream, consumeStream } from '../services/kokoroService';
+import { I18nErrorCode } from '@warpcore/shared';
 export const kokoroRouter = Router();
 const KOKORO_AUTHOR = 'onnx-community';
 const KOKORO_MODEL = 'Kokoro-82M-v1.0-ONNX';
@@ -64,7 +65,7 @@ kokoroRouter.get('/status', async (_req, res) => {
 kokoroRouter.post('/tts/start', express.json(), (req, res) => {
 	const { text, voice } = req.body || {};
 	if (!isKokoroReady()) {
-		res.json({ ok: false, data: null, error: 'kokoro not ready' });
+		res.json({ ok: false, data: null, error: I18nErrorCode.KOKORO_NOT_READY });
 		return;
 	}
 	if (typeof text !== 'string' || typeof voice !== 'string') {

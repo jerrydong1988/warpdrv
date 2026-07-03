@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { store } from '../util/store';
 import { sseManager } from '../services/sseManagerInstance';
+import { I18nErrorCode } from '@warpcore/shared';
 import type { IBackendGroup, IBackendGroupCreatePayload, IBackendGroupUpdatePayload } from '@warpcore/shared';
 
 const PREFIX = 'backendGroups:';
@@ -18,7 +19,7 @@ backendGroupsRouter.get('/', async (_req, res) => {
 backendGroupsRouter.get('/:id', async (req, res) => {
 	const group = await store.get<IBackendGroup>(PREFIX + req.params.id);
 	if (!group) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend group not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_GROUP_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: group, error: null });
@@ -29,17 +30,17 @@ backendGroupsRouter.post('/', async (req, res) => {
 	const payload = req.body as IBackendGroupCreatePayload;
 
 	if (!payload.name?.trim()) {
-		res.status(400).json({ ok: false, data: null, error: 'Name is required' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.NAME_REQUIRED });
 		return;
 	}
 
 	if (!payload.backendIds || payload.backendIds.length === 0) {
-		res.status(400).json({ ok: false, data: null, error: 'At least one backend is required' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.AT_LEAST_ONE_BACKEND_REQUIRED });
 		return;
 	}
 
 	if (!payload.backendIds.includes(payload.activeBackendId)) {
-		res.status(400).json({ ok: false, data: null, error: 'Active backend must be in the group' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.ACTIVE_BACKEND_MUST_BE_IN_GROUP });
 		return;
 	}
 
@@ -65,7 +66,7 @@ backendGroupsRouter.post('/', async (req, res) => {
 backendGroupsRouter.put('/:id', async (req, res) => {
 	const existing = await store.get<IBackendGroup>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend group not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_GROUP_NOT_FOUND });
 		return;
 	}
 
@@ -77,7 +78,7 @@ backendGroupsRouter.put('/:id', async (req, res) => {
 	};
 
 	if (payload.backendIds && payload.activeBackendId && !payload.backendIds.includes(payload.activeBackendId)) {
-		res.status(400).json({ ok: false, data: null, error: 'Active backend must be in the group' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.ACTIVE_BACKEND_MUST_BE_IN_GROUP });
 		return;
 	}
 
@@ -90,7 +91,7 @@ backendGroupsRouter.put('/:id', async (req, res) => {
 backendGroupsRouter.delete('/:id', async (req, res) => {
 	const existing = await store.get<IBackendGroup>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend group not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_GROUP_NOT_FOUND });
 		return;
 	}
 
@@ -103,12 +104,12 @@ backendGroupsRouter.delete('/:id', async (req, res) => {
 backendGroupsRouter.post('/:id/activate/:backendId', async (req, res) => {
 	const existing = await store.get<IBackendGroup>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend group not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_GROUP_NOT_FOUND });
 		return;
 	}
 
 	if (!existing.backendIds.includes(req.params.backendId)) {
-		res.status(400).json({ ok: false, data: null, error: 'Backend not in group' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_IN_GROUP });
 		return;
 	}
 

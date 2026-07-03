@@ -3,7 +3,7 @@ import { store } from '../util/store';
 import { scanAllModelRoots } from '../services/modelScanner';
 import { sseManager } from '../services/sseManagerInstance';
 import type { ISettings, IModel } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import { DEFAULT_SETTINGS, I18nErrorCode } from '@warpcore/shared';
 import { parseGgufMetadata } from '../services/ggufParser';
 import type { IGgufFile } from '@warpcore/shared';
 
@@ -50,7 +50,7 @@ modelsRouter.post('/scan', async (_req, res) => {
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 	if (settings.modelRoots.length === 0) {
-		res.json({ ok: true, data: [], total: 0, error: 'No model directories configured' });
+		res.json({ ok: true, data: [], total: 0, error: I18nErrorCode.NO_MODEL_DIRECTORIES });
 		return;
 	}
 
@@ -91,7 +91,7 @@ modelsRouter.put('/:id', async (req, res) => {
 
 	const modelIndex = cachedModels.findIndex(m => m.id === modelId);
 	if (modelIndex === -1) {
-		res.status(404).json({ ok: false, data: null, error: 'Model not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MODEL_NOT_FOUND });
 		return;
 	}
 

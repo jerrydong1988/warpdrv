@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { store } from '../util/store';
+import { I18nErrorCode } from '@warpcore/shared';
 import type { IPreset, IPresetCreatePayload } from '@warpcore/shared';
 
 const PREFIX = 'presets:';
@@ -18,7 +19,7 @@ presetsRouter.post('/', async (req, res) => {
 	const payload = req.body as IPresetCreatePayload;
 
 	if (!payload.name?.trim()) {
-		res.status(400).json({ ok: false, data: null, error: 'Name is required' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.NAME_REQUIRED });
 		return;
 	}
 
@@ -42,7 +43,7 @@ presetsRouter.post('/', async (req, res) => {
 presetsRouter.delete('/:id', async (req, res) => {
 	const existing = await store.get<IPreset>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Preset not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.PRESET_NOT_FOUND });
 		return;
 	}
 	await store.del(PREFIX + req.params.id);

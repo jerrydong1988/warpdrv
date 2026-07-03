@@ -7,7 +7,7 @@ import { validateBackend } from '../services/backendValidator';
 import { startGenericDownload } from '../services/downloadManager';
 import { fetchLlamaReleases } from '../services/releases';
 import type { IBackend, IBackendCreatePayload, IBackendUpdatePayload, IDownloadPostAction } from '@warpcore/shared';
-import { EValidationStatus, EPostActionType, EPostActionStatus } from '@warpcore/shared';
+import { EValidationStatus, EPostActionType, EPostActionStatus, I18nErrorCode } from '@warpcore/shared';
 import { sseManager } from '../services/sseManagerInstance';
 
 const PREFIX = 'backends:';
@@ -34,7 +34,7 @@ backendsRouter.get('/', async (_req, res) => {
 backendsRouter.get('/:id', async (req, res) => {
 	const backend = await store.get<IBackend>(PREFIX + req.params.id);
 	if (!backend) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: backend, error: null });
@@ -45,7 +45,7 @@ backendsRouter.post('/', async (req, res) => {
 	const payload = req.body as IBackendCreatePayload;
 
 	if (!payload.name?.trim() || !payload.path?.trim()) {
-		res.status(400).json({ ok: false, data: null, error: 'Name and path are required' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.NAME_AND_PATH_REQUIRED });
 		return;
 	}
 
@@ -80,7 +80,7 @@ backendsRouter.post('/', async (req, res) => {
 backendsRouter.put('/:id', async (req, res) => {
 	const existing = await store.get<IBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 		return;
 	}
 
@@ -111,7 +111,7 @@ backendsRouter.put('/:id', async (req, res) => {
 backendsRouter.delete('/:id', async (req, res) => {
 	const existing = await store.get<IBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 		return;
 	}
 await store.del(PREFIX + req.params.id);
@@ -124,7 +124,7 @@ await store.del(PREFIX + req.params.id);
 backendsRouter.post('/:id/validate', async (req, res) => {
 	const existing = await store.get<IBackend>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Backend not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.BACKEND_NOT_FOUND });
 		return;
 	}
 

@@ -8,7 +8,7 @@ import type {
 	IRecipeRunResponse,
 	IRecipeState,
 } from '@warpcore/shared';
-import { parseRecipe } from '@warpcore/shared';
+import { parseRecipe, I18nErrorCode } from '@warpcore/shared';
 import {
 	listRecipes,
 	getRecipe,
@@ -38,7 +38,7 @@ recipesRouter.post('/runs/cancel', (_req: Request, res: Response) => {
 
 recipesRouter.get('/:id', async (req: Request, res: Response) => {
 	const recipe = await getRecipe(req.params.id as string);
-	if (recipe === null) { res.status(404).json({ ok: false, data: null, error: 'Recipe not found' }); return; }
+	if (recipe === null) { res.status(404).json({ ok: false, data: null, error: I18nErrorCode.RECIPE_NOT_FOUND }); return; }
 	res.json({ ok: true, data: recipe, error: null });
 });
 
@@ -70,8 +70,8 @@ recipesRouter.post('/', async (req: Request, res: Response) => {
 
 recipesRouter.put('/:id', async (req: Request, res: Response) => {
 	const existing = await getRecipe(req.params.id as string);
-	if (existing === null) { res.status(404).json({ ok: false, data: null, error: 'Recipe not found' }); return; }
-	if (existing.isBuiltIn) { res.status(403).json({ ok: false, data: null, error: 'Built-in recipes are read-only' }); return; }
+	if (existing === null) { res.status(404).json({ ok: false, data: null, error: I18nErrorCode.RECIPE_NOT_FOUND }); return; }
+	if (existing.isBuiltIn) { res.status(403).json({ ok: false, data: null, error: I18nErrorCode.BUILTIN_RECIPES_READONLY }); return; }
 
 	const body = req.body as IRecipeUpdatePayload;
 	const nextSource = body.source !== undefined ? body.source : existing.source;
@@ -92,8 +92,8 @@ recipesRouter.put('/:id', async (req: Request, res: Response) => {
 
 recipesRouter.delete('/:id', async (req: Request, res: Response) => {
 	const existing = await getRecipe(req.params.id as string);
-	if (existing === null) { res.status(404).json({ ok: false, data: null, error: 'Recipe not found' }); return; }
-	if (existing.isBuiltIn) { res.status(403).json({ ok: false, data: null, error: 'Built-in recipes are read-only' }); return; }
+	if (existing === null) { res.status(404).json({ ok: false, data: null, error: I18nErrorCode.RECIPE_NOT_FOUND }); return; }
+	if (existing.isBuiltIn) { res.status(403).json({ ok: false, data: null, error: I18nErrorCode.BUILTIN_RECIPES_READONLY }); return; }
 	await deleteRecipe(req.params.id as string);
 	sseManager.emit('recipes:delete', existing);
 	res.json({ ok: true, data: { deleted: true }, error: null });
@@ -101,8 +101,8 @@ recipesRouter.delete('/:id', async (req: Request, res: Response) => {
 
 recipesRouter.post('/:id/run', async (req: Request, res: Response) => {
 	const recipe = await getRecipe(req.params.id as string);
-	if (recipe === null) { res.status(404).json({ ok: false, data: null, error: 'Recipe not found' }); return; }
-	if (isRunInProgress()) { res.status(409).json({ ok: false, data: null, error: 'A recipe run is already in progress' }); return; }
+	if (recipe === null) { res.status(404).json({ ok: false, data: null, error: I18nErrorCode.RECIPE_NOT_FOUND }); return; }
+	if (isRunInProgress()) { res.status(409).json({ ok: false, data: null, error: I18nErrorCode.RECIPE_RUN_IN_PROGRESS }); return; }
 
 	const body = req.body as IRecipeRunRequest;
 	const inputs = body.inputs ?? {};

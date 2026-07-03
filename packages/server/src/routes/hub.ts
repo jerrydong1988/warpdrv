@@ -12,7 +12,7 @@ import {
 	clearDownloadHistory,
 } from '../services/downloadManager';
 import type { ISettings, IDownloadRequestPayload, IHubFile } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import { DEFAULT_SETTINGS, I18nErrorCode } from '@warpcore/shared';
 import {
 	fetchAllGgufFiles,
 	mapFilesToHubFiles,
@@ -100,7 +100,7 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 		// Fetch model info
 		const infoRes = await fetch(`${HF_API}/models/${modelId}`);
 		if (!infoRes.ok) {
-			res.status(404).json({ ok: false, data: null, error: 'Model not found' });
+			res.status(404).json({ ok: false, data: null, error: I18nErrorCode.MODEL_NOT_FOUND });
 			return;
 		}
 		const info = await infoRes.json() as Record<string, unknown>;
@@ -159,14 +159,14 @@ hubRouter.post('/download', async (req, res) => {
 	});
 
 	if (!payload.author || !payload.modelName || !payload.filename || !payload.destRoot) {
-		res.status(400).json({ ok: false, data: null, error: 'Missing required fields' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_REQUIRED_FIELDS });
 		return;
 	}
 
 	// Verify destRoot is a configured model root
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	if (!settings.modelRoots.includes(payload.destRoot)) {
-		res.status(400).json({ ok: false, data: null, error: 'Destination is not a configured model directory' });
+		res.status(400).json({ ok: false, data: null, error: I18nErrorCode.DESTINATION_NOT_MODEL_DIR });
 		return;
 	}
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { store } from '../util/store';
+import { I18nErrorCode } from '@warpcore/shared';
 import type { IAccessToken, IAccessTokenInfo, IAccessTokenCreatePayload, IAccessTokenUpdatePayload } from '@warpcore/shared';
 
 export const tokensRouter = Router();
@@ -83,7 +84,7 @@ tokensRouter.post('/', async (req, res) => {
 tokensRouter.put('/:id', async (req, res) => {
 	const existing = await store.get<IAccessToken>(`${TOKEN_PREFIX}${req.params.id}`);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.TOKEN_NOT_FOUND });
 		return;
 	}
 
@@ -105,7 +106,7 @@ tokensRouter.put('/:id', async (req, res) => {
 tokensRouter.delete('/:id', async (req, res) => {
 	const existing = await store.get<IAccessToken>(`${TOKEN_PREFIX}${req.params.id}`);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.TOKEN_NOT_FOUND });
 		return;
 	}
 

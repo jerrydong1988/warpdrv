@@ -18,7 +18,7 @@ import type {
 	IWhisperServerCreatePayload,
 	IWhisperBackend,
 } from '@warpcore/shared';
-import { EWhisperServerStatus } from '@warpcore/shared';
+import { EWhisperServerStatus, I18nErrorCode } from '@warpcore/shared';
 
 const PREFIX = WHISPER_SERVERS_PREFIX;
 
@@ -34,7 +34,7 @@ whisperServersRouter.get('/', async (_req, res) => {
 whisperServersRouter.get('/:id', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: server, error: null });
@@ -75,7 +75,7 @@ whisperServersRouter.post('/', async (req, res) => {
 whisperServersRouter.post('/:id/stop', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -112,7 +112,7 @@ whisperServersRouter.post('/stop-all', async (_req, res) => {
 whisperServersRouter.post('/:id/restart', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -130,7 +130,7 @@ whisperServersRouter.post('/:id/restart', async (req, res) => {
 whisperServersRouter.put('/:id', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -167,7 +167,7 @@ whisperServersRouter.put('/:id', async (req, res) => {
 whisperServersRouter.delete('/:id', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 
@@ -195,11 +195,11 @@ whisperServersRouter.delete('/:id/logs', async (req, res) => {
 whisperServersRouter.post('/:id/transcribe', async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_FOUND });
 		return;
 	}
 	if (server.status !== EWhisperServerStatus.RUNNING) {
-		res.status(503).json({ ok: false, data: null, error: 'Whisper server not running' });
+		res.status(503).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_SERVER_NOT_RUNNING });
 		return;
 	}
 
@@ -222,7 +222,7 @@ whisperServersRouter.post('/:id/transcribe', async (req, res) => {
 
 	upstream.on('error', (err) => {
 		if (!res.headersSent) {
-			res.status(502).json({ ok: false, data: null, error: 'Whisper upstream error', message: err.message });
+			res.status(502).json({ ok: false, data: null, error: I18nErrorCode.WHISPER_UPSTREAM_ERROR, message: err.message });
 		}
 	});
 

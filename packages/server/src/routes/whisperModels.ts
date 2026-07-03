@@ -3,7 +3,7 @@ import { store } from '../util/store';
 import { scanAllWhisperModelRoots } from '../services/whisperModelScanner';
 import { sseManager } from '../services/sseManagerInstance';
 import type { ISettings, IWhisperModel } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import { DEFAULT_SETTINGS, I18nErrorCode } from '@warpcore/shared';
 
 const SETTINGS_KEY = 'settings:general';
 const WHISPER_MODELS_KEY = 'whisperModels:cache';
@@ -47,7 +47,7 @@ whisperModelsRouter.post('/scan', async (_req, res) => {
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 	if (settings.modelRoots.length === 0) {
-		res.json({ ok: true, data: [], total: 0, error: 'No model directories configured' });
+		res.json({ ok: true, data: [], total: 0, error: I18nErrorCode.NO_MODEL_DIRECTORIES });
 		return;
 	}
 

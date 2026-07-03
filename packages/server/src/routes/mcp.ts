@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { mcpClient, persistence, broadcaster } from '../index';
 import { sseManager } from '../services/sseManagerInstance';
 import type { IMcpConfigFile, IMcpServerEntry } from '@warpcore/shared';
+import { I18nErrorCode } from '@warpcore/shared';
 import { EToolApprovalMode } from '@warpcore/bridge';
 import type { IElicitationResponse } from '@warpcore/bridge';
 
@@ -28,7 +29,7 @@ mcpRouter.put('/config', async (req, res) => {
 	try {
 		const config = req.body as IMcpConfigFile;
 		if (!config || !config.mcpServers) {
-			res.status(400).json({ ok: false, data: null, error: 'Invalid config' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.INVALID_CONFIG });
 			return;
 		}
 		writeMcpConfig(config);
@@ -58,7 +59,7 @@ mcpRouter.post('/servers', async (req, res) => {
 	try {
 		const { name, ...entry } = req.body as IMcpServerEntry & { name: string };
 		if (!name) {
-			res.status(400).json({ ok: false, data: null, error: 'Missing server name' });
+			res.status(400).json({ ok: false, data: null, error: I18nErrorCode.MISSING_SERVER_NAME });
 			return;
 		}
 		const config = addMcpServer(name, entry);
@@ -97,7 +98,7 @@ mcpRouter.get('/status', (_req, res) => {
 mcpRouter.get('/status/:name', (req, res) => {
 	const state = mcpClient.getServerState(req.params.name);
 	if (!state) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: I18nErrorCode.SERVER_NOT_FOUND });
 		return;
 	}
 	res.json({ ok: true, data: state, error: null });
@@ -256,7 +257,7 @@ mcpRouter.post('/elicitation/:id/respond', async (req, res) => {
 	const response = req.body as IElicitationResponse;
 	const ok = mcpClient.elicitationRegistry.resolve(id, response);
 	if (!ok) {
-		res.status(404).json({ error: 'Elicitation not found or already resolved' });
+		res.status(404).json({ error: I18nErrorCode.ELICITATION_NOT_FOUND });
 		return;
 	}
 	broadcaster.emit({ type: 'elicitation_resolved', id });

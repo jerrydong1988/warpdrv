@@ -3,7 +3,7 @@ import { store } from '../util/store';
 import { validateBearerToken } from './tokens';
 import type { IAccessToken, IAccessTokenInfo, ISettings } from '@warpcore/shared';
 import { isRemote } from '../middleware/auth';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import { DEFAULT_SETTINGS, I18nErrorCode } from '@warpcore/shared';
 
 const SETTINGS_KEY = 'settings:general';
 
@@ -35,7 +35,7 @@ authRouter.post('/login', async (req, res) => {
 	const token = await validateBearerToken(authHeader);
 
 	if (!token) {
-		res.status(401).json({ ok: false, data: null, error: 'Invalid token' });
+		res.status(401).json({ ok: false, data: null, error: I18nErrorCode.INVALID_TOKEN });
 		return;
 	}
 
@@ -97,7 +97,7 @@ authRouter.get('/me', async (req, res) => {
 	const tokenId = req.cookies?.[COOKIE_NAME];
 
 	if (!tokenId) {
-		res.status(401).json({ ok: false, data: null, error: 'Not authenticated' });
+		res.status(401).json({ ok: false, data: null, error: I18nErrorCode.NOT_AUTHENTICATED });
 		return;
 	}
 
@@ -107,7 +107,7 @@ authRouter.get('/me', async (req, res) => {
 
 	if (!token) {
 		res.clearCookie(COOKIE_NAME);
-		res.status(401).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(401).json({ ok: false, data: null, error: I18nErrorCode.TOKEN_NOT_FOUND });
 		return;
 	}
 
