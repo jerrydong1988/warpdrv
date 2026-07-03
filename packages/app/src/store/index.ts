@@ -82,7 +82,6 @@ export const useStore = create<AppState>()(
 					setSelectedWhisperServerId: bridge.setSelectedWhisperServerId,
 					models: models.models!,
 					settings: settings.settings!,
-					locale: settings.locale!,
 					setLocale: settings.setLocale!,
 					hardware: hardware.hardware!,
 					llamaReleases: releases.llamaReleases!,

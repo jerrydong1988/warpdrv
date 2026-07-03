@@ -88,7 +88,6 @@ export interface AppState extends IChatStoreState{
 
 	// Settings
 	settings: ISettings;
-	locale: 'en' | 'zh-CN';
 	setLocale: (locale: 'en' | 'zh-CN') => void;
 	// Hardware detection
 	hardware: IHardwareInfo | null;
