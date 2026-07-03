@@ -68,34 +68,28 @@ const resources: Record<SupportedLocale, Record<string, object>> = {
   },
 };
 
-export const NAMESPACES = [
-  'common',
-  'settings',
-  'chat',
-  'onboarding',
-  'home',
-  'servers',
-  'backends',
-  'models',
-  'hub',
-  'mcp',
-  'recipes',
-  'checkpoints',
-  'proxy',
-  'about',
-] as const;
+export const NAMESPACES = Object.keys(resources.en) as string[];
 
 export { type SupportedLocale };
 
+let initialized = false;
+
 export async function initI18n(locale: SupportedLocale = 'en'): Promise<void> {
-  await i18next.use(initReactI18next).init({
-    resources,
-    lng: locale,
-    fallbackLng: 'en',
-    defaultNS: 'common',
-    ns: NAMESPACES as unknown as string[],
-    interpolation: {
-      escapeValue: false,
-    },
-  });
+  if (initialized) return;
+  try {
+    await i18next.use(initReactI18next).init({
+      resources,
+      lng: locale,
+      fallbackLng: 'en',
+      defaultNS: 'common',
+      ns: NAMESPACES,
+      interpolation: {
+        escapeValue: false,
+      },
+    });
+    initialized = true;
+  } catch (error) {
+    console.error('i18n initialization failed:', error);
+    throw error;
+  }
 }
