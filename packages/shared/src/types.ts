@@ -342,6 +342,7 @@ export interface ISettings {
 	dictationPTTModeHold?: boolean;
 	globalPTTKey?: string;
 	globalPTTModeHold?: boolean;
+	locale?: 'en' | 'zh-CN';
 }
 export const DEFAULT_SETTINGS: ISettings = {
 	modelRoots: [],
@@ -384,6 +385,7 @@ export const DEFAULT_SETTINGS: ISettings = {
 	dictationPTTModeHold: false,
 	globalPTTKey: '',
 	globalPTTModeHold: false,
+	locale: 'en',
 };
 // ============================================================
 // VRAM Calculator
