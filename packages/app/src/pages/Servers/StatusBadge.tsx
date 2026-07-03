@@ -1,39 +1,37 @@
 import { HStack, Box, Text } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import { EServerStatus } from '@warpcore/shared';
 
-const STATUS_CONFIG: Record<EServerStatus, { color: string; label: string }> = {
-	[EServerStatus.RUNNING]: { color: 'var(--wc-accent-green)', label: 'Running' },
-	[EServerStatus.LOADING]: { color: 'var(--wc-accent-yellow)', label: 'Loading' },
-	[EServerStatus.STOPPED]: { color: 'var(--wc-text-placeholder)', label: 'Stopped' },
-	[EServerStatus.ERROR]: { color: 'var(--wc-accent-red)', label: 'Error' },
+const STATUS_CONFIG: Record<EServerStatus, { color: string; labelKey: string }> = {
+	[EServerStatus.RUNNING]: { color: 'var(--wc-accent-green)', labelKey: 'status.running' },
+	[EServerStatus.LOADING]: { color: 'var(--wc-accent-yellow)', labelKey: 'status.loading' },
+	[EServerStatus.STOPPED]: { color: 'var(--wc-text-placeholder)', labelKey: 'status.stopped' },
+	[EServerStatus.ERROR]: { color: 'var(--wc-accent-red)', labelKey: 'status.error' },
 };
 
 export function StatusBadge({ status, port }: { status: EServerStatus; port?: number }) {
-	const config = STATUS_CONFIG[status] ?? { color: 'var(--wc-text-placeholder)', label: status };
+	const { t } = useTranslation('servers');
+	const config = STATUS_CONFIG[status] ?? { color: 'var(--wc-text-placeholder)', labelKey: 'status.running' };
 
-	// Format label with port info
-	let label = config.label;
+	let label: string;
 	if (port != null) {
 		if (status === EServerStatus.RUNNING) {
-			label = `Port ${port}`;
-		} else if (status === EServerStatus.STOPPED) {
-			label = `Port ${port}`;
+			label = t('labels.port') + ' ' + port;
 		} else if (status === EServerStatus.LOADING) {
-			label = `Loading on port ${port}`;
+			label = t('status.loading') + ' ' + t('labels.port') + ' ' + port;
 		} else if (status === EServerStatus.ERROR) {
-			label = `Error (port ${port})`;
+			label = t('status.error') + ' (' + t('labels.port') + ' ' + port + ')';
+		} else {
+			label = t('labels.port') + ' ' + port;
 		}
+	} else {
+		label = t(config.labelKey);
 	}
 
 	return (
 		<HStack
 			gap="1.5"
-			// px="2.5"
 			py="1"
-			// borderRadius="full"
-			// bg={`color-mix(in srgb, ${config.color} 10%, transparent)`}
-			// borderWidth="1px"
-			// borderColor={`color-mix(in srgb, ${config.color} 20%, transparent)`}
 		>
 			<Box
 				w="6px"
