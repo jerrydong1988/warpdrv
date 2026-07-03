@@ -1,0 +1,93 @@
+{
+  "title": "Settings",
+  "subtitle": "WarpCore configuration",
+  "sections": {
+    "theme": "Theme",
+    "appearance": "Appearance",
+    "appZoom": "App Zoom",
+    "chatFontSize": "Chat Font Size",
+    "chatFontFamily": "Chat Font Family",
+    "fixedChatWidth": "Fixed Chat Width",
+    "modelDirectories": "Model Directories",
+    "portRange": "Port Range",
+    "checkpoints": "Checkpoints",
+    "generateTitles": "Generate conversation titles",
+    "voiceInput": "Voice Input",
+    "voiceOutput": "Voice Output",
+    "dictation": "Dictation",
+    "globalPTT": "Global PTT",
+    "apiHost": "API Host",
+    "builtinMcp": "Built-in MCP Server (warpmcp)",
+    "router": "Router",
+    "launchOnStartup": "Launch on Startup",
+    "startMinimized": "Start Minimized",
+    "onboarding": "Onboarding",
+    "language": "Language"
+  },
+  "descriptions": {
+    "appearance": "UI appearance theme",
+    "zoom": "App zoom and chat message styling",
+    "modelDirs": "Folders to scan for GGUF models"
+  },
+  "themes": {
+    "amoled": "Amoled",
+    "dark": "Dark",
+    "light": "Light",
+    "catppuccinLatte": "Catppuccin (Latte)",
+    "catppuccinFrappe": "Catppuccin (Frappe)",
+    "catppuccinMacchiato": "Catppuccin (Macchiato)",
+    "catppuccinMocha": "Catppuccin (Mocha)",
+    "dracula": "Dracula",
+    "everforest": "Everforest",
+    "githubDark": "GitHub Dark",
+    "githubLight": "GitHub Light",
+    "gruvbox": "Gruvbox",
+    "monokai": "Monokai",
+    "nord": "Nord",
+    "oneDark": "One Dark",
+    "rosePine": "Rose Pine",
+    "rosePineMoon": "Rose Pine Moon",
+    "rosePineDawn": "Rose Pine Dawn",
+    "solarizedDark": "Solarized Dark",
+    "solarizedLight": "Solarized Light",
+    "tokyoNight": "Tokyo Night",
+    "tokyoNightStorm": "Tokyo Night Storm",
+    "vesper": "Vesper",
+    "zenburn": "Zenburn"
+  },
+  "voices": {
+    "heart": "Heart (Female, US)",
+    "bella": "Bella (Female, US)",
+    "sarah": "Sarah (Female, US)",
+    "nicole": "Nicole (Female, US)",
+    "michael": "Michael (Male, US)",
+    "adam": "Adam (Male, US)",
+    "emma": "Emma (Female, UK)"
+  },
+  "fonts": {
+    "default": "Default (Inter)"
+  },
+  "actions": {
+    "grantMicAccess": "Grant Microphone Access",
+    "rerunOnboarding": "Re-run Onboarding",
+    "saveChanges": "Save Changes",
+    "browseDirectory": "Browse directory",
+    "reloadAllServers": "Reload all servers"
+  },
+  "switches": {
+    "fixedChatWidth": "Fixed chat width",
+    "generateTitles": "Generate titles",
+    "startRouterOnLaunch": "Start router on App launch",
+    "exposeExternal": "Expose to external clients",
+    "bindAll": "Bind on 0.0.0.0 (off = loopback only)",
+    "pttHold": "Hold to record, release to stop",
+    "pttToggle": "Toggle on/off"
+  },
+  "placeholders": {
+    "modelPath": "/path/to/models",
+    "checkpointsPath": "~/.config/warpcore/checkpoints/"
+  },
+  "labels": {
+    "pttKey": "PTT Key"
+  }
+}
