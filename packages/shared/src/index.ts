@@ -12,4 +12,5 @@ export type { IChatInferenceParams, IChatPreset, IChatPresetCreatePayload, IThre
 export { EResponseFormat, EReasoningFormat, EReasoningEffort } from "./enums";
 export type { IMcpServerEntry, IMcpConfigFile, IWarpdrvServerExt, IRendererConfig } from './mcp-types'
 export { ERendererComponent } from './mcp-types'
+export { I18nErrorCode } from './i18n-errors';
 export type { ISettings } from './types';
