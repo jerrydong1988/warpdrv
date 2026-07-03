@@ -13,7 +13,14 @@
     "search": "Search conversations",
     "close": "Close",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "reload": "Reload",
+    "copy": "Copy",
+    "edit": "Edit",
+    "update": "Update",
+    "previous": "Previous",
+    "next": "Next"
   },
   "search": {
     "typeToSearch": "Type to search your chats",
@@ -26,8 +33,11 @@
     "typeToSearch": "Type to search this chat",
     "noChatSelected": "No chat selected"
   },
+  "toolList": {
+    "allTools": "All tools",
+    "noToolsAvailable": "No tools available"
+  },
   "labels": {
-    "noChats": "No conversations yet",
     "noChatsDesc": "Start a new conversation to begin",
     "thinking": "Thinking...",
     "today": "Today",
@@ -41,6 +51,7 @@
     "unsaved": "Unsaved conversations",
     "searchResults": "Search results",
     "noSearchResults": "No results found",
+    "tokensEst": "tokens est.",
     "escClose": "esc close"
   },
   "threadList": {
@@ -52,11 +63,17 @@
     "attachFile": "Attach file",
     "voiceInput": "Voice input",
     "stopRecording": "Stop recording",
-    "recording": "Recording..."
+    "recording": "Recording...",
+    "selectModelFirst": "Select and start a model first",
+    "sendMessage": "Send message",
+    "sendMessageNoModel": "Send message - model not selected",
+    "multimodalNotSupported": "Multimodal not supported",
+    "scrollToBottom": "Scroll to bottom"
   },
   "dialogs": {
     "deleteThreadTitle": "Delete conversation?",
-    "deleteThreadMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+    "deleteThreadMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "deleteMessageConfirm": "Are you sure you want to delete this message?"
   },
   "toast": {
     "messageCopied": "Message copied",
