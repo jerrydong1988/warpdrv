@@ -15,6 +15,17 @@
     "cancel": "Cancel",
     "confirm": "Confirm"
   },
+  "search": {
+    "typeToSearch": "Type to search your chats",
+    "matchCount": "{{count}} match(es)",
+    "resultCount": "{{count}} result(s)",
+    "threadLabel": "Thread"
+  },
+  "threadSearch": {
+    "placeholder": "Search in thread...",
+    "typeToSearch": "Type to search this chat",
+    "noChatSelected": "No chat selected"
+  },
   "labels": {
     "noChats": "No conversations yet",
     "noChatsDesc": "Start a new conversation to begin",
@@ -29,7 +40,8 @@
     "chatWith": "Chat with {{model}}",
     "unsaved": "Unsaved conversations",
     "searchResults": "Search results",
-    "noSearchResults": "No results found"
+    "noSearchResults": "No results found",
+    "escClose": "esc close"
   },
   "threadList": {
     "editThread": "Edit conversation",

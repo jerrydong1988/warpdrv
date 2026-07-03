@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text, Input, Portal } from '@chakra-ui/react';
 import { XIcon, SearchIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { BsFillFileTextFill } from 'react-icons/bs';
 import { useStore } from '@/store';
 import { searchChatMessages } from '@/api/services';
@@ -76,6 +77,7 @@ function renderSnippet(text: string): React.ReactNode {
 // ============================================================
 
 export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen: boolean; onClose: () => void; currentThreadId: string | null | undefined }) {
+	const { t } = useTranslation('chat');
 	const [query, setQuery] = useState('');
 	const [results, setResults] = useState<SearchResultEntry[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -209,7 +211,7 @@ export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen:
 						<Input
 							ref={inputRef}
 							variant="subtle"
-							placeholder="Search..."
+							placeholder={t('actions.search')}
 							value={query}
 							onChange={(e) => {
 								setQuery(e.target.value);
@@ -239,13 +241,13 @@ export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen:
 
 						{!isLoading && hasQuery && results.length === 0 && (
 							<Flex justifyContent="center" py="8">
-								<Text fontSize="13px" color="var(--wc-text-muted)">No results</Text>
+								<Text fontSize="13px" color="var(--wc-text-muted)">{t('labels.noSearchResults')}</Text>
 							</Flex>
 						)}
 
 						{!hasQuery && !isLoading && (
 							<Flex justifyContent="center" py="8">
-								<Text fontSize="13px" color="var(--wc-text-disabled)">Type to search your chats</Text>
+								<Text fontSize="13px" color="var(--wc-text-disabled)">{t('search.typeToSearch')}</Text>
 							</Flex>
 						)}
 
@@ -256,7 +258,7 @@ export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen:
 									<Text fontSize="13px" fontWeight="500" color="var(--wc-text-secondary)" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
 										{highlightText(group.thread.threadTitle, query)}
 									</Text>
-									<Text fontSize="11px" color="var(--wc-text-muted)">{group.messages.length} match{group.messages.length > 1 ? 'es' : ''}</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('search.matchCount', { count: group.messages.length })}</Text>
 								</Flex>
 								{group.messages.map((result, idx) => (
 										<Box
@@ -304,7 +306,7 @@ export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen:
 												{highlightText(result.threadTitle, query)}
 											</Text>
 										</Flex>
-										<Text fontSize="11px" color="var(--wc-text-muted)" ml="5">Thread • {timeAgo(result.createdAt)}</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)" ml="5">{t('search.threadLabel')} • {timeAgo(result.createdAt)}</Text>
 									</Flex>
 								</Box>
 							))}
@@ -312,8 +314,8 @@ export function ChatSearchDialog({ isOpen, onClose, currentThreadId }: { isOpen:
 
 					{results.length > 0 && (
 						<Flex justifyContent="space-between" alignItems="center" px="4" py="2" borderTop="1px solid var(--wc-border-subtle)">
-							<Text fontSize="11px" color="var(--wc-text-muted)">{results.length} result{results.length > 1 ? 's' : ''}</Text>
-							<Text fontSize="11px" color="var(--wc-text-faint)">esc close</Text>
+							<Text fontSize="11px" color="var(--wc-text-muted)">{t('search.resultCount', { count: results.length })}</Text>
+							<Text fontSize="11px" color="var(--wc-text-faint)">{t('labels.escClose')}</Text>
 						</Flex>
 					)}
 				</Box>
