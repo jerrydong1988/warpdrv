@@ -347,8 +347,13 @@ const Composer: FC = () => {
 	const handleEnter = useCallback(() => {
 		// Annotation injection moved to FEApplet bridge.preCompletion hook
 		// if (annotations.length > 0) {
-		// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-		// 	const fullText = (lines.join('\n\n') + (composerText.trim() ? '\n\n' + composerText : '')).trim();
+		// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"
+   ${a.comment}`);
+		// 	const fullText = (lines.join('
+
+') + (composerText.trim() ? '
+
+' + composerText : '')).trim();
 		// 	aui.composer().setText(fullText);
 		// 	clearAnnotations();
 		// }
@@ -391,8 +396,13 @@ const Composer: FC = () => {
 		}
 		// Annotation injection moved to FEApplet bridge.preCompletion hook
 		// if (annotations.length === 0) return;
-		// const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-		// const fullText = (lines.join('\n\n') + (composerText.trim() ? '\n\n' + composerText : '')).trim();
+		// const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"
+   ${a.comment}`);
+		// const fullText = (lines.join('
+
+') + (composerText.trim() ? '
+
+' + composerText : '')).trim();
 		// aui.composer().setText(fullText);
 		// clearAnnotations();
 		if (!composerText.trim() && (pendingSlashCommands.length > 0 || annotations.length > 0)) {
@@ -641,8 +651,13 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 		if (isSendDisabled) return;
 		// Annotation injection moved to FEApplet bridge.preCompletion hook
 		// if (annotations.length > 0) {
-		// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-		// 	const fullText = (lines.join('\n\n') + (composerText.trim() ? '\n\n' + composerText : '')).trim();
+		// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"
+   ${a.comment}`);
+		// 	const fullText = (lines.join('
+
+') + (composerText.trim() ? '
+
+' + composerText : '')).trim();
 		// 	aui.composer().setText(fullText);
 		// 	clearAnnotations();
 		// }
@@ -946,7 +961,9 @@ const BrowserTTS = React.memo(() => {
 		return parts
 			.filter((p: any) => p.type === 'text')
 			.map((p: any) => p.text)
-			.join('\n\n');
+			.join('
+
+');
 	}, [parts]);
 
 	const handleSpeak = useCallback(() => {

@@ -1,5 +1,6 @@
 import { Box, Text, HStack, VStack, Flex } from '@chakra-ui/react';
-import React from 'react';\nimport { useTranslation } from 'react-i18next';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusDot } from './StatusDot';
 
 export const TileContainer = React.memo(({

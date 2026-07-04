@@ -216,8 +216,13 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 							// const annotations = useStore.getState().annotations;
 							let fullText = text;
 							// if (annotations.length > 0) {
-							// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-							// 	fullText = lines.join('\n\n') + '\n\n' + text;
+							// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"
+   ${a.comment}`);
+							// 	fullText = lines.join('
+
+') + '
+
+' + text;
 							// 	useStore.getState().clearAnnotations();
 							// }
 							console.log('[VAD Chat] sending message via composer');

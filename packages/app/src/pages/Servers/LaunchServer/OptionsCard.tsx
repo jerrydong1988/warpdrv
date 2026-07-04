@@ -1,4 +1,5 @@
-import React from 'react';\nimport { useTranslation } from 'react-i18next';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, VStack, HStack, Flex, Text, Input } from '@chakra-ui/react';
 import { type ILaunchParams } from '@warpcore/shared';
 import { Card } from '@/components/Card';

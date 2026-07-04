@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';\nimport { useTranslation } from 'react-i18next';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button, Spinner } from '@chakra-ui/react';
 import { Upload } from 'lucide-react';
 import { useStore } from '@/store';

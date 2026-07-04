@@ -1,4 +1,5 @@
-import { useTranslation } from 'react-i18next';\nimport React, { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import { useTranslation } from 'react-i18next';
+import React, { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import type { ISlashCommand } from "@/store/slices/slashCommands";
 

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';\nimport { useTranslation } from 'react-i18next';
+import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
 	Flex, Box, Text, HStack, VStack, Button, Input, Switch, Portal, Combobox, createListCollection,
 } from '@chakra-ui/react';

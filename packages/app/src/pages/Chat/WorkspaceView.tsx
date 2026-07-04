@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';\nimport { useTranslation } from 'react-i18next';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { Box, Text, HStack, VStack, Input, Textarea } from '@chakra-ui/react';
 import { PencilIcon, CheckIcon, XIcon } from 'lucide-react';

@@ -52,7 +52,8 @@ export async function createVADSession(callbacks: IVADCallbacks): Promise<IVADSe
 			destroy: () => vad.destroy(),
 		};
 	} catch (err) {
-		alert(`VAD init failed: ${(err as Error).message}\n${(err as Error).stack}`);
+		alert(`VAD init failed: ${(err as Error).message}
+${(err as Error).stack}`);
 		console.error('[VADManager] Failed to create VAD session:', err);
 		return null;
 	}

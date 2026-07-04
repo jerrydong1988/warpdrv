@@ -60,8 +60,11 @@ const TodoPanel = React.memo(() => {
 	const addTodoAnnotation = useCallback((updatedTodos: ITodoItem[]) => {
 		const existing = annotations.find(a => a.selectedText.startsWith('<todos>'));
 		if (existing) removeAnnotation(existing.id);
-		const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\\n');
-		addAnnotation(`<todos>\\n${formatted}\\n</todos>`, 'Updated Todos');
+		const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\
+');
+		addAnnotation(`<todos>\
+${formatted}\
+</todos>`, 'Updated Todos');
 	}, [annotations, addAnnotation, removeAnnotation]);
 
 	const toggleDone = useCallback((index: number) => {
@@ -870,8 +873,13 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				const state = useStore.getState();
 				const annotations = state.annotations;
 				if (annotations.length > 0) {
-					const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-					const fullText = (lines.join('\n\n') + (payload.body.userMessage.content.trim() ? '\n\n' + payload.body.userMessage.content : '')).trim();
+					const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"
+   ${a.comment}`);
+					const fullText = (lines.join('
+
+') + (payload.body.userMessage.content.trim() ? '
+
+' + payload.body.userMessage.content : '')).trim();
 					payload.body.userMessage.content = fullText;
 					state.clearAnnotations();
 				}

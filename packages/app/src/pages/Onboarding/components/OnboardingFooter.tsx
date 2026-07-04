@@ -1,4 +1,5 @@
-import { useTranslation } from 'react-i18next';\nimport { Box, Button, Flex } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
+import { Box, Button, Flex } from '@chakra-ui/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface IOnboardingFooterProps {

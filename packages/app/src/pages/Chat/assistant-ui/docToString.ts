@@ -55,5 +55,6 @@ export const docToString = (doc: JSONContent | undefined): string => {
 			lines.push(walkBlock(node));
 		}
 	}
-	return lines.join("\n");
+	return lines.join("
+");
 };

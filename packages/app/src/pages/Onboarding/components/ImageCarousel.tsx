@@ -1,4 +1,5 @@
-import { useState } from 'react';\nimport { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 interface ICarouselSlide {

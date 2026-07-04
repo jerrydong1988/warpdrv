@@ -63,7 +63,9 @@ export async function extractTextFromFile(file: File): Promise<string> {
 		for (let i = 1; i <= pdf.numPages; i++) {
 			const page = await pdf.getPage(i);
 			const textContent = await page.getTextContent();
-			text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '\n\n';
+			text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '
+
+';
 		}
 		return text;
 	}
@@ -118,7 +120,9 @@ export function useFileReader() {
 			for (let i = 1; i <= pdf.numPages; i++) {
 				const page = await pdf.getPage(i);
 				const textContent = await page.getTextContent();
-				text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '\n\n';
+				text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '
+
+';
 			}
 			
 			return text;

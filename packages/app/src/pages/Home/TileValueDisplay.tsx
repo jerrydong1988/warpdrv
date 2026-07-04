@@ -1,5 +1,6 @@
 import { Text } from '@chakra-ui/react';
-import React from 'react';\nimport { useTranslation } from 'react-i18next';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const TileValueDisplay = React.memo(({ label, value }: { label: string; value: string | number }) => (
 	<>

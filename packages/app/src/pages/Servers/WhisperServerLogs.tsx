@@ -30,7 +30,8 @@ export const WhisperServerLogs = React.memo(({ serverId, serverName, onClose }: 
 	}, [serverId]);
 
 	const handleDownload = useCallback(() => {
-		const blob = new Blob([serverLogs.join('\n')], { type: 'text/plain' });
+		const blob = new Blob([serverLogs.join('
+')], { type: 'text/plain' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
