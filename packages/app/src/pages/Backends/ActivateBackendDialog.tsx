@@ -316,7 +316,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 												<Text>{t('activateDialog.restarting')}</Text>
 											</HStack>
 										) : (
-											{t('activateDialog.switchAndRestart')}
+											<Text>{t('activateDialog.switchAndRestart')}</Text>
 										)}
 									</Button>
 								)}
