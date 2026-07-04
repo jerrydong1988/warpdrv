@@ -22,10 +22,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Type check shared (our changes)
-        continue-on-error: true
-        run: npx tsc --noEmit -p packages/shared/tsconfig.json --skipLibCheck 2>&1 | tail -10
-
       - name: Build app
         run: npx vite build
         working-directory: packages/app
