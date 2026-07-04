@@ -59,7 +59,7 @@ const TreeNode = React.memo(({ entry, depth }: { entry: ITreeEntry, depth: numbe
 	);
 });
 
-export const ListRenderer = React.memo((props((props: {
+export const ListRenderer = React.memo((props: {
 	path?: string,
 	excludePatterns?: string[],
 	result?: unknown,

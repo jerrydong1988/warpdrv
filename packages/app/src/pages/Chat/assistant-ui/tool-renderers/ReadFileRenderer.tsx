@@ -4,7 +4,7 @@ import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
-export const ReadFileRenderer = React.memo((props((props: {
+export const ReadFileRenderer = React.memo((props: {
 	path?: string,
 	head?: number,
 	tail?: number,

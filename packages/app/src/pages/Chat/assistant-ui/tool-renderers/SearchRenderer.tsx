@@ -24,7 +24,7 @@ function parseSearchResults(text: string): ISearchResult[] | null {
 	}
 }
 
-export const SearchRenderer = React.memo((props((props: {
+export const SearchRenderer = React.memo((props: {
 	query?: string,
 	result?: unknown,
 }) => {

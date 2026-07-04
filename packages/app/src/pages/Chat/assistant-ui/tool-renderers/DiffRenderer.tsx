@@ -15,7 +15,7 @@ interface IEdit {
 	newText?: string;
 }
 
-export const DiffRenderer = React.memo((props((props: {
+export const DiffRenderer = React.memo((props: {
 	path?: string,
 	old?: string,
 	new?: string,
