@@ -18,8 +18,8 @@ export interface IStepProps {
 	finishOnboarding: () => void;
 }
 
-export function 
-const OnboardingWrapped = ()=>{const { t } = useTranslation('onboarding');() {
+export function OnboardingPage() {
+	const { t } = useTranslation('onboarding');
 	const [currentStep, setCurrentStep] = useState(0);
 
 	const goNext = () => {
