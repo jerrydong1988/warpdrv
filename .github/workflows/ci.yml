@@ -9,7 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,9 +23,10 @@ jobs:
         run: npm install
 
       - name: Type check shared (our changes)
-        run: npx tsc -b packages/shared --dry 2>/dev/null || npx tsc --noEmit -p packages/shared/tsconfig.json --skipLibCheck 2>&1 | tail -5
+        continue-on-error: true
+        run: npx tsc --noEmit -p packages/shared/tsconfig.json --skipLibCheck 2>&1 | tail -10
 
-      - name: Build app (Vite only - skip tsc due to pre-existing type errors)
+      - name: Build app
         run: npx vite build
         working-directory: packages/app
 
@@ -77,9 +77,12 @@ jobs:
           fi
           echo "All 14 namespaces have matching key counts"
 
-  linux-package:
+  desktop-package:
     if: github.event_name == 'push'
     runs-on: ubuntu-22.04
+    needs: build
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,7 +118,9 @@ jobs:
             build-essential \
             curl \
             wget \
-            file
+            file \
+            libxdo-dev \
+            libxkbcommon-dev
 
       - name: Install npm dependencies
         run: npm install
@@ -127,177 +132,36 @@ jobs:
       - name: Build server binary
         run: |
           npx esbuild src/index.ts \
-            --bundle \
-            --outfile=dist/server.cjs \
-            --format=cjs \
-            --platform=node \
-            --target=node22 \
-            --minify=false \
-            --external:kokoro-js \
-            --external:@huggingface/transformers \
+            --bundle --outfile=dist/server.cjs --format=cjs \
+            --platform=node --target=node22 --minify=false \
+            --external:kokoro-js --external:@huggingface/transformers \
             --external:onnxruntime-node
-          cp ../../node_modules/better-sqlite3/build/Release/better_sqlite3.node dist/better_sqlite3.node
+          cp ../../node_modules/better-sqlite3/build/Release/better_sqlite3.node dist/
           npx @yao-pkg/pkg dist/server.cjs \
             --target node24-linux-x64 \
-            --output "dist/warpcore-server" \
-            --compress GZip
+            --output "dist/warpcore-server" --compress GZip
         working-directory: packages/server
 
-      - name: Prepare Tauri sidecar
+      - name: Prepare sidecar and frontend
         run: |
           TARGET=$(rustc --print host-tuple)
           mkdir -p binaries
           cp ../server/dist/warpcore-server "binaries/warpcore-server-$TARGET"
-          cp ../server/dist/better_sqlite3.node binaries/better_sqlite3.node
+          cp ../server/dist/better_sqlite3.node binaries/
           chmod +x "binaries/warpcore-server-$TARGET"
           rm -rf app-dist
           cp -r ../app/dist app-dist
         working-directory: packages/desktop
 
-      - name: Build Tauri (deb)
-        run: npx tauri build --bundles deb
+      - name: Build Tauri (deb + AppImage)
+        run: npx tauri build --bundles deb,appimage
         working-directory: packages/desktop
 
-      - name: Upload .deb artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: warpdrv-linux-deb
-          path: packages/desktop/target/release/bundle/deb/*.deb
-          retention-days: 7
-
-  windows-package:
-    if: github.event_name == 'push'
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
+          name: warpdrv-linux-${{ github.sha }}
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            packages/desktop/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install npm dependencies
-        run: npm install
-
-      - name: Build frontend
-        run: npx vite build
-        working-directory: packages/app
-
-      - name: Build server binary
-        run: |
-          npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
-          copy ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\better_sqlite3.node
-          npx @yao-pkg/pkg dist/server.cjs --target node24-win-x64 --output "dist/warpcore-server.exe" --compress GZip
-        working-directory: packages/server
-        shell: cmd
-
-      - name: Prepare Tauri sidecar
-        run: |
-          for /f "delims=" %%i in ('rustc --print host-tuple') do set TARGET=%%i
-          mkdir binaries 2>nul
-          copy ..\server\dist\warpcore-server.exe "binaries\warpcore-server-%TARGET%.exe"
-          copy ..\server\dist\better_sqlite3.node binaries\better_sqlite3.node
-          rmdir /s /q app-dist 2>nul
-          xcopy /e /i ..\app\dist app-dist
-        working-directory: packages/desktop
-        shell: cmd
-
-      - name: Build Tauri (msi)
-        run: npx tauri build --bundles msi
-        working-directory: packages/desktop
-
-      - name: Upload .msi artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: warpdrv-windows-msi
-          path: packages/desktop/target/release/bundle/msi/*.msi
-          retention-days: 7
-
-  macos-package:
-    if: github.event_name == 'push'
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            packages/desktop/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install npm dependencies
-        run: npm install
-
-      - name: Build frontend
-        run: npx vite build
-        working-directory: packages/app
-
-      - name: Build server binary
-        run: |
-          npx esbuild src/index.ts \
-            --bundle \
-            --outfile=dist/server.cjs \
-            --format=cjs \
-            --platform=node \
-            --target=node22 \
-            --minify=false \
-            --external:kokoro-js \
-            --external:@huggingface/transformers \
-            --external:onnxruntime-node
-          cp ../../node_modules/better-sqlite3/build/Release/better_sqlite3.node dist/better_sqlite3.node
-          ARCH=$(uname -m)
-          if [ "$ARCH" = "arm64" ]; then PKG_TARGET="node24-macos-arm64"; else PKG_TARGET="node24-macos-x64"; fi
-          npx @yao-pkg/pkg dist/server.cjs \
-            --target "$PKG_TARGET" \
-            --output "dist/warpcore-server" \
-            --compress GZip
-        working-directory: packages/server
-
-      - name: Prepare Tauri sidecar
-        run: |
-          TARGET=$(rustc --print host-tuple)
-          mkdir -p binaries
-          cp ../server/dist/warpcore-server "binaries/warpcore-server-$TARGET"
-          cp ../server/dist/better_sqlite3.node binaries/better_sqlite3.node
-          chmod +x "binaries/warpcore-server-$TARGET"
-          rm -rf app-dist
-          cp -r ../app/dist app-dist
-        working-directory: packages/desktop
-
-      - name: Build Tauri (dmg)
-        run: npx tauri build --bundles dmg
-        working-directory: packages/desktop
-
-      - name: Upload .dmg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: warpdrv-macos-dmg
-          path: packages/desktop/target/release/bundle/dmg/*.dmg
+            packages/desktop/target/release/bundle/deb/*.deb
+            packages/desktop/target/release/bundle/appimage/*.AppImage
           retention-days: 7
