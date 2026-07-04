@@ -162,5 +162,9 @@
     "settingsAriaLabel": "Chat settings",
     "toggleRightPanel": "Toggle right panel",
     "toggleThreadsList": "Toggle threads list"
+  },
+  "todo": {
+    "done": "[DONE]",
+    "pending": "[PENDING]"
   }
 }

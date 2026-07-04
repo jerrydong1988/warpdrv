@@ -162,5 +162,9 @@
     "settingsAriaLabel": "聊天设置",
     "toggleRightPanel": "切换右侧面板",
     "toggleThreadsList": "切换对话列表"
+  },
+  "todo": {
+    "done": "[已完ae]",
+    "pending": "[待办]"
   }
 }

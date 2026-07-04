@@ -115,7 +115,8 @@
     "fetch": "Fetch",
     "search": "Search",
     "lines": "{{count}} lines",
-    "read": "Read"
+    "read": "Read",
+    "output": "Output"
   },
   "slashCmd": {
     "noMatches": "No matches",

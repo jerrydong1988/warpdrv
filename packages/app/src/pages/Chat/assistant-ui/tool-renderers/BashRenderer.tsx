@@ -24,7 +24,7 @@ function splitCommand(command: string): string[] {
 		.filter(s => s.length > 0);
 }
 
-export const BashRenderer = React.memo((props((props: {
+export const BashRenderer = React.memo((props: {
 	command?: string,
 	cwd?: string,
 	shell?: string,
@@ -65,7 +65,7 @@ export const BashRenderer = React.memo((props((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Output</Text>
+						<Text fontSize="11px" color="var(--wc-text-muted)">{t('chat.tool.output')}</Text>
 					</HStack>
 					{resultExpanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">

@@ -115,7 +115,8 @@
     "fetch": "获取",
     "search": "搜索",
     "lines": "{{count}} 行",
-    "read": "读取"
+    "read": "读取",
+    "output": "输出"
   },
   "slashCmd": {
     "noMatches": "无匹配项",
