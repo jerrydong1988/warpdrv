@@ -24,11 +24,11 @@ export function parseThreadMeta(meta: string): { serverId: string | null } {
 }
 
 export const ThreadServerSelector = React.memo(({
-	const { t } = useTranslation('chat');
 	threadId,
 }: {
 	threadId: string | null;
 }) => {
+	const { t } = useTranslation('chat');
 	const [open, setOpen] = useState(false);
 	const [shake, setShake] = useState(false);
 
