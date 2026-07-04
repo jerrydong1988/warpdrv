@@ -3,7 +3,7 @@ import { Box, Text, HStack } from '@chakra-ui/react';
 import { Globe } from 'lucide-react';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
-export const FetchRenderer = React.memo((props: {
+export const FetchRenderer = React.memo((props((props: {
 	url?: string,
 	[key: string]: unknown
 }) => {

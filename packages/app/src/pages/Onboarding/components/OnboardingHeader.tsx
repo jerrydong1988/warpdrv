@@ -1,4 +1,4 @@
-import { Box, Text, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';\nimport { Box, Text, HStack } from '@chakra-ui/react';
 
 interface IOnboardingHeaderProps {
 	title: string;

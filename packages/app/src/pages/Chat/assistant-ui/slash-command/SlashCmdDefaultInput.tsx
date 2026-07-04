@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { useTranslation } from 'react-i18next';\nimport type { FC } from "react";
 
 type SlashCmdDefaultInputProps = {
 	value: string;

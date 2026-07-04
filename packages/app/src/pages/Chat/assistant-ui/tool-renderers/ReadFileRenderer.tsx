@@ -4,7 +4,7 @@ import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
-export const ReadFileRenderer = React.memo((props: {
+export const ReadFileRenderer = React.memo((props((props: {
 	path?: string,
 	head?: number,
 	tail?: number,
@@ -13,6 +13,7 @@ export const ReadFileRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, head, tail, offset, length, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const [expanded, setExpanded] = useState(false);
 	const rangeBits: string[] = [];

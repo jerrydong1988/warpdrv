@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FC } from "react";
+import { useTranslation } from 'react-i18next';\nimport { useEffect, useRef, useState, type FC } from "react";
 import mermaid from "mermaid";
 import { useAuiState } from "@assistant-ui/react";
 import { useStore } from "@/store";

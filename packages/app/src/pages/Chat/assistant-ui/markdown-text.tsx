@@ -1,4 +1,4 @@
-"use client";
+import { useTranslation } from 'react-i18next';\n"use client";
 
 import "@assistant-ui/react-markdown/styles/dot.css";
 

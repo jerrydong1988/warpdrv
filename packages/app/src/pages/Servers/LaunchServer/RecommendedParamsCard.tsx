@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';\nimport { useTranslation } from 'react-i18next';
 import { Box, HStack, VStack, Text, Button, Switch, Textarea } from '@chakra-ui/react';
 import { Pencil, Check } from 'lucide-react';
 import { type IModel } from '@warpcore/shared';

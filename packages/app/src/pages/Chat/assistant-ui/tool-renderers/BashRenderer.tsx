@@ -24,7 +24,7 @@ function splitCommand(command: string): string[] {
 		.filter(s => s.length > 0);
 }
 
-export const BashRenderer = React.memo((props: {
+export const BashRenderer = React.memo((props((props: {
 	command?: string,
 	cwd?: string,
 	shell?: string,

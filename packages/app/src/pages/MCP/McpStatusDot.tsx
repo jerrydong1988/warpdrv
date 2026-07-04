@@ -1,4 +1,4 @@
-import { Box } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';\nimport { Box } from '@chakra-ui/react';
 import { EMcpServerStatus } from '@warpcore/bridge';
 
 export function McpStatusDot({ status }: { status: EMcpServerStatus }) {

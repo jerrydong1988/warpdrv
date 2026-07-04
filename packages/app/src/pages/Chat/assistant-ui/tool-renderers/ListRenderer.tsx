@@ -59,12 +59,13 @@ const TreeNode = React.memo(({ entry, depth }: { entry: ITreeEntry, depth: numbe
 	);
 });
 
-export const ListRenderer = React.memo((props: {
+export const ListRenderer = React.memo((props((props: {
 	path?: string,
 	excludePatterns?: string[],
 	result?: unknown,
 }) => {
 	const { path, excludePatterns, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const entries = resultText ? (parseEntries(resultText) ?? parseFlatLines(resultText)) : null;
 	return (

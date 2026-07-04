@@ -1,6 +1,7 @@
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { ChevronDown, Eye } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { EServerStatus, TServerId, IModel } from '@warpcore/shared';
 import { updateThread } from '@/api/services';
@@ -23,6 +24,7 @@ export function parseThreadMeta(meta: string): { serverId: string | null } {
 }
 
 export const ThreadServerSelector = React.memo(({
+	const { t } = useTranslation('chat');
 	threadId,
 }: {
 	threadId: string | null;
@@ -123,7 +125,7 @@ export const ThreadServerSelector = React.memo(({
 				) : (
 					<>
 						<Text flex="1" color="var(--wc-text-faint)" fontSize="12px">
-							Select
+							{t('serverSelector.selectServer')}
 						</Text>
 						<ChevronDown size={12} style={{ opacity: 0.4 }} />
 					</>

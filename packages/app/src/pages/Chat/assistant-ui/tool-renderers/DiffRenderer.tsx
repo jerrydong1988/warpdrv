@@ -15,7 +15,7 @@ interface IEdit {
 	newText?: string;
 }
 
-export const DiffRenderer = React.memo((props: {
+export const DiffRenderer = React.memo((props((props: {
 	path?: string,
 	old?: string,
 	new?: string,
@@ -24,6 +24,7 @@ export const DiffRenderer = React.memo((props: {
 	strategy?: EDiffStrategy,
 }) => {
 	const { path, old, new: newVal, edits, content, strategy } = props;
+	const { t } = useTranslation('chat');
 
 	return (
 		<Box px="3" py="2">

@@ -55,8 +55,28 @@
     "escClose": "esc close"
   },
   "threadList": {
-    "editThread": "Edit conversation",
-    "deleteThread": "Delete conversation"
+    "newChat": "New Chat",
+    "rename": "Rename",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "newFolder": "New Folder",
+    "search": "Search",
+    "sortUpdated": "Updated",
+    "sortCreated": "Created",
+    "sortName": "Name",
+    "sortTokens": "Tokens",
+    "sortFieldTooltip": "Click to change sort field",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "newFolderTooltip": "New folder",
+    "dropThreadsHere": "Drop threads here",
+    "msg": "msg",
+    "empty": "empty",
+    "confirmDeleteFolder": "Delete this folder? Threads inside will be moved to root.",
+    "confirmDeleteThread": "Delete this thread? This cannot be undone.",
+    "confirmDeleteAllChats": "Delete ALL chats? This cannot be undone.",
+    "welcomeTitle": "Hello there!",
+    "welcomeSubtitle": "How can I help you today?"
   },
   "composer": {
     "placeholder": "Type a message...",
@@ -79,5 +99,22 @@
     "messageCopied": "Message copied",
     "threadDeleted": "Conversation deleted",
     "titleGenerated": "Title generated"
+  },
+  "serverSelector": {
+    "selectServer": "Select a server"
+  },
+  "elicitation": {
+    "openInBrowser": "Open in browser"
+  },
+  "tool": {
+    "running": "Running...",
+    "commandOutput": "Command output",
+    "file": "File",
+    "directory": "Directory",
+    "modified": "Modified",
+    "fetch": "Fetch",
+    "search": "Search",
+    "lines": "{{count}} lines",
+    "read": "Read"
   }
 }

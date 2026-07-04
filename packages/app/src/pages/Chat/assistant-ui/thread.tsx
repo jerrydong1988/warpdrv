@@ -264,10 +264,10 @@ const ThreadWelcome: FC = () => {
 						className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both duration-200"
 					/>
 					<h1 className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-semibold text-2xl duration-200" style={{ color: 'var(--wc-text-heading)' }}>
-						Hello there!
+						{t('threadList.welcomeTitle')}
 					</h1>
 					<p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-xl delay-75 duration-200" style={{ color: 'var(--wc-text-secondary)' }}>
-						How can I help you today?
+						{t('threadList.welcomeSubtitle')}
 					</p>
 				</div>
 			</div>

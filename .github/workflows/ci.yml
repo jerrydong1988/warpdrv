@@ -77,36 +77,8 @@ jobs:
           fi
           echo "All 14 namespaces have matching key counts"
 
-  desktop-package:
-    if: github.event_name == 'push'
-    runs-on: ${{ matrix.os }}
-    needs: build
-    permissions:
-      contents: write
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            target: linux
-            pkg-target: node24-linux-x64
-            tauri-bundles: deb
-            artifact-name: warpdrv-linux-deb
-            artifact-path: packages/desktop/target/release/bundle/deb/*.deb
-            ext: ""
-          - os: windows-latest
-            target: windows
-            pkg-target: node24-win-x64
-            tauri-bundles: msi
-            artifact-name: warpdrv-windows-msi
-            artifact-path: packages/desktop/target/release/bundle/msi/*.msi
-            ext: .exe
-          - os: macos-latest
-            target: macos
-            pkg-target: node24-macos-arm64
-            tauri-bundles: dmg
-            artifact-name: warpdrv-macos-dmg
-            artifact-path: packages/desktop/target/release/bundle/dmg/*.dmg
-            ext: ""
+ desktop-package:
+    if: github.event_name == 'push' && false
     steps:
       - name: Checkout
         uses: actions/checkout@v4

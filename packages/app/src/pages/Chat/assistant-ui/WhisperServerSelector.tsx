@@ -1,6 +1,7 @@
 import { Box, Text, HStack, Slider } from '@chakra-ui/react';
 import { Mic, ChevronDown, MicOff } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { EWhisperServerStatus, TWhisperServerId } from '@warpcore/shared';
 import { updateSettings } from '@/api/services';

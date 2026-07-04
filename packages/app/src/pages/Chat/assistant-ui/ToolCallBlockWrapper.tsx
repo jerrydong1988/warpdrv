@@ -1,4 +1,4 @@
-import React, { useState, useContext, useCallback, useMemo } from 'react';
+import React, { useState, useContext, useCallback, useMemo } from 'react';\nimport { useTranslation } from 'react-i18next';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { Wrench, Check, Ban, Loader, AlertCircle, X, Lock } from 'lucide-react';
 import { ToolCallBlock } from '@/pages/Chat/assistant-ui/ToolCallBlock';

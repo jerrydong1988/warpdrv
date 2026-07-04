@@ -1,5 +1,5 @@
 import { Box } from '@chakra-ui/react';
-import React from 'react';
+import React from 'react';\nimport { useTranslation } from 'react-i18next';
 
 const dotColors: Record<string, { bg: string; shadow: string }> = {
 	online: { bg: 'var(--wc-accent-green-icon)', shadow: '0 0 6px var(--wc-accent-green-icon)' },

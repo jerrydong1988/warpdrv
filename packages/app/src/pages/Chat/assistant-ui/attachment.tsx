@@ -1,4 +1,4 @@
-"use client";
+import { useTranslation } from 'react-i18next';\n"use client";
 
 import { PropsWithChildren, useEffect, useState, type FC } from "react";
 import { XIcon, PlusIcon, FileText, File } from "lucide-react";

@@ -55,8 +55,28 @@
     "escClose": "esc 关闭"
   },
   "threadList": {
-    "editThread": "编辑对话",
-    "deleteThread": "删除对话"
+    "newChat": "新建聊天",
+    "rename": "重命名",
+    "delete": "删除",
+    "cancel": "取消",
+    "newFolder": "新建文件夹",
+    "search": "搜索",
+    "sortUpdated": "更新时间",
+    "sortCreated": "创建时间",
+    "sortName": "名称",
+    "sortTokens": "Tokens",
+    "sortFieldTooltip": "点击切换排序字段",
+    "newestFirst": "最新在前",
+    "oldestFirst": "最早在前",
+    "newFolderTooltip": "新建文件夹",
+    "dropThreadsHere": "拖放线程至此",
+    "msg": "条消息",
+    "empty": "空",
+    "confirmDeleteFolder": "删除此文件夹？其中的线程将移动到根目录。",
+    "confirmDeleteThread": "删除此线程？此操作不可撤销。",
+    "confirmDeleteAllChats": "删除所有聊天？此操作不可撤销。",
+    "welcomeTitle": "你好！",
+    "welcomeSubtitle": "今天我能帮你做什么？"
   },
   "composer": {
     "placeholder": "输入消息...",
@@ -79,5 +99,22 @@
     "messageCopied": "消息已复制",
     "threadDeleted": "对话已删除",
     "titleGenerated": "标题已生成"
+  },
+  "serverSelector": {
+    "selectServer": "选择服务器"
+  },
+  "elicitation": {
+    "openInBrowser": "在浏览器中打开"
+  },
+  "tool": {
+    "running": "运行中...",
+    "commandOutput": "命令输出",
+    "file": "文件",
+    "directory": "目录",
+    "modified": "已修改",
+    "fetch": "获取",
+    "search": "搜索",
+    "lines": "{{count}} 行",
+    "read": "读取"
   }
 }

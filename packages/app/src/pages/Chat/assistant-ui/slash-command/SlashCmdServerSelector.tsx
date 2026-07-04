@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from 'react-i18next';\nimport { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import { ChevronDown, Eye } from "lucide-react";

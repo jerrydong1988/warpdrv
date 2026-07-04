@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, Loader2, Mic, Volume2 } from 'lucide-react';
 import { FaStop } from 'react-icons/fa';
 import { Box } from '@chakra-ui/react';
