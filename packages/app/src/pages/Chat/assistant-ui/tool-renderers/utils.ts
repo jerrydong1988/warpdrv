@@ -8,8 +8,7 @@ export function extractResultText(result: unknown): string | null {
 		const texts = parsed
 			.filter(b => b && typeof b === 'object' && 'type' in b && b.type === 'text')
 			.map(b => (b as { text: string }).text);
-		return texts.length ? texts.join('
-') : null;
+		return texts.length ? texts.join('\n') : null;
 	}
 	if (typeof parsed === 'object' && parsed !== null && 'content' in parsed) {
 		return extractResultText((parsed as { content: unknown }).content);

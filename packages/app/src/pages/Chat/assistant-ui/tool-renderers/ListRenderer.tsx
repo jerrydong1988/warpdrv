@@ -31,8 +31,7 @@ function parseEntries(text: string): ITreeEntry[] | null {
 }
 
 function parseFlatLines(text: string): ITreeEntry[] {
-	const lines = text.split('
-').map(l => l.trim()).filter(l => l.length > 0);
+	const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 	return lines.map(line => {
 		if (line.startsWith('[DIR]')) return { name: line.replace(/^\[DIR\]\s*/, ''), type: 'directory' as const };
 		if (line.startsWith('[FILE]')) return { name: line.replace(/^\[FILE\]\s*/, ''), type: 'file' as const };

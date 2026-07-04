@@ -1,7 +1,6 @@
 import { Box, Text, HStack, Flex } from '@chakra-ui/react';
 import { CheckCircle2, Circle, CircleDot, ChevronRight } from 'lucide-react';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React from 'react';\nimport { useTranslation } from 'react-i18next';
 import { useDependantState } from '@/hooks/useDependantState';
 import { Collapsible } from '@chakra-ui/react';
 

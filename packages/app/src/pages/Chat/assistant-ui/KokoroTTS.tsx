@@ -240,9 +240,7 @@ export const KokoroTTSButton = React.memo(() => {
 		return parts
 			.filter((p: any) => p.type === 'text')
 			.map((p: any) => p.text)
-			.join('
-
-');
+			.join('\n\n');
 	}, [parts]);
 
 	const handleSpeak = useCallback(async () => {

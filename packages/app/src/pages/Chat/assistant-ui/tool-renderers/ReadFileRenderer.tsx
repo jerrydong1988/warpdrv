@@ -21,8 +21,7 @@ export const ReadFileRenderer = React.memo((props: {
 	if (tail !== undefined) rangeBits.push(`tail ${tail}`);
 	if (offset !== undefined) rangeBits.push(`offset ${offset}`);
 	if (length !== undefined) rangeBits.push(`length ${length}`);
-	const lineCount = resultText ? resultText.split('
-').length : 0;
+	const lineCount = resultText ? resultText.split('\n').length : 0;
 	return (
 		<Box px="3" py="2">
 			<HStack gap="2" align="center">
