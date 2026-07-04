@@ -1,4 +1,5 @@
-import { useState } from 'react';\nimport { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box } from '@chakra-ui/react';
 import { updateSettings } from '@/api/services';
 import { StepWelcome } from './steps/StepWelcome';
