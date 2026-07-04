@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     continue-on-error: true
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +27,8 @@ jobs:
         run: npx tsc -b packages/shared --dry 2>/dev/null || npx tsc --noEmit -p packages/shared/tsconfig.json --skipLibCheck 2>&1 | tail -5
 
       - name: Build app (Vite only - skip tsc due to pre-existing type errors)
-        run: npx vite build packages/app
+        run: npx vite build
+        working-directory: packages/app
 
   i18n-validation:
     runs-on: ubuntu-latest
