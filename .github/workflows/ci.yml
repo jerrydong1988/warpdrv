@@ -159,15 +159,13 @@ jobs:
           cp -r ../app/dist app-dist
         working-directory: packages/desktop
 
-      - name: Build Tauri (deb + AppImage)
-        run: npx tauri build --bundles deb,appimage
+      - name: Build Tauri (deb only)
+        run: npx tauri build --bundles deb
         working-directory: packages/desktop
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: warpdrv-linux-${{ github.sha }}
-          path: |
-            packages/desktop/target/release/bundle/deb/*.deb
-            packages/desktop/target/release/bundle/appimage/*.AppImage
+          name: warpdrv-linux-deb
+          path: packages/desktop/target/release/bundle/deb/*.deb
           retention-days: 7
