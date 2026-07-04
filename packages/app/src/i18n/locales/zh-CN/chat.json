@@ -116,5 +116,9 @@
     "search": "搜索",
     "lines": "{{count}} 行",
     "read": "读取"
+  },
+  "slashCmd": {
+    "noMatches": "无匹配项",
+    "noServers": "无可用服务器"
   }
 }

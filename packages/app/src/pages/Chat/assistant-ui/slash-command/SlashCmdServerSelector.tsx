@@ -48,6 +48,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 	onBlur,
 }) => {
 	const serversMap = useStore((s) => s.servers);
+	const { t } = useTranslation('chat');
 	const [isOpen, setIsOpen] = useState(false);
 	const triggerRef = useRef<HTMLSpanElement | null>(null);
 	const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -205,7 +206,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No servers
+								{t('slashCmd.noServers')}
 							</div>
 						)}
 						{servers.map((server) => (

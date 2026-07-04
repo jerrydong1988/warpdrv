@@ -150,7 +150,8 @@
     "MISSING_THREAD_OR_SERVER_ID": "缺少线程 ID 或服务器 ID",
     "UPDATE_CHECK_FAILED": "检查更新失败",
     "NO_MODEL_DIRECTORIES": "未配置模型目录",
-    "NO_ACTIVE_COMPLETION": "没有活跃的补全"
+    "NO_ACTIVE_COMPLETION": "没有活跃的补全",
+    "componentError": "组件错误"
   },
   "checkpoints": {
     "recentlySaved": "最近保存"

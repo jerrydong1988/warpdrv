@@ -34,6 +34,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 	items,
 }) => {
 	const resolvedItems = useResolveItems(items);
+	const { t } = useTranslation('chat');
 	const [isOpen, setIsOpen] = useState(false);
 	const [highlight, setHighlight] = useState(0);
 	const inputRefLocal = useRef<HTMLInputElement | null>(null);
@@ -227,7 +228,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No matches
+								{t('slashCmd.noMatches')}
 							</div>
 						)}
 						{filtered.map((item, i) => (

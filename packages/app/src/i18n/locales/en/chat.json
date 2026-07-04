@@ -116,5 +116,9 @@
     "search": "Search",
     "lines": "{{count}} lines",
     "read": "Read"
+  },
+  "slashCmd": {
+    "noMatches": "No matches",
+    "noServers": "No servers available"
   }
 }
