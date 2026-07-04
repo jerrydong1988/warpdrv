@@ -8,7 +8,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png", "devtools", "wry"] }
-enigo = { version = "0.6", features = ["wayland", "libei_tokio"] }
+enigo = "0.6"
 rdev = "0.5"
 tauri-plugin-shell = "2"
 tauri-plugin-single-instance = "2"
@@ -21,6 +21,7 @@ reqwest = { version = "0.11", default-features = false, features = ["blocking", 
 window-vibrancy = "0.7.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
+enigo = { version = "0.6", features = ["wayland", "libei_tokio"] }
 webkit2gtk = { version = "=2.0.2", features = ["v2_38"] }
 
 [features]

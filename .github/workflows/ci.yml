@@ -79,10 +79,34 @@ jobs:
 
   desktop-package:
     if: github.event_name == 'push'
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     needs: build
     permissions:
       contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux
+            pkg-target: node24-linux-x64
+            tauri-bundles: deb
+            artifact-name: warpdrv-linux-deb
+            artifact-path: packages/desktop/target/release/bundle/deb/*.deb
+            ext: ""
+          - os: windows-latest
+            target: windows
+            pkg-target: node24-win-x64
+            tauri-bundles: msi
+            artifact-name: warpdrv-windows-msi
+            artifact-path: packages/desktop/target/release/bundle/msi/*.msi
+            ext: .exe
+          - os: macos-latest
+            target: macos
+            pkg-target: node24-macos-arm64
+            tauri-bundles: dmg
+            artifact-name: warpdrv-macos-dmg
+            artifact-path: packages/desktop/target/release/bundle/dmg/*.dmg
+            ext: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,31 +129,26 @@ jobs:
             packages/desktop/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install Tauri system dependencies
+      - name: Install Linux system deps
+        if: matrix.target == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libssl-dev \
-            patchelf \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libxkbcommon-dev
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libssl-dev patchelf build-essential curl wget file \
+            libxdo-dev libxkbcommon-dev
 
       - name: Install npm dependencies
         run: npm install
 
       - name: Build frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npx vite build
         working-directory: packages/app
 
-      - name: Build server binary
+      - name: Build server binary (Linux/macOS)
+        if: matrix.target != 'windows'
         run: |
           npx esbuild src/index.ts \
             --bundle --outfile=dist/server.cjs --format=cjs \
@@ -138,16 +157,25 @@ jobs:
             --external:onnxruntime-node
           cp ../../node_modules/better-sqlite3/build/Release/better_sqlite3.node dist/
           npx @yao-pkg/pkg dist/server.cjs \
-            --target node24-linux-x64 \
+            --target ${{ matrix.pkg-target }} \
             --output "dist/warpcore-server" --compress GZip
-          # Copy runtime dependencies for sidecar
           mkdir -p dist/node_modules
           for pkg in kokoro-js @huggingface/transformers onnxruntime-node sharp; do
             cp -r "../../node_modules/$pkg" "dist/node_modules/$pkg" 2>/dev/null || echo "  skip $pkg"
           done
         working-directory: packages/server
 
-      - name: Prepare sidecar and frontend
+      - name: Build server binary (Windows)
+        if: matrix.target == 'windows'
+        run: |
+          npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
+          copy ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
+          npx @yao-pkg/pkg dist/server.cjs --target ${{ matrix.pkg-target }} --output "dist/warpcore-server.exe" --compress GZip
+        working-directory: packages/server
+        shell: cmd
+
+      - name: Prepare sidecar (Linux/macOS)
+        if: matrix.target != 'windows'
         run: |
           TARGET=$(rustc --print host-tuple)
           mkdir -p binaries/node_modules
@@ -159,13 +187,25 @@ jobs:
           cp -r ../app/dist app-dist
         working-directory: packages/desktop
 
-      - name: Build Tauri (deb only)
-        run: npx tauri build --bundles deb
+      - name: Prepare sidecar (Windows)
+        if: matrix.target == 'windows'
+        run: |
+          for /f "delims=" %%i in ('rustc --print host-tuple') do set TARGET=%%i
+          mkdir binaries 2>nul
+          copy ..\server\dist\warpcore-server.exe "binaries\warpcore-server-%TARGET%.exe"
+          copy ..\server\dist\better_sqlite3.node binaries\
+          rmdir /s /q app-dist 2>nul
+          xcopy /e /i ..\app\dist app-dist
+        working-directory: packages/desktop
+        shell: cmd
+
+      - name: Build Tauri
+        run: npx tauri build --bundles ${{ matrix.tauri-bundles }}
         working-directory: packages/desktop
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: warpdrv-linux-deb
-          path: packages/desktop/target/release/bundle/deb/*.deb
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
           retention-days: 7
