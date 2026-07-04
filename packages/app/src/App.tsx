@@ -16,7 +16,7 @@ export function App() {
 	const [i18nReady, setI18nReady] = useState(false);
 
 	useEffect(() => {
-		initI18n(locale as SupportedLocale).then(() => setI18nReady(true));
+		initI18n(locale as SupportedLocale).then(() => setI18nReady(true)).catch(() => setI18nReady(true));
 	}, []);
 
 	useEffect(() => {

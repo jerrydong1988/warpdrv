@@ -242,6 +242,7 @@ function ScopeSelector({
 	pillPlaceholder: string;
 	disabled?: boolean;
 }) {
+	const { t } = useTranslation('proxy');
 	const isAll = value === true;
 
 	return (
@@ -304,6 +305,7 @@ function ScopeSelector({
 // ============================================================
 
 function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
+	const { t } = useTranslation('proxy');
 	const [copied, setCopied] = useState(false);
 
 	const handleCopy = async () => {

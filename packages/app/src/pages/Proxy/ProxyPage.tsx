@@ -26,6 +26,7 @@ function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
+	const { t } = useTranslation('proxy');
 	if (status.error) {
 		return (
 			<HStack

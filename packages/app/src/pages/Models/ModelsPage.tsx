@@ -108,6 +108,7 @@ function sortModels(models: IModel[], sort: ISortState): IModel[] {
 // ============================================================
 
 function RowMenu({ model, onClose, onReparse }: { model: IModel; onClose: () => void; onReparse: (id: string) => void }) {
+	const { t } = useTranslation('models');
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {

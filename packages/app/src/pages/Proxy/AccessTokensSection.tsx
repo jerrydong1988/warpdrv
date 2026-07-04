@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { TokenDialog } from './TokenDialog';
 
 function RoleBadge({ token }: { token: IAccessTokenInfo }) {
+	const { t } = useTranslation('proxy');
 	if (token.admin) {
 		return (
 			<Badge
@@ -94,6 +95,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 }
 
 function ScopePills({ value }: { value: true | string[] }) {
+	const { t } = useTranslation('proxy');
 	if (value === true) {
 		return (
 			<Text fontSize="11px" color="var(--wc-text-muted)" fontStyle="italic">

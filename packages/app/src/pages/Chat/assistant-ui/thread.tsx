@@ -227,6 +227,7 @@ const ThreadMessage: FC = () => {
 };
 
 const ThreadScrollToBottom: FC = () => {
+	const { t } = useTranslation('chat');
 	return (
 		<ThreadPrimitive.ScrollToBottom asChild>
 			<TooltipIconButton
@@ -327,6 +328,7 @@ const ContextUsageBar: FC = () => {
 };
 
 const Composer: FC = () => {
+	const { t } = useTranslation('chat');
 	const { isValidServer } = useContext(ServerStatusContext);
 	const { waveformStream, setWaveformStream, subscribeTranscript } = useDictation();
 	const annotatorVisible = useStore(s => s.annotatorVisible);
@@ -469,6 +471,7 @@ const ReasoningEffortToggle: FC = () => {
 };
 
 const ToolsSelector: FC = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
@@ -622,6 +625,7 @@ const ToolsSelector: FC = React.memo(() => {
 });
 
 const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = ({ onStreamChange }) => {
+	const { t } = useTranslation('chat');
 	const { isValidServer, supportsMultiModal } = useContext(ServerStatusContext);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const canAttach = isValidServer && supportsMultiModal;
@@ -876,6 +880,7 @@ const AssistantMessage: FC = React.memo(() => {
  });
 
 const ReasoningBlock: FC = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const reasoning = useAuiState((s) => {
 		const part = s.part;
 		return part?.type === 'reasoning' ? (part as any).reasoning : '';
@@ -923,6 +928,7 @@ const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = (
 );
 
 const DeleteMessageButton: FC<{ messageId: string }> = ({ messageId }) => {
+	const { t } = useTranslation('chat');
 	const ctx = useContext(DeleteMessageContext);
 	return (
 		<HStack gap="2" onClick={() => ctx?.open(messageId)}>
@@ -966,6 +972,7 @@ const BrowserTTS = React.memo(() => {
 });
 
 const AssistantActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const isCopied = useAuiState((s) => s.message.isCopied);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
@@ -1063,6 +1070,7 @@ const ToolMessage: FC = React.memo(() => {
 });
 
 const ToolActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
@@ -1169,6 +1177,7 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
@@ -1211,6 +1220,7 @@ const UserActionBar: FC = () => {
 };
 
 const EditComposer: FC = () => {
+	const { t } = useTranslation('chat');
 	return (
 		<MessagePrimitive.Root className="aui-edit-composer-wrapper mx-auto flex w-full flex-col px-2 py-3">
 			<ComposerPrimitive.Root className="aui-edit-composer-root ml-auto flex w-full max-w-[85%] flex-col bg-muted" >
@@ -1243,6 +1253,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 	className,
 	...rest
 }) => {
+	const { t } = useTranslation('chat');
 	return (
 		<BranchPickerPrimitive.Root
 			hideWhenSingleBranch
