@@ -222,13 +222,13 @@ function timeAgo(ts: number): string {
 // Manual Thread List Item - uses plain Chakra UI (no assistant-ui primitives)
 // ============================================================
 function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelete }: {
-	const { t } = useTranslation('chat');
 	thread: IChatThread;
 	onRename: (id: string, title: string) => void;
 	onStartDrag: (threadId: string) => void;
 	onSelect: (threadId: string) => void;
 	onDelete: (id: string) => void;
 }) {
+	const { t } = useTranslation('chat');
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(() => triggerRef.current?.getBoundingClientRect(), [triggerRef]);
@@ -340,7 +340,6 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 // Folder section
 // ============================================================
 function FolderSection({
-	const { t } = useTranslation('chat');
 	folder,
 	threads,
 	onRename,
@@ -357,6 +356,7 @@ function FolderSection({
 	onReorderFolder: (fromFolderId: string, toFolderId: string) => void;
 	children: ReactNode;
 }) {
+	const { t } = useTranslation('chat');
 	const [open, setOpen] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const [dragOver, setDragOver] = useState(false);
