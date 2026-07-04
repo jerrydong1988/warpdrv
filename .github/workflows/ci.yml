@@ -140,14 +140,20 @@ jobs:
           npx @yao-pkg/pkg dist/server.cjs \
             --target node24-linux-x64 \
             --output "dist/warpcore-server" --compress GZip
+          # Copy runtime dependencies for sidecar
+          mkdir -p dist/node_modules
+          for pkg in kokoro-js @huggingface/transformers onnxruntime-node sharp; do
+            cp -r "../../node_modules/$pkg" "dist/node_modules/$pkg" 2>/dev/null || echo "  skip $pkg"
+          done
         working-directory: packages/server
 
       - name: Prepare sidecar and frontend
         run: |
           TARGET=$(rustc --print host-tuple)
-          mkdir -p binaries
+          mkdir -p binaries/node_modules
           cp ../server/dist/warpcore-server "binaries/warpcore-server-$TARGET"
           cp ../server/dist/better_sqlite3.node binaries/
+          cp -r ../server/dist/node_modules/. binaries/node_modules/ 2>/dev/null || true
           chmod +x "binaries/warpcore-server-$TARGET"
           rm -rf app-dist
           cp -r ../app/dist app-dist
