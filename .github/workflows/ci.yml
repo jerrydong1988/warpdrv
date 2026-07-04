@@ -29,7 +29,8 @@ jobs:
         run: npx tsc --noEmit -p packages/server/tsconfig.json
 
       - name: Type check app
-        run: npx tsc --noEmit -p packages/app/tsconfig.json 2>&1 | grep -v "TS5103" || true
+        continue-on-error: true
+        run: npx tsc --noEmit -p packages/app/tsconfig.json
 
   build:
     runs-on: ubuntu-latest
