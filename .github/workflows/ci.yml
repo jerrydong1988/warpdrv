@@ -172,6 +172,8 @@ jobs:
           npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
           Copy-Item ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
           npx @yao-pkg/pkg dist/server.cjs --target ${{ matrix.pkg-target }} --output "dist/warpcore-server.exe" --compress GZip
+          New-Item -ItemType Directory -Force -Path dist\node_modules
+          @('kokoro-js','@huggingface/transformers','onnxruntime-node','sharp') | ForEach-Object { Copy-Item -Recurse "..\..\node_modules\$_" "dist\node_modules\$_" -ErrorAction SilentlyContinue }
         working-directory: packages/server
 
       - name: Prepare sidecar (Linux/macOS)
@@ -191,10 +193,11 @@ jobs:
         if: matrix.target == 'windows'
         shell: pwsh
         run: |
-          $TARGET = rustc --print host-tuple
-          New-Item -ItemType Directory -Force -Path binaries
+          $TARGET = (rustc --print host-tuple).Trim()
+          New-Item -ItemType Directory -Force -Path binaries\node_modules
           Copy-Item ..\server\dist\warpcore-server.exe "binaries\warpcore-server-$TARGET.exe"
           Copy-Item ..\server\dist\better_sqlite3.node binaries\
+          Copy-Item -Recurse ..\server\dist\node_modules\* binaries\node_modules\ -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force app-dist -ErrorAction SilentlyContinue
           Copy-Item -Recurse ..\app\dist app-dist
         working-directory: packages/desktop
