@@ -1,1 +1,94 @@
-{}
+{
+  "title": "首页",
+  "greeting": "欢迎",
+  "readyStatus": "warpdrv 已就绪！",
+  "setupStatus": "设置",
+  "details": "详情",
+  "tiles": {
+    "servers": {
+      "title": "服务器",
+      "noServers": "未配置服务器",
+      "start": "启动",
+      "subtitle": "{{count}} 台服务器，{{running}} 台运行中"
+    },
+    "models": {
+      "title": "模型",
+      "llms": "大语言模型",
+      "subtitle": "已扫描 {{count}} 个模型"
+    },
+    "backends": {
+      "title": "后端",
+      "llamaBuilds": "llama.cpp 构建",
+      "subtitle": "{{count}} 个后端，{{devices}} 个设备"
+    },
+    "proxy": {
+      "title": "路由器",
+      "openaiEndpoint": "兼容 OpenAI 的聊天端点",
+      "subtitle_running": "运行在端口 {{port}}",
+      "subtitle_stopped": "已停止"
+    },
+    "appServer": {
+      "title": "应用服务器",
+      "remotePort": "远程端口",
+      "subtitle_enabled": "监听 {{host}}:{{port}}",
+      "subtitle_disabled": "未配置"
+    },
+    "mcp": {
+      "title": "MCP",
+      "mcpServersConnected": "已连接 MCP 服务器",
+      "subtitle": "{{count}} 台服务器"
+    },
+    "downloads": {
+      "title": "下载",
+      "subtitle": "{{count}} 个活动"
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "voicesAvailable": "可用语音",
+      "subtitle_ready": "就绪",
+      "subtitle_notReady": "未就绪"
+    }
+  },
+  "status": {
+    "ok": "正常",
+    "running": "运行中",
+    "stopped": "已停止",
+    "notConfigured": "未配置",
+    "connected": "已连接",
+    "disconnected": "已断开"
+  },
+  "steps": {
+    "registerBackend": {
+      "title_done": "后端已注册",
+      "title_todo": "添加 LLaMA 后端",
+      "step1": "1. 访问 <linkReleases>LLaMA.cpp 发布页面</linkReleases> 并下载适用于您硬件的预构建二进制文件。",
+      "step1note": "<strong>注意：</strong>您也可以 <code> git clone https://github.com/ggml-org/llama.cpp.git </code> 到文件夹中并从源码构建。请参阅 <linkRecipes>配置方案指南</linkRecipes>。",
+      "step2": "2. 打开 <linkBackends>后端页面</linkBackends> 并添加一个新的后端。",
+      "step3": "3. 打开文件选择器，导航到您下载并解压的 llama.cpp 文件夹，然后选择 <code>llama-server</code> 二进制文件。",
+      "step4": "4. 保存后端。它将自动验证您的系统并检测硬件。"
+    },
+    "loadModel": {
+      "title_done": "模型已添加",
+      "title_todo": "从 HuggingFace 下载并添加模型",
+      "step1": "1. 前往 <linkSettings>设置</linkSettings> 并选择用于存放 GGUF 模型文件的文件夹（如果尚未选择）。",
+      "step2": "2. 导航到 <linkHub>Hub</linkHub> 页面。",
+      "step3": "3. 搜索模型系列名称，例如 Qwen、Mistral 或 Gemma。",
+      "step4": "4. 从左侧面板的结果列表中点击一个模型。建议选择最近 6 个月内发布的模型以获得最佳能力。",
+      "step4note": "<strong>注意：</strong> LLaMA 模型与 Whisper 模型不同。如需使用 Whisper，请搜索 \"ggml\" .bin 模型。",
+      "step5": "5. 在右侧面板中，打开模型文件下拉菜单，选择一个能放入您 VRAM 且留有一定余量的量化 GGUF 文件。",
+      "step6": "6. 点击下载。下载进度窗口将显示。您可以暂停和恢复大型下载。",
+      "step7": "7. 下载完成后，导航到 <linkModels>模型</linkModels> 页面，点击重新扫描模型按钮以添加模型。"
+    },
+    "createServer": {
+      "title_done": "服务器已创建",
+      "title_todo": "创建服务器",
+      "step1": "1. 导航到 <linkServers>服务器</linkServers> 页面。",
+      "step2": "2. 点击启动服务器。",
+      "step3": "3. 从模型下拉列表中选择您添加的模型。",
+      "step4": "4. 从后端下拉列表中选择您注册的后端。",
+      "step5": "5. 选择加载模型的设备。",
+      "step6": "6. 配置参数，如上下文长度、线程数和 GPU 层数。根据您的硬件调整——GPU 层数越多推理速度越快，但需要更多 VRAM。",
+      "step7": "7. 点击启动以启动服务器。"
+    }
+  }
+}

@@ -1,1 +1,64 @@
-{}
+{
+  "title": "初始引导",
+  "steps": {
+    "welcome": {
+      "headerTitle": "欢迎",
+      "title": "欢迎使用 warpdrv",
+      "body": "只需几步即可完成设置——配置模型文件夹、了解基础知识，然后开始运行模型。"
+    },
+    "modelFolders": {
+      "headerTitle": "模型文件夹",
+      "addFolderPlaceholder": "输入文件夹路径...",
+      "addFolder": "添加文件夹",
+      "addFromEnv": "从环境变量添加",
+      "scanning": "扫描中...",
+      "scan": "扫描模型",
+      "modelsFound": "找到模型：{{count}} 个",
+      "overview": "您的模型存储在以下文件夹中：",
+      "removeFolder": "移除文件夹",
+      "removing": "移除中..."
+    },
+    "backends": {
+      "headerTitle": "后端",
+      "detectedHardware": "检测到的硬件",
+      "llamaBackends": "llama.cpp 后端",
+      "whisperBackends": "whisper.cpp 后端",
+      "noReleases": "此操作系统没有可用的发布版本。",
+      "voiceOptional": "语音（可选）",
+      "kokoroInstalled": "Kokoro TTS 已安装。",
+      "kokoroTTS": "Kokoro TTS",
+      "startingInstalls": "正在开始安装...",
+      "installAndContinue": "安装并继续",
+      "skip": "跳过"
+    },
+    "guide": {
+      "headerTitle": "入门指南",
+      "slides": {
+        "hub": {
+          "title": "从 Hub 下载模型",
+          "description": "浏览 Hub 页面，搜索 HuggingFace 上的 GGUF 模型。可按参数量筛选、按下载量排序，并直接下载到您的模型文件夹中。"
+        },
+        "backends": {
+          "title": "添加后端",
+          "description": "在后端页面注册您的 llama.cpp 构建。WarpCore 会验证二进制文件并为每个后端检测可用的 GPU 设备。"
+        },
+        "launch": {
+          "title": "启动服务器",
+          "description": "在服务器页面点击启动按钮。选择后端、选择模型、配置 GPU 层数和上下文大小，然后启动您的推理服务器。"
+        }
+      }
+    },
+    "done": {
+      "headerTitle": "全部完成",
+      "title": "一切就绪",
+      "body": "您现在可以开始运行本地大语言模型了。随时添加模型、注册后端并启动您的第一台服务器。您可以随时在设置中重新运行本指南。",
+      "startUsing": "开始使用 warpdrv"
+    }
+  },
+  "navigation": {
+    "back": "返回",
+    "next": "下一步",
+    "skip": "跳过",
+    "finish": "完成"
+  }
+}

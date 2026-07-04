@@ -46,7 +46,8 @@
     "launchOnStartup": "Start WarpCore automatically when you log in",
     "startMinimized": "Start to tray without showing window (requires Launch on Startup)",
     "onboarding": "Re-run the setup guide",
-    "fsAllowedRoots": "file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution."
+    "fsAllowedRoots": "file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution.",
+    "language": "Interface display language"
   },
   "themes": {
     "amoled": "Amoled",

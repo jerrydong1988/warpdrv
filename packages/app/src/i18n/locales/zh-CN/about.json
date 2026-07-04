@@ -1,1 +1,12 @@
-{}
+{
+  "title": "warpdrv",
+  "website": "warpdrv.ai",
+  "builtWith": "使用 ",
+  "by": "构建，作者 ",
+  "visitWebsite": "访问网站",
+  "copyright": "版权",
+  "copyrightText": "Copyright \u00a9 2026 mikjee。保留所有权利。",
+  "legal": "法律信息",
+  "licenseAgreement": "许可协议 - AGPL 3.0",
+  "becomeSponsor": "成为赞助者"
+}

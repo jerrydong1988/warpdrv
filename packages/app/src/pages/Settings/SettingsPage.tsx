@@ -33,6 +33,8 @@ export function SettingsPage() {
 	const { t } = useTranslation('settings');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
+	const locale = useStore(s => s.settings.locale);
+	const setLocale = useStore(s => s.setLocale);
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
 	const [portStart, setPortStart] = useDependantState(settings.portRangeStart);
@@ -144,6 +146,14 @@ export function SettingsPage() {
 			{ label: 'Georgia', value: 'Georgia, serif' },
 			{ label: 'Times New Roman', value: '"Times New Roman", serif' },
 			{ label: 'Courier New', value: '"Courier New", monospace' },
+		],
+		itemToString: (item) => item.label,
+		itemToValue: (item) => item.value,
+	});
+	const languageCollection = createListCollection({
+		items: [
+			{ label: 'English', value: 'en' },
+			{ label: '简体中文', value: 'zh-CN' },
 		],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
@@ -396,6 +406,65 @@ dictationPTTKey,
 											p="1"
 										>
 											{themeCollection.items.map((item) => (
+												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
+													<Combobox.ItemIndicator />
+												</Combobox.Item>
+											))}
+										</Combobox.Content>
+									</Combobox.Positioner>
+								</Portal>
+							</Combobox.Root>
+						</VStack>
+					</Card>
+
+					{/* Language */}
+					<Card>
+						<VStack align="stretch" gap="4">
+							<Box>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.language')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.language')}</Text>
+							</Box>
+							<Combobox.Root
+								collection={languageCollection}
+								value={[locale ?? 'en']}
+								onValueChange={(details) => {
+									const val = (details.value?.[0] ?? 'en') as 'en' | 'zh-CN';
+									setLocale(val);
+									import('i18next').then(({ default: i18n }) => {
+										i18n.changeLanguage(val);
+									});
+								}}
+							>
+								<Combobox.Control>
+									<Combobox.Trigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											justifyContent="space-between"
+											bg="var(--wc-bg-subtle)"
+											borderColor="var(--wc-border-default)"
+											color="var(--wc-text-primary)"
+											fontSize="13px"
+											borderRadius="lg"
+											fontWeight="500"
+										>
+											{languageCollection.items.find(i => i.value === locale)?.label ?? 'English'}
+											<ChevronDown size={14} />
+										</Button>
+									</Combobox.Trigger>
+								</Combobox.Control>
+								<Portal>
+									<Combobox.Positioner>
+										<Combobox.Content
+											bg="var(--wc-bg-elevated)"
+											borderWidth="1px"
+											borderColor="var(--wc-border-default)"
+											borderRadius="lg"
+											shadow="0 8px 32px rgba(0, 0, 0, 0.5)"
+											p="1"
+										>
+											{languageCollection.items.map((item) => (
 												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
 													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
 													<Combobox.ItemIndicator />
