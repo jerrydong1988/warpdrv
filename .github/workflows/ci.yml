@@ -167,12 +167,12 @@ jobs:
 
       - name: Build server binary (Windows)
         if: matrix.target == 'windows'
+        shell: pwsh
         run: |
           npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
-          copy ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
+          Copy-Item ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
           npx @yao-pkg/pkg dist/server.cjs --target ${{ matrix.pkg-target }} --output "dist/warpcore-server.exe" --compress GZip
         working-directory: packages/server
-        shell: cmd
 
       - name: Prepare sidecar (Linux/macOS)
         if: matrix.target != 'windows'
@@ -189,15 +189,15 @@ jobs:
 
       - name: Prepare sidecar (Windows)
         if: matrix.target == 'windows'
+        shell: pwsh
         run: |
-          for /f "delims=" %%i in ('rustc --print host-tuple') do set TARGET=%%i
-          mkdir binaries 2>nul
-          copy ..\server\dist\warpcore-server.exe "binaries\warpcore-server-%TARGET%.exe"
-          copy ..\server\dist\better_sqlite3.node binaries\
-          rmdir /s /q app-dist 2>nul
-          xcopy /e /i ..\app\dist app-dist
+          $TARGET = rustc --print host-tuple
+          New-Item -ItemType Directory -Force -Path binaries
+          Copy-Item ..\server\dist\warpcore-server.exe "binaries\warpcore-server-$TARGET.exe"
+          Copy-Item ..\server\dist\better_sqlite3.node binaries\
+          Remove-Item -Recurse -Force app-dist -ErrorAction SilentlyContinue
+          Copy-Item -Recurse ..\app\dist app-dist
         working-directory: packages/desktop
-        shell: cmd
 
       - name: Build Tauri
         run: npx tauri build --bundles ${{ matrix.tauri-bundles }}
