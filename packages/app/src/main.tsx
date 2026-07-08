@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChakraProvider } from '@chakra-ui/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -8,6 +8,8 @@ import { AuthProvider } from './components/AuthProvider';
 import { App } from './App';
 import { OnboardingPage } from './pages/Onboarding/OnboardingPage';
 import { useStore } from './store';
+import { initI18n } from './i18n';
+import { startRuntimeHardcodedTranslations } from './i18n/runtimeHardcodedTranslations';
 
 import "./theme/theme-dark.scss";
 import "./theme/theme-light.scss";
@@ -74,16 +76,35 @@ function OnboardingWrapper() {
 	return <OnboardingPage />;
 }
 
+function I18nGate() {
+	const [ready, setReady] = useState(false);
+
+	useEffect(() => {
+		initI18n()
+			.catch(() => undefined)
+			.finally(() => {
+				startRuntimeHardcodedTranslations();
+				setReady(true);
+			});
+	}, []);
+
+	if (!ready) return null;
+
+	return (
+		<AuthProvider>
+			<App />
+			<OnboardingWrapper />
+		</AuthProvider>
+	);
+}
+
 createRoot(document.getElementById('root-wrapper')!).render(
 	<div id="root">
 		<StrictMode>
 			<ChakraProvider value={system}>
 				<BrowserRouter>
 					<ToastProvider>
-						<AuthProvider>
-							<App />
-							<OnboardingWrapper />
-						</AuthProvider>
+						<I18nGate />
 					</ToastProvider>
 				</BrowserRouter>
 			</ChakraProvider>

@@ -38,6 +38,7 @@ import { RecipesPage } from '../pages/Recipes/RecipesPage';
 import { CheckpointsPage } from '../pages/Checkpoints/CheckpointsPage';
 import { useTauriWindow } from '@/hooks/useTauriWindow';
 import { ResizeHandles } from './ResizeHandles';
+import { useTranslation } from 'react-i18next';
 
 // Page lifecycle config: closeOnSwitch=false means page persists (hidden but not unmounted)
 type TPageConfig = {
@@ -63,6 +64,7 @@ const PAGE_REGISTRY: Record<string, TPageConfig> = {
 interface INavItem {
 	path?: string;
 	label?: string;
+	labelKey?: string;
 	icon?: ReactNode;
 	badge?: (summary: ISummaryData | null) => ReactNode;
 	isSeparator?: boolean;
@@ -121,31 +123,34 @@ function StatusDot({ online, hasError }: { online: boolean; hasError?: boolean }
 }
 
 const NAV_ITEMS: INavItem[] = [
-	{ path: '/home', label: 'Home', icon: <Home size={18} /> },
+	{ path: '/home', label: 'Home', labelKey: 'navigation.home', icon: <Home size={18} /> },
 	{ isSeparator: true },
 	{
 		path: '/servers',
 		label: 'Servers',
+		labelKey: 'navigation.servers',
 		icon: <Server size={18} />,
 		badge: (s) => s ? <StatusDot online={s.servers.running > 0} hasError={s.servers.errors > 0} /> : null,
 	},
 	{
 		path: '/proxy',
 		label: 'Router',
+		labelKey: 'navigation.router',
 		icon: <BsRouter size={18} />,
 		badge: (s) => s ? <StatusDot online={s.router.online} hasError={s.router.hasError} /> : null,
 	},
-	{ path: '/checkpoints', label: 'Checkpoints', icon: <Save size={18} /> },
+	{ path: '/checkpoints', label: 'Checkpoints', labelKey: 'navigation.checkpoints', icon: <Save size={18} /> },
 	{ isSeparator: true },
 
-	{ path: '/backends', label: 'Backends', icon: <Blocks size={18} /> },
-	{ path: '/recipes', label: 'Recipes', icon: <ScrollText size={18} /> },
+	{ path: '/backends', label: 'Backends', labelKey: 'navigation.backends', icon: <Blocks size={18} /> },
+	{ path: '/recipes', label: 'Recipes', labelKey: 'navigation.recipes', icon: <ScrollText size={18} /> },
 	{ isSeparator: true },
 
-	{ path: '/models', label: 'Models', icon: <FolderOpen size={18} /> },
+	{ path: '/models', label: 'Models', labelKey: 'navigation.models', icon: <FolderOpen size={18} /> },
 	{
 		path: '/hub',
 		label: 'Hub',
+		labelKey: 'navigation.hub',
 		icon: <Globe size={18} />,
 		badge: (s) => {
 			if ((s?.downloads.active ?? 0) > 0) {
@@ -182,6 +187,7 @@ const NAV_ITEMS: INavItem[] = [
 	{
 		path: '/mcp',
 		label: 'MCP',
+		labelKey: 'navigation.mcp',
 		icon: <Plug size={18} />,
 		badge: (s) => {
 			if (s == null || s.mcp.total === 0) return null;
@@ -227,12 +233,12 @@ const NAV_ITEMS: INavItem[] = [
 			return null;
 		},
 	},
-	{ path: '/chat', label: 'Chat', icon: <MessageSquare size={18} /> },
+	{ path: '/chat', label: 'Chat', labelKey: 'navigation.chat', icon: <MessageSquare size={18} /> },
 ];
 
 const NAV_ITEMS_BOTTOM: INavItem[] = [
-	{ path: '/settings', label: 'Settings', icon: <Settings size={18} /> },
-	{ path: '/about', label: 'About', icon: <Info size={18} /> },
+	{ path: '/settings', label: 'Settings', labelKey: 'navigation.settings', icon: <Settings size={18} /> },
+	{ path: '/about', label: 'About', labelKey: 'navigation.about', icon: <Info size={18} /> },
 ];
 
 function SidebarLink({
@@ -244,6 +250,8 @@ function SidebarLink({
 	collapsed: boolean;
 	summary: ISummaryData | null;
 }) {
+	const { t } = useTranslation('common');
+
 	// Handle separator
 	if (item.isSeparator) {
 		return (
@@ -292,7 +300,7 @@ function SidebarLink({
 				</Box>
 				{!collapsed && (
 					<Text fontSize="13px" fontWeight={isActive ? '600' : '400'} flex="1">
-						{item.label}
+						{item.labelKey ? t(item.labelKey) : item.label}
 					</Text>
 				)}
 				{!collapsed && badgeNode}

@@ -1,5 +1,6 @@
 import { Plug } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store';
 import { EMcpServerStatus } from '@warpcore/bridge';
@@ -7,6 +8,7 @@ import { TileContainer } from '../TileContainer';
 import { TileValueDisplay } from '../TileValueDisplay';
 
 export const McpTile = React.memo(() => {
+	const { t } = useTranslation('home');
 	const navigate = useNavigate();
 	const mcpServers = useStore((s) => s.mcpServers);
 
@@ -26,11 +28,11 @@ export const McpTile = React.memo(() => {
 	return (
 		<TileContainer
 			icon={<Plug size={18} />}
-			label="MCP"
+			label={t('tiles.mcp.title')}
 			statusDot={state}
 			onClick={() => navigate('/mcp')}
 		>
-			<TileValueDisplay label="MCP Servers Connected" value={`${mcpConnected}/${mcpTotal}`} />
+			<TileValueDisplay label={t('tiles.mcp.mcpServersConnected')} value={`${mcpConnected}/${mcpTotal}`} />
 		</TileContainer>
 	);
 });

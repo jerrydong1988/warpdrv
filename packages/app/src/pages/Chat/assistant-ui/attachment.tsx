@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 "use client";
 
 import { PropsWithChildren, useEffect, useState, type FC } from "react";

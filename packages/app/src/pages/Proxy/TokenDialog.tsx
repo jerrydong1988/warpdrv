@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { X, Copy, Check, Shield, Cpu, Wrench, AlertTriangle } from 'lucide-react';
 import type { IAccessTokenInfo, IAccessTokenCreatePayload, IAccessTokenUpdatePayload } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '../../hooks/useQuery';
 import { createToken, updateToken } from '../../api/services';
 import { useToast } from '../../components/ToastProvider';
@@ -241,6 +242,7 @@ function ScopeSelector({
 	pillPlaceholder: string;
 	disabled?: boolean;
 }) {
+	const { t } = useTranslation('proxy');
 	const isAll = value === true;
 
 	return (
@@ -282,7 +284,7 @@ function ScopeSelector({
 						transition="all 0.15s ease"
 						opacity={disabled ? 0.4 : 1}
 					>
-						Specific
+						{t('tokenDialog.specific')}
 					</Box>
 				</HStack>
 			</HStack>
@@ -303,6 +305,7 @@ function ScopeSelector({
 // ============================================================
 
 function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
+	const { t } = useTranslation('proxy');
 	const [copied, setCopied] = useState(false);
 
 	const handleCopy = async () => {
@@ -322,9 +325,9 @@ function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
 			<VStack gap="2" align="stretch">
 				<HStack gap="2">
 					<AlertTriangle size={14} color="var(--wc-accent-yellow)" />
-					<Text fontSize="12px" fontWeight="600" color="var(--wc-accent-yellow-strong)">
-						Copy this token now — it will not be shown again
-					</Text>
+				<Text fontSize="12px" fontWeight="600" color="var(--wc-accent-yellow-strong)">
+					{t('tokenDialog.copyWarning')}
+				</Text>
 				</HStack>
 				<HStack
 					gap="2"
@@ -344,7 +347,7 @@ function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
 						{rawToken}
 					</Text>
 					<IconButton
-						aria-label="Copy token"
+								aria-label={t('tokenDialog.copyToken')}
 						size="xs"
 						variant="ghost"
 						color={copied ? 'var(--wc-accent-green-icon)' : 'var(--wc-text-tertiary)'}
@@ -370,6 +373,7 @@ interface ITokenDialogProps {
 }
 
 export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) {
+	const { t } = useTranslation('proxy');
 	const isEditing = !!editingToken;
 	const { toast } = useToast();
 
@@ -404,7 +408,7 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 
 	const handleSave = async () => {
 		if (!name.trim()) {
-			toast('error', 'Token name is required');
+			toast('error', t('toast.tokenNameRequired'));
 			return;
 		}
 
@@ -418,7 +422,7 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 			};
 			const result = await updateMutation.mutate({ id: editingToken.id, payload });
 			if (result) {
-				toast('success', 'Token updated');
+				toast('success', t('toast.tokenUpdated'));
 				onClose();
 			}
 		} else {
@@ -456,9 +460,9 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 							boxShadow="0 25px 50px rgba(0,0,0,0.5)"
 						>
 				<DialogHeader pb="2">
-					<DialogTitle fontSize="15px" fontWeight="600" color="var(--wc-text-heading)">
-						{createdRawToken ? 'Token Created' : (isEditing ? 'Edit Token' : 'Create Access Token')}
-					</DialogTitle>
+				<DialogTitle fontSize="15px" fontWeight="600" color="var(--wc-text-heading)">
+					{createdRawToken ? t('tokenDialog.titleCreated') : (isEditing ? t('tokenDialog.titleEdit') : t('tokenDialog.titleCreate'))}
+				</DialogTitle>
 					<DialogCloseTrigger />
 				</DialogHeader>
 
@@ -467,9 +471,9 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 						// Token created - show copy-once display
 						<VStack gap="3" align="stretch">
 							<TokenCreatedDisplay rawToken={createdRawToken} />
-							<Text fontSize="11px" color="var(--wc-text-faint)">
-								Use this token in the Authorization header: Bearer {createdRawToken.substring(0, 11)}...
-							</Text>
+						<Text fontSize="11px" color="var(--wc-text-faint)">
+							{t('tokenDialog.useTokenHint', { prefix: createdRawToken.substring(0, 11) })}
+						</Text>
 						</VStack>
 					) : (
 						// Create/Edit form
@@ -477,12 +481,12 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 							{/* Token name */}
 							<VStack gap="1.5" align="stretch">
 <Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-					Name
+					{t('tokenDialog.nameField')}
 								</Text>
 								<Input
 									value={name}
 									onChange={(e) => setName(e.target.value)}
-									placeholder="e.g. Mobile app, CI pipeline, Friend's access"
+									placeholder={t('tokenDialog.namePlaceholder')}
 									size="sm"
 bg="var(--wc-bg-interactive)"
 								borderColor="var(--wc-border-default)"
@@ -496,23 +500,23 @@ bg="var(--wc-bg-interactive)"
 							{/* Role selector */}
 							<VStack gap="1.5" align="stretch">
 <Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-					Access Level
+					{t('tokenDialog.accessLevel')}
 								</Text>
 								<HStack gap="2">
 									<RoleOption
 										selected={isAdmin}
 										onClick={() => setRole('admin')}
 										icon={<Shield size={16} />}
-										label="Admin"
-										description="Full control API, inference, and MCP access"
+										label={t('tokenDialog.adminRole')}
+										description={t('tokenDialog.adminDesc')}
 										color="var(--wc-accent-red)"
 									/>
 									<RoleOption
 										selected={!isAdmin}
 										onClick={() => setRole('inference')}
 										icon={<Cpu size={16} />}
-										label="Inference"
-description="Query models through the proxy server"
+										label={t('tokenDialog.inferenceRole')}
+										description={t('tokenDialog.inferenceDesc')}
 										color="var(--wc-accent-blue-hover)"
 									/>
 								</HStack>
@@ -521,11 +525,11 @@ description="Query models through the proxy server"
 							{/* Inference scope - only shown if not admin */}
 							{!isAdmin && (
 								<ScopeSelector
-									label="Server Access"
-									allLabel="All Servers"
+									label={t('tokenDialog.serverAccess')}
+									allLabel={t('tokenDialog.allServers')}
 									value={inference}
 									onChange={setInference}
-									pillPlaceholder="Type alias or server ID, press Enter"
+									pillPlaceholder={t('tokenDialog.serverPillPlaceholder')}
 									disabled={isAdmin}
 								/>
 							)}
@@ -536,18 +540,18 @@ description="Query models through the proxy server"
 									<ToggleCheck
 										checked={mcpLabelledEnabled}
 										onChange={setMcpLabelledEnabled}
-										label="MCP Tools (Labelled)"
-										description="Allow calling MCP tools from mcp.json"
+										label={t('tokenDialog.mcpLabelled')}
+										description={t('tokenDialog.mcpLabelledDesc')}
 										disabled={isAdmin}
 									/>
 									{mcpLabelledEnabled && (
 										<Box pl="7">
 											<ScopeSelector
-												label="Tool Access (Labelled)"
-												allLabel="All Tools"
+												label={t('tokenDialog.toolAccessLabelled')}
+												allLabel={t('tokenDialog.allTools')}
 												value={mcpLabelled}
 												onChange={setMcpLabelled}
-												pillPlaceholder="Type tool name, press Enter"
+												pillPlaceholder={t('tokenDialog.toolPillPlaceholder')}
 												disabled={isAdmin}
 											/>
 										</Box>
@@ -555,18 +559,18 @@ description="Query models through the proxy server"
 									<ToggleCheck
 										checked={mcpInlineEnabled}
 										onChange={setMcpInlineEnabled}
-										label="MCP Tools (Inline)"
-										description="Allow calling ephemeral MCP tools"
+										label={t('tokenDialog.mcpInline')}
+										description={t('tokenDialog.mcpInlineDesc')}
 										disabled={isAdmin}
 									/>
 									{mcpInlineEnabled && (
 										<Box pl="7">
 											<ScopeSelector
-												label="Tool Access (Inline)"
-												allLabel="All Tools"
+												label={t('tokenDialog.toolAccessInline')}
+												allLabel={t('tokenDialog.allTools')}
 												value={mcpInline}
 												onChange={setMcpInline}
-												pillPlaceholder="Type tool name, press Enter"
+												pillPlaceholder={t('tokenDialog.toolPillPlaceholder')}
 												disabled={isAdmin}
 											/>
 										</Box>
@@ -587,7 +591,7 @@ color="var(--wc-accent-blue-hover)"
 							_hover={{ bg: 'var(--wc-accent-blue-focus)' }}
 							fontSize="12px"
 						>
-							Done
+							{t('tokenDialog.done')}
 						</Button>
 					) : (
 						<HStack gap="2">
@@ -599,7 +603,7 @@ color="var(--wc-accent-blue-hover)"
 								_hover={{ bg: 'var(--wc-bg-card)' }}
 								fontSize="12px"
 							>
-								Cancel
+								{t('tokenDialog.cancel')}
 							</Button>
 							<Button
 								size="sm"
@@ -610,7 +614,7 @@ color="var(--wc-accent-blue-hover)"
 								_hover={{ bg: isAdmin ? 'var(--wc-accent-red-hover)' : 'var(--wc-accent-blue-focus)' }}
 								fontSize="12px"
 							>
-								{loading ? 'Saving...' : (isEditing ? 'Update Token' : 'Create Token')}
+								{loading ? t('tokenDialog.saving') : (isEditing ? t('tokenDialog.update') : t('tokenDialog.create'))}
 							</Button>
 						</HStack>
 					)}

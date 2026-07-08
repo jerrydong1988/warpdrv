@@ -88,6 +88,7 @@ export interface AppState extends IChatStoreState{
 
 	// Settings
 	settings: ISettings;
+	setLocale: (locale: 'en' | 'zh-CN') => void;
 	// Hardware detection
 	hardware: IHardwareInfo | null;
 	// Llama / Whisper backend releases

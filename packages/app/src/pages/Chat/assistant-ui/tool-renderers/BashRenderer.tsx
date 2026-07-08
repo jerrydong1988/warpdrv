@@ -65,7 +65,7 @@ export const BashRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Output</Text>
+						<Text fontSize="11px" color="var(--wc-text-muted)">{t('chat.tool.output')}</Text>
 					</HStack>
 					{resultExpanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">

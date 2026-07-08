@@ -1,6 +1,7 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Box, Text, HStack, Flex, Badge, Collapsible } from '@chakra-ui/react';
 import { ChevronDown, ChevronRight, CheckCircle, AlertCircle, Circle, XCircle, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../../store';
 import { ERecipeStepStatus, type IRecipeStepState } from '@warpcore/shared';
 
@@ -9,21 +10,40 @@ interface IStepPanelProps {
 	defaultExpanded?: boolean;
 }
 
-const STATUS_CONFIG: Record<ERecipeStepStatus, { color: string; icon: typeof Circle; label: string }> = {
-	[ERecipeStepStatus.PENDING]: { color: 'var(--wc-text-faint)', icon: Circle, label: 'Pending' },
-	[ERecipeStepStatus.RUNNING]: { color: 'var(--wc-accent-yellow)', icon: Loader, label: 'Running' },
-	[ERecipeStepStatus.OK]: { color: 'var(--wc-accent-green)', icon: CheckCircle, label: 'OK' },
-	[ERecipeStepStatus.FAILED]: { color: 'var(--wc-accent-red)', icon: AlertCircle, label: 'Failed' },
-	[ERecipeStepStatus.CANCELLED]: { color: 'var(--wc-text-tertiary)', icon: XCircle, label: 'Cancelled' },
-	[ERecipeStepStatus.SKIPPED]: { color: 'var(--wc-text-faint)', icon: Circle, label: 'Skipped' },
+const STATUS_ICONS: Record<ERecipeStepStatus, typeof Circle> = {
+	[ERecipeStepStatus.PENDING]: Circle,
+	[ERecipeStepStatus.RUNNING]: Loader,
+	[ERecipeStepStatus.OK]: CheckCircle,
+	[ERecipeStepStatus.FAILED]: AlertCircle,
+	[ERecipeStepStatus.CANCELLED]: XCircle,
+	[ERecipeStepStatus.SKIPPED]: Circle,
+};
+
+const STATUS_COLORS: Record<ERecipeStepStatus, string> = {
+	[ERecipeStepStatus.PENDING]: 'var(--wc-text-faint)',
+	[ERecipeStepStatus.RUNNING]: 'var(--wc-accent-yellow)',
+	[ERecipeStepStatus.OK]: 'var(--wc-accent-green)',
+	[ERecipeStepStatus.FAILED]: 'var(--wc-accent-red)',
+	[ERecipeStepStatus.CANCELLED]: 'var(--wc-text-tertiary)',
+	[ERecipeStepStatus.SKIPPED]: 'var(--wc-text-faint)',
 };
 
 export function StepPanel({ step, defaultExpanded = false }: IStepPanelProps) {
+	const { t } = useTranslation('recipes');
 	const stepOutputs = useStore((s) => s.stepOutputs);
 	const output = stepOutputs[step.id] ?? '';
 	const [expanded, setExpanded] = useState(defaultExpanded || step.status === ERecipeStepStatus.RUNNING || step.status === ERecipeStepStatus.FAILED);
 	const [autoScroll, setAutoScroll] = useState(true);
 	const outputEndRef = useRef<HTMLDivElement>(null);
+
+	const STATUS_LABELS: Record<ERecipeStepStatus, string> = useMemo(() => ({
+		[ERecipeStepStatus.PENDING]: t('stepStatus.pending'),
+		[ERecipeStepStatus.RUNNING]: t('stepStatus.running'),
+		[ERecipeStepStatus.OK]: t('stepStatus.ok'),
+		[ERecipeStepStatus.FAILED]: t('stepStatus.failed'),
+		[ERecipeStepStatus.CANCELLED]: t('stepStatus.cancelled'),
+		[ERecipeStepStatus.SKIPPED]: t('stepStatus.skipped'),
+	}), [t]);
 
 	useEffect(() => {
 		if (autoScroll && outputEndRef.current) {
@@ -37,8 +57,10 @@ export function StepPanel({ step, defaultExpanded = false }: IStepPanelProps) {
 		}
 	}, [step.status]);
 
-	const config = STATUS_CONFIG[step.status];
-	const StatusIcon = config.icon;
+	const statusIcon = STATUS_ICONS[step.status];
+	const statusColor = STATUS_COLORS[step.status];
+	const statusLabel = STATUS_LABELS[step.status];
+	const StatusIcon = statusIcon;
 	const isRunning = step.status === ERecipeStepStatus.RUNNING;
 
 	const duration = step.startedAt && step.finishedAt ? `${((step.finishedAt - step.startedAt) / 1000).toFixed(1)}s` : null;
@@ -51,11 +73,11 @@ export function StepPanel({ step, defaultExpanded = false }: IStepPanelProps) {
 						<Box color="var(--wc-text-faint)">
 							{expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
 						</Box>
-						<Box color={config.color}>
+						<Box color={statusColor}>
 							<StatusIcon size={14} className={isRunning ? 'spin' : undefined} style={isRunning ? { animation: 'spin 1.5s linear infinite' } : undefined} />
 						</Box>
 						<Text fontSize="13px" fontWeight="500" color="var(--wc-text-primary)">{step.name}</Text>
-						<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-bg-interactive)" color={config.color} fontSize="10px" fontWeight="600">{config.label}</Badge>
+						<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-bg-interactive)" color={config.color} fontSize="10px" fontWeight="600">{statusLabel}</Badge>
 						{step.exitCode !== undefined && step.exitCode !== 0 && (
 							<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-red-bg-8)" color="var(--wc-accent-red)" fontSize="10px" fontWeight="600">exit {step.exitCode}</Badge>
 						)}
@@ -73,7 +95,7 @@ export function StepPanel({ step, defaultExpanded = false }: IStepPanelProps) {
 						setAutoScroll(atBottom);
 					}}>
 						{output.length === 0 ? (
-							<Text color="var(--wc-text-placeholder)">No output yet...</Text>
+							<Text color="var(--wc-text-placeholder)">{t('stepPanel.noOutput')}</Text>
 						) : (
 							<Text color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all">{output}</Text>
 						)}

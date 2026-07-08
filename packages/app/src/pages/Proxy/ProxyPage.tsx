@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Button, Spinner, Badge, Switch } from '@chakra-ui/react';
 import { Globe, Trash2, Server, ArrowRight, Play, Square, Shield } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/Card';
@@ -25,6 +26,7 @@ function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
+	const { t } = useTranslation('proxy');
 	if (status.error) {
 		return (
 			<HStack
@@ -37,9 +39,9 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 				borderColor="var(--wc-accent-red-border)"
 			>
 				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-accent-red)" shadow="0 0 8px var(--wc-accent-red)" />
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-accent-red)" letterSpacing="0.02em">
-					Error: {status.error}
-				</Text>
+			<Text fontSize="11px" fontWeight="600" color="var(--wc-accent-red)" letterSpacing="0.02em">
+				{t('status.error', { error: status.error })}
+			</Text>
 			</HStack>
 		);
 	}
@@ -56,9 +58,9 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 				borderColor="var(--wc-border-subtle)"
 			>
 				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-text-muted)" />
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" letterSpacing="0.02em">
-					Stopped
-				</Text>
+			<Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" letterSpacing="0.02em">
+				{t('status.stopped')}
+			</Text>
 			</HStack>
 		);
 	}
@@ -75,13 +77,14 @@ bg="var(--wc-accent-green-bg-8)"
 			>
 				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-accent-green)" shadow="0 0 8px var(--wc-accent-green)" />
 				<Text fontSize="11px" fontWeight="600" color="var(--wc-accent-green)" letterSpacing="0.02em">
-				Running on port {status.port}
+				{t('status.running', { port: status.port })}
 			</Text>
 		</HStack>
 	);
 }
 
 export function ProxyPage() {
+	const { t } = useTranslation('proxy');
 	const proxyStatus = useStore((s) => s.proxyStatus);
 	const proxyRoutes = useStore((s) => s.proxyRoutes);
 
@@ -148,9 +151,9 @@ export function ProxyPage() {
 	};
 
 	const getStatusSubtitle = (status: IProxyStatus, routeCount: number): string => {
-		if (status.error) return 'Error';
-		if (!status.running) return 'Stopped';
-		return `${routeCount} sticky routes`;
+		if (status.error) return t('subtitle_error');
+		if (!status.running) return t('subtitle_stopped');
+		return t('subtitle_running', { count: routeCount });
 	};
 
 	const getIconBg = (status: IProxyStatus): string => {
@@ -174,7 +177,7 @@ export function ProxyPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Router"
+				title={t('title')}
 				subtitle={proxyStatus ? getStatusSubtitle(proxyStatus, proxyRoutes.length) : '-'}
 				icon={<BsRouter size={20} />}
 				actions={
@@ -190,7 +193,7 @@ export function ProxyPage() {
 							onClick={() => setClearingAll(true)}
 						>
 							<Trash2 size={15} />
-							Clear All
+							{t('actions.clearAll')}
 						</Button>
 					) : null
 				}
@@ -213,7 +216,7 @@ export function ProxyPage() {
 										{!proxyStatus?.error && proxyStatus?.running && proxyStatus?.healthy && <Box position="absolute" top="-1px" right="-1px" w="8px" h="8px" borderRadius="full" bg="var(--wc-accent-green)" shadow="0 0 8px var(--wc-accent-green)" />}
 									</Flex>
 									<Box>
-										<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">Server Alias</Text>
+										<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">{t('serverAlias')}</Text>
 										<HStack gap="3" mt="0.5">
 											<ProxyStatusBadge status={proxyStatus ?? { enabled: false, port: 0, running: false, healthy: false, error: null }} />
 										</HStack>
@@ -235,13 +238,13 @@ bg="var(--wc-accent-blue-bg-12)"
 										disabled={startMut.loading}
 									>
 										<Play size={14} />
-										Start Router
+										{t('actions.startRouter')}
 									</Button>
 								) : (
 									<Button
 										size="sm"
 										variant="ghost"
-color="var(--wc-text-muted)"
+										color="var(--wc-text-muted)"
 									_hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }}
 										borderRadius="lg"
 										fontSize="13px"
@@ -250,15 +253,15 @@ color="var(--wc-text-muted)"
 										disabled={stopMut.loading}
 									>
 										<Square size={14} />
-										Stop Router
+										{t('actions.stopRouter')}
 									</Button>
 								)}
 							</Flex>
 
 							{/* Details row - simplified from server cards */}
 							<HStack gap="2" flexWrap="wrap">
-								<StatPill icon={<Server size={12} />} label="Port" value={`${proxyStatus?.port ?? '-'}`} />
-								<StatPill icon={<Globe size={12} />} label="Routes" value={`${proxyRoutes.length}`} />
+								<StatPill icon={<Server size={12} />} label={t('statPills.port')} value={`${proxyStatus?.port ?? '-'}`} />
+								<StatPill icon={<Globe size={12} />} label={t('statPills.routes')} value={`${proxyRoutes.length}`} />
 							</HStack>
 						</VStack>
 					</Card>
@@ -268,13 +271,13 @@ color="var(--wc-text-muted)"
 						<VStack align="stretch" gap="3">
 							<HStack gap="2" mb="2">
 								<Shield size={14} color="var(--wc-text-tertiary)" />
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">Authentication</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">{t('auth.sectionTitle')}</Text>
 							</HStack>
 							<VStack gap="2" align="stretch">
 								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Proxy Auth</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Require Bearer token for /v1/* endpoints</Text>
+										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">{t('auth.proxyAuth')}</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">{t('auth.proxyAuthDesc')}</Text>
 									</Box>
 									<Switch.Root checked={proxyAuthEnabled} onCheckedChange={handleProxyAuthToggle}>
 										<Switch.HiddenInput />
@@ -285,8 +288,8 @@ color="var(--wc-text-muted)"
 								</HStack>
 								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Control API Auth</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Require auth for /api/* endpoints</Text>
+										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">{t('auth.controlApiAuth')}</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">{t('auth.controlApiAuthDesc')}</Text>
 									</Box>
 									<Switch.Root checked={apiAuthEnabled} onCheckedChange={handleApiAuthToggle}>
 										<Switch.HiddenInput />
@@ -297,8 +300,8 @@ color="var(--wc-text-muted)"
 								</HStack>
 								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Require Auth for Localhost</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Enforce auth even for localhost requests (testing)</Text>
+										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">{t('auth.requireLocalhost')}</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">{t('auth.requireLocalhostDesc')}</Text>
 									</Box>
 									<Switch.Root checked={authRequireForLocalhost} onCheckedChange={handleAuthRequireForLocalhostToggle}>
 										<Switch.HiddenInput />
@@ -318,7 +321,7 @@ color="var(--wc-text-muted)"
 					<Card>
 						<VStack align="stretch" gap="3">
 							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">
-								Sticky Routes
+								{t('stickyRoutes.title')}
 									</Text>
 
 									{!proxyRoutes || proxyRoutes.length === 0 ? (
@@ -327,8 +330,8 @@ color="var(--wc-text-muted)"
 											borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="xl" borderStyle="dashed"
 										>
 											<VStack gap="2" color="var(--wc-text-faint)">
-												<Text fontSize="13px">No sticky routes yet</Text>
-												<Text fontSize="11px" color="var(--wc-text-muted)">Sticky routes are created when requests go through the router</Text>
+												<Text fontSize="13px">{t('stickyRoutes.empty')}</Text>
+												<Text fontSize="11px" color="var(--wc-text-muted)">{t('stickyRoutes.emptyDesc')}</Text>
 											</VStack>
 										</Flex>
 									) : (
@@ -341,7 +344,7 @@ color="var(--wc-text-muted)"
 														</Badge>
 														<ArrowRight size={14} color="var(--wc-text-placeholder)" />
 														<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">
-															{route.serverName ?? 'Unknown'}
+															{route.serverName ?? t('stickyRoutes.unknown')}
 														</Text>
 													</HStack>
 													<Button
@@ -353,7 +356,7 @@ color="var(--wc-text-faint)"
 														fontSize="11px"
 														onClick={() => handleClearOne(route.alias)}
 													>
-														Clear
+														{t('actions.clear')}
 													</Button>
 												</Flex>
 											))}
@@ -366,8 +369,8 @@ color="var(--wc-text-faint)"
 
 			{clearingAll && (
 				<ConfirmDialog
-					title="Clear All Sticky Routes?"
-					message="This will remove all sticky route mappings. New routes will be created on the next request."
+					title={t('dialog.clearAllTitle')}
+					message={t('dialog.clearAllMessage')}
 					isOpen={true}
 					isLoading={clearAllMut.loading}
 					onCancel={() => setClearingAll(false)}
@@ -377,13 +380,13 @@ color="var(--wc-text-faint)"
 
 			{restartConfirm && (
 				<ConfirmDialog
-					title="Restart Proxy Required"
-					message="Enabling proxy authentication requires restarting the proxy. This will terminate all existing connections. New connections will require authentication."
+					title={t('dialog.restartTitle')}
+					message={t('dialog.restartMessage')}
 					isOpen={true}
 					isLoading={stopMut.loading || startMut.loading || saveSettingsMut.loading}
 					onCancel={() => { setRestartConfirm(false); setProxyAuthEnabled(false); }}
 					onConfirm={handleRestartAndApply}
-					confirmLabel="Restart"
+					confirmLabel={t('dialog.restartConfirmLabel')}
 				/>
 			)}
 		</Box>

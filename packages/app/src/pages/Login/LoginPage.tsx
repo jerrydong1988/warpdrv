@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Box, Flex, VStack, Text, Input, Button, Heading } from '@chakra-ui/react';
 import { Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../components/ToastProvider';
 import { login } from '../../api/services';
 
 export function LoginPage() {
+	const { t } = useTranslation('common');
 	const navigate = useNavigate();
 	const { toast } = useToast();
 	const [token, setToken] = useState('');
@@ -20,10 +22,10 @@ export function LoginPage() {
 		setLoading(false);
 
 		if (result.ok) {
-			toast('success', 'Logged in successfully');
+			toast('success', t('toast.loginSuccess'));
 			navigate('/');
 		} else {
-			toast('error', result.error ?? 'Login failed');
+			toast('error', result.error ?? t('toast.loginFailed'));
 		}
 	};
 
@@ -60,12 +62,12 @@ export function LoginPage() {
 							<Key size={18} color="var(--wc-accent-blue)" />
 						</Box>
 						<Heading fontSize="18px" color="var(--wc-text-heading)">
-							WarpCore
+							{t('login.title')}
 						</Heading>
 					</Flex>
 
 					<Text fontSize="13px" color="var(--wc-text-secondary)" fontWeight="500">
-						Enter your access token to continue
+						{t('login.description')}
 					</Text>
 
 					<form onSubmit={handleSubmit}>
@@ -93,13 +95,13 @@ export function LoginPage() {
 								fontWeight="500"
 								disabled={loading || !token.trim()}
 							>
-								{loading ? 'Logging in...' : 'Login'}
+								{loading ? t('login.loggingIn') : t('login.button')}
 							</Button>
 						</VStack>
 					</form>
 
 					<Text fontSize="11px" color="var(--wc-text-faint)" textAlign="center">
-						Contact your WarpCore admin to get an access token
+						{t('login.help')}
 					</Text>
 				</VStack>
 			</Box>

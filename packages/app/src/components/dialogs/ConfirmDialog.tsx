@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button } from '@chakra-ui/react';
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface IConfirmDialogProps {
 	title: string;
@@ -13,7 +14,9 @@ interface IConfirmDialogProps {
 	loadingLabel?: string;
 }
 
-export function ConfirmDialog({ title, message, isOpen, onConfirm, onCancel, isLoading = false, confirmLabel = 'Delete', loadingLabel }: IConfirmDialogProps) {
+export function ConfirmDialog({ title, message, isOpen, onConfirm, onCancel, isLoading = false, confirmLabel, loadingLabel }: IConfirmDialogProps) {
+	const { t } = useTranslation('common');
+	const displayConfirmLabel = confirmLabel ?? t('actions.delete');
 	const [open, setOpen] = useState(isOpen);
 
 	return (
@@ -55,7 +58,7 @@ export function ConfirmDialog({ title, message, isOpen, onConfirm, onCancel, isL
 									onClick={onCancel}
 									disabled={isLoading}
 								>
-									Cancel
+									{t('actions.cancel')}
 								</Button>
 								<Button
 									flex="1"
@@ -71,7 +74,7 @@ bg="var(--wc-accent-red-bg-8)"
 									onClick={() => { onConfirm(); setOpen(false); }}
 									disabled={isLoading}
 								>
-									{isLoading ? (loadingLabel ?? `${confirmLabel}...`) : confirmLabel}
+									{isLoading ? (loadingLabel ?? `${displayConfirmLabel}...`) : displayConfirmLabel}
 								</Button>
 							</HStack>
 						</VStack>

@@ -65,6 +65,7 @@ export const ListRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, excludePatterns, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const entries = resultText ? (parseEntries(resultText) ?? parseFlatLines(resultText)) : null;
 	return (

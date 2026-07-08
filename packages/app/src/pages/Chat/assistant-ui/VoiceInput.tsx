@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, HStack } from '@chakra-ui/react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { RiVoiceprintLine } from 'react-icons/ri';

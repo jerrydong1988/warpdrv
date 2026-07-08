@@ -3,6 +3,7 @@ import {
 	ComposerAttachments,
 	UserMessageAttachments,
 } from "./attachment";
+import { useTranslation } from 'react-i18next';
 import { MarkdownText } from "./markdown-text";
 import { ToolFallback } from "./tool-fallback";
 import { ToolCallBlockWrapper } from "./ToolCallBlockWrapper";
@@ -106,6 +107,7 @@ export const Thread: FC<{
 	isLoading?: boolean,
 	currentServerId: TServerId | null
 }> = React.memo(({ isLoading = false, currentServerId }) => {
+	const { t } = useTranslation('chat');
 	const ThreadMsgFn = useCallback(() => <ThreadMessage />, []);
 	const serversMap = useStore(s => s.servers);
 	const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
@@ -194,13 +196,13 @@ export const Thread: FC<{
 
 					{deletingMessageId && (
 						<ConfirmDialog
-							title="Delete Message"
-							message="Are you sure you want to delete this message?"
+							title={t('threadList.deleteThread')}
+							message={t('dialogs.deleteMessageConfirm')}
 							isOpen={true}
 							onConfirm={deleteMessageCtx.confirm}
 							onCancel={deleteMessageCtx.close}
 							isLoading={deletingLoading}
-							confirmLabel="Delete"
+							confirmLabel={t('actions.delete')}
 						/>
 					)}
 				</DictationProvider>
@@ -225,10 +227,11 @@ const ThreadMessage: FC = () => {
 };
 
 const ThreadScrollToBottom: FC = () => {
+	const { t } = useTranslation('chat');
 	return (
 		<ThreadPrimitive.ScrollToBottom asChild>
 			<TooltipIconButton
-				tooltip="Scroll to bottom"
+				tooltip={t('composer.scrollToBottom')}
 				variant="outline"
 				className="aui-thread-scroll-to-bottom absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible dark:border-border dark:bg-background dark:hover:bg-accent"
 			>
@@ -261,10 +264,10 @@ const ThreadWelcome: FC = () => {
 						className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both duration-200"
 					/>
 					<h1 className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-semibold text-2xl duration-200" style={{ color: 'var(--wc-text-heading)' }}>
-						Hello there!
+						{t('threadList.welcomeTitle')}
 					</h1>
 					<p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-xl delay-75 duration-200" style={{ color: 'var(--wc-text-secondary)' }}>
-						How can I help you today?
+						{t('threadList.welcomeSubtitle')}
 					</p>
 				</div>
 			</div>
@@ -325,6 +328,7 @@ const ContextUsageBar: FC = () => {
 };
 
 const Composer: FC = () => {
+	const { t } = useTranslation('chat');
 	const { isValidServer } = useContext(ServerStatusContext);
 	const { waveformStream, setWaveformStream, subscribeTranscript } = useDictation();
 	const annotatorVisible = useStore(s => s.annotatorVisible);
@@ -414,7 +418,7 @@ const Composer: FC = () => {
 					<ComposerUiSpace />
 <ComposerEditor
 					ref={editorRef}
-					placeholder="Send a message..."
+					placeholder={t('composer.placeholder')}
 					className="aui-composer-editor max-h-32 min-h-10 w-full overflow-y-auto bg-transparent px-1.75 py-1 text-sm"
 					onChangeText={handleChangeText}
 					onEnter={handleEnter}
@@ -467,6 +471,7 @@ const ReasoningEffortToggle: FC = () => {
 };
 
 const ToolsSelector: FC = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
@@ -538,12 +543,12 @@ const ToolsSelector: FC = React.memo(() => {
 				>
 					<Popover.Body p="3">
 						{totalCount === 0 ? (
-							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">No tools available</Text>
+							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">{t('toolList.noToolsAvailable')}</Text>
 						) : (
 							<VStack gap="3" align="stretch">
 								<HStack gap="2">
 									<Switch.Root
-										label="All tools"
+										label={t('toolList.allTools')}
 										checked={attachAllTools}
 										onCheckedChange={(details) => handleAllToolsChange(details.checked)}
 									>
@@ -620,6 +625,7 @@ const ToolsSelector: FC = React.memo(() => {
 });
 
 const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = ({ onStreamChange }) => {
+	const { t } = useTranslation('chat');
 	const { isValidServer, supportsMultiModal } = useContext(ServerStatusContext);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const canAttach = isValidServer && supportsMultiModal;
@@ -650,7 +656,7 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 	return (
 		<div className="aui-composer-action-wrapper relative flex items-center justify-between">
 			<div className="flex items-center gap-1">
-				<ComposerAddAttachment disabled={!canAttach} tooltip={canAttach ? "Add Attachment" : "Multimodal not supported"} />
+				<ComposerAddAttachment disabled={!canAttach} tooltip={canAttach ? t('composer.attachFile') : t('composer.multimodalNotSupported')} />
 				<ReasoningEffortToggle />
 				{/* <ToolsToggle /> */}
 				<ToolsSelector />
@@ -666,12 +672,12 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 					<TooltipIconButton
 						onClick={handleSend}
 						disabled={!isValidServer || isSendDisabled}
-						tooltip={!isValidServer ? "Select and start a model first" : "Send message"}
+						tooltip={!isValidServer ? t('composer.selectModelFirst') : t('composer.sendMessage')}
 						side="bottom"
 						type="button"
 						variant="outline"
 						className={`${(!isValidServer || isSendDisabled) ? 'opacity-50 cursor-not-allowed' : ''} aui-composer-send size-9`}
-						aria-label={!isValidServer ? "Send message - model not selected" : "Send message"}
+						aria-label={!isValidServer ? t('composer.sendMessageNoModel') : t('actions.send')}
 						style={!isValidServer
 							? { color: 'var(--wc-text-muted)', borderColor: 'var(--wc-border-default)', backgroundColor: 'transparent' }
 							: { color: 'var(--wc-accent-blue)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-8)' }
@@ -687,7 +693,7 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							type="button"
 							variant="outline"
 							className="aui-composer-cancel size-9"
-							aria-label="Stop generating"
+							aria-label={t('actions.stop')}
 							color="var(--wc-text-primary)"
 							borderColor="var(--wc-border-default)"
 						style={{ borderColor: 'var(--wc-border-default)' }}
@@ -874,6 +880,7 @@ const AssistantMessage: FC = React.memo(() => {
  });
 
 const ReasoningBlock: FC = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const reasoning = useAuiState((s) => {
 		const part = s.part;
 		return part?.type === 'reasoning' ? (part as any).reasoning : '';
@@ -891,7 +898,7 @@ const ReasoningBlock: FC = React.memo(() => {
 					style={{ color: 'var(--wc-text-muted)' }}
 			>
 				<BrainCircuitIcon className="size-3.5" />
-				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tokens est.)` : ''}</span>
+				<span>{t('labels.thinking')}{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} ${t('labels.tokensEst')})` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
 			{open && (
@@ -921,11 +928,12 @@ const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = (
 );
 
 const DeleteMessageButton: FC<{ messageId: string }> = ({ messageId }) => {
+	const { t } = useTranslation('chat');
 	const ctx = useContext(DeleteMessageContext);
 	return (
 		<HStack gap="2" onClick={() => ctx?.open(messageId)}>
 			<Trash2 size={14} color="var(--wc-accent-red)" />
-			<Text fontSize="12px" color="var(--wc-accent-red)">Delete</Text>
+			<Text fontSize="12px" color="var(--wc-accent-red)">{t('actions.delete')}</Text>
 		</HStack>
 	);
 };
@@ -964,6 +972,7 @@ const BrowserTTS = React.memo(() => {
 });
 
 const AssistantActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const isCopied = useAuiState((s) => s.message.isCopied);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
@@ -992,7 +1001,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">Reload</Text>
+									<Text fontSize="12px">{t('actions.reload')}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1001,7 +1010,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="copy">
 								<HStack gap="2">
 									{isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-									<Text fontSize="12px">Copy</Text>
+									<Text fontSize="12px">{t('actions.copy')}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Copy>
@@ -1009,7 +1018,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="edit">
 								<HStack gap="2">
 									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
+									<Text fontSize="12px">{t('actions.edit')}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Edit>
@@ -1061,6 +1070,7 @@ const ToolMessage: FC = React.memo(() => {
 });
 
 const ToolActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
@@ -1086,7 +1096,7 @@ const ToolActionBar: FC = () => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">Reload</Text>
+									<Text fontSize="12px">{t('actions.reload')}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1167,6 +1177,7 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
+	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
@@ -1193,7 +1204,7 @@ const UserActionBar: FC = () => {
 							<Menu.Item value="edit">
 								<HStack gap="2">
 									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
+									<Text fontSize="12px">{t('actions.edit')}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Edit>
@@ -1209,6 +1220,7 @@ const UserActionBar: FC = () => {
 };
 
 const EditComposer: FC = () => {
+	const { t } = useTranslation('chat');
 	return (
 		<MessagePrimitive.Root className="aui-edit-composer-wrapper mx-auto flex w-full flex-col px-2 py-3">
 			<ComposerPrimitive.Root className="aui-edit-composer-root ml-auto flex w-full max-w-[85%] flex-col bg-muted" >
@@ -1223,7 +1235,7 @@ const EditComposer: FC = () => {
 						</Button>
 					</ComposerPrimitive.Cancel>
 					<ComposerPrimitive.Send asChild>
-						<Button size="sm">Update</Button>
+						<Button size="sm">{t('actions.update')}</Button>
 					</ComposerPrimitive.Send>
 				</div>
 			</ComposerPrimitive.Root>
@@ -1241,6 +1253,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 	className,
 	...rest
 }) => {
+	const { t } = useTranslation('chat');
 	return (
 		<BranchPickerPrimitive.Root
 			hideWhenSingleBranch
@@ -1251,7 +1264,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 			{...rest}
 		>
 			<BranchPickerPrimitive.Previous asChild>
-				<TooltipIconButton tooltip="Previous">
+				<TooltipIconButton tooltip={t('actions.previous')}>
 					<ChevronLeftIcon />
 				</TooltipIconButton>
 			</BranchPickerPrimitive.Previous>
@@ -1259,7 +1272,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 				<BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
 			</span>
 			<BranchPickerPrimitive.Next asChild>
-				<TooltipIconButton tooltip="Next">
+				<TooltipIconButton tooltip={t('actions.next')}>
 					<ChevronRightIcon />
 				</TooltipIconButton>
 			</BranchPickerPrimitive.Next>

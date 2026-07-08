@@ -1,0 +1,74 @@
+{
+  "title": "MCP 服务器",
+  "subtitle": "已配置 {{count}} 台服务器",
+  "actions": {
+    "addServer": "添加 MCP 服务器",
+    "editServer": "编辑服务器",
+    "deleteServer": "删除服务器",
+    "save": "保存",
+    "cancel": "取消",
+    "add": "添加",
+    "addEnv": "添加变量",
+    "addToolFilter": "添加工具过滤",
+    "toggleTools": "切换工具",
+    "reloadConfig": "重新加载配置"
+  },
+  "fields": {
+    "name": "名称",
+    "command": "命令",
+    "args": "参数",
+    "env": "环境变量",
+    "toolFilter": "工具过滤",
+    "serverUrl": "服务器 URL",
+    "transport": "传输方式",
+    "transportStdio": "stdio",
+    "transportHttp": "HTTP",
+    "toolAccess": "工具访问"
+  },
+  "addForm": {
+    "commandPlaceholder": "命令（例如：npx、uvx、node）",
+    "argsPlaceholder": "参数（空格分隔）",
+    "urlPlaceholder": "URL（例如：https://example.com/mcp）"
+  },
+  "card": {
+    "refreshTools": "刷新工具",
+    "restartServer": "重启服务器",
+    "removeServer": "移除服务器"
+  },
+  "toolList": {
+    "tools": "工具",
+    "ask": "询问",
+    "allow": "允许",
+    "deny": "拒绝",
+    "noToolsAvailable": "无可用工具"
+  },
+  "jsonEditor": {
+    "missingMcpServers": "缺少 \"mcpServers\" 键",
+    "invalidJson": "无效的 JSON",
+    "saveAndReload": "保存并重新加载"
+  },
+  "status": {
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "error": "错误"
+  },
+  "labels": {
+    "noServers": "未配置 MCP 服务器",
+    "noServersDesc": "点击 + 添加一个，或直接编辑 JSON。",
+    "allToolsAvailable": "所有工具可用",
+    "toolsAvailable": "{{count}} 个工具可用",
+    "noTools": "无工具",
+    "builtinServer": "内置服务器 (warpmcp)"
+  },
+  "toast": {
+    "configReloaded": "MCP 配置已重新加载",
+    "saveFailed": "保存 MCP 配置失败",
+    "serverAdded": "MCP 服务器已添加",
+    "serverUpdated": "MCP 服务器已更新",
+    "serverDeleted": "MCP 服务器已删除"
+  },
+  "dialogs": {
+    "deleteServerTitle": "删除 MCP 服务器？",
+    "deleteServerMessage": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。"
+  }
+}

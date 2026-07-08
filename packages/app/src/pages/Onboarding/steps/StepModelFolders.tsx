@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Box, Text, Input, Button, Spinner, HStack, Flex, VStack } from '@chakra-ui/react';
 import { Plus, Trash2, FolderInput, FolderOpen, Check, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '@/hooks/useDependantState';
 import { useStore } from '@/store';
 import { scanModels, updateSettings } from '@/api/services';
@@ -10,6 +11,7 @@ import { OnboardingFooter } from '../components/OnboardingFooter';
 import type { IStepProps } from '../OnboardingPage';
 
 export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProps) {
+	const { t } = useTranslation('onboarding');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
 	const models = useStore(s => s.models);

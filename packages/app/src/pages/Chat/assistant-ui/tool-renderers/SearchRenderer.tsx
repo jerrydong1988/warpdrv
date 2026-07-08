@@ -29,6 +29,7 @@ export const SearchRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { query, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const results = resultText ? parseSearchResults(resultText) : null;
 	return (

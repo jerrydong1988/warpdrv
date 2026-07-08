@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Text, HStack, Flex, Button } from '@chakra-ui/react';
 import { X, Terminal, Trash2, Download, ArrowDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { clearServerLogs as clearLogsApi } from '@/api/services';
 
@@ -12,6 +13,7 @@ interface IServerLogsProps {
 
 const emptyLogs: Array<string> = [];
 export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServerLogsProps) => {
+	const { t } = useTranslation('servers');
 	const logsEndRef = useRef<HTMLDivElement>(null);
 	const [autoScroll, setAutoScroll] = useState(true);
 
@@ -46,7 +48,7 @@ export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServer
 			<Flex px="4" py="2.5" justify="space-between" align="center" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-surface)" flexShrink={0}>
 				<HStack gap="2">
 					<Terminal size={14} color="var(--wc-text-muted)" />
-					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)">Logs — {serverName}</Text>
+					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)">{t('labels.logsTitle', { serverName })}</Text>
 				</HStack>
 				<HStack gap="1">
 					<Button size="xs" variant="ghost" color={autoScroll ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)' } _hover={{ bg: 'var(--wc-bg-hover)' }} borderRadius="md" onClick={() => setAutoScroll(!autoScroll)}>
@@ -67,7 +69,7 @@ export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServer
 			<Box flex="1" overflowY="auto" px="4" py="2" fontFamily='"Geist Mono", monospace' fontSize="11px" lineHeight="1.8">
 				{serverLogs.length === 0 ? (
 					<Flex h="100%" alignItems="center" justifyContent="center">
-						<Text color="var(--wc-text-disabled)">No logs yet...</Text>
+						<Text color="var(--wc-text-disabled)">{t('labels.noLogs')}</Text>
 					</Flex>
 				) : (
 					serverLogs.map((line: string, i: number) => (

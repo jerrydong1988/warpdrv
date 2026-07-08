@@ -24,6 +24,7 @@ export const DiffRenderer = React.memo((props: {
 	strategy?: EDiffStrategy,
 }) => {
 	const { path, old, new: newVal, edits, content, strategy } = props;
+	const { t } = useTranslation('chat');
 
 	return (
 		<Box px="3" py="2">

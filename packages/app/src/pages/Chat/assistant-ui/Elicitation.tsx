@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Text, VStack, HStack, Input, Checkbox, NativeSelect } from '@chakra-ui/react';
 import { ExternalLink } from 'lucide-react';
 import { useStore } from '@/store';
@@ -13,6 +14,7 @@ interface IFieldSchema {
 }
 
 export const Elicitation = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const elicitation = useStore(s => currentThreadId ? s.elicitationByThread[currentThreadId] : undefined);
 	const properties = (elicitation?.requestedSchema?.properties ?? {}) as Record<string, IFieldSchema>;
@@ -68,7 +70,7 @@ export const Elicitation = React.memo(() => {
 					<Text fontSize="11px" color="var(--wc-text-muted)">You will be sent to:</Text>
 					<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">{host}</Text>
 					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue)" disabled={submitting} onClick={() => { if (elicitation.url) window.open(elicitation.url, '_blank'); }}>
-						<HStack gap="1"><ExternalLink size={12} /><Text fontSize="12px">Open in browser</Text></HStack>
+						<HStack gap="1"><ExternalLink size={12} /><Text fontSize="12px">{t('elicitation.openInBrowser')}</Text></HStack>
 					</Box>
 				</VStack>
 			)}

@@ -1,0 +1,26 @@
+{
+  "title": "Models",
+  "subtitle": "{{count}} {{type}} model{{suffix}}",
+  "subtitle_llm": "LLM",
+  "subtitle_whisper": "Whisper",
+  "actions": {
+    "reScanFolders": "Re-Scan Folders",
+    "openOnHuggingFace": "Open on HuggingFace",
+    "copyFolderPath": "Copy folder path",
+    "reparseMetadata": "Re-parse Metadata",
+    "delete": "Delete"
+  },
+  "columns": {
+    "model": "Model",
+    "user": "User",
+    "quant": "Quant",
+    "vision": "Vision",
+    "params": "Params",
+    "size": "Size",
+    "context": "Context",
+    "files": "Files"
+  },
+  "emptyState": "No models found. Configure a directory in Settings, then scan.",
+  "noResults": "No models match \"{{search}}\"",
+  "searchPlaceholder": "Search models..."
+}

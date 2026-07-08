@@ -13,6 +13,7 @@ export const ReadFileRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, head, tail, offset, length, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const [expanded, setExpanded] = useState(false);
 	const rangeBits: string[] = [];

@@ -6,6 +6,7 @@
 // ============================================================
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import {
 	Wrench,

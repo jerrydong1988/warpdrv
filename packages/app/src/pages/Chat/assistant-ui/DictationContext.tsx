@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { useHotkey, HotkeyMode, comboStringToRecord } from '@/hooks/useHotKey';
 import { transcribeAudio, float32ToWavBlob } from './WhisperTranscribe';

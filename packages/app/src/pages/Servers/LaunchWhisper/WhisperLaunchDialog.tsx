@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, HStack, VStack, Button, Input, Switch, Textarea, Badge, Portal, Combobox, createListCollection } from '@chakra-ui/react';
 import { X, Mic, Play, RotateCcw, Package, Check } from 'lucide-react';
 import { DEFAULT_WHISPER_LAUNCH_PARAMS, type IWhisperLaunchParams, type IWhisperModel } from '@warpcore/shared';

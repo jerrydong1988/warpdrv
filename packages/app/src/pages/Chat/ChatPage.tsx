@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRealm } from '@/hooks/useRealm';
 import { Box, Button, Flex, IconButton, Text, HStack, Popover, Portal, Switch, Slider, VStack, Combobox, createListCollection } from '@chakra-ui/react';
 import { MessageSquare, ChevronDown, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
 	AssistantRuntimeProvider,
 	useExternalStoreRuntime,
@@ -606,8 +607,9 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	);
 });
 export const ChatPage = React.memo(() => {
+	const { t } = useTranslation('chat');
 
-	const title = useStore(s => s.currentThreadId ? s.threads[s.currentThreadId]?.title || "New Chat" : "New Chat");
+	const title = useStore(s => s.currentThreadId ? s.threads[s.currentThreadId]?.title || t('actions.newChat') : t('actions.newChat'));
 	const setCurrentThreadId = useStore(s => s.setCurrentThreadId);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const [threadsListCollapsed, setThreadsListCollapsed] = useState(false);
