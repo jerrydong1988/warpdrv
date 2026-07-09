@@ -49,17 +49,20 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const [deciding, setDeciding] = useState(false);
 	const toast = useToast();
 
-	const handleDecision = useCallback(async (decision: 'approve' | 'deny') => {
+		const handleDecision = useCallback(async (decision: 'approve' | 'deny') => {
 		if (!currentThreadId || !currentServerId) return;
 		setDeciding(true);
 		try {
-			await decideMcpToolCall(
-				toolCallId, decision, currentThreadId, currentServerId,
-				currentSystemPrompt, currentInferenceParams,
-				undefined,
+			await decideMcpToolCall({
+				toolCallId,
+				decision,
+				threadId: currentThreadId,
+				serverId: currentServerId,
+				systemPrompt: currentSystemPrompt,
+				inferenceParams: currentInferenceParams,
 				attachAllTools,
-				attachedTools
-			);
+				attachedTools,
+			});
 		} finally {
 			setDeciding(false);
 		}
@@ -72,13 +75,16 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 			await setThreadToolPermission(currentThreadId, serverName, toolName, true, EToolApprovalMode.ALLOWED);
 			const res = await fetchThreadPermissions(currentThreadId);
 			if (res.ok) useStore.getState().setThreadToolPermissions(currentThreadId, res.data.threadOverrides);
-			await decideMcpToolCall(
-				toolCallId, 'approve', currentThreadId, currentServerId,
-				currentSystemPrompt, currentInferenceParams,
-				undefined,
+			await decideMcpToolCall({
+				toolCallId,
+				decision: 'approve',
+				threadId: currentThreadId,
+				serverId: currentServerId,
+				systemPrompt: currentSystemPrompt,
+				inferenceParams: currentInferenceParams,
 				attachAllTools,
-				attachedTools
-			);
+				attachedTools,
+			});
 			toast({ title: `"${toolName}" will always be approved for this thread`, status: 'success', duration: 3000 });
 		} finally {
 			setDeciding(false);

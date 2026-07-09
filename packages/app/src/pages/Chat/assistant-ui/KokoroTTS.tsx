@@ -35,6 +35,8 @@ let currentStreamAbortId: string | null = null;
 let ttsAudioCtx: AudioContext | null = null;
 let ttsAnalyser: AnalyserNode | null = null;
 let ttsAnalyserListeners: Array<(a: AnalyserNode | null) => void> = [];
+let recursionDepth = 0;
+const MAX_RECURSION_DEPTH = 100;
 function ensureAnalyser(): AnalyserNode {
 	if (!ttsAudioCtx) ttsAudioCtx = new AudioContext();
 	if (ttsAudioCtx.state === 'suspended') ttsAudioCtx.resume().catch(() => {});
@@ -141,10 +143,32 @@ export async function startStream(requestId: number, text: string, voice: string
 }
 
 function tryPlayNext() {
+	recursionDepth++;
+	if (recursionDepth > MAX_RECURSION_DEPTH) {
+		console.error('[TTS] tryPlayNext: max recursion depth exceeded, aborting');
+		recursionDepth = 0;
+		return;
+	}
+	
 	console.log('[TTS] tryPlayNext: queue=', playbackQueue.length, 'playing=', isPlayingChunk);
-	if (isPlayingChunk || playbackQueue.length === 0) return;
+	if (isPlayingChunk || playbackQueue.length === 0) {
+		recursionDepth = 0;
+		return;
+	}
+	
 	const url = playbackQueue.shift();
-	if (!url) return;
+	if (!url) {
+		recursionDepth = 0;
+		return;
+	}
+	
+	if (currentRequestId === 0) {
+		console.log('[TTS] tryPlayNext: cancelled (requestId=0)');
+		recursionDepth = 0;
+		URL.revokeObjectURL(url);
+		return;
+	}
+	
 	isPlayingChunk = true;
 	const audioEl = new Audio(url);
 	currentAudioEl = audioEl;
@@ -164,7 +188,8 @@ function tryPlayNext() {
 		}
 		URL.revokeObjectURL(url);
 		isPlayingChunk = false;
-		tryPlayNext();
+		recursionDepth = 0;
+		setTimeout(() => tryPlayNext(), 0);
 		if (playbackQueue.length === 0 && !isPlayingChunk && !useStore.getState().ttsIsGenerating) {
 			useStore.getState().ttsSetSpeaking(false);
 		}
@@ -176,7 +201,8 @@ function tryPlayNext() {
 		}
 		URL.revokeObjectURL(url);
 		isPlayingChunk = false;
-		tryPlayNext();
+		recursionDepth = 0;
+		setTimeout(() => tryPlayNext(), 0);
 		if (playbackQueue.length === 0 && !isPlayingChunk && !useStore.getState().ttsIsGenerating) {
 			useStore.getState().ttsSetSpeaking(false);
 		}
@@ -188,6 +214,7 @@ function tryPlayNext() {
 		}
 		URL.revokeObjectURL(url);
 		isPlayingChunk = false;
+		recursionDepth = 0;
 	});
 }
 

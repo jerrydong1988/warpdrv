@@ -7,6 +7,7 @@ import { store } from '../util/store';
 import { Dirent } from 'fs';
 
 const MODELS_CACHE_KEY = 'models:cache';
+const MAX_SCAN_DEPTH = 20;
 
 // Shard pattern: -00001-of-00003.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
@@ -60,7 +61,12 @@ async function scanDirRecursive(
 	ancestorMmproj: IGgufFile | null,
 	userSegment: string | null,
 	cachedModels: IModel[],
+	depth: number = 0,
 ): Promise<IModel[]> {
+	if (depth > MAX_SCAN_DEPTH) {
+		console.warn(`[modelScanner] Max scan depth (${MAX_SCAN_DEPTH}) exceeded at ${dirPath}, stopping recursion`);
+		return [];
+	}
 	let entries: Dirent[];
 	try {
 		entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -144,7 +150,7 @@ async function scanDirRecursive(
 	for (const subDir of subDirs) {
 		const childPath = path.join(dirPath, subDir.name);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels);
+		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels, depth + 1);
 		results.push(...childModels);
 	}
 

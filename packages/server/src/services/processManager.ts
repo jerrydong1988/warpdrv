@@ -155,14 +155,17 @@ function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 
 // Build the llama-server command line args from params
 export function buildArgs(
-	modelPath: string,
-	mmprojPath: string | null,
-	params: ILaunchParams,
-	defaultArgs: string[],
-	buildNumber: number,
-	extraArgs?: Record<string, string>,
-	inferenceParams?: Partial<IChatInferenceParams>,
+	options: {
+		modelPath: string;
+		mmprojPath?: string | null;
+		params: ILaunchParams;
+		defaultArgs: string[];
+		buildNumber: number;
+		extraArgs?: Record<string, string>;
+		inferenceParams?: Partial<IChatInferenceParams>;
+	},
 ): string[] {
+	const { modelPath, mmprojPath, params, defaultArgs, buildNumber, extraArgs, inferenceParams } = options;
 	const args: string[] = [...defaultArgs];
 	const argsSet = new Set(defaultArgs);
 	// Remove -fa and its value from defaultArgs if present (will add properly formatted version below)
@@ -243,14 +246,16 @@ export function buildArgs(
 }
 // Async wrapper that injects checkpoint path
 export async function buildServerArgs(
-	modelPath: string,
-	mmprojPath: string | null,
-	params: ILaunchParams,
-	defaultArgs: string[],
-	buildNumber: number,
+	options: {
+		modelPath: string;
+		mmprojPath?: string | null;
+		params: ILaunchParams;
+		defaultArgs: string[];
+		buildNumber: number;
+	},
 ): Promise<string[]> {
 	const checkpointDir = await getCheckpointsDir();
-	return buildArgs(modelPath, mmprojPath, params, defaultArgs, buildNumber, { 'slot-save-path': checkpointDir });
+	return buildArgs({ ...options, extraArgs: { 'slot-save-path': checkpointDir } });
 }
 // Spawn a llama-server process
 export function spawnServer(
@@ -746,13 +751,13 @@ export async function launchServer(server: IServer): Promise<void> {
 		? parseInt(backend.buildNumber, 10)
 		: 0;
 
-	const args = await buildServerArgs(
-		server.modelPath,
+	const args = await buildServerArgs({
+		modelPath: server.modelPath,
 		mmprojPath,
-		launchParams,
-		backend.defaultArgs,
+		params: launchParams,
+		defaultArgs: backend.defaultArgs,
 		buildNumber,
-	);
+	});
 
 	const pid = spawnServer(
 		server.id,
