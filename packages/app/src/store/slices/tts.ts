@@ -4,6 +4,8 @@ interface TTSSlice {
 	ttsActiveMessageId: string | null;
 	ttsIsGenerating: 'button' | 'vad' | null;
 	ttsIsSpeaking: boolean;
+	ttsPlaybackQueue: string[];
+	ttsCurrentRequestId: number;
 	ttsSpokenByMessage: Record<string, number>;
 	ttsVadSentencesSent: number;
 	ttsVadSentencesDone: number;
@@ -30,6 +32,8 @@ export const ttsSlice = (
 	ttsActiveMessageId: null,
 	ttsIsGenerating: null,
 	ttsIsSpeaking: false,
+	ttsPlaybackQueue: [],
+	ttsCurrentRequestId: 0,
 	ttsSpokenByMessage: {},
 	ttsVadSentencesSent: 0,
 	ttsVadSentencesDone: 0,
@@ -41,6 +45,8 @@ export const ttsSlice = (
 			draft.ttsActiveMessageId = messageId;
 			draft.ttsIsGenerating = mode;
 			draft.ttsIsSpeaking = false;
+			draft.ttsPlaybackQueue = [];
+			draft.ttsCurrentRequestId = Date.now();
 		});
 	},
 	ttsStop: () => {
@@ -49,6 +55,8 @@ export const ttsSlice = (
 			draft.ttsActiveMessageId = null;
 			draft.ttsIsGenerating = null;
 			draft.ttsIsSpeaking = false;
+			draft.ttsPlaybackQueue = [];
+			draft.ttsCurrentRequestId = 0;
 		});
 	},
 	ttsSetGenerating: (v) => {

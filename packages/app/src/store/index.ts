@@ -105,6 +105,8 @@ export const useStore = create<AppState>()(
 					ttsVadIncSent: tts.ttsVadIncSent!,
 					ttsVadIncDone: tts.ttsVadIncDone!,
 					ttsVadReset: tts.ttsVadReset!,
+					ttsPlaybackQueue: tts.ttsPlaybackQueue!,
+					ttsCurrentRequestId: tts.ttsCurrentRequestId!,
 					vadActive: tts.vadActive!,
 					setVadActive: tts.setVadActive!,
 					ttsVadNewRequestId: tts.ttsVadNewRequestId!,

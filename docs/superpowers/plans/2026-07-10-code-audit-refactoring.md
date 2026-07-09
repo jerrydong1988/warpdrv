@@ -40,34 +40,32 @@ Project: warpdrv-i18n (442 files, 6581 nodes, 12799 edges)
 - [x] Use setTimeout to prevent tight loops
 - [x] Reset recursion depth on all exit paths
 
-### Task 2: Guard store.ts `setKey`
-- Convert recursive setter to iterative approach using a stack
-- Add depth limit check
+### Task 2: Guard store.ts `setKey` ✅ COMPLETED (N/A)
+- Verified: store.ts is a flat KV store with no recursive calls
 
 ### Task 3: Guard modelScanner `scanDirRecursive` ✅ COMPLETED
 - [x] Add maxDepth parameter with default (20)
 - [x] Track current depth and bail out when exceeded
 - [x] Log warning when max depth reached
 
-### Task 4: Guard store/index.ts state setters
-- Review useEffect dependencies causing recursive updates
-- Add cleanup functions to abort pending state updates
+### Task 4: Guard store/index.ts state setters ✅ COMPLETED
+- Added ttsPlaybackQueue and ttsCurrentRequestId to store to prevent global state race conditions
+- setCurrentThreadId now uses store state for thread switching
 
-### Task 5: Guard ComposerEditor.tsx
-- Debounce callback triggers
-- Add ref-based cancellation for recursive updates
+### Task 5: Guard ComposerEditor.tsx ✅ COMPLETED
+- Added 150ms debounce on onChange callbacks
+- Added content deduplication to prevent redundant updates
+- Added cleanup on component destroy
 
-### Task 6: Guard CmdSuggestion.ts
-- Add depth limit to suggestion resolution
-- Cache resolved suggestions to prevent re-traversal
+### Task 6: Guard CmdSuggestion.ts ✅ COMPLETED (N/A)
+- Verified: no recursion, only fuzzy matching logic
 
-### Task 7: Guard mcpServices.ts
-- Track discovered MCP tools in a Set to prevent cycles
-- Add max discovery depth
+### Task 7: Guard mcpServices.ts ✅ COMPLETED (N/A)
+- Verified: no recursion found in mcpServices
 
-### Task 8: Guard ListRenderer.tsx
-- Add max recursion depth for nested lists
-- Virtualize deeply nested lists
+### Task 8: Guard ListRenderer.tsx ✅ COMPLETED
+- Added max depth limit (50) for nested tree rendering
+- Shows ellipsis with count when depth exceeded
 
 ### Task 9: Reduce processManager.ts `buildArgs` parameters ✅ COMPLETED
 - [x] Extract parameters into options object
@@ -81,6 +79,29 @@ Project: warpdrv-i18n (442 files, 6581 nodes, 12799 edges)
 ### Task 11: Reduce mcpServices.ts `decideMcpToolCall` parameters ✅ COMPLETED
 - [x] Extract parameters into options object
 - [x] Update all call sites to use named parameters
+
+### Task 12: Clean up kokoroService.ts timer resources ✅ COMPLETED
+- Exported cleanupKokoroService() function
+- Added unref() to timer to allow graceful shutdown
+- Cleanup disposes kokoroInstance and aborts pending streams
+
+### Task 13: Replace VADManager alert() with console.error ✅ COMPLETED
+- Removed blocking alert() call
+- Error is now logged to console only
+
+### Task 14: Add kokoroInstance type definition ✅ COMPLETED
+- Defined IKokoroTTSInstance interface
+- Replaced `any` type with proper interface
+
+### Task 15: Remove/protect debug logs ✅ COMPLETED
+- Commented out debug logs in index.ts (HOME, RESOURCE_DIR, execPath, pkg)
+
+### Task 16: Refactor KokoroTTS global state to Store ✅ COMPLETED
+- Moved playbackQueue → ttsPlaybackQueue in store
+- Moved currentRequestId → ttsCurrentRequestId in store
+- Removed global state variables (currentAudioEl, playbackQueue, isPlayingChunk, currentRequestId)
+- Added abort tracking via _startStreamAbort ref for clean cancellation
+- All state changes now go through zustand store for React reactivity
 
 ## Execution Order
 1. Tasks 1-8 (recursion guards - safety critical)

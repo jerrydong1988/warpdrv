@@ -10,6 +10,8 @@ import { docToString, extractCommands } from "./docToString";
 import { setActiveComposerEditor, clearActiveComposerEditor } from "./composerEditorRegistry";
 import { useStore } from "@/store";
 
+const DEBOUNCE_MS = 150;
+
 export interface IWarpComposerEditorRef {
 	insertText: (text: string) => void;
 	focus: () => void;
@@ -52,6 +54,9 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 	onEnterRef.current = props.onEnter;
 	const canSendRef = useRef(props.canSend);
 	canSendRef.current = props.canSend;
+	const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const lastContentRef = useRef<string>('');
+	const lastCommandsRef = useRef<string>('');
 	const editor = useEditor({
 		extensions: [
 			Document,
@@ -70,14 +75,29 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 		},
 		onUpdate: ({ editor }) => {
 			const json = editor.getJSON();
-			props.onChangeText(docToString(json));
-			setPendingSlashCommands(extractCommands(json));
+			const content = docToString(json);
+			const commands = extractCommands(json);
+			const contentKey = content;
+			const commandsKey = JSON.stringify(commands);
+			if (contentKey === lastContentRef.current && commandsKey === lastCommandsRef.current) return;
+			lastContentRef.current = contentKey;
+			lastCommandsRef.current = commandsKey;
+			if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+			updateTimerRef.current = setTimeout(() => {
+				props.onChangeText(content);
+				setPendingSlashCommands(commands);
+				updateTimerRef.current = null;
+			}, DEBOUNCE_MS);
 		},
 		onCreate: ({ editor }) => {
 			//console.log("[register] onCreate fired", !!editor);
 			setActiveComposerEditor(editor);
 		},
 		onDestroy: () => {
+			if (updateTimerRef.current) {
+				clearTimeout(updateTimerRef.current);
+				updateTimerRef.current = null;
+			}
 			if (editor) clearActiveComposerEditor(editor);
 		},
 	});

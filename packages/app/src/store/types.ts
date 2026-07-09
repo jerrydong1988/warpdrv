@@ -102,6 +102,8 @@ export interface AppState extends IChatStoreState{
 	ttsActiveMessageId: string | null;
 	ttsIsGenerating: 'button' | 'vad' | null;
 	ttsIsSpeaking: boolean;
+	ttsPlaybackQueue: string[];
+	ttsCurrentRequestId: number;
 	ttsSpokenByMessage: Record<string, number>;
 	ttsVadSentencesSent: number;
 	ttsVadSentencesDone: number;

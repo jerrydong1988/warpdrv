@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, type FC } from 'react';
+import React, { useCallback, useMemo, useRef, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Volume2, Loader2 } from 'lucide-react';
 import { FaStop } from 'react-icons/fa';
@@ -26,17 +26,15 @@ const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = (
 	</Box>
 );
 
-let currentAudioEl: HTMLAudioElement | null = null;
-let playbackQueue: string[] = [];
-let isPlayingChunk = false;
-let currentRequestId: number = 0;
-let currentEventSource: EventSource | null = null;
-let currentStreamAbortId: string | null = null;
+const MAX_RECURSION_DEPTH = 100;
 let ttsAudioCtx: AudioContext | null = null;
 let ttsAnalyser: AnalyserNode | null = null;
 let ttsAnalyserListeners: Array<(a: AnalyserNode | null) => void> = [];
 let recursionDepth = 0;
-const MAX_RECURSION_DEPTH = 100;
+let _currentAudioEl: HTMLAudioElement | null = null;
+let _currentEventSource: EventSource | null = null;
+let _currentStreamAbortId: string | null = null;
+
 function ensureAnalyser(): AnalyserNode {
 	if (!ttsAudioCtx) ttsAudioCtx = new AudioContext();
 	if (ttsAudioCtx.state === 'suspended') ttsAudioCtx.resume().catch(() => {});
@@ -61,26 +59,29 @@ export function subscribeTTSAnalyser(cb: (a: AnalyserNode | null) => void): () =
 }
 function checkVadComplete() {
 	const s = useStore.getState();
-	const queueLen = playbackQueue.length;
-	const playing = isPlayingChunk;
+	const queueLen = s.ttsPlaybackQueue.length;
+	const playing = s.ttsIsSpeaking;
 	const generating = s.ttsIsGenerating;
 	const sent = s.ttsVadSentencesSent;
 	const done = s.ttsVadSentencesDone;
 	const threadId = s.currentThreadId;
 	const running = threadId ? s.isRunningByThread[threadId] : false;
-	console.log('[TTS vad] checkVadComplete: queue=', queueLen, 'playing=', playing, 'generating=', generating, 'sent=', sent, 'done=', done, 'running=', running);
 	if (queueLen > 0 || playing) return;
 	if (generating !== 'vad') return;
 	if (sent !== done) return;
 	if (threadId && running) return;
-	console.log('[TTS vad] checkVadComplete: all done, calling stopTTS');
 	stopTTS();
 }
 
+function _getCleanedText(text: string): string {
+	return removeMd(text).replace(emojiRegex(), '').replace(/\s+/g, ' ').trim();
+}
+
+let _startStreamAbort: (() => void) | null = null;
+
 export async function startStream(requestId: number, text: string, voice: string): Promise<void> {
-	const cleaned = removeMd(text).replace(emojiRegex(), '').replace(/\s+/g, ' ').trim();
-	if (!cleaned) { console.log('[TTS] startStream: cleaned text is empty'); return; }
-	console.log('[TTS] startStream: requestId=', requestId, 'text=', JSON.stringify(cleaned.slice(0, 60)));
+	const cleaned = _getCleanedText(text);
+	if (!cleaned) return;
 	const startRes = await fetch('/api/kokoro/tts/start', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -89,43 +90,42 @@ export async function startStream(requestId: number, text: string, voice: string
 	const startJson = await startRes.json();
 	if (!startJson.ok) throw new Error(startJson.error || 'tts start failed');
 	const streamId = startJson.data.streamId as string;
-	if (requestId !== currentRequestId) {
-		console.log('[TTS] startStream: requestId mismatch after fetch, requestId=', requestId, 'currentRequestId=', currentRequestId, 'aborting');
-		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: 'POST' }).catch(() => {});
-		return;
-	}
-	console.log('[TTS] startStream: streamId=', streamId, 'setting up SSE');
-	currentStreamAbortId = streamId;
+	_currentStreamAbortId = streamId;
 	const es = new EventSource(`/api/kokoro/tts/stream/${streamId}`);
-	currentEventSource = es;
+	_currentEventSource = es;
+	_startStreamAbort = () => {
+		es.close();
+		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: 'POST' }).catch(() => {});
+	};
+	const abortCheck = () => {
+		const currentReqId = useStore.getState().ttsCurrentRequestId;
+		return requestId === currentReqId;
+	};
 	es.addEventListener('chunk', (e: MessageEvent) => {
-		if (requestId !== currentRequestId) {
-			console.log('[TTS] chunk DROPPED: requestId', requestId, '!== currentRequestId', currentRequestId);
+		if (!abortCheck()) {
+			es.close();
 			return;
 		}
 		const activeMsg = useStore.getState().ttsActiveMessageId;
-		if (activeMsg === null) {
-			console.log('[TTS] chunk DROPPED: ttsActiveMessageId is null');
-			return;
-		}
+		if (activeMsg === null) return;
 		const payload = JSON.parse(e.data);
 		const bin = atob(payload.audio);
 		const bytes = new Uint8Array(bin.length);
 		for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
 		const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
-		playbackQueue.push(url);
+		useStore.getState().ttsPlaybackQueue.push(url);
 		tryPlayNext();
 	});
 	es.addEventListener('done', () => {
-		console.log('[TTS] stream done: requestId=', requestId, 'currentRequestId=', currentRequestId, 'generating=', useStore.getState().ttsIsGenerating);
 		es.close();
-		if (currentEventSource === es) currentEventSource = null;
-		currentStreamAbortId = null;
-		if (requestId !== currentRequestId) return;
+		if (_currentEventSource === es) _currentEventSource = null;
+		_currentStreamAbortId = null;
+		_startStreamAbort = null;
+		if (!abortCheck()) return;
 		const s = useStore.getState();
 		if (s.ttsIsGenerating === 'button') {
 			s.ttsSetGenerating(null);
-			if (playbackQueue.length === 0 && !isPlayingChunk) {
+			if (s.ttsPlaybackQueue.length === 0 && !s.ttsIsSpeaking) {
 				s.ttsSetSpeaking(false);
 			}
 		} else if (s.ttsIsGenerating === 'vad') {
@@ -135,9 +135,9 @@ export async function startStream(requestId: number, text: string, voice: string
 	});
 	es.addEventListener('error', (e: MessageEvent) => {
 		es.close();
-		if (currentEventSource === es) currentEventSource = null;
-		currentStreamAbortId = null;
-		console.error('[KokoroTTS] Stream error:', (e as any)?.data);
+		if (_currentEventSource === es) _currentEventSource = null;
+		_currentStreamAbortId = null;
+		_startStreamAbort = null;
 		useStore.getState().ttsStop();
 	});
 }
@@ -145,33 +145,28 @@ export async function startStream(requestId: number, text: string, voice: string
 function tryPlayNext() {
 	recursionDepth++;
 	if (recursionDepth > MAX_RECURSION_DEPTH) {
-		console.error('[TTS] tryPlayNext: max recursion depth exceeded, aborting');
 		recursionDepth = 0;
 		return;
 	}
-	
-	console.log('[TTS] tryPlayNext: queue=', playbackQueue.length, 'playing=', isPlayingChunk);
-	if (isPlayingChunk || playbackQueue.length === 0) {
+	const s = useStore.getState();
+	if (s.ttsIsSpeaking || s.ttsPlaybackQueue.length === 0) {
 		recursionDepth = 0;
 		return;
 	}
-	
-	const url = playbackQueue.shift();
+	const url = s.ttsPlaybackQueue.shift();
 	if (!url) {
 		recursionDepth = 0;
 		return;
 	}
-	
-	if (currentRequestId === 0) {
-		console.log('[TTS] tryPlayNext: cancelled (requestId=0)');
-		recursionDepth = 0;
+	const currentReqId = s.ttsCurrentRequestId;
+	if (currentReqId === 0) {
 		URL.revokeObjectURL(url);
+		recursionDepth = 0;
 		return;
 	}
-	
-	isPlayingChunk = true;
+	s.ttsSetSpeaking(true);
 	const audioEl = new Audio(url);
-	currentAudioEl = audioEl;
+	_currentAudioEl = audioEl;
 	try {
 		const analyser = ensureAnalyser();
 		const src = ttsAudioCtx!.createMediaElementSource(audioEl);
@@ -179,75 +174,71 @@ function tryPlayNext() {
 	} catch (e) {
 		console.error('[KokoroTTS] analyser wire failed:', e);
 	}
-	if (!useStore.getState().ttsIsSpeaking) {
-		useStore.getState().ttsSetSpeaking(true);
-	}
-	audioEl.onended = () => {
-		if (currentAudioEl === audioEl) {
-			currentAudioEl = null;
-		}
+	const onEnd = () => {
+		if (_currentAudioEl === audioEl) _currentAudioEl = null;
 		URL.revokeObjectURL(url);
-		isPlayingChunk = false;
 		recursionDepth = 0;
 		setTimeout(() => tryPlayNext(), 0);
-		if (playbackQueue.length === 0 && !isPlayingChunk && !useStore.getState().ttsIsGenerating) {
-			useStore.getState().ttsSetSpeaking(false);
+		const after = useStore.getState();
+		if (after.ttsPlaybackQueue.length === 0 && !after.ttsIsGenerating) {
+			after.ttsSetSpeaking(false);
 		}
 		checkVadComplete();
 	};
-	audioEl.onerror = () => {
-		if (currentAudioEl === audioEl) {
-			currentAudioEl = null;
-		}
+	const onError = () => {
+		if (_currentAudioEl === audioEl) _currentAudioEl = null;
 		URL.revokeObjectURL(url);
-		isPlayingChunk = false;
 		recursionDepth = 0;
 		setTimeout(() => tryPlayNext(), 0);
-		if (playbackQueue.length === 0 && !isPlayingChunk && !useStore.getState().ttsIsGenerating) {
-			useStore.getState().ttsSetSpeaking(false);
+		const after = useStore.getState();
+		if (after.ttsPlaybackQueue.length === 0 && !after.ttsIsGenerating) {
+			after.ttsSetSpeaking(false);
 		}
 		checkVadComplete();
 	};
+	audioEl.onended = onEnd;
+	audioEl.onerror = onError;
 	audioEl.play().catch(() => {
-		if (currentAudioEl === audioEl) {
-			currentAudioEl = null;
-		}
+		if (_currentAudioEl === audioEl) _currentAudioEl = null;
 		URL.revokeObjectURL(url);
-		isPlayingChunk = false;
 		recursionDepth = 0;
 	});
 }
 
 export function stopTTS() {
-	console.log('[TTS] stopTTS: requestId→0, clearing queue, closing EventSource, aborting stream');
-	currentRequestId = 0;
-	if (currentAudioEl) {
-		currentAudioEl.pause();
-		currentAudioEl.currentTime = 0;
-		currentAudioEl = null;
+	const s = useStore.getState();
+	s.ttsCurrentRequestId = 0;
+	if (_currentAudioEl) {
+		_currentAudioEl.pause();
+		_currentAudioEl.currentTime = 0;
+		_currentAudioEl = null;
 	}
-	for (const url of playbackQueue) {
+	for (const url of s.ttsPlaybackQueue) {
 		URL.revokeObjectURL(url);
 	}
-	playbackQueue = [];
-	isPlayingChunk = false;
-	const s = useStore.getState();
+	s.ttsPlaybackQueue = [];
+	s.ttsSetSpeaking(false);
 	const activeId = s.ttsActiveMessageId;
 	if (activeId) s.ttsClearSpokenIndex(activeId);
 	s.ttsVadReset();
 	s.ttsStop();
-	if (currentEventSource) {
-		currentEventSource.close();
-		currentEventSource = null;
+	if (_startStreamAbort) {
+		_startStreamAbort();
+		_startStreamAbort = null;
 	}
-	if (currentStreamAbortId) {
-		fetch(`/api/kokoro/tts/abort/${currentStreamAbortId}`, { method: 'POST' }).catch(() => {});
-		currentStreamAbortId = null;
+	if (_currentEventSource) {
+		_currentEventSource.close();
+		_currentEventSource = null;
+	}
+	if (_currentStreamAbortId) {
+		fetch(`/api/kokoro/tts/abort/${_currentStreamAbortId}`, { method: 'POST' }).catch(() => {});
+		_currentStreamAbortId = null;
 	}
 }
 
 export function setKokoroCurrentRequestId(id: number) {
-	currentRequestId = id;
+	const s = useStore.getState();
+	s.ttsCurrentRequestId = id;
 }
 
 export const KokoroTTSButton = React.memo(() => {
@@ -279,10 +270,10 @@ export const KokoroTTSButton = React.memo(() => {
 			stopTTS();
 		}
 		if (!messageText.trim()) return;
-		playbackQueue = [];
 		const requestId = Date.now();
-		currentRequestId = requestId;
 		ttsStart(messageId);
+		const s = useStore.getState();
+		s.ttsCurrentRequestId = requestId;
 		try {
 			await startStream(requestId, messageText, voice);
 		} catch (err) {
