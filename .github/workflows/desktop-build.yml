@@ -26,6 +26,11 @@ jobs:
       - name: Build app
         run: npm run build -w @warpcore/app
 
+      - name: Create placeholder binaries directory
+        run: |
+          New-Item -ItemType Directory -Path packages\desktop\binaries -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\warpcore-server-x86_64-pc-windows-msvc.exe -Force
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
