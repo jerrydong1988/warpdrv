@@ -91,7 +91,7 @@ export const PageHeader = React.memo(({ title, subtitle, icon, actions, actionsR
 			// boxShadow={"4px 0px 10px rgba(0,0,0,0.2)"}
 			className='drag'
 			onDoubleClick={handleDoubleClick}
-			style={{ userSelect: 'none', WebkitUserSelect: 'none', userDrag: 'none',
+			style={{ userSelect: 'none', WebkitUserSelect: 'none',
 				backdropFilter: "blur(10px)",
 				WebkitBackdropFilter: "blur(10px)",
 			 }}

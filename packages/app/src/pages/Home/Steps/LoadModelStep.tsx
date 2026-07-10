@@ -16,7 +16,7 @@ export const LoadModelStep = React.memo(({ done, isOpenDefault, isHighlighted }:
 		<VStack align="stretch" gap="3">
 			<Text fontSize="13px" color="var(--wc-text-tertiary)" lineHeight="1.6">
 				<Trans t={t} i18nKey="steps.loadModel.step1" components={{
-					linkSettings: <ChakraLink as={NavLink} to="/settings" style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} />,
+					linkSettings: <ChakraLink as={NavLink} style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} />,
 				}} />
 				<br />
 				<br />

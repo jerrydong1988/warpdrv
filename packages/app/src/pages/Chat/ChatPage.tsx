@@ -18,6 +18,7 @@ import { useStore } from '@/store';
 import type { AppState } from '@/store/types';
 import type { IChatPreset } from '@warpcore/shared';
 import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
+import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 import './assistant-ui/styles/assistant-ui.css';
 import { createContext } from 'react';
 import { ChatSidebar } from './ChatSidebar';
@@ -34,6 +35,7 @@ import { parseThreadMeta } from '@/pages/Chat/assistant-ui/ServerSelector';
 // COMMENTED OUT: per-thread whisper server selection no longer used
 // import { parseWhisperThreadMeta } from '@/pages/Chat/assistant-ui/WhisperServerSelector';
 import { VscLayoutSidebarLeft, VscLayoutSidebarLeftOff, VscLayoutSidebarRight, VscLayoutSidebarRightOff } from 'react-icons/vsc';
+import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 import { RiFontSize } from 'react-icons/ri';
 import mermaid from 'mermaid';
 import { useLocation } from 'react-router-dom';
@@ -630,7 +632,7 @@ export const ChatPage = React.memo(() => {
 		},
 		{
 			onActivate: () => {
-				openChatSidebarTab('search');
+				openChatSidebarTab(EChatSidebarTab.SEARCH);
 				setTimeout(() => {
 					const input = document.querySelector('#chat-thread-search-input') as HTMLInputElement | null;
 					input?.focus();

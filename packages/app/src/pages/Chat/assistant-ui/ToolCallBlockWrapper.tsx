@@ -47,7 +47,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const [deciding, setDeciding] = useState(false);
-	const toast = useToast();
+	const { toast } = useToast();
 
 		const handleDecision = useCallback(async (decision: 'approve' | 'deny') => {
 		if (!currentThreadId || !currentServerId) return;
@@ -85,7 +85,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 				attachAllTools,
 				attachedTools,
 			});
-			toast({ title: `"${toolName}" will always be approved for this thread`, status: 'success', duration: 3000 });
+			toast('success', `"${toolName}" will always be approved for this thread`);
 		} finally {
 			setDeciding(false);
 		}

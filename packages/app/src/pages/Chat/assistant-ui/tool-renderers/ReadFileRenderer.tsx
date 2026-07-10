@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 

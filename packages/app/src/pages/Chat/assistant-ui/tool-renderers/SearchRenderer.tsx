@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, Text, HStack, VStack, Link } from '@chakra-ui/react';
+import { Box, Text, HStack, Link } from '@chakra-ui/react';
 import { Search, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 

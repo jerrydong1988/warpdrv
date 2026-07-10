@@ -15,18 +15,18 @@ export const ResizeHandles = React.memo(() => {
 	};
 
 	const edges = [
-		{ direction: 'North', top: 0, left: 0, right: 0, height: RESIZE_EDGE, cursor: 'n-resize' },
-		{ direction: 'South', bottom: 0, left: 0, right: 0, height: RESIZE_EDGE, cursor: 's-resize' },
-		{ direction: 'West', top: 0, left: 0, bottom: 0, width: RESIZE_EDGE, cursor: 'w-resize' },
-		{ direction: 'East', top: 0, right: 0, bottom: 0, width: RESIZE_EDGE, cursor: 'e-resize' },
-	];
+		{ direction: 'North' as const, top: 0, left: 0, right: 0, height: RESIZE_EDGE, cursor: 'n-resize' },
+		{ direction: 'South' as const, bottom: 0, left: 0, right: 0, height: RESIZE_EDGE, cursor: 's-resize' },
+		{ direction: 'West' as const, top: 0, left: 0, bottom: 0, width: RESIZE_EDGE, cursor: 'w-resize' },
+		{ direction: 'East' as const, top: 0, right: 0, bottom: 0, width: RESIZE_EDGE, cursor: 'e-resize' },
+	] as const;
 
 	const corners = [
-		{ direction: 'NorthWest', top: 0, left: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'nw-resize' },
-		{ direction: 'NorthEast', top: 0, right: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'ne-resize' },
-		{ direction: 'SouthWest', bottom: 0, left: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'sw-resize' },
-		{ direction: 'SouthEast', bottom: 0, right: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'se-resize' },
-	];
+		{ direction: 'NorthWest' as const, top: 0, left: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'nw-resize' },
+		{ direction: 'NorthEast' as const, top: 0, right: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'ne-resize' },
+		{ direction: 'SouthWest' as const, bottom: 0, left: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'sw-resize' },
+		{ direction: 'SouthEast' as const, bottom: 0, right: 0, width: RESIZE_CORNER, height: RESIZE_CORNER, cursor: 'se-resize' },
+	] as const;
 
 	return (
 		<>

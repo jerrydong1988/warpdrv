@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FileText } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
+import { useTranslation } from 'react-i18next';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {

@@ -44,6 +44,7 @@ export function autoResolveRenderer(
 	const candidates = findCandidates(toolName, registry);
 	for (const name of candidates) {
 		const entry = registry[name];
+		if (!entry) continue;
 		const result = entry.canRender(args);
 		if (result !== false) {
 			return { component: entry.component, props: result };

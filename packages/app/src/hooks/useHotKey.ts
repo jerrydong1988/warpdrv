@@ -29,7 +29,7 @@ function isComboActive(pressed: Record<string, true>, keys: KeyRecord): boolean 
 	//console.log("match check", comboCodes, pressedCodes);
 	if (comboCodes.length !== pressedCodes.length) return false;
 	for (let i = 0; i < comboCodes.length; i++) {
-		if (!pressed[comboCodes[i]]) return false;
+		if (!pressed[comboCodes[i] as string]) return false;
 	}
 	return true;
 }
@@ -37,7 +37,7 @@ function isComboActive(pressed: Record<string, true>, keys: KeyRecord): boolean 
 function isAnyComboActive(pressed: Record<string, true>, keys: IKeys): boolean {
 	const combos = Array.isArray(keys) ? keys : [keys];
 	for (let i = 0; i < combos.length; i++) {
-		if (isComboActive(pressed, combos[i])) return true;
+		if (combos[i] && isComboActive(pressed, combos[i])) return true;
 	}
 	return false;
 }

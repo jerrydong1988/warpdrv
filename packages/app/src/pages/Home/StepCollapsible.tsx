@@ -49,7 +49,7 @@ export const StepCollapsible = React.memo(({
 					</Text>
 				</HStack>
 				<Box color="var(--wc-text-tertiary)">
-					<ChevronRight size={16} transform={open ? 'rotate(90deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
+					<ChevronRight size={16} style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
 				</Box>
 			</Flex>
 			<Collapsible.Root open={open}>

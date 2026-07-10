@@ -83,10 +83,10 @@ color="var(--wc-text-muted)"
 								fontSize={"11px"}
 							>	
 								{t('details')}&nbsp;
-								{!showSteps 
-									? <ChevronDown size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-									: <ChevronUp size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-								}
+							{!showSteps 
+								? <ChevronDown size={20} style={{ transform: showSteps ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
+								: <ChevronUp size={20} style={{ transform: showSteps ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
+							}
 							</Flex>
 						)}
 					</Flex>

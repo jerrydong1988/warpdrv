@@ -95,13 +95,13 @@ case 'message.chunk':
 					if (msg) {
 						const part = msg.content.find((p: any) => p.id === event.partId);
 						const buffered = state.chunksByMessageId[event.messageId]?.chunk || '';
-						const fullText = (part?.text || '') + buffered;
+						const fullText = ((part as { text?: string })?.text || '') + buffered;
 						const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
 						const remaining = fullText.slice(spoken);
 						const lastEnd = findLastSentenceEnd(remaining);
 						if (lastEnd > -1) {
 							const sentence = remaining.slice(0, lastEnd + 1);
-							const reqId = useStore.getState().ttsVadRequestId;
+							const reqId = useStore.getState().ttsVadRequestId ?? '';
 							//console.log('[TTS SSE] calling startStream: requestId=', reqId, 'sentence=', JSON.stringify(sentence.slice(0, 60)));
 							useStore.getState().ttsVadIncSent();
 							startStream(

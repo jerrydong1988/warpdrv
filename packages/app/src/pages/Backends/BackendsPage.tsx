@@ -16,7 +16,7 @@ import { ActivateBackendDialog } from './ActivateBackendDialog';
 import { BackendRow } from './BackendRow';
 import { BackendGroupCard } from './BackendGroupCard';
 import { openExternal } from '../../utils/openExternal';
-import type { IBackend, IBackendGroup, IServer, TBackendSortField, IWhisperBackend, TWhisperBackendId } from '@warpcore/shared';
+	import type { IBackend, IBackendGroup, IServer, TBackendSortField, IWhisperBackend, TWhisperBackendId, IApiResponse } from '@warpcore/shared';
 import { EValidationStatus } from '@warpcore/shared';
 import { removeWhisperBackend, createWhisperBackend } from '../../api/whisperServices';
 import { EServerStatus } from '@warpcore/shared';
@@ -67,7 +67,10 @@ export function BackendsPage() {
 	);
 
 	const deleteWhisperMut = useMutation<string, null>(
-		useCallback((id: string) => removeWhisperBackend(id), [])
+		useCallback(async (id: string) => {
+			await removeWhisperBackend(id);
+			return { ok: true, data: null, error: null } as IApiResponse<null>;
+		}, [])
 	);
 
 	const handleDeleteWhisper = async (id: string) => {

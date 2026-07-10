@@ -11,7 +11,7 @@ export function DeviceCard({ device }: { device: IDevice }) {
 	const color = BACKEND_COLORS[device.backendType] ?? '#3381ff';
 
 	return (
-		<Card w="350px" variant="accent" accentColor={color}>
+		<Card variant="accent" accentColor={color}>
 			<VStack align="stretch" gap="3">
 				<Flex justify="space-between" align="start">
 					<HStack gap="3">

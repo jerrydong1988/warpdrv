@@ -34,7 +34,7 @@ export function SettingsPage() {
 	const { t } = useTranslation('settings');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
-	const locale = useStore(s => s.settings.locale);
+	const locale = useStore(s => s.settings?.locale);
 	const setLocale = useStore(s => s.setLocale);
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
@@ -679,7 +679,7 @@ dictationPTTKey,
 									color="var(--wc-accent-blue)"
 									_hover={{ bg: 'var(--wc-accent-blue-bg-25)' }}
 									borderRadius="lg"
-									leftIcon={<Mic size={15} />}
+									startIcon={<Mic size={15} />}
 									onClick={handleGrantMicPermission}
 								>
 									{t('actions.grantMicAccess')}
@@ -983,7 +983,7 @@ dictationPTTKey,
 								color="var(--wc-text-secondary)"
 								_hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-10)' }}
 								borderRadius="lg"
-								leftIcon={<BookOpen size={15} />}
+								startIcon={<BookOpen size={15} />}
 								onClick={() => updateSettings({ isOnboardingComplete: false })}
 							>
 								{t('actions.rerunOnboarding')}

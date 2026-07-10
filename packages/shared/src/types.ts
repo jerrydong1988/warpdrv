@@ -339,6 +339,7 @@ export interface ISettings {
 	chatFontFamily?: string;
 	chatFixedWidth?: boolean;
 	dictationPTTKey?: string;
+	locale?: string;
 	dictationPTTModeHold?: boolean;
 	globalPTTKey?: string;
 	globalPTTModeHold?: boolean;

@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { useMutation } from '@/hooks/useQuery';
 import { useStore } from '@/store';
 import { stopWhisperServer, restartWhisperServer, updateWhisperServer } from '@/api/whisperServices';
-import type { IWhisperServer, IWhisperModel } from '@warpcore/shared';
+import type { IWhisperServer, IWhisperModel, IApiResponse } from '@warpcore/shared';
 import { EWhisperServerStatus, EServerStatus } from '@warpcore/shared';
 import { formatUptime, StatPill, formatLaunchCommand } from './utils';
 
@@ -38,8 +38,8 @@ export const WhisperServerCard = React.memo(({
 	const backend = server?.backendId ? whisperBackends[server.backendId] : null;
 	const model = server ? modelByPath[server.modelPath] : null;
 
-	const { mutate: stopMut } = useMutation<string, IWhisperServer>(useCallback((id: string) => stopWhisperServer(id), []));
-	const { mutate: restartMut } = useMutation<string, IWhisperServer>(useCallback((id: string) => restartWhisperServer(id), []));
+	const { mutate: stopMut } = useMutation<string, Promise<IApiResponse<IWhisperServer>>>(useCallback((id: string): Promise<IApiResponse<IWhisperServer>> => stopWhisperServer(id), []));
+	const { mutate: restartMut } = useMutation<string, Promise<IApiResponse<IWhisperServer>>>(useCallback((id: string): Promise<IApiResponse<IWhisperServer>> => restartWhisperServer(id), []));
 
 	const handleStop = useCallback(() => { stopMut(serverId); }, [stopMut, serverId]);
 	const handleRestart = useCallback(() => { restartMut(serverId); }, [restartMut, serverId]);
@@ -49,7 +49,7 @@ export const WhisperServerCard = React.memo(({
 	const [addingAliasOpen, setAddingAliasOpen] = useState(false);
 	const [newAliasValue, setNewAliasValue] = useState('');
 
-	const updateCallback = useCallback(([id, data]: Array<any>) => updateWhisperServer(id, data), []);
+	const updateCallback = useCallback(([id, data]: [string, Partial<Pick<IWhisperServer, 'serverAlias'>>]): Promise<IApiResponse<IWhisperServer>> => updateWhisperServer(id, data), []);
 	const { mutate: updateMut, loading } = useMutation<[string, Partial<Pick<IWhisperServer, 'serverAlias'>>], IWhisperServer>(updateCallback);
 
 	const handleRemoveAlias = useCallback(async () => {
@@ -126,7 +126,7 @@ export const WhisperServerCard = React.memo(({
 										</HoverCard.Positioner>
 									</Portal>
 								</HoverCard.Root>
-								<StatusBadge status={server.status as EServerStatus} port={server.port} />
+								<StatusBadge status={server.status as unknown as EServerStatus} port={server.port} />
 								{server.serverAlias && server.serverAlias.length > 0 && (
 									<>
 										{server.serverAlias.map(alias => (

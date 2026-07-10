@@ -10,7 +10,9 @@ const dotColors: Record<string, { bg: string; shadow: string }> = {
 };
 
 export const StatusDot = React.memo(({ state }: { state: 'online' | 'loading' | 'error' | 'offline' }) => {
-	const { bg, shadow } = dotColors[state];
+	const status = dotColors[state];
+	const bg = status?.bg;
+	const shadow = status?.shadow;
 	return (
 		<Box
 			w="8px"

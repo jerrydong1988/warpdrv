@@ -242,6 +242,7 @@ const ThreadScrollToBottom: FC = () => {
 };
 
 const ThreadWelcome: FC = () => {
+	const { t } = useTranslation('chat');
 	const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
 	if (activeWorkspaceId) {
 		return <WorkspaceView folderId={activeWorkspaceId} />;
@@ -682,7 +683,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							? { color: 'var(--wc-text-muted)', borderColor: 'var(--wc-border-default)', backgroundColor: 'transparent' }
 							: { color: 'var(--wc-accent-blue)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-8)' }
 						}
-						_hover={!isValidServer ? undefined : { color: 'var(--wc-accent-blue-hover)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-10)' }}
 					>
 						<SendHorizonal className="aui-composer-send-icon size-4" />
 					</TooltipIconButton>
@@ -695,7 +695,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							className="aui-composer-cancel size-9"
 							aria-label={t('actions.stop')}
 							color="var(--wc-text-primary)"
-							borderColor="var(--wc-border-default)"
 						style={{ borderColor: 'var(--wc-border-default)' }}
 						>
 							<SquareIcon className="aui-composer-cancel-icon size-4 fill-current" />
@@ -978,8 +977,8 @@ const AssistantActionBar: FC = () => {
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null)
-  	const getAnchorRect = () => ref.current!.getBoundingClientRect()
+	const ref = useRef<SVGSVGElement | null>(null)
+   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (
 		<ActionBarPrimitive.Root
@@ -1074,8 +1073,8 @@ const ToolActionBar: FC = () => {
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null)
-  	const getAnchorRect = () => ref.current!.getBoundingClientRect()
+	const ref = useRef<SVGSVGElement | null>(null)
+   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (
 		<ActionBarPrimitive.Root
@@ -1181,8 +1180,8 @@ const UserActionBar: FC = () => {
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
-	const ref = useRef<HTMLDivElement | null>(null)
-  	const getAnchorRect = () => ref.current!.getBoundingClientRect()
+	const ref = useRef<SVGSVGElement | null>(null)
+   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (
 		<ActionBarPrimitive.Root

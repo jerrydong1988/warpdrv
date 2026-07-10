@@ -3,7 +3,7 @@ import { Box, Flex, Input, Text } from '@chakra-ui/react';
 import { SearchIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { searchChatMessages } from '@/api/services';
-import type { ISearchResult } from '@warpcore/bridge';
+import type { ISearchResult, ISearchThreadResult } from '@warpcore/bridge';
 
 // ============================================================
 // Types
@@ -84,9 +84,9 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 		timerRef.current = setTimeout(async () => {
 			setIsLoading(true);
 			try {
-				const res = await searchChatMessages(q, 'thread', { threadId, limit: 50 });
+				const res = await searchChatMessages(q, 'thread', { threadId: threadId ?? undefined, limit: 50 });
 				if (res.ok && res.data) {
-					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult) =>
+					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult | ISearchThreadResult) =>
 						item as unknown as SearchResultEntry
 					);
 					setResults(entries);

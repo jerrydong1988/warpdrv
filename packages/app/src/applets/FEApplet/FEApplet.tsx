@@ -106,7 +106,7 @@ const TodoPanel = React.memo(() => {
 	const addTodo = useCallback(() => {
 		const trimmed = addText.trim();
 		if (!trimmed) return;
-		const newTodos = [...todos, { text: trimmed, status: 'pending' }];
+		const newTodos: ITodoItem[] = [...todos, { text: trimmed, status: 'pending' }];
 		setThreadState(threadId, { todos: newTodos });
 		setAddText('');
 		addTodoAnnotation(newTodos);
@@ -135,7 +135,9 @@ const TodoPanel = React.memo(() => {
 		const toIndex = dragOverIndex !== null ? dragOverIndex : todos.length;
 		const updated = [...todos];
 		const [item] = updated.splice(fromIndex, 1);
-		updated.splice(toIndex, 0, item);
+		if (item) {
+			updated.splice(toIndex, 0, item);
+		}
 		setThreadState(threadId, { todos: updated });
 		setDraggingIndex(null);
 		setDragOverIndex(null);
@@ -660,7 +662,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 								{allClear && <CheckCircle size={16} color="var(--wc-accent-green)" />}
 							</HStack>
 							<HStack gap="2" align="center">
-								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" css={{ transition: 'transform 0.15s ease' }} />
+								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" />
 							</HStack>
 						</AccordionItemTrigger>
 						<AccordionItemContent>

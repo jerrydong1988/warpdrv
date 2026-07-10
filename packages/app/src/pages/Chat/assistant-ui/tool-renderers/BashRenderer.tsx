@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
 import { parse } from 'shell-quote';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -31,6 +32,7 @@ export const BashRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { command, cwd, shell, result } = props;
+	const { t } = useTranslation('chat');
 	const subCommands = command ? splitCommand(command) : [];
 	const resultText = extractResultText(result);
 	const [resultExpanded, setResultExpanded] = useState(false);

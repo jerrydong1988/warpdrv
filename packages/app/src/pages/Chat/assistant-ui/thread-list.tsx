@@ -294,7 +294,6 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 							opacity={0}
 							className="group-hover:!opacity-50"
 							_hover={{ bg: 'var(--wc-bg-hover)' }}
-							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<MoreHorizontalIcon size={13} />
@@ -361,7 +360,7 @@ function FolderSection({
 	const [renaming, setRenaming] = useState(false);
 	const [dragOver, setDragOver] = useState(false);
 	const folderMenuRef = useRef<HTMLButtonElement>(null);
-	const getFolderAnchorRect = useCallback(() => folderMenuRef.current?.getBoundingClientRect(), [folderMenuRef]);
+	const getFolderAnchorRect = useCallback(() => folderMenuRef.current?.getBoundingClientRect() ?? null, [folderMenuRef]);
 	const setActiveWorkspaceId = useStore(s => s.setActiveWorkspaceId);
 	const setCurrentThreadId = useStore(s => s.setCurrentThreadId);
 	const setWorkspace = useStore(s => s.setWorkspace);
@@ -452,7 +451,7 @@ function FolderSection({
 					</Text>
 				)}
 				<Text fontSize="12px" color="var(--wc-text-faint)" flexShrink={0}>{threads.length}</Text>
-				<Menu.Root positioning={{ getFolderAnchorRect }}>
+				<Menu.Root positioning={{ getAnchorRect: getFolderAnchorRect }}>
 					<Menu.Trigger asChild>
 						<Box
 							ref={folderMenuRef as any}
@@ -462,7 +461,6 @@ function FolderSection({
 							className="group-hover:!opacity-100"
 							_hover={{ opacity: 1, bg: 'var(--wc-bg-hover)' }}
 							borderRadius="sm"
-							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<MoreHorizontalIcon size={12} />
@@ -732,7 +730,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 						onDelete={handleDeleteFolder}
 						onDropThread={handleDropThread}
 						onReorderFolder={handleReorderFolders}
-						w="full"
 					>
 						<VStack gap="1" align="start" w="full">
 							{(threadsByFolderMap[f.id] ?? []).map(thread => (
@@ -743,7 +740,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 									onStartDrag={setDraggingThread}
 									onSelect={handleSelectThread}
 									onDelete={handleDeleteThread}
-									w="full"
 								/>
 							))}
 						</VStack>
@@ -769,7 +765,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 								onStartDrag={setDraggingThread}
 								onSelect={handleSelectThread}
 								onDelete={handleDeleteThread}
-								w="full"
 							/>
 						))}
 					</VStack>

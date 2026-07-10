@@ -41,12 +41,13 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		const usableBins = binEnd - binStart;
 		let phase = 0;
 		const drawPass = (pts: Array<{ x: number; y: number }>, hueShift: number, alpha: number, yScale: number) => {
+			if (pts.length < 2) return;
 			ctx.beginPath();
 			ctx.moveTo(0, 0);
-			ctx.lineTo(pts[0].x, pts[0].y * yScale);
+			ctx.lineTo(pts[0]!.x, pts[0]!.y * yScale);
 			for (let i = 0; i < pts.length - 1; i++) {
-				const p0 = pts[i];
-				const p1 = pts[i + 1];
+				const p0 = pts[i]!;
+				const p1 = pts[i + 1]!;
 				const mx = (p0.x + p1.x) / 2;
 				const my = ((p0.y + p1.y) / 2) * yScale;
 				ctx.quadraticCurveTo(p0.x, p0.y * yScale, mx, my);
