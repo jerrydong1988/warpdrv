@@ -65,7 +65,7 @@ const TodoPanel = React.memo(() => {
 	}, [annotations, addAnnotation, removeAnnotation]);
 
 	const toggleDone = useCallback((index: number) => {
-		const updated = todos.map((t, j) =>
+		const updated: ITodoItem[] = todos.map((t, j) =>
 			j === index ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t
 		);
 		setThreadState(threadId, { todos: updated });

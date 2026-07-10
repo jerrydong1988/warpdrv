@@ -124,7 +124,7 @@ export const Thread: FC<{
 	const currentThreadId = useStore(s => s.currentThreadId);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
-		let resolveFn: (() => void) | null = null;
+		const ctx: { resolveFn?: () => void } = {};
 		const handleConfirm = async () => {
 			setDeletingLoading(true);
 			try {
@@ -132,7 +132,7 @@ export const Thread: FC<{
 			} finally {
 				setDeletingLoading(false);
 				setDeletingMessageId(null);
-				if (resolveFn) resolveFn();
+				ctx.resolveFn?.();
 			}
 		};
 		return {
@@ -293,9 +293,8 @@ const ThreadSuggestionItem: FC = () => {
 			<SuggestionPrimitive.Trigger send asChild>
 				<Button
 					variant="ghost"
-					className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-4 py-3 text-left text-sm transition-colors"
+					className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-4 py-3 text-left text-sm transition-colors hover:bg-[var(--wc-bg-hover)]"
 					style={{ backgroundColor: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
-					_hover={{ bg: 'var(--wc-bg-hover)' }}
 				>
 					<SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 font-medium" />
 					<SuggestionPrimitive.Description className="aui-thread-welcome-suggestion-text-2 empty:hidden" style={{ color: 'var(--wc-text-secondary)' }} />

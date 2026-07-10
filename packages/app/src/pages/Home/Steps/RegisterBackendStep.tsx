@@ -17,18 +17,18 @@ export const RegisterBackendStep = React.memo(({ done, isOpenDefault, isHighligh
 		<VStack align="stretch" gap="3">
 			<Text fontSize="13px" color="var(--wc-text-tertiary)" lineHeight="1.6">
 				<Trans t={t} i18nKey="steps.registerBackend.step1" components={{
-					linkReleases: <ChakraLink href="https://github.com/ggml-org/llama.cpp/releases" isExternal color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/ggml-org/llama.cpp/releases'); }} />,
+					linkReleases: <ChakraLink href="https://github.com/ggml-org/llama.cpp/releases" color="var(--wc-accent-blue)" onClick={(e) => { e.preventDefault(); openExternal('https://github.com/ggml-org/llama.cpp/releases'); }} />,
 					strong: <strong />,
 				}} />
 				<br />
 				<Trans t={t} i18nKey="steps.registerBackend.step1note" components={{
 					code: <span style={{ background: 'var(--wc-special-code-bg)', fontFamily: 'mono' }} />,
-					linkRecipes: <ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md" isExternal color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md'); }} />,
+					linkRecipes: <ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md" color="var(--wc-accent-blue)" onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md'); }} />,
 				}} />
 				<br />
 				<br />
 				<Trans t={t} i18nKey="steps.registerBackend.step2" components={{
-					linkBackends: <ChakraLink as={NavLink} to="/backends" style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} />,
+					linkBackends: <ChakraLink href="/backends" style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" />,
 				}} />
 				<br />
 				<br />

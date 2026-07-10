@@ -10,14 +10,14 @@ const OPERATORS = new Set(['&&', '||', ';', '|', '&']);
 
 function splitCommand(command: string): string[] {
 	const parsed = parse(command);
-	const groups: string[][] = [[]];
+	const groups: (string | undefined)[][] = [[]];
 	for (const token of parsed) {
-		if (typeof token === 'object' && token !== null && 'op' in token && OPERATORS.has(token.op)) {
+		if (typeof token === 'object' && token !== null && 'op' in token && typeof (token as any).op === 'string' && OPERATORS.has((token as any).op)) {
 			groups.push([]);
 		} else if (typeof token === 'string') {
-			groups[groups.length - 1].push(token);
-		} else if (typeof token === 'object' && token !== null && 'op' in token) {
-			groups[groups.length - 1].push(token.op);
+			groups[groups.length - 1]!.push(token);
+		} else if (typeof token === 'object' && token !== null && 'op' in token && typeof (token as any).op === 'string') {
+			groups[groups.length - 1]!.push((token as any).op);
 		}
 	}
 	return groups

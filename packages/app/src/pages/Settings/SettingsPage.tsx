@@ -34,7 +34,7 @@ export function SettingsPage() {
 	const { t } = useTranslation('settings');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
-	const locale = useStore(s => s.settings?.locale);
+	const locale = useStore(s => (s.settings as any)?.locale);
 	const setLocale = useStore(s => s.setLocale);
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
@@ -490,7 +490,7 @@ dictationPTTKey,
 									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.appZoom')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>{Math.round(appZoomLevel * 100)}%</Text>
 								</HStack>
-								<Box as="input" type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
+								<input type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
 								<HStack justify="space-between">
 									<Text fontSize="10px" color="var(--wc-text-faint)">50%</Text>
 									<Text fontSize="10px" color="var(--wc-text-faint)">300%</Text>
@@ -509,15 +509,14 @@ dictationPTTKey,
 							{/* Chat Font Family */}
 							<VStack align="stretch" gap="2">
 								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontFamily')}</Text>
-								<NativeSelect.Root value={chatFontFamily}>
+								<NativeSelect.Root defaultValue={chatFontFamily}>
 									<NativeSelect.Field
-										size="sm"
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
 										fontSize="13px"
 										borderRadius="lg"
-										onChange={(e) => dirtySetter(setChatFontFamily, e.target.value)}
+										onChange={(e) => dirtySetter(setChatFontFamily, (e.target as unknown as HTMLSelectElement).value)}
 									>
 										<option value="">{t('fonts.default')}</option>
 										{fontFamilyCollection.items.map(f => (
@@ -674,28 +673,25 @@ dictationPTTKey,
 							</Box>
 							{!micPermissionGranted ? (
 								<Button
-									size="sm"
 									bg="var(--wc-accent-blue-bg-15)"
 									color="var(--wc-accent-blue)"
 									_hover={{ bg: 'var(--wc-accent-blue-bg-25)' }}
 									borderRadius="lg"
-									startIcon={<Mic size={15} />}
 									onClick={handleGrantMicPermission}
 								>
-									{t('actions.grantMicAccess')}
+									<Mic size={15} />{t('actions.grantMicAccess')}
 								</Button>
 							) : micDevices.length === 0 ? (
 								<Text fontSize="12px" color="var(--wc-text-faint)">{t('options.noMicDevices')}</Text>
 							) : (
-								<NativeSelect.Root value={micDeviceId}>
+								<NativeSelect.Root defaultValue={micDeviceId}>
 									<NativeSelect.Field
-										size="sm"
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
 										fontSize="13px"
 										borderRadius="lg"
-										onChange={(e) => dirtySetter(setMicDeviceId, e.target.value)}
+										onChange={(e) => dirtySetter(setMicDeviceId, (e.target as unknown as HTMLSelectElement).value)}
 									>
 										<option value="">{t('options.defaultMicrophone')}</option>
 										{micDevices.map(d => (
@@ -978,15 +974,13 @@ dictationPTTKey,
 								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.onboarding')}</Text>
 							</Box>
 							<Button
-								size="sm"
 								variant="ghost"
 								color="var(--wc-text-secondary)"
 								_hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-10)' }}
 								borderRadius="lg"
-								startIcon={<BookOpen size={15} />}
 								onClick={() => updateSettings({ isOnboardingComplete: false })}
 							>
-								{t('actions.rerunOnboarding')}
+								<BookOpen size={15} />{t('actions.rerunOnboarding')}
 							</Button>
 						</VStack>
 					</Card>

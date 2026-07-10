@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box } from '@chakra-ui/react';
 import { updateSettings } from '@/api/services';
@@ -34,7 +34,7 @@ export function OnboardingPage() {
 		await updateSettings({ isOnboardingComplete: true });
 	};
 
-	const StepComponent = STEPS[currentStep];
+	const StepComponent = STEPS[currentStep] as React.FC<IStepProps>;
 	const stepProps: IStepProps = { goNext, goPrev, finishOnboarding };
 
 	return (

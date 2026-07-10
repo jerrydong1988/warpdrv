@@ -35,7 +35,6 @@ import { parseThreadMeta } from '@/pages/Chat/assistant-ui/ServerSelector';
 // COMMENTED OUT: per-thread whisper server selection no longer used
 // import { parseWhisperThreadMeta } from '@/pages/Chat/assistant-ui/WhisperServerSelector';
 import { VscLayoutSidebarLeft, VscLayoutSidebarLeftOff, VscLayoutSidebarRight, VscLayoutSidebarRightOff } from 'react-icons/vsc';
-import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 import { RiFontSize } from 'react-icons/ri';
 import mermaid from 'mermaid';
 import { useLocation } from 'react-router-dom';

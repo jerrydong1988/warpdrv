@@ -13,7 +13,9 @@ import {
 import remarkGfm from "remark-gfm";
 import { type FC, memo, useState } from "react";
 import { CheckIcon, CopyIcon } from "lucide-react";
+// @ts-ignore: react-syntax-highlighter missing types
 import { Prism } from "react-syntax-highlighter";
+// @ts-ignore: react-syntax-highlighter missing types
 import {
   atomDark,
   dark,
@@ -29,7 +31,7 @@ import {
   solarizedDarkAtom,
   solarizedlight,
   vscDarkPlus,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
+} from "react-syntax-highlighter/dist/esm/styles/prism"; // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports
 
 import { useStore } from "@/store";
 import { TooltipIconButton } from "./tooltip-icon-button";

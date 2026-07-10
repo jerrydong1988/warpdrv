@@ -231,7 +231,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 	const { t } = useTranslation('chat');
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
-	const getAnchorRect = useCallback(() => triggerRef.current?.getBoundingClientRect(), [triggerRef]);
+	const getAnchorRect = useCallback((_el?: any) => triggerRef.current?.getBoundingClientRect() ?? null, [triggerRef]);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const selected = thread.id === currentThreadId;
 

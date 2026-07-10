@@ -38,8 +38,8 @@ export const WhisperServerCard = React.memo(({
 	const backend = server?.backendId ? whisperBackends[server.backendId] : null;
 	const model = server ? modelByPath[server.modelPath] : null;
 
-	const { mutate: stopMut } = useMutation<string, Promise<IApiResponse<IWhisperServer>>>(useCallback((id: string): Promise<IApiResponse<IWhisperServer>> => stopWhisperServer(id), []));
-	const { mutate: restartMut } = useMutation<string, Promise<IApiResponse<IWhisperServer>>>(useCallback((id: string): Promise<IApiResponse<IWhisperServer>> => restartWhisperServer(id), []));
+	const { mutate: stopMut, loading: stopLoading } = useMutation<string, void>(useCallback((id: string): Promise<IApiResponse<void>> => stopWhisperServer(id).then(() => ({ ok: true, data: undefined, error: null })), []));
+	const { mutate: restartMut, loading: restartLoading } = useMutation<string, void>(useCallback((id: string): Promise<IApiResponse<void>> => restartWhisperServer(id).then(() => ({ ok: true, data: undefined, error: null })), []));
 
 	const handleStop = useCallback(() => { stopMut(serverId); }, [stopMut, serverId]);
 	const handleRestart = useCallback(() => { restartMut(serverId); }, [restartMut, serverId]);
@@ -49,8 +49,11 @@ export const WhisperServerCard = React.memo(({
 	const [addingAliasOpen, setAddingAliasOpen] = useState(false);
 	const [newAliasValue, setNewAliasValue] = useState('');
 
-	const updateCallback = useCallback(([id, data]: [string, Partial<Pick<IWhisperServer, 'serverAlias'>>]): Promise<IApiResponse<IWhisperServer>> => updateWhisperServer(id, data), []);
-	const { mutate: updateMut, loading } = useMutation<[string, Partial<Pick<IWhisperServer, 'serverAlias'>>], IWhisperServer>(updateCallback);
+	const updateCallback = useCallback(async ([id, data]: [string, Partial<Pick<IWhisperServer, 'serverAlias'>>]): Promise<IApiResponse<IWhisperServer | null>> => {
+		const result = await updateWhisperServer(id, data);
+		return { ok: true, data: result, error: null };
+	}, []);
+	const { mutate: updateMut, loading: updateLoading } = useMutation<[string, Partial<Pick<IWhisperServer, 'serverAlias'>>], IWhisperServer | null>(updateCallback);
 
 	const handleRemoveAlias = useCallback(async () => {
 		if (!removingAlias) return;
@@ -254,7 +257,7 @@ export const WhisperServerCard = React.memo(({
 					title={t('dialogs.removeAliasTitle')}
 					message={t('dialogs.removeAliasMessage', { alias: removingAlias })}
 					isOpen={true}
-					isLoading={loading}
+					isLoading={updateLoading}
 					onCancel={() => setRemovingAlias(null)}
 					onConfirm={handleRemoveAlias}
 				/>

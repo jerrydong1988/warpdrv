@@ -10,7 +10,7 @@ export const settingsSlice = (_setState: ImmerSet<AppState>, _getState: ImmerGet
 	settings: DEFAULT_SETTINGS as ISettings,
 	setLocale: (locale) => {
 		_setState((s) => {
-			s.settings.locale = locale;
+			(s.settings as any).locale = locale;
 		});
 	},
 });

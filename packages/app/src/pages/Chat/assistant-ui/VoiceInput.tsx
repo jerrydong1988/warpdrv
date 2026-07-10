@@ -199,7 +199,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		const session = await createVADSession({
 			onSpeechStart: () => {
 				console.log('[VAD Chat] speech started: cancelling inference, stopping TTS');
-				if (aui.composer().canCancel) {
+				if (aui.composer().cancel) {
 					aui.composer().cancel();
 				}
 				stopTTS();
@@ -282,7 +282,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			{/* PTT Button — replaced by VAD dictation, hidden */}
 			<Box display="none">
 			<Box
-				as="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -295,8 +294,8 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				cursor={vadActive ? 'not-allowed' : 'pointer'}
 				opacity={vadActive ? 0.4 : 1}
 				_hover={{ bg: vadActive ? undefined : 'var(--wc-bg-hover)' }}
+				_disabled={{ opacity: 0.4, cursor: 'not-allowed' }}
 				onClick={isPTTRecording ? handlePTTEnd : handlePTTStart}
-				disabled={vadActive}
 				title={vadActive ? 'Dictation disabled during voice chat' : isPTTRecording ? 'Stop recording' : 'Start recording (dictation)'}
 			>
 					{isPTTRecording ? (
@@ -338,7 +337,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 
 			{/* VAD Chat Toggle — disabled when dictation active */}
 			<Box
-				as="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -351,8 +349,8 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				cursor={dictationActive ? 'not-allowed' : 'pointer'}
 				opacity={dictationActive ? 0.4 : 1}
 				_hover={{ bg: dictationActive ? undefined : 'var(--wc-bg-hover)' }}
+				_disabled={{ opacity: 0.4, cursor: 'not-allowed' }}
 				onClick={handleVADToggle}
-				disabled={dictationActive}
 				title={dictationActive ? 'Voice chat disabled during dictation' : vadActive ? 'Voice chat active (click to stop)' : 'Toggle voice chat mode'}
 			>
 				{isVADTranscribing ? (

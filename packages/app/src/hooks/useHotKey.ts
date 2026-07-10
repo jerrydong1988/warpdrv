@@ -37,7 +37,8 @@ function isComboActive(pressed: Record<string, true>, keys: KeyRecord): boolean 
 function isAnyComboActive(pressed: Record<string, true>, keys: IKeys): boolean {
 	const combos = Array.isArray(keys) ? keys : [keys];
 	for (let i = 0; i < combos.length; i++) {
-		if (combos[i] && isComboActive(pressed, combos[i])) return true;
+		const combo = combos[i];
+		if (combo && isComboActive(pressed, combo)) return true;
 	}
 	return false;
 }

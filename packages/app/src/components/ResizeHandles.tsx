@@ -33,7 +33,7 @@ export const ResizeHandles = React.memo(() => {
 			{edges.map((e) => (
 				<div
 					key={e.direction}
-					style={{ ...baseStyle, ...e }}
+					style={{ ...baseStyle, ...((e as unknown) as React.CSSProperties) } as React.CSSProperties}
 					onMouseDown={(ev) => {
 						ev.preventDefault();
 						handleResizeStart(e.direction);
@@ -43,7 +43,7 @@ export const ResizeHandles = React.memo(() => {
 			{corners.map((c) => (
 				<div
 					key={c.direction}
-					style={{ ...baseStyle, ...c }}
+					style={{ ...baseStyle, ...((c as unknown) as React.CSSProperties) } as React.CSSProperties}
 					onMouseDown={(ev) => {
 						ev.preventDefault();
 						handleResizeStart(c.direction);

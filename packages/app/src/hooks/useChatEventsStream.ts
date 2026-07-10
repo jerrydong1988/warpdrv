@@ -8,7 +8,7 @@ function findLastSentenceEnd(text: string): number {
 	for (let i = text.length - 1; i >= 0; i--) {
 		const c = text[i];
 		if (c === '.' || c === '!' || c === '?') {
-			if (i + 1 >= text.length || /\s/.test(text[i + 1])) {
+			if (i + 1 >= text.length || /\s/.test(text[i + 1] ?? '')) {
 				return i;
 			}
 		}

@@ -69,7 +69,7 @@ export const Elicitation = React.memo(() => {
 				<VStack gap="2" align="stretch" mb="3">
 					<Text fontSize="11px" color="var(--wc-text-muted)">You will be sent to:</Text>
 					<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">{host}</Text>
-					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue)" disabled={submitting} onClick={() => { if (elicitation.url) window.open(elicitation.url, '_blank'); }}>
+					<Box px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue)" _disabled={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={() => { if (elicitation.url) window.open(elicitation.url, '_blank'); }}>
 						<HStack gap="1"><ExternalLink size={12} /><Text fontSize="12px">{t('elicitation.openInBrowser')}</Text></HStack>
 					</Box>
 				</VStack>
@@ -104,9 +104,9 @@ export const Elicitation = React.memo(() => {
 			</VStack>
 			)}
 			<HStack gap="2" justify="flex-end">
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-overlay-dim)" color="var(--wc-text-muted)" disabled={submitting} onClick={() => handleAction('cancel')}>Cancel</Box>
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" disabled={submitting} onClick={() => handleAction('decline')}>Decline</Box>
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" disabled={submitting} onClick={() => handleAction('accept')}>{isUrlMode ? 'Done' : 'Submit'}</Box>
+				<Box px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-overlay-dim)" color="var(--wc-text-muted)" _disabled={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={() => handleAction('cancel')}>Cancel</Box>
+				<Box px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" _disabled={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={() => handleAction('decline')}>Decline</Box>
+				<Box px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" _disabled={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={() => handleAction('accept')}>{isUrlMode ? 'Done' : 'Submit'}</Box>
 			</HStack>
 		</Box>
 	);

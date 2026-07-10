@@ -70,7 +70,7 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 			const cx = samples / 2;
 			for (let i = 0; i <= samples; i++) {
 				const binIndex = binStart + Math.floor((i / samples) * usableBins);
-				const v = data[binIndex] / 255;
+				const v = data[binIndex] != null ? data[binIndex] / 255 : 0;
 				const envelope = 1 - Math.pow(Math.abs(i - cx) / cx, 1.6);
 				const amp = v * envelope;
 				const y = Math.max(2, amp * height * 0.95);

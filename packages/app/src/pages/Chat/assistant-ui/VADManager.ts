@@ -82,8 +82,9 @@ export function float32ToWavBlob(samples: Float32Array, sampleRate: number = 160
 
 	// Write samples
 	let offset = 44;
-	for (let i = 0; i < samples.length; i++) {
-		const sample = Math.max(-1, Math.min(1, samples[i]));
+	const s = samples ?? [];
+	for (let i = 0; i < s.length; i++) {
+		const sample = Math.max(-1, Math.min(1, s[i]!));
 		const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
 		view.setInt16(offset, intSample, true);
 		offset += 2;

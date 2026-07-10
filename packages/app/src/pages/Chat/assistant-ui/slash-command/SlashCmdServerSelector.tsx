@@ -55,7 +55,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 	const dropdownRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
-		inputRef(triggerRef.current);
+		inputRef(triggerRef.current as unknown as HTMLInputElement | null);
 	}, [inputRef]);
 
 	const servers = useMemo(

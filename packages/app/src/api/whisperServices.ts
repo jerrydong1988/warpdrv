@@ -27,7 +27,7 @@ export async function updateWhisperBackend(id: string, payload: IWhisperBackendU
 }
 
 export async function removeWhisperBackend(id: string): Promise<void> {
-	await api.delete(`/whisper-backends/${id}`);
+	await api.del(`/whisper-backends/${id}`);
 }
 
 export async function validateWhisperBackend(id: string): Promise<IWhisperBackend | null> {
@@ -55,7 +55,7 @@ export async function updateWhisperServer(id: string, payload: Partial<IWhisperS
 }
 
 export async function removeWhisperServer(id: string): Promise<void> {
-	await api.delete(`/whisper-servers/${id}`);
+	await api.del(`/whisper-servers/${id}`);
 }
 
 export async function stopWhisperServer(id: string): Promise<void> {
@@ -76,7 +76,7 @@ export async function getWhisperServerLogs(id: string): Promise<string[]> {
 }
 
 export async function clearWhisperServerLogs(id: string): Promise<void> {
-	await api.delete(`/whisper-servers/${id}/logs`);
+	await api.del(`/whisper-servers/${id}/logs`);
 }
 
 // ============================================================

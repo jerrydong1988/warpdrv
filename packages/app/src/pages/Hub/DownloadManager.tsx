@@ -42,6 +42,7 @@ const STATUS_ICONS: Record<EDownloadStatus, React.ReactNode> = {
 	[EDownloadStatus.COMPLETED]: <CheckCircle size={11} />,
 	[EDownloadStatus.FAILED]: <AlertCircle size={11} />,
 	[EDownloadStatus.CANCELLED]: <XCircle size={11} />,
+	[EDownloadStatus.INSTALLING]: <Spinner size="sm" />,
 };
 
 const STATUS_COLORS: Record<EDownloadStatus, string> = {
@@ -50,6 +51,7 @@ const STATUS_COLORS: Record<EDownloadStatus, string> = {
 	[EDownloadStatus.COMPLETED]: 'var(--wc-accent-green)',
 	[EDownloadStatus.FAILED]: 'var(--wc-accent-red)',
 	[EDownloadStatus.CANCELLED]: 'var(--wc-text-tertiary)',
+	[EDownloadStatus.INSTALLING]: 'var(--wc-accent-blue)',
 };
 
 interface IDownloadManagerProps {
@@ -67,6 +69,7 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 		[EDownloadStatus.COMPLETED]: t('downloadStatus.completed'),
 		[EDownloadStatus.FAILED]: t('downloadStatus.failed'),
 		[EDownloadStatus.CANCELLED]: t('downloadStatus.cancelled'),
+		[EDownloadStatus.INSTALLING]: t('downloadStatus.installing'),
 	}), [t]);
 
 	const downloads = Object.values(useStore((s) => s.downloads));

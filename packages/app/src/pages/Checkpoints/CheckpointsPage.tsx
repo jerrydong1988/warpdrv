@@ -90,7 +90,10 @@ export function CheckpointsPage() {
 			if (sortField === 'recency') return sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
 			if (sortField === 'size') return sortOrder === 'asc' ? a.totalSize - b.totalSize : b.totalSize - a.totalSize;
 			if (sortField === 'name') return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-			return sortOrder === 'asc' ? a.items[0].slotIndex - b.items[0].slotIndex : b.items[0].slotIndex - a.items[0].slotIndex;
+			const aFirst = a.items[0];
+		const bFirst = b.items[0];
+		if (!aFirst || !bFirst) return sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
+		return sortOrder === 'asc' ? aFirst.slotIndex - bFirst.slotIndex : bFirst.slotIndex - aFirst.slotIndex;
 		});
 		standalone.sort((a, b) => slotFn(a, b));
 

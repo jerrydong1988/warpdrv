@@ -97,7 +97,8 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 			}
 			if (e.key === "Enter" && filtered.length > 0) {
 				e.preventDefault();
-				handleSelect(filtered[highlight]);
+				const item = filtered[highlight];
+				if (item) handleSelect(item);
 				return;
 			}
 			if (e.key === "Escape") {

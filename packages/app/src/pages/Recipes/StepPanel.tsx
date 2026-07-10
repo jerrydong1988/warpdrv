@@ -77,7 +77,7 @@ export function StepPanel({ step, defaultExpanded = false }: IStepPanelProps) {
 							<StatusIcon size={14} className={isRunning ? 'spin' : undefined} style={isRunning ? { animation: 'spin 1.5s linear infinite' } : undefined} />
 						</Box>
 						<Text fontSize="13px" fontWeight="500" color="var(--wc-text-primary)">{step.name}</Text>
-						<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-bg-interactive)" color={config.color} fontSize="10px" fontWeight="600">{statusLabel}</Badge>
+						<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-bg-interactive)" color={statusColor} fontSize="10px" fontWeight="600">{statusLabel}</Badge>
 						{step.exitCode !== undefined && step.exitCode !== 0 && (
 							<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-red-bg-8)" color="var(--wc-accent-red)" fontSize="10px" fontWeight="600">exit {step.exitCode}</Badge>
 						)}
