@@ -29,7 +29,13 @@ jobs:
       - name: Create placeholder binaries directory
         run: |
           New-Item -ItemType Directory -Path packages\desktop\binaries -Force
+          New-Item -ItemType Directory -Path packages\desktop\binaries\node_modules -Force
+          New-Item -ItemType Directory -Path packages\desktop\app-dist -Force
           New-Item -ItemType File -Path packages\desktop\binaries\warpcore-server-x86_64-pc-windows-msvc.exe -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\better_sqlite3.node -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\node_modules\.gitkeep -Force
+          New-Item -ItemType File -Path packages\desktop\app-dist\.gitkeep -Force
+          if (!(Test-Path release.json)) { New-Item -ItemType File -Path release.json -Force }
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
