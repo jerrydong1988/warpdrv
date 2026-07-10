@@ -527,7 +527,6 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		setCurrentThreadId: (id: TThreadId | null) =>
 			set((draft) => {
 				draft.currentThreadId = id;
-				draft.tempThreadServerId = null;
 				draft.tempAutoEmbed = false;
 				draft.tempThreadState = {};
 			}),
