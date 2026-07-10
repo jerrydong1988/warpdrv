@@ -23,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Type check (shared)
-        run: npx tsc --noEmit --project packages/shared/tsconfig.json
+      - name: Build shared
+        run: npx tsc --project packages/shared/tsconfig.json
 
-      - name: Type check (realmcore)
-        run: npx tsc --noEmit --project packages/realmcore/tsconfig.json
+      - name: Build realmcore
+        run: npx tsc --project packages/realmcore/tsconfig.json
 
       - name: Type check (app)
         run: npx tsc --noEmit --project packages/app/tsconfig.json
