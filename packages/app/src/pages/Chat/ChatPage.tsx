@@ -588,7 +588,7 @@ const ChatInner = ({ threadsListCollapsed, onOpenSearch }: { threadsListCollapse
 						<Box flex="1" overflow="hidden">
 							<BranchTokensContext value={branchTokenCount}>
 								<WithErrorBoundary >
-									<Thread isLoading={isLoadingThread} currentServerId={currentServerId} />
+									<Thread key={currentThreadId} isLoading={isLoadingThread} currentServerId={currentServerId} />
 								</WithErrorBoundary>
 							</BranchTokensContext>
 						</Box>
