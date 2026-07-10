@@ -99,7 +99,7 @@ export const BranchTokensContext = React.createContext(0);
 // ChatInner — main chat layout using bridge store
 // ============================================================
 const emptyMsgs = {};
-const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsListCollapsed: boolean; onOpenSearch?: () => void }) => {
+const ChatInner = ({ threadsListCollapsed, onOpenSearch }: { threadsListCollapsed: boolean; onOpenSearch?: () => void }) => {
 	const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 	const generateTitle = useStore(s => !s.settings.disableTitleGen);
 
@@ -606,7 +606,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			</TooltipProvider>
 		</ChatConfigContext.Provider>
 	);
-});
+};
 export const ChatPage = React.memo(() => {
 	const { t } = useTranslation('chat');
 
