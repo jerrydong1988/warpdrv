@@ -4,6 +4,28 @@ import { useStore } from '../store';
 import { setKokoroCurrentRequestId, startStream } from '../pages/Chat/assistant-ui/KokoroTTS';
 import type { IBridgeEvent } from '@warpcore/bridge';
 
+function isThreadCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.created' } { return e.type === 'thread.created'; }
+function isThreadUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.updated' } { return e.type === 'thread.updated'; }
+function isThreadDeleted(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.deleted' } { return e.type === 'thread.deleted'; }
+function isMessageCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.created' } { return e.type === 'message.created'; }
+function isMessagePatched(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.patched' } { return e.type === 'message.patched'; }
+function isMessageDeleted(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.deleted' } { return e.type === 'message.deleted'; }
+function isMessageChunk(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.chunk' } { return e.type === 'message.chunk'; }
+function isToolCallStarting(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.starting' } { return e.type === 'tool_call.starting'; }
+function isToolCallCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.created' } { return e.type === 'tool_call.created'; }
+function isToolCallUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.updated' } { return e.type === 'tool_call.updated'; }
+function isInferenceStarted(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.started' } { return e.type === 'inference.started'; }
+function isInferenceEnded(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.ended' } { return e.type === 'inference.ended'; }
+function isInferenceError(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.error' } { return e.type === 'inference.error'; }
+function isElicitationRequest(e: IBridgeEvent): e is IBridgeEvent & { type: 'elicitation_request' } { return e.type === 'elicitation_request'; }
+function isElicitationResolved(e: IBridgeEvent): e is IBridgeEvent & { type: 'elicitation_resolved' } { return e.type === 'elicitation_resolved'; }
+function isEmbeddingError(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.error' } { return e.type === 'embedding.error'; }
+function isEmbeddingEmbedded(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.embedded' } { return e.type === 'embedding.embedded'; }
+function isEmbeddingRemoved(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.removed' } { return e.type === 'embedding.removed'; }
+function isWorkspaceStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'workspace_state.updated' } { return e.type === 'workspace_state.updated'; }
+function isThreadStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread_state.updated' } { return e.type === 'thread_state.updated'; }
+function isMessageStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'message_state.updated' } { return e.type === 'message_state.updated'; }
+
 function findLastSentenceEnd(text: string): number {
 	for (let i = text.length - 1; i >= 0; i--) {
 		const c = text[i];
@@ -30,21 +52,25 @@ export function tryAutoEmbed(messageId: string, threadId: string) {
 }
 
 function handleThreadCreated(event: IBridgeEvent) {
+	if (!isThreadCreated(event)) return;
 	const applyThreadCreated = useStore.getState().applyThreadCreated;
 	applyThreadCreated(event.thread);
 }
 
 function handleThreadUpdated(event: IBridgeEvent) {
+	if (!isThreadUpdated(event)) return;
 	const applyThreadUpdated = useStore.getState().applyThreadUpdated;
 	applyThreadUpdated(event.threadId, event.updates);
 }
 
 function handleThreadDeleted(event: IBridgeEvent) {
+	if (!isThreadDeleted(event)) return;
 	const applyThreadDeleted = useStore.getState().applyThreadDeleted;
 	applyThreadDeleted(event.threadId);
 }
 
 function handleMessageCreated(event: IBridgeEvent) {
+	if (!isMessageCreated(event)) return;
 	const applyMessageCreated = useStore.getState().applyMessageCreated;
 	applyMessageCreated(event.message);
 	if (event.message.role === 'user') {
@@ -53,16 +79,19 @@ function handleMessageCreated(event: IBridgeEvent) {
 }
 
 function handleMessagePatched(event: IBridgeEvent) {
+	if (!isMessagePatched(event)) return;
 	const applyMessagePatched = useStore.getState().applyMessagePatched;
 	applyMessagePatched(event.messageId, event.threadId, event.updates);
 }
 
 function handleMessageDeleted(event: IBridgeEvent) {
+	if (!isMessageDeleted(event)) return;
 	const applyMessageDeleted = useStore.getState().applyMessageDeleted;
 	applyMessageDeleted(event.messageId, event.threadId);
 }
 
 function handleMessageChunk(event: IBridgeEvent) {
+	if (!isMessageChunk(event)) return;
 	const applyMessageChunk = useStore.getState().applyMessageChunk;
 	applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
 
@@ -98,21 +127,25 @@ function handleMessageChunk(event: IBridgeEvent) {
 }
 
 function handleToolCallStarting(event: IBridgeEvent) {
+	if (!isToolCallStarting(event)) return;
 	const applyToolCallStarting = useStore.getState().applyToolCallStarting;
 	applyToolCallStarting(event.messageId, event.name);
 }
 
 function handleToolCallCreated(event: IBridgeEvent) {
+	if (!isToolCallCreated(event)) return;
 	const applyToolCallCreated = useStore.getState().applyToolCallCreated;
 	applyToolCallCreated(event.toolCall);
 }
 
 function handleToolCallUpdated(event: IBridgeEvent) {
+	if (!isToolCallUpdated(event)) return;
 	const applyToolCallUpdated = useStore.getState().applyToolCallUpdated;
 	applyToolCallUpdated(event.toolCall);
 }
 
 function handleInferenceStarted(event: IBridgeEvent) {
+	if (!isInferenceStarted(event)) return;
 	const applyInferenceStarted = useStore.getState().applyInferenceStarted;
 	applyInferenceStarted(event.threadId, event.messageId);
 
@@ -127,6 +160,7 @@ function handleInferenceStarted(event: IBridgeEvent) {
 }
 
 function handleInferenceEnded(event: IBridgeEvent) {
+	if (!isInferenceEnded(event)) return;
 	const applyInferenceEnded = useStore.getState().applyInferenceEnded;
 	applyInferenceEnded(event.threadId, event.messageId);
 	tryAutoEmbed(event.messageId, event.threadId);
@@ -138,26 +172,31 @@ function handleInferenceEnded(event: IBridgeEvent) {
 }
 
 function handleInferenceError(event: IBridgeEvent) {
+	if (!isInferenceError(event)) return;
 	const applyInferenceError = useStore.getState().applyInferenceError;
 	applyInferenceError(event.threadId, event.messageId, event.error);
 }
 
 function handleElicitationRequest(event: IBridgeEvent) {
+	if (!isElicitationRequest(event)) return;
 	const applyElicitationRequest = useStore.getState().applyElicitationRequest;
 	applyElicitationRequest(event.threadId, event.request);
 }
 
 function handleElicitationResolved(event: IBridgeEvent) {
+	if (!isElicitationResolved(event)) return;
 	const applyElicitationResolved = useStore.getState().applyElicitationResolved;
 	applyElicitationResolved(event.id);
 }
 
 function handleEmbeddingError(event: IBridgeEvent) {
+	if (!isEmbeddingError(event)) return;
 	const applyEmbeddingError = useStore.getState().applyEmbeddingError;
 	applyEmbeddingError(event.error);
 }
 
 function handleEmbeddingEmbedded(event: IBridgeEvent) {
+	if (!isEmbeddingEmbedded(event)) return;
 	const state = useStore.getState();
 	const selectedServerId = state.selectedEmbeddingServerId;
 	const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
@@ -168,6 +207,7 @@ function handleEmbeddingEmbedded(event: IBridgeEvent) {
 }
 
 function handleEmbeddingRemoved(event: IBridgeEvent) {
+	if (!isEmbeddingRemoved(event)) return;
 	const state = useStore.getState();
 	const selectedServerId = state.selectedEmbeddingServerId;
 	const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
@@ -178,16 +218,19 @@ function handleEmbeddingRemoved(event: IBridgeEvent) {
 }
 
 function handleWorkspaceStateUpdated(event: IBridgeEvent) {
+	if (!isWorkspaceStateUpdated(event)) return;
 	const applyWorkspaceStateUpdated = useStore.getState().applyWorkspaceStateUpdated;
 	applyWorkspaceStateUpdated(event.folderId, event.data);
 }
 
 function handleThreadStateUpdated(event: IBridgeEvent) {
+	if (!isThreadStateUpdated(event)) return;
 	const applyThreadStateUpdated = useStore.getState().applyThreadStateUpdated;
 	applyThreadStateUpdated(event.threadId, event.data);
 }
 
 function handleMessageStateUpdated(event: IBridgeEvent) {
+	if (!isMessageStateUpdated(event)) return;
 	const applyMessageStateUpdated = useStore.getState().applyMessageStateUpdated;
 	applyMessageStateUpdated(event.messageId, event.data);
 }
