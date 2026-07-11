@@ -11,6 +11,97 @@ const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
     reasoningEffort: "none",
 };
 
+function toText(m: TOpenAIMessage): string {
+    if (m.role === "system") {
+        if (m.content === "<base>") return `--- Conversation Root ---`;
+        if (m.content === "<latest>") return `--- Recent Messages ---`;
+        if (m.content === "<review>") return `--- Message to Review ---`;
+    }
+    const content = typeof m.content === 'string'
+        ? m.content
+        : Array.isArray(m.content)
+            ? m.content.find((c: any) => c.type === 'text')?.text || ''
+            : '';
+    let result = `[${m.role}]: ${content}`;
+    if (m.tool_calls?.length) {
+        result += '\n' + m.tool_calls.map(tc => `[${tc.function.name}]: ${tc.function.arguments}`).join('\n');
+    }
+    return result;
+}
+
+function buildGuardrailContext(
+    messages: TOpenAIMessage[],
+    assistantIndex: number,
+    guardrail: IGuardrail,
+): string {
+    const beforePart3 = assistantIndex !== -1 ? messages.slice(0, assistantIndex) : messages;
+    const part1: TOpenAIMessage[] = [];
+    const part2: TOpenAIMessage[] = [];
+    const part3: TOpenAIMessage[] = [];
+
+    part3.push({ role: "system", content: "<review>" });
+    part3.push(messages[assistantIndex]!);
+
+    if (guardrail.includeBaseMessage) {
+        if (beforePart3.length >= 1) {
+            part1.push({ role: "system", content: "<base>" });
+            part1.push(beforePart3[0]!);
+        }
+        if (beforePart3.length >= 2) part1.push(beforePart3[1]!);
+    }
+
+    if (guardrail.messagesCount && guardrail.messagesCount > 0) {
+        part2.push({ role: "system", content: "<latest>" });
+        part2.push(...beforePart3.slice(-guardrail.messagesCount));
+    }
+
+    const all = [...part1, ...part2, ...part3];
+    const seen = new Set<string>();
+    const context = all.filter(m => {
+        const key = JSON.stringify(m);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+    return context.map(toText).join('\n');
+}
+
+async function processGuardrail(
+    api: IAppletAPIBE,
+    guardrail: IGuardrail,
+    messageId: string,
+    inferenceUrl: string,
+    messages: TOpenAIMessage[],
+    assistantIndex: number,
+): Promise<void> {
+    const grServer = await store.get<IServer>('servers:' + guardrail.serverId);
+    if (!grServer) throw 'Guardrail server not found:' + guardrail.serverId;
+
+    const grInferenceUrl = `http://127.0.0.1:${grServer.port}` || inferenceUrl;
+    const contextTexts = buildGuardrailContext(messages, assistantIndex, guardrail);
+
+    const prompt = GUARDRAIL_PROMPT + GUARDRAIL_RULESET_GENERIC_PROMPT + '\n' + (guardrail.prompt || '')
+        + 'Conversation/Message is below -\n' + contextTexts;
+
+    const result = await api.eventNode.invoke('/warpcore', 'bridge.handlePureCompletion', {
+        inferenceRequestId: guardrail.name + '-' + messageId,
+        inferenceUrl: grInferenceUrl,
+        messages: [{ role: 'user', content: prompt }],
+        inferenceParams: { ...GUARDRAILS_DEFAULT_INFERENCE_PARAMS, ...guardrail.inferenceParams },
+    });
+
+                    const text = (result as any).content?.filter((c: any) => c.type === "text")?.[0]?.text || 'Error';
+    const parsed: IGuardrailIssue[] = JSON.parse(text);
+
+    const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;
+    const currentResults = (existing?.guardrailResults as Record<string, any>) || {};
+
+    await api.eventNode.invoke('/warpcore', 'bridge.updateMessageState', {
+        messageId,
+        data: { guardrailResults: { ...currentResults, [guardrail.name]: parsed } },
+    });
+}
+
 const fn: IAppletFn<IAppletAPIBE> = async (api) => {
     console.log('[BEApplet] Started');
 
@@ -87,7 +178,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 messages: Array<TOpenAIMessage>;
                 message: IChatMessage,
             };
-            const { threadId, messageId, inferenceUrl, messages, message } = payload;
+            const { threadId, messageId, inferenceUrl, messages } = payload;
 
             const threadState = await api.eventNode.invoke(
                 '/warpcore',
@@ -101,15 +192,10 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             const activeGuardrails = Object.values(guardrails).filter(g => g.isActive);
             if (!activeGuardrails.length) return;
 
-            // Find current turn boundary
             const assistantIndex = messages.map(m => m.role).lastIndexOf('assistant');
-            const beforePart3 = assistantIndex !== -1 ? messages.slice(0, assistantIndex) : messages;
-
-            // Tool names from the assistant message
             const lastAssistant = messages[assistantIndex];
             const toolNames = lastAssistant?.tool_calls?.map(tc => tc.function.name.toLowerCase()) || [];
 
-            // Filter guardrails by triggerOnTools
             const applicableGuardrails = activeGuardrails.filter(g => {
                 if (!g.triggerOnTools) return true;
                 const tools = g.triggerOnTools.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
@@ -118,7 +204,6 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             });
             if (!applicableGuardrails.length) return;
 
-            // Immediately mark all as processing
             const initialResults: Record<string, boolean> = {};
             for (const g of applicableGuardrails) {
                 initialResults[g.name] = false;
@@ -128,96 +213,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 data: { guardrailResults: initialResults },
             });
 
-            // Process one by one, save each result
             for (const guardrail of applicableGuardrails) {
                 try {
-                    const grServer = await store.get<IServer>('servers:' + guardrail.serverId);
-                    if (!grServer) throw '[BEApplet] Guardrail server not found:' + guardrail.serverId;
-
-                    const grInferenceUrl = `http://127.0.0.1:${grServer.port}` || inferenceUrl;
-
-                    const toText = (m: TOpenAIMessage) => {
-                        if (m.role === "system") {
-                            if (m.content === "<base>") return `--- Conversation Root ---`;
-                            else if (m.content === "<latest>") return `--- Recent Messages ---`;
-                            else if (m.content === "<review>") return `--- Message to Review ---`;
-                        }
-
-                        const content = typeof m.content === 'string'
-                            ? m.content
-                            : Array.isArray(m.content)
-                                ? m.content.find((c: any) => c.type === 'text')?.text || ''
-                                : '';
-                        let result = `[${m.role}]: ${content}`;
-                        if (m.tool_calls?.length) {
-                            result += '\n' + m.tool_calls.map(tc => `[${tc.function.name}]: ${tc.function.arguments}`).join('\n');
-                        }
-                        return result;
-                    };
-
-                    const part1: Array<TOpenAIMessage> = [];
-                    const part2: Array<TOpenAIMessage> = [];
-                    const part3: Array<TOpenAIMessage> = [];
-
-                    // Part 3 - always included, just the assistant message
-                    part3.push({ role: "system", content: "<review>" });
-                    part3.push(messages[assistantIndex]!);
-
-                    // Part 1 - base from beforePart3
-                    if (guardrail.includeBaseMessage) {
-                        if (beforePart3.length >= 1) {
-                            part1.push({role: "system", content: "<base>"});
-                            part1.push(beforePart3[0]!);
-                        }
-                        if (beforePart3.length >= 2) part1.push(beforePart3[1]!);
-                    }
-
-                    // Part 2 - last N from beforePart3
-                    if (guardrail.messagesCount && guardrail.messagesCount > 0) {
-                        part2.push({ role: "system", content: "<latest>" });
-                        part2.push(...beforePart3.slice(-guardrail.messagesCount));
-                    }
-
-                    // Merge with dedup (part 1/2 can overlap)
-                    const all = [...part1, ...part2, ...part3];
-                    const seen = new Set<TOpenAIMessage>();
-                    const context = all.filter(m => {
-                        if (seen.has(m)) return false;
-                        seen.add(m);
-                        return true;
-                    });
-                    const contextTexts = context.map(toText);
-
-                    const prompt = GUARDRAIL_PROMPT + GUARDRAIL_RULESET_GENERIC_PROMPT + '\n' + (guardrail.prompt || '')
-                        + 'Conversation/Message is below -\n'
-                        + contextTexts.join('\n');
-
-                    const result = await api.eventNode.invoke('/warpcore', 'bridge.handlePureCompletion', {
-                        inferenceRequestId: guardrail.name + '-' + messageId,
-                        inferenceUrl: grInferenceUrl,
-                        
-                        messages: [{
-                            role: 'user',
-                            content: prompt,
-                        }],
-
-                        inferenceParams: {
-                            ...GUARDRAILS_DEFAULT_INFERENCE_PARAMS,
-                            ...guardrail.inferenceParams,
-                        }
-                    });
-
-                    const text = result.content?.filter((c: any) => c.type === "text")?.[0]?.text || 'Error';
-                    const parsed: IGuardrailIssue[] =JSON.parse(text);
-
-                    // Read existing results, merge, save
-                    const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;
-                    const currentResults = (existing?.guardrailResults as Record<string, any>) || {};
-
-                    await api.eventNode.invoke('/warpcore', 'bridge.updateMessageState', {
-                        messageId,
-                        data: { guardrailResults: { ...currentResults, [guardrail.name]: parsed } },
-                    });
+                    await processGuardrail(api, guardrail, messageId, inferenceUrl, messages, assistantIndex);
                 } catch (err) {
                     console.error('[BEApplet] Guardrail error:', guardrail.name, err);
                 }

@@ -17,31 +17,45 @@ import { todoAddDefinition, todoAddHandler } from './tools/todo';
 import { todoRemoveDefinition, todoRemoveHandler } from './tools/todo';
 import { todoUpdateDefinition, todoUpdateHandler } from './tools/todo';
 import { todoClearDefinition, todoClearHandler } from './tools/todo';
+import type { ITodoItem } from '@warpcore/shared';
+
+type TFileReadArgs = { path: string; encoding?: string };
+type TFileWriteArgs = { path: string; content: string; encoding?: string };
+type TDirListArgs = { path: string };
+type TShellExecArgs = { command: string; cwd?: string; timeout?: number };
+type TFetchArgs = { url: string; method?: string; headers?: Record<string, string>; body?: string };
+type TEmbeddingSearchArgs = { query: string; topK?: number; topic?: string };
+type TTodoReadArgs = { threadId: string };
+type TTodoAddArgs = { threadId: string; todo: ITodoItem; index?: number };
+type TTodoRemoveArgs = { threadId: string; index: number };
+type TTodoUpdateArgs = { threadId: string; index: number; status: ITodoItem['status'] };
+type TTodoClearArgs = { threadId: string };
+
 const SERVER_NAME = 'warpmcp';
 let httpServer: Server | null = null;
 let currentPort: number | null = null;
 let currentBindHost: string | null = null;
-function buildMcpServer(deps: IWarpmcpDeps): McpServer {
-	const tools = [
-		{ def: fileReadDefinition, handler: (a: any) => fileReadHandler(deps, a) },
-		{ def: fileWriteDefinition, handler: (a: any) => fileWriteHandler(deps, a) },
-		{ def: dirListDefinition, handler: (a: any) => dirListHandler(deps, a) },
-		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a) },
-		{ def: fetchDefinition, handler: (a: any) => fetchHandler(a) },
-		{ def: embeddingSearchDefinition, handler: (a: any) => embeddingSearchHandler(deps, a) },
-		{ def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
-		{ def: todoAddDefinition, handler: (a: any) => todoAddHandler(deps, a) },
-		{ def: todoRemoveDefinition, handler: (a: any) => todoRemoveHandler(deps, a) },
-		{ def: todoUpdateDefinition, handler: (a: any) => todoUpdateHandler(deps, a) },
-		{ def: todoClearDefinition, handler: (a: any) => todoClearHandler(deps, a) },
-	];
+	function buildMcpServer(deps: IWarpmcpDeps): McpServer {
+		const tools = [
+			{ def: fileReadDefinition, handler: ((a: TFileReadArgs) => fileReadHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: fileWriteDefinition, handler: ((a: TFileWriteArgs) => fileWriteHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: dirListDefinition, handler: ((a: TDirListArgs) => dirListHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: shellExecDefinition, handler: ((a: TShellExecArgs) => shellExecHandler(a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: fetchDefinition, handler: ((a: TFetchArgs) => fetchHandler(a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: embeddingSearchDefinition, handler: ((a: TEmbeddingSearchArgs) => embeddingSearchHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: todoReadDefinition, handler: ((a: TTodoReadArgs) => todoReadHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: todoAddDefinition, handler: ((a: TTodoAddArgs) => todoAddHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: todoRemoveDefinition, handler: ((a: TTodoRemoveArgs) => todoRemoveHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: todoUpdateDefinition, handler: ((a: TTodoUpdateArgs) => todoUpdateHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+			{ def: todoClearDefinition, handler: ((a: TTodoClearArgs) => todoClearHandler(deps, a)) as (args: Record<string, unknown>) => Promise<unknown> },
+		];
 	const server = new McpServer({ name: SERVER_NAME, version: '0.1.0' }, { capabilities: { tools: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;
 		const tool = tools.find(t => t.def.name === name);
 		if (!tool) throw new Error(`Unknown tool: ${name}`);
-		const result = await tool.handler(args as any);
+		const result = await tool.handler(args as Record<string, unknown>);
 		//console.log('[warpmcp] Tool', name, 'result:', JSON.stringify(result).slice(0, 200));
 		return { content: [{ type: 'text', text: JSON.stringify(result) }] };
 	});

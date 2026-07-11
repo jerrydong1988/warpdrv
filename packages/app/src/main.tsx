@@ -48,7 +48,7 @@ const reportError = (payload: Record<string, unknown>) => {
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(payload),
 			keepalive: true,
-		}).catch(() => {});
+		}).catch(console.error);
 	} catch {}
 };
 

@@ -1,4 +1,9 @@
-export function extractResultText(result: unknown): string | null {
+export function extractResultText(result: unknown, depth: number = 0): string | null {
+	const MAX_DEPTH = 20;
+	if (depth > MAX_DEPTH) {
+		console.warn('[extractResultText] recursion depth exceeded', { depth });
+		return null;
+	}
 	if (!result) return null;
 	let parsed: unknown = result;
 	if (typeof result === 'string') {
@@ -11,7 +16,7 @@ export function extractResultText(result: unknown): string | null {
 		return texts.length ? texts.join('\n') : null;
 	}
 	if (typeof parsed === 'object' && parsed !== null && 'content' in parsed) {
-		return extractResultText((parsed as { content: unknown }).content);
+		return extractResultText((parsed as { content: unknown }).content, depth + 1);
 	}
 	return typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
 }

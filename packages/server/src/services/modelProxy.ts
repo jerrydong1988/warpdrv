@@ -39,7 +39,7 @@ async function resolveServer(alias: string): Promise<IServer | null> {
 			stickyRoutes.delete(alias);
 			getStickyRoutesResolved().then(routes => {
 				sseManager.emit('proxy:routes', { routes });
-			}).catch(() => {});
+			}).catch(console.error);
 		}
 
 	// Find a running server without error state
@@ -56,7 +56,7 @@ async function resolveServer(alias: string): Promise<IServer | null> {
 			stickyRoutes.set(alias, chosen.id);
 			getStickyRoutesResolved().then(routes => {
 				sseManager.emit('proxy:routes', { routes });
-			}).catch(() => {});
+			}).catch(console.error);
 		}
 		return chosen;
 	}
@@ -206,7 +206,7 @@ export function clearStickyRoute(alias: string): boolean {
 	if (deleted) {
 		getStickyRoutesResolved().then(routes => {
 			sseManager.emit('proxy:routes', { routes });
-		}).catch(() => {});
+		}).catch(console.error);
 	}
 	return deleted;
 }
@@ -216,7 +216,7 @@ export function clearAllStickyRoutes(): void {
 	stickyRoutes.clear();
 	getStickyRoutesResolved().then(routes => {
 		sseManager.emit('proxy:routes', { routes });
-	}).catch(() => {});
+	}).catch(console.error);
 }
 
 // Create the proxy app (shared between start and restart)

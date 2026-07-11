@@ -76,7 +76,7 @@ export const ServerCard = React.memo(({
 
 	const handleRemoveAlias = useCallback(async () => {
 		if (!removingAlias) return;
-		await clearStickyRoute(removingAlias).catch(() => {});
+		await clearStickyRoute(removingAlias).catch(console.error);
 		const newAliases = (server.serverAlias ?? []).filter(a => a !== removingAlias);
 		await updateMut([serverId, { serverAlias: newAliases }]);
 		setRemovingAlias(null);

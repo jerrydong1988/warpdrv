@@ -282,6 +282,7 @@ export interface IPreset {
 	name: string;
 	backendId: TBackendId;
 	modelPath: string;
+	mmprojPath?: string;
 	params: ILaunchParams;
 	createdAt: number;
 }
@@ -289,6 +290,7 @@ export interface IPresetCreatePayload {
 	name: string;
 	backendId: TBackendId;
 	modelPath: string;
+	mmprojPath?: string;
 	params: ILaunchParams;
 }
 // ============================================================

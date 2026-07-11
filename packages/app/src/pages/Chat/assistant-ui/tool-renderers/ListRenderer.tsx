@@ -11,11 +11,17 @@ interface ITreeEntry {
 	children?: ITreeEntry[];
 }
 
-function normalizeEntries(entries: any[]): ITreeEntry[] {
+const MAX_ENTRY_DEPTH = 20;
+
+function normalizeEntries(entries: any[], depth: number = 0): ITreeEntry[] {
+	if (depth > MAX_ENTRY_DEPTH) {
+		console.warn('[normalizeEntries] recursion depth exceeded', { depth });
+		return [];
+	}
 	return entries.map(e => ({
 		name: e.name,
 		type: e.type === 'dir' ? 'directory' : e.type === 'symlink' || e.type === 'other' ? 'file' : e.type,
-		children: Array.isArray(e.children) ? normalizeEntries(e.children) : undefined,
+		children: Array.isArray(e.children) ? normalizeEntries(e.children, depth + 1) : undefined,
 	}));
 }
 

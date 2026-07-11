@@ -32,7 +32,7 @@ async function getSettings(): Promise<ISettings> {
 }
 
 // Check if user has admin access via cookie or token
-export async function hasAdminAccess(req: { cookies?: Record<string, string>; headers?: Record<string, string>; ip?: string; connection?: { remoteAddress: string } }): Promise<boolean> {
+export async function hasAdminAccess(req: { cookies?: Record<string, string>; headers?: Record<string, string>; ip: string; connection: { remoteAddress: string } }): Promise<boolean> {
 	const settings = await getSettings();
 
 	// If not requiring auth (localhost and authRequireForLocalhost is false), allow
@@ -44,7 +44,7 @@ export async function hasAdminAccess(req: { cookies?: Record<string, string>; he
 	// Check cookie first
 	if (req.cookies?.[COOKIE_NAME]) {
 		const tokens = await store.list<IAccessToken>('tokens:');
-		const token = tokens.find(t => t.id === req.cookies[COOKIE_NAME]);
+		const token = tokens.find(t => t.id === req.cookies?.[COOKIE_NAME]);
 		if (token?.admin) return true;
 	}
 

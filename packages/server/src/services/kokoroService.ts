@@ -32,15 +32,16 @@ const pendingStreams: Record<string, IPendingStream> = {};
 const STREAM_TTL_MS = 30_000;
 let _streamCleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-function _startStreamCleanup(): void {
-	_streamCleanupTimer = setInterval(() => {
-		const now = Date.now();
-		for (const id of Object.keys(pendingStreams)) {
-			if (now - pendingStreams[id].createdAt > STREAM_TTL_MS) delete pendingStreams[id];
-		}
-	}, 10_000);
-	if (_streamCleanupTimer.unref) _streamCleanupTimer.unref();
-}
+	function _startStreamCleanup(): void {
+		_streamCleanupTimer = setInterval(() => {
+			const now = Date.now();
+			for (const id of Object.keys(pendingStreams)) {
+				const entry = pendingStreams[id];
+				if (entry && now - entry.createdAt > STREAM_TTL_MS) delete pendingStreams[id];
+			}
+		}, 10_000);
+		if (_streamCleanupTimer.unref) _streamCleanupTimer.unref();
+	}
 _startStreamCleanup();
 
 export function cleanupKokoroService(): void {
@@ -54,7 +55,8 @@ export function cleanupKokoroService(): void {
 	kokoroInstance = null;
 	isReady = false;
 	for (const id of Object.keys(pendingStreams)) {
-		pendingStreams[id].aborted = true;
+		const entry = pendingStreams[id];
+		if (entry) entry.aborted = true;
 	}
 }
 export async function initKokoroService(): Promise<void> {

@@ -164,7 +164,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			stopTTS();
 			const sess = vadSessionRef.current;
 			if (sess instanceof Promise) {
-				sess.then(s => s?.destroy()).catch(() => {});
+				sess.then(s => s?.destroy()).catch(console.error);
 			} else {
 				sess?.destroy();
 			}
@@ -260,7 +260,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		return () => {
 			const sess = vadSessionRef.current;
 			if (sess instanceof Promise) {
-				sess.then(s => s?.destroy()).catch(() => {});
+				sess.then(s => s?.destroy()).catch(console.error);
 			} else {
 				sess?.destroy();
 			}

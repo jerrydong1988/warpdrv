@@ -67,16 +67,17 @@ export class McpClientManager implements IMcpClient {
 		client.setRequestHandler(ElicitRequestSchema, async (req) => {
 			const id = randomUUID();
 			const promise = this.elicitationRegistry.register(id, name);
+			const params = req.params as { message: string; mode?: 'form' | 'url'; url?: string; requestedSchema?: Record<string, unknown> };
 			this.broadcaster?.emit({
 				type: 'elicitation_request',
 				threadId: this.activeThreadByServer[name] ?? '',
 				request: {
 					id,
 					serverName: name,
-					message: req.params.message,
-					mode: (req.params.mode as 'form' | 'url' | undefined) ?? 'form',
-					url: req.params.url as string | undefined,
-					requestedSchema: req.params.requestedSchema as Record<string, unknown> | undefined,
+					message: params.message,
+					mode: params.mode ?? 'form',
+					url: params.url,
+					requestedSchema: params.requestedSchema,
 				},
 			});
 			const response = await promise;

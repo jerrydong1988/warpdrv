@@ -111,7 +111,7 @@ export function useListQuery<T>(
 }
 
 // Mutation helper (for POST/PUT/DELETE actions)
-interface IUseMutationResult<TInput, TOutput> {
+export interface IUseMutationResult<TInput, TOutput> {
 	mutate: (input: TInput) => Promise<TOutput | null>;
 	loading: boolean;
 	error: string | null;

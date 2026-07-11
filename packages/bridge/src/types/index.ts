@@ -417,8 +417,18 @@ export interface IElicitationRequest {
 }
 
 export interface IElicitationResponse {
+	[x: string]: unknown;
 	action: 'accept' | 'decline' | 'cancel';
 	content?: Record<string, unknown>;
+	task: {
+		taskId: string;
+		status: 'working' | 'input_required' | 'completed' | 'failed' | 'cancelled';
+		ttl: number | null;
+		createdAt: string;
+		lastUpdatedAt: string;
+		pollInterval?: number;
+		statusMessage?: string;
+	};
 }
 
 export type IBridgeEvent =
@@ -440,6 +450,7 @@ export type IBridgeEvent =
 	| { type: 'embedding.error'; error: string }
 	| { type: 'embedding.embedded'; messageId: TMessageId; threadId: TThreadId; modelId: string; topic: string }
 	| { type: 'embedding.removed'; messageId: TMessageId; modelId: string; topic: string }
+	| { type: 'embedding.configured'; serverId: string }
 	| { type: 'workspace_state.updated'; folderId: TFolderId; data: Record<string, unknown> }
 	| { type: 'thread_state.updated'; threadId: TThreadId; data: Record<string, unknown> }
 	| { type: 'message_state.updated'; messageId: TMessageId; data: Record<string, unknown> };

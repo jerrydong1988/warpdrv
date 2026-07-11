@@ -100,7 +100,7 @@ kokoroRouter.post('/install', async (_req, res) => {
 			const dl = await startDownload({
 				author: KOKORO_AUTHOR,
 				modelName: KOKORO_MODEL,
-				filename: allFiles[i],
+				filename: allFiles[i]!,
 				destRoot,
 				fileParts: allFiles,
 				partIndex: i,

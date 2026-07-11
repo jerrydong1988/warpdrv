@@ -70,7 +70,7 @@ export class EmbeddingService {
 		if (!fs.existsSync(topicDir)) fs.mkdirSync(topicDir, { recursive: true });
 		const dbPath = path.join(topicDir, `${modelName}.db`);
 		this.store = new EmbeddingStore(dbPath, dim);
-		console.log('[embedding] Store loaded:', dbPath);
+
 		return this.store;
 	}
 
@@ -93,7 +93,6 @@ export class EmbeddingService {
 		const newDir = path.join(this.dataDir!, 'embeddings', newTopic);
 		if (fs.existsSync(oldDir)) {
 			fs.renameSync(oldDir, newDir);
-			console.log('[embedding] Renamed embeddings dir:', oldDir, '->', newDir);
 		}
 	}
 
@@ -110,12 +109,10 @@ export class EmbeddingService {
 		await store.insertVector(messageId, text, vector);
 		await this.persistence!.insertEmbeddingStatus(messageId, message.threadId, modelId, topic);
 		this.onStatusChange?.(messageId, message.threadId, modelId, topic);
-		console.log('[embedding] Embedded message:', messageId);
 	}
 
 	async deleteByMessageId(messageId: string, modelId: string, topic: string, serverUrl: string, dim: number): Promise<void> {
 		await this.configure(modelId, topic, serverUrl, dim);
-		console.log('[embedding] Deleting embedding:', messageId, topic);
 		const store = await this.getOrCreateStore(modelId, topic, dim);
 		await store.deleteByMessageId(messageId);
 		if (this.persistence) {
@@ -125,12 +122,10 @@ export class EmbeddingService {
 	}
 
 	async search(query: string, topK: number): Promise<IEmbeddingSearchResult[]> {
-		console.log('[embedding] service.search called, store:', this.store ? 'loaded' : null, 'currentInfo:', this.currentInfo ? { modelId: this.currentInfo.modelId, serverUrl: this.currentInfo.serverUrl } : null);
 		if (!this.store) throw new Error('No store loaded');
 		if (!this.currentInfo) throw new Error('Not configured');
 		const vector = await this.getEmbeddingFromUrl(query, this.currentInfo.serverUrl, this.currentInfo.modelId);
 		const results = await this.store.search(vector, topK);
-		console.log('[embedding] Search returned', results.length, 'results');
 		return results;
 	}
 
@@ -156,7 +151,6 @@ export class EmbeddingService {
 	async processQueue(): Promise<void> {
 		if (this.processing || !this.persistence || !this.onStatusChange) return;
 		this.processing = true;
-		console.log('[embedding] Queue processing, pending:', this.queue.length);
 		while (this.queue.length > 0) {
 			const task = this.queue.shift();
 			if (!task) continue;
@@ -167,7 +161,6 @@ export class EmbeddingService {
 				await store.insertVector(task.messageId, task.text, vector);
 				await this.persistence.insertEmbeddingStatus(task.messageId, task.threadId, task.modelId, task.topic);
 				this.onStatusChange(task.messageId, task.threadId, task.modelId, task.topic);
-				console.log('[embedding] Queue done:', task.messageId);
 			} catch (err) {
 				console.error(`[embedding] Failed to embed message ${task.messageId}:`, err);
 			} finally {
@@ -187,9 +180,9 @@ export class EmbeddingService {
 			const body = await res.text();
 			throw new Error(`Embedding API error: ${res.status} ${body}`);
 		}
-		const data: { data?: { embedding: number[] }[] } = await res.json();
-		if (data.data && data.data[0] && data.data[0].embedding) {
-			return data.data[0].embedding;
+		const json = await res.json() as { data?: { embedding: number[] }[] };
+		if (json.data && json.data[0] && json.data[0].embedding) {
+			return json.data[0].embedding;
 		}
 		throw new Error('Unexpected embedding response format');
 	}

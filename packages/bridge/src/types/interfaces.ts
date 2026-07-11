@@ -148,6 +148,7 @@ export interface IMcpClient {
 	getAllTools(): IToolDefinition[];
 	executeToolCall(serverName: string, toolName: string, args: Record<string, unknown>, threadId?: string): Promise<{ content: unknown; isError: boolean }>;
 	findToolServer(toolName: string): string | null;
+	prepareToolArgs(serverName: string, toolName: string, args: Record<string, unknown>, wsVars: Record<string, unknown> | null): Record<string, unknown>;
 }
 
 // ============================================================

@@ -65,6 +65,15 @@ async function scanDirIterative(
 	rootPath: string,
 	cachedModels: IModel[],
 ): Promise<IModel[]> {
+	// Pre-build lookup maps to avoid O(n) scans per directory/model
+	const cachedById = new Map<string, IModel>();
+	const cachedByDir = new Map<string, IModel[]>();
+	for (const m of cachedModels) {
+		cachedById.set(m.id, m);
+		if (!cachedByDir.has(m.dirPath)) cachedByDir.set(m.dirPath, []);
+		cachedByDir.get(m.dirPath)!.push(m);
+	}
+
 	const queue: ScanEntry[] = [{ dirPath: rootPath, depth: 0, ancestorMmproj: null, userSegment: null }];
 	const results: IModel[] = [];
 
@@ -88,7 +97,7 @@ async function scanDirIterative(
 		const subDirs = entries.filter(e => e.isDirectory());
 
 		// Build IGgufFile for every gguf in this dir (if any)
-		const cachedDirModels = cachedModels.filter(m => m.dirPath === dirPath);
+		const cachedDirModels = cachedByDir.get(dirPath) ?? [];
 		const cachedFilesByPath = new Map<string, IGgufFile>();
 		for (const m of cachedDirModels) {
 			for (const f of m.files) cachedFilesByPath.set(f.filePath, f);
@@ -132,7 +141,7 @@ async function scanDirIterative(
 			}
 
 			const id = makeModelId(dirPath, parentModel);
-			const cachedSameId = cachedModels.find(m => m.id === id);
+			const cachedSameId = cachedById.get(id);
 
 			const model: IModel = {
 				id,

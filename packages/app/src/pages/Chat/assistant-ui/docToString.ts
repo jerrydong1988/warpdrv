@@ -6,10 +6,12 @@ export interface IExtractedSlashCommand {
 }
 
 // Extract slash commands from tiptap JSON
-export const extractCommands = (doc: JSONContent | undefined): IExtractedSlashCommand[] => {
+	export const extractCommands = (doc: JSONContent | undefined): IExtractedSlashCommand[] => {
 	if (!doc) return [];
 	const commands: IExtractedSlashCommand[] = [];
-	const walk = (node: JSONContent) => {
+	const MAX_DEPTH = 50;
+	const walk = (node: JSONContent, depth: number = 0) => {
+		if (depth > MAX_DEPTH) return;
 		if (!node.content) return;
 		for (const child of node.content) {
 			if (child.type === "slashCommand") {
@@ -22,7 +24,7 @@ export const extractCommands = (doc: JSONContent | undefined): IExtractedSlashCo
 				}
 				commands.push({ name, params });
 			} else if (child.content) {
-				walk(child);
+				walk(child, depth + 1);
 			}
 		}
 	};

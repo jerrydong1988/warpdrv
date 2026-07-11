@@ -104,7 +104,7 @@ export class SegmentTrie<T> {
 		}
 		else {
 			const seg = segs[i];
-			if (node.named[seg]) this.walk(node.named[seg], segs, i + 1, found);
+			if (seg && node.named[seg]) this.walk(node.named[seg], segs, i + 1, found);
 			if (node.star) this.walk(node.star, segs, i + 1, found);
 		}
 		// a ** edge absorbs zero or more segments from the current position, then
@@ -130,6 +130,7 @@ export class SegmentTrie<T> {
 		}
 		else {
 			const seg = segs[i];
+			if (!seg) return this.isEmpty(node);
 			const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 			if (child && this.removeAt(child, segs, i + 1, value)) {
 				if (seg === STARSTAR) delete node.starstar;

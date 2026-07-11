@@ -20,6 +20,9 @@ import type {
 	IToolPermission,
 	IThreadToolPermission,
 	IElicitationRequest,
+	IToolAttachment,
+	IThreadPatch,
+	IMessagePart,
 } from '../types';
 import { EMessagePartType } from '../types';
 import type { WritableDraft } from 'immer';
@@ -85,13 +88,13 @@ export interface IChatStoreState {
 
 	// Attached tools (for active thread context)
 	attachAllTools: boolean;
-	attachedTools: any[];
+	attachedTools: IToolAttachment[];
 	// Elicitations (per thread)
 	elicitationByThread: Record<TThreadId, IElicitationRequest>;
 
 	// Actions
 	applyThreadCreated: (thread: IChatThread) => void;
-	applyThreadUpdated: (threadId: TThreadId, updates: any) => void;
+		applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) => void;
 	applyThreadDeleted: (threadId: TThreadId) => void;
 	applyMessageCreated: (message: IChatMessage) => void;
 	applyMessagePatched: (messageId: TMessageId, threadId: TThreadId, updates: IMessagePatch) => void;
@@ -119,7 +122,7 @@ export interface IChatStoreState {
 	setSelectedWhisperServerId: (id: string | null) => void;
 
 	// Attached tools actions
-	setAttachedTools: (attachAll: boolean, tools: any[]) => void;
+	setAttachedTools: (attachAll: boolean, tools: IToolAttachment[]) => void;
 
 	// MCP Actions
 	setMcpServers: (servers: Record<string, IMcpServerState>) => void;
@@ -155,7 +158,7 @@ function flushChunksToPart<TState extends IChatStoreState>(
 	const buffer = draft.chunksByMessageId[messageId];
 	if (!buffer || buffer.chunk.length === 0) return;
 
-	const existingPart = msg.content.find((p: any) => p.id === buffer.partId);
+	const existingPart = msg.content.find((p: IMessagePart) => p.id === buffer.partId);
 	if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
 		existingPart.text += buffer.chunk;
 	}
@@ -262,7 +265,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		tempThreadState: {} as Record<string, unknown>,
 		selectedWhisperServerId: null,
 		attachAllTools: false,
-		attachedTools: [] as any[],
+		attachedTools: [] as IToolAttachment[],
 		elicitationByThread: {} as Record<TThreadId, IElicitationRequest>,
 		workspaceStates: {} as Record<TFolderId, Record<string, unknown>>,
 		threadStates: {} as Record<TThreadId, Record<string, unknown>>,
@@ -280,7 +283,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				draft.threads[thread.id] = thread;
 			}),
 
-		applyThreadUpdated: (threadId: TThreadId, updates: any) =>
+		applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) =>
 			set((draft) => {
 				const thread = draft.threads[threadId];
 				if (thread) {
@@ -347,7 +350,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 
 				if (updates.addParts !== undefined) {
 					for (const part of updates.addParts) {
-						const existingIndex = msg.content.findIndex((p: any) => p.id === part.id);
+						const existingIndex = msg.content.findIndex((p: IMessagePart) => p.id === part.id);
 						if (existingIndex >= 0) {
 							draft.messagesByThread[threadId]![messageId]!.content[existingIndex]! = part;
 						} else {
@@ -381,31 +384,31 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 
 				const buffer = draft.chunksByMessageId[messageId];
 				const now = Date.now();
-				const part = msg.content.find((p: any) => p.id === partId);
+				const part = msg.content.find((p: IMessagePart) => p.id === partId);
 
 				const flushBuffer = (buf: { partId: string; chunk: string }) => {
-					const existingPart = msg.content.find((p: any) => p.id === buf.partId);
+					const existingPart = msg.content.find((p: IMessagePart) => p.id === buf.partId);
 					if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
 						existingPart.text += buf.chunk;
 					} else {
-						const newPart = {
+						const newPart: IMessagePart = {
 							id: buf.partId,
 							type: EMessagePartType.TEXT,
 							orderIndex: msg.content.length,
 							text: buf.chunk,
-						} as any;
+						};
 						msg.content.push(newPart);
 					}
 				};
 
 				const ensurePartExists = () => {
 					if (!part) {
-						const newPart = {
+						const newPart: IMessagePart = {
 							id: partId,
 							type: EMessagePartType.TEXT,
 							orderIndex: msg.content.length,
 							text: deltaText,
-						} as any;
+						};
 						msg.content.push(newPart);
 					} else {
 						if (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING) {
@@ -598,7 +601,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		// ============================================================
 		// Attached tools actions
 		// ============================================================
-		setAttachedTools: (attachAll: boolean, tools: any[]) =>
+		setAttachedTools: (attachAll: boolean, tools: IToolAttachment[]) =>
 			set((draft) => {
 				draft.attachAllTools = attachAll;
 				draft.attachedTools = tools;

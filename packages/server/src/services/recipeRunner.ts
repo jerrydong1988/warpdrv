@@ -35,9 +35,9 @@ interface IActiveRun {
 }
 
 let activeRun: IActiveRun | null = null;
-let sseEmitter: ISSEEmitter | null = null;
+let sseEmitter: ISSEmitter | null = null;
 
-export function setRecipeRunnerSSE(emitter: ISSEEmitter): void {
+export function setRecipeRunnerSSE(emitter: ISSEmitter): void {
 	sseEmitter = emitter;
 }
 

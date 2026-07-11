@@ -37,7 +37,7 @@ let _currentStreamAbortId: string | null = null;
 
 function ensureAnalyser(): AnalyserNode {
 	if (!ttsAudioCtx) ttsAudioCtx = new AudioContext();
-	if (ttsAudioCtx.state === 'suspended') ttsAudioCtx.resume().catch(() => {});
+	if (ttsAudioCtx.state === 'suspended') ttsAudioCtx.resume().catch(console.error);
 	if (!ttsAnalyser) {
 		ttsAnalyser = ttsAudioCtx.createAnalyser();
 		ttsAnalyser.fftSize = 256;
@@ -95,7 +95,7 @@ export async function startStream(requestId: number, text: string, voice: string
 	_currentEventSource = es;
 	_startStreamAbort = () => {
 		es.close();
-		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: 'POST' }).catch(() => {});
+		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: 'POST' }).catch(console.error);
 	};
 	const abortCheck = () => {
 		const currentReqId = useStore.getState().ttsCurrentRequestId;
@@ -231,7 +231,7 @@ export function stopTTS() {
 		_currentEventSource = null;
 	}
 	if (_currentStreamAbortId) {
-		fetch(`/api/kokoro/tts/abort/${_currentStreamAbortId}`, { method: 'POST' }).catch(() => {});
+		fetch(`/api/kokoro/tts/abort/${_currentStreamAbortId}`, { method: 'POST' }).catch(console.error);
 		_currentStreamAbortId = null;
 	}
 }
