@@ -62,7 +62,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 
 	const handleAddArg = () => {
 		const trimmed = newArg.trim();
-		if (trimmed && !defaultArgs.includes(trimmed)) {
+		const argsSet = new Set(defaultArgs);
+		if (trimmed && !argsSet.has(trimmed)) {
 			setDefaultArgs([...defaultArgs, trimmed]);
 			setNewArg('');
 		}
@@ -74,16 +75,15 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 
 	const handleToggleCommonFlag = (flag: string) => {
 		const parts = flag.split(' ');
-		const allPresent = parts.every(p => defaultArgs.includes(p));
+		const argsSet = new Set(defaultArgs);
+		const allPresent = parts.every(p => argsSet.has(p));
 
 		if (allPresent) {
-			// Remove all parts of the flag
 			const next = defaultArgs.filter(arg => !parts.includes(arg));
 			setDefaultArgs(next);
 		} else {
-			// Add missing parts
 			const next = [...defaultArgs];
-			for (const part of parts) if (!next.includes(part)) next.push(part);
+			for (const part of parts) if (!argsSet.has(part)) next.push(part);
 			setDefaultArgs(next);
 		}
 	};
@@ -186,7 +186,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 							<HStack gap="1.5" mb="3" flexWrap="wrap">
 								{ALL_COMMON_FLAGS.map(({ flag, label }) => {
 									const parts = flag.split(' ');
-									const added = parts.every(p => defaultArgs.includes(p));
+									const argsSet = new Set(defaultArgs);
+									const added = parts.every(p => argsSet.has(p));
 									return (
 										<Button key={flag} size="xs" px="2.5" py="1" h="auto" borderRadius="md" fontSize="11px" fontWeight="400"
 											bg={added ? 'var(--wc-accent-green-bg-8)' : 'var(--wc-bg-subtle)'}
@@ -203,17 +204,9 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 							<HStack gap="1.5" flexWrap="wrap" mb="2">
 								{groupArgsForDisplay(defaultArgs).map((groupedArgs, gi) => (
 									<Badge key={gi} px="2" py="1" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-bg-card)" color="var(--wc-text-secondary)" borderWidth="1px" borderColor="var(--wc-border-default)" cursor="pointer" _hover={{ borderColor: 'var(--wc-accent-red-hover)', color: 'var(--wc-accent-red)' }} onClick={() => {
-										// Find the index of the first arg in this group and remove all args in the group
-										const firstArg = groupedArgs[0];
-										const firstIdx = defaultArgs.indexOf(firstArg as any);
-										if (firstIdx !== -1) {
-											const newArgs = [...defaultArgs];
-											for (let j = 0; j < groupedArgs.length; j++) {
-												const argIdx = newArgs.indexOf(groupedArgs[j] as any, firstIdx + j);
-												if (argIdx !== -1) newArgs.splice(argIdx, 1);
-											}
-											setDefaultArgs(newArgs);
-										}
+										const argsSet = new Set(defaultArgs);
+										for (const arg of groupedArgs) argsSet.delete(arg as string);
+										setDefaultArgs([...argsSet]);
 									}} display="flex" alignItems="center" gap="1">
 										{groupedArgs.join(' ')} <X size={10} />
 									</Badge>

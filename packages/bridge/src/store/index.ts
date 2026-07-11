@@ -9,7 +9,6 @@ import type {
 	IChatThread,
 	IChatMessage,
 	IToolCall,
-	IToolAttachment,
 	IMessagePatch,
 	TThreadId,
 	TMessageId,
@@ -20,7 +19,6 @@ import type {
 	IServerPermission,
 	IToolPermission,
 	IThreadToolPermission,
-	IThreadPatch,
 	IElicitationRequest,
 } from '../types';
 import { EMessagePartType } from '../types';
@@ -48,10 +46,9 @@ export interface IChatStoreState {
 	}>;
 
 	// In-memory head tracking (NOT persisted to DB)
-	// Updated automatically on message.created
 	headMessageIdByThread: Record<TThreadId, TMessageId>;
 
-	// Tool calls - global flat map (these are the records from conversations)
+	// Tool calls - global flat map
 	toolCallsById: Record<TToolCallId, IToolCall>;
 	startingToolsByMessage: Record<TMessageId, string[]>;
 
@@ -88,12 +85,13 @@ export interface IChatStoreState {
 
 	// Attached tools (for active thread context)
 	attachAllTools: boolean;
-	attachedTools: IToolAttachment[];
+	attachedTools: any[];
 	// Elicitations (per thread)
 	elicitationByThread: Record<TThreadId, IElicitationRequest>;
+
 	// Actions
 	applyThreadCreated: (thread: IChatThread) => void;
-	applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) => void;
+	applyThreadUpdated: (threadId: TThreadId, updates: any) => void;
 	applyThreadDeleted: (threadId: TThreadId) => void;
 	applyMessageCreated: (message: IChatMessage) => void;
 	applyMessagePatched: (messageId: TMessageId, threadId: TThreadId, updates: IMessagePatch) => void;
@@ -121,14 +119,14 @@ export interface IChatStoreState {
 	setSelectedWhisperServerId: (id: string | null) => void;
 
 	// Attached tools actions
-	setAttachedTools: (attachAll: boolean, tools: IToolAttachment[]) => void;
+	setAttachedTools: (attachAll: boolean, tools: any[]) => void;
 
 	// MCP Actions
 	setMcpServers: (servers: Record<string, IMcpServerState>) => void;
 	setPermissions: (serverPerms: IServerPermission[], toolPerms: IToolPermission[]) => void;
 	setThreadToolPermissions: (threadId: TThreadId, perms: IThreadToolPermission[]) => void;
 
-	// Persisted states — free-form JSON blobs per entity
+	// Persisted states
 	workspaceStates: Record<TFolderId, Record<string, unknown>>;
 	threadStates: Record<TThreadId, Record<string, unknown>>;
 	messageStates: Record<TMessageId, Record<string, unknown>>;
@@ -144,6 +142,92 @@ export interface IChatStoreState {
 	applyMessageStateUpdated: (messageId: TMessageId, data: Record<string, unknown>) => void;
 
 	reset: () => void;
+}
+
+// ============================================================
+// Helper: Flush buffered chunks to message part
+// ============================================================
+function flushChunksToPart<TState extends IChatStoreState>(
+	draft: WritableDraft<TState>,
+	messageId: TMessageId,
+	msg: IChatMessage,
+): void {
+	const buffer = draft.chunksByMessageId[messageId];
+	if (!buffer || buffer.chunk.length === 0) return;
+
+	const existingPart = msg.content.find((p: any) => p.id === buffer.partId);
+	if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
+		existingPart.text += buffer.chunk;
+	}
+
+	delete draft.chunksByMessageId[messageId];
+}
+
+// ============================================================
+// Helper: Find new head message after deletion
+// ============================================================
+function findNewHeadMessage(
+	threadMessages: Record<TMessageId, IChatMessage>,
+	messageId: TMessageId,
+	parentId: string | null,
+): TMessageId {
+	let newHead: TMessageId | null = null;
+	let newestCreatedAt = -1;
+
+	for (const sibling of Object.values(threadMessages)) {
+		if (sibling.id !== messageId && sibling.parentId === parentId) {
+			if (sibling.createdAt > newestCreatedAt) {
+				newestCreatedAt = sibling.createdAt;
+				newHead = sibling.id;
+			}
+		}
+	}
+
+	return newHead || (parentId as TMessageId);
+}
+
+// ============================================================
+// Helper: Promote children after message deletion
+// ============================================================
+function promoteChildrenAfterDeletion<TState extends IChatStoreState>(
+	draft: WritableDraft<TState>,
+	threadId: TThreadId,
+	messageId: TMessageId,
+	grandParentId: string | null,
+): void {
+	for (const child of Object.values(draft.messagesByThread[threadId] ?? {})) {
+		if (child.parentId === messageId) {
+			child.parentId = grandParentId as TMessageId | null;
+		}
+	}
+}
+
+// ============================================================
+// Helper: Resolve elicitation by ID and delete it
+// ============================================================
+function resolveElicitationById<TState extends IChatStoreState>(
+	draft: WritableDraft<TState>,
+	id: string,
+): void {
+	for (const [tid, e] of Object.entries(draft.elicitationByThread)) {
+		if (e.id === id) delete draft.elicitationByThread[tid];
+	}
+}
+
+// ============================================================
+// Helper: Calculate head message from array
+// ============================================================
+function calculateHeadMessage(messages: IChatMessage[]): IChatMessage | null {
+	if (messages.length === 0) return null;
+	let headMsg = messages[0]!;
+	for (let i = 1; i < messages.length; i++) {
+		const candidate = messages[i]!;
+		if (candidate.createdAt > headMsg.createdAt ||
+			(candidate.createdAt === headMsg.createdAt && candidate.id > headMsg.id)) {
+			headMsg = candidate;
+		}
+	}
+	return headMsg;
 }
 
 // ============================================================
@@ -178,7 +262,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		tempThreadState: {} as Record<string, unknown>,
 		selectedWhisperServerId: null,
 		attachAllTools: false,
-		attachedTools: [] as IToolAttachment[],
+		attachedTools: [] as any[],
 		elicitationByThread: {} as Record<TThreadId, IElicitationRequest>,
 		workspaceStates: {} as Record<TFolderId, Record<string, unknown>>,
 		threadStates: {} as Record<TThreadId, Record<string, unknown>>,
@@ -188,13 +272,15 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 	return {
 		...initialState,
 
+		// ============================================================
 		// Thread actions
+		// ============================================================
 		applyThreadCreated: (thread: IChatThread) =>
 			set((draft) => {
 				draft.threads[thread.id] = thread;
 			}),
 
-		applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) =>
+		applyThreadUpdated: (threadId: TThreadId, updates: any) =>
 			set((draft) => {
 				const thread = draft.threads[threadId];
 				if (thread) {
@@ -215,7 +301,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				delete draft.elicitationByThread[threadId];
 				delete draft.threadToolPermissions[threadId];
 				delete draft.threadStates[threadId];
-				// Clear embedding statuses and message states for messages in this thread
+
 				const msgs = draft.messagesByThread[threadId];
 				if (msgs) {
 					for (const messageId of Object.keys(msgs)) {
@@ -224,23 +310,22 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					}
 				}
 				delete draft.messagesByThread[threadId];
-				// Clear current thread if it was the deleted one
+
 				if (draft.currentThreadId === threadId) {
 					draft.currentThreadId = crypto.randomUUID();
 				}
 			}),
 
+		// ============================================================
 		// Message actions
+		// ============================================================
 		applyMessageCreated: (message: IChatMessage) =>
 			set((draft) => {
-				// Ensure thread exists in messagesByThread
 				if (!draft.messagesByThread[message.threadId]) {
 					draft.messagesByThread[message.threadId] = {};
 				}
 				const threadMessages = draft.messagesByThread[message.threadId]!;
-				// Insert message
 				threadMessages[message.id] = message;
-				// Update head — new message is always the new head
 				draft.headMessageIdByThread[message.threadId] = message.id;
 			}),
 
@@ -249,37 +334,23 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				const msg = draft.messagesByThread[threadId]?.[messageId];
 				if (!msg) return;
 
-				// Flush and remove chunks
-				const buffer = draft.chunksByMessageId[msg.id];
-				if (buffer && buffer.chunk.length > 0) {
-					const part = msg.content.find(p => p.id === buffer.partId);
-					if (part && (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING)) {
-						part.text += buffer.chunk;
-					} else {
-					}
-				}
-				delete draft.chunksByMessageId[msg.id];
+				flushChunksToPart(draft, messageId, msg);
 
-				// Update stats if provided
 				if (updates.stats !== undefined) {
 					msg.stats = updates.stats;
 				}
 
-				// Handle replaceParts — full replacement
 				if (updates.replaceParts !== undefined) {
 					msg.content = [...updates.replaceParts];
 					return;
 				}
 
-				// Handle addParts — upsert by part id
 				if (updates.addParts !== undefined) {
 					for (const part of updates.addParts) {
-						const existingIndex = msg.content.findIndex(p => p.id === part.id);
+						const existingIndex = msg.content.findIndex((p: any) => p.id === part.id);
 						if (existingIndex >= 0) {
-							// Replace existing part
 							draft.messagesByThread[threadId]![messageId]!.content[existingIndex]! = part;
 						} else {
-							// Add new part
 							msg.content.push(part);
 						}
 					}
@@ -290,39 +361,15 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			set((draft) => {
 				const msg = draft.messagesByThread[threadId]?.[messageId];
 				if (!msg) return;
-				
-				// Handle head shift if deleted message is the head
+
 				if (draft.headMessageIdByThread[threadId] === messageId) {
 					const threadMessages = draft.messagesByThread[threadId] ?? {};
-					const parentId = msg.parentId;
-					
-					// Find most recent sibling
-					let newHead: TMessageId | null = null;
-					let newestCreatedAt = -1;
-					
-					for (const sibling of Object.values(threadMessages)) {
-						if (sibling.id !== messageId && sibling.parentId === parentId) {
-							if (sibling.createdAt > newestCreatedAt) {
-								newestCreatedAt = sibling.createdAt;
-								newHead = sibling.id;
-							}
-						}
-					}
-					
-					// Fallback to parent if no siblings
-					// root msgs cannot beleted so it will always have a parent ID or not get deleted.
-					if (newHead === null) newHead = parentId!;					
-					draft.headMessageIdByThread[threadId] = newHead;
+					draft.headMessageIdByThread[threadId] = findNewHeadMessage(threadMessages, messageId, msg.parentId);
 				}
-				
+
 				const grandParentId = msg.parentId;
-				
-				for (const child of Object.values(draft.messagesByThread[threadId] ?? {})) {
-					if (child.parentId === messageId) {
-						child.parentId = grandParentId as TMessageId | null;
-					}
-				}
-				
+				promoteChildrenAfterDeletion(draft, threadId, messageId, grandParentId);
+
 				delete draft.messagesByThread[threadId]?.[messageId];
 				delete draft.messageStates[messageId];
 			}),
@@ -334,11 +381,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 
 				const buffer = draft.chunksByMessageId[messageId];
 				const now = Date.now();
-				const part = msg.content.find(p => p.id === partId);
+				const part = msg.content.find((p: any) => p.id === partId);
 
-				// Helper to flush buffer to part (creates part if needed)
 				const flushBuffer = (buf: { partId: string; chunk: string }) => {
-					const existingPart = msg.content.find(p => p.id === buf.partId);
+					const existingPart = msg.content.find((p: any) => p.id === buf.partId);
 					if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
 						existingPart.text += buf.chunk;
 					} else {
@@ -352,7 +398,6 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					}
 				};
 
-				// Helper to create part if it doesn't exist
 				const ensurePartExists = () => {
 					if (!part) {
 						const newPart = {
@@ -369,10 +414,8 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					}
 				};
 
-				// No existing buffer - first chunk for this message
 				if (!buffer) {
 					ensurePartExists();
-					// Create empty buffer for future chunks
 					draft.chunksByMessageId[messageId] = {
 						partId,
 						chunk: '',
@@ -381,13 +424,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					return;
 				}
 
-				// Buffer exists - check if partId changed
 				if (buffer.partId !== partId) {
-					// Flush old buffer to its part
 					flushBuffer(buffer);
-					// Handle new part
 					ensurePartExists();
-					// Create empty buffer for new part
 					draft.chunksByMessageId[messageId] = {
 						partId,
 						chunk: '',
@@ -396,25 +435,22 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					return;
 				}
 
-				// Same partId - check time delta
 				const timeDelta = now - buffer.lastUpdate.getTime();
 				if (timeDelta <= 100) {
-					// Within 100ms - append to buffer
 					buffer.chunk += deltaText;
 				} else {
-					// Over 100ms - flush buffer and append new delta
 					flushBuffer(buffer);
-					// Append new delta directly to part
 					if (part && (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING)) {
 						part.text += deltaText;
 					}
-					// Reset buffer
 					buffer.chunk = '';
 					buffer.lastUpdate = new Date(now);
 				}
 			}),
 
+		// ============================================================
 		// Tool call actions
+		// ============================================================
 		applyToolCallStarting: (messageId: TMessageId, name: string) =>
 			set((draft) => {
 				if (!draft.startingToolsByMessage[messageId]) {
@@ -434,7 +470,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				}
 			}),
 
+		// ============================================================
 		// Inference state actions
+		// ============================================================
 		applyInferenceStarted: (threadId: TThreadId, _messageId: TMessageId) =>
 			set((draft) => {
 				draft.isRunningByThread[threadId] = true;
@@ -446,12 +484,16 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				delete draft.startingToolsByMessage[messageId];
 			}),
 
-	applyInferenceError: (threadId: TThreadId, messageId: TMessageId, error: string) =>
+		applyInferenceError: (threadId: TThreadId, messageId: TMessageId, error: string) =>
 			set((draft) => {
 				draft.isRunningByThread[threadId] = false;
 				draft.inferenceError = { threadId, messageId, error };
 				delete draft.startingToolsByMessage[messageId];
 			}),
+
+		// ============================================================
+		// Embedding actions
+		// ============================================================
 		applyEmbeddingError: (error: string) =>
 			set((draft) => {
 				draft.embeddingError = { error };
@@ -475,39 +517,34 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			set((draft) => {
 				draft.embeddingStatusByMessage = {};
 			}),
+
+		// ============================================================
+		// Elicitation actions
+		// ============================================================
 		applyElicitationRequest: (threadId: TThreadId, request: IElicitationRequest) =>
 			set((draft) => {
 				draft.elicitationByThread[threadId] = request;
 			}),
 		applyElicitationResolved: (id: string) =>
 			set((draft) => {
-				for (const [tid, e] of Object.entries(draft.elicitationByThread)) {
-					if (e.id === id) delete draft.elicitationByThread[tid];
-				}
+				resolveElicitationById(draft, id);
 			}),
+
+		// ============================================================
 		// Initial seeding from API fetch
+		// ============================================================
 		seedThreadMessages: (threadId: TThreadId, messages: IChatMessage[]) =>
 			set((draft) => {
-				// Ensure thread map exists
 				if (!draft.messagesByThread[threadId]) {
 					draft.messagesByThread[threadId] = {};
 				}
 
-				// Bulk insert all messages
 				for (const msg of messages) {
 					draft.messagesByThread[threadId]![msg.id] = msg;
 				}
 
-				// Calculate initial head: newest by createdAt, tie-break by id
-				if (messages.length > 0) {
-					let headMsg = messages[0]!;
-					for (let i = 1; i < messages.length; i++) {
-						const candidate = messages[i]!;
-						if (candidate.createdAt > headMsg.createdAt ||
-							(candidate.createdAt === headMsg.createdAt && candidate.id > headMsg.id)) {
-							headMsg = candidate;
-						}
-					}
+				const headMsg = calculateHeadMessage(messages);
+				if (headMsg) {
 					draft.headMessageIdByThread[threadId] = headMsg.id;
 				}
 			}),
@@ -523,7 +560,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				draft.headMessageIdByThread[threadId] = messageId;
 			}),
 
+		// ============================================================
 		// Current chat state actions
+		// ============================================================
 		setCurrentThreadId: (id: TThreadId | null) =>
 			set((draft) => {
 				draft.currentThreadId = id;
@@ -556,14 +595,18 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				draft.selectedWhisperServerId = id;
 			}),
 
+		// ============================================================
 		// Attached tools actions
-		setAttachedTools: (attachAll: boolean, tools: IToolAttachment[]) =>
+		// ============================================================
+		setAttachedTools: (attachAll: boolean, tools: any[]) =>
 			set((draft) => {
 				draft.attachAllTools = attachAll;
 				draft.attachedTools = tools;
 			}),
 
+		// ============================================================
 		// MCP Actions
+		// ============================================================
 		setMcpServers: (servers: Record<string, IMcpServerState>) =>
 			set((draft) => {
 				draft.mcpServers = servers;
@@ -580,7 +623,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				draft.threadToolPermissions[threadId] = perms;
 			}),
 
+		// ============================================================
 		// Persisted state actions
+		// ============================================================
 		setWorkspaceState: (folderId: TFolderId, data: Record<string, unknown>) => {
 			set((draft) => {
 				draft.workspaceStates[folderId] = { ...(draft.workspaceStates[folderId] || {}), ...data };
@@ -594,7 +639,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		},
 		setThreadState: (threadId: TThreadId | null, data: Record<string, unknown>) => {
 			set((draft) => {
-				const threadInStore = threadId  && draft.threads[threadId];
+				const threadInStore = threadId && draft.threads[threadId];
 				if (threadId && threadInStore) draft.threadStates[threadId] = { ...(draft.threadStates[threadId] || {}), ...data };
 				else draft.tempThreadState = { ...draft.tempThreadState, ...data };
 			});
@@ -631,7 +676,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				draft.messageStates[messageId] = { ...(draft.messageStates[messageId] || {}), ...data };
 			}),
 
+		// ============================================================
 		// Reset
+		// ============================================================
 		reset: () =>
 			set(() => ({ ...initialState })),
 	};
