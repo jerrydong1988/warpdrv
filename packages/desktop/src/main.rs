@@ -1,18 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::env;
+use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::Mutex;
-use std::time::Duration;
 use std::thread;
-use std::path::PathBuf;
-use std::env;
+use std::time::Duration;
 
 use tauri::{
     image::Image,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::TrayIconBuilder,
-    Emitter,
-    Manager,
+    Emitter, Manager,
 };
 
 struct ServerProcess(Mutex<Option<Child>>);
@@ -34,7 +33,10 @@ fn find_server_binary() -> Option<(String, Vec<String>)> {
                 let name = entry.file_name().to_string_lossy().to_string();
                 if name.starts_with("warpcore-server") && !name.ends_with(".sig") {
                     let path_str = entry.path().to_string_lossy().to_string();
-                    let cleaned = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str).to_string();
+                    let cleaned = path_str
+                        .strip_prefix(r"\\?\")
+                        .unwrap_or(&path_str)
+                        .to_string();
                     return Some((cleaned, vec![]));
                 }
             }
@@ -52,7 +54,11 @@ fn find_server_binary() -> Option<(String, Vec<String>)> {
             "npx".to_string(),
             vec![
                 "tsx".to_string(),
-                dev_index.canonicalize().unwrap_or(dev_index).to_string_lossy().to_string(),
+                dev_index
+                    .canonicalize()
+                    .unwrap_or(dev_index)
+                    .to_string_lossy()
+                    .to_string(),
             ],
         ));
     }
@@ -83,8 +89,20 @@ fn get_server_port() -> u16 {
     }
 
     if let Ok(content) = std::fs::read_to_string(&data_path) {
-        if let Some(api_port_str) = content.split("\"apiPort\"").nth(1).and_then(|s| s.split(':').next()) {
-            let trimmed = api_port_str.trim().split(',').next().unwrap_or("").split('}').next().unwrap_or("").trim();
+        if let Some(api_port_str) = content
+            .split("\"apiPort\"")
+            .nth(1)
+            .and_then(|s| s.split(':').next())
+        {
+            let trimmed = api_port_str
+                .trim()
+                .split(',')
+                .next()
+                .unwrap_or("")
+                .split('}')
+                .next()
+                .unwrap_or("")
+                .trim();
             if let Ok(port) = trimmed.parse::<u16>() {
                 if port >= 1 && port <= 65535 {
                     return port;
@@ -102,7 +120,9 @@ fn spawn_server(app: &tauri::AppHandle) -> Option<Child> {
     let log_path = log_dir.join("warpcore-server.log");
     let log_file = std::fs::File::create(&log_path).unwrap();
     let err_file = log_file.try_clone().unwrap();
-    let resource_dir = app.path().resource_dir()
+    let resource_dir = app
+        .path()
+        .resource_dir()
         .map(|p| {
             let s = p.to_string_lossy().to_string();
             s.strip_prefix(r"\\?\").unwrap_or(&s).to_string()
@@ -128,7 +148,13 @@ fn spawn_server(app: &tauri::AppHandle) -> Option<Child> {
 
     match cmd.spawn() {
         Ok(c) => {
-            println!("[WarpCore] Server spawned: {} {:?} (PID {}) on port {}", bin, args, c.id(), server_port);
+            println!(
+                "[WarpCore] Server spawned: {} {:?} (PID {}) on port {}",
+                bin,
+                args,
+                c.id(),
+                server_port
+            );
             Some(c)
         }
         Err(e) => {
@@ -157,7 +183,8 @@ fn navigate_to_app(app: &tauri::AppHandle, port: u16) {
 }
 
 fn loading_html(port: u16) -> String {
-    format!(r#"
+    format!(
+        r#"
         <html>
         <head><style>
             * {{ box-sizing: border-box; }}
@@ -195,7 +222,9 @@ fn loading_html(port: u16) -> String {
             </script>
         </body>
         </html>
-    "#, port = port)
+    "#,
+        port = port
+    )
 }
 
 fn base64_encode(data: &[u8]) -> String {
@@ -211,8 +240,16 @@ fn base64_encode(data: &[u8]) -> String {
         let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | (b[2] as u32);
         result.push(CHARS[((n >> 18) & 0x3F) as usize] as char);
         result.push(CHARS[((n >> 12) & 0x3F) as usize] as char);
-        if chunk.len() > 1 { result.push(CHARS[((n >> 6) & 0x3F) as usize] as char); } else { result.push('='); }
-        if chunk.len() > 2 { result.push(CHARS[(n & 0x3F) as usize] as char); } else { result.push('='); }
+        if chunk.len() > 1 {
+            result.push(CHARS[((n >> 6) & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
+        if chunk.len() > 2 {
+            result.push(CHARS[(n & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
     }
     result
 }
@@ -233,7 +270,8 @@ fn read_start_minimized_setting() -> bool {
 
     match std::fs::read_to_string(&data_path) {
         Ok(content) => {
-            content.contains("\"startMinimized\":true") || content.contains("\"startMinimized\": true")
+            content.contains("\"startMinimized\":true")
+                || content.contains("\"startMinimized\": true")
         }
         Err(_) => false,
     }
@@ -276,8 +314,14 @@ fn read_window_size_settings() -> Option<(u32, u32)> {
                 }
             };
 
-            let width = settings.get("windowWidth").and_then(|v| v.as_u64()).map(|w| w as u32)?;
-            let height = settings.get("windowHeight").and_then(|v| v.as_u64()).map(|h| h as u32)?;
+            let width = settings
+                .get("windowWidth")
+                .and_then(|v| v.as_u64())
+                .map(|w| w as u32)?;
+            let height = settings
+                .get("windowHeight")
+                .and_then(|v| v.as_u64())
+                .map(|h| h as u32)?;
 
             if width >= 800 && height >= 600 {
                 return Some((width, height));
@@ -320,10 +364,13 @@ fn save_window_size(width: u32, height: u32) -> bool {
                     match serde_json::from_str::<serde_json::Value>(settings_str) {
                         Ok(mut settings_obj) => {
                             if let Some(settings_map) = settings_obj.as_object_mut() {
-                                settings_map.insert("windowWidth".to_string(), serde_json::json!(width));
-                                settings_map.insert("windowHeight".to_string(), serde_json::json!(height));
+                                settings_map
+                                    .insert("windowWidth".to_string(), serde_json::json!(width));
+                                settings_map
+                                    .insert("windowHeight".to_string(), serde_json::json!(height));
                                 *settings_value = serde_json::Value::String(
-                                    serde_json::to_string(&settings_obj).unwrap_or_else(|_| settings_str.to_string())
+                                    serde_json::to_string(&settings_obj)
+                                        .unwrap_or_else(|_| settings_str.to_string()),
                                 );
                             }
                         }
@@ -334,7 +381,10 @@ fn save_window_size(width: u32, height: u32) -> bool {
                 }
             }
 
-            match std::fs::write(&data_path, serde_json::to_string_pretty(&json).unwrap_or(content)) {
+            match std::fs::write(
+                &data_path,
+                serde_json::to_string_pretty(&json).unwrap_or(content),
+            ) {
                 Ok(_) => true,
                 Err(e) => {
                     eprintln!("[WarpCore] Failed to save window size: {}", e);
@@ -359,20 +409,20 @@ fn setup_window(app: &tauri::AppHandle, server_port: u16, should_start_minimized
                 saved_width as f64,
                 saved_height as f64,
             )));
-            println!("[WarpCore] Restored window size: {}x{}", saved_width, saved_height);
+            println!(
+                "[WarpCore] Restored window size: {}x{}",
+                saved_width, saved_height
+            );
         }
 
         let html = loading_html(server_port);
-        let data_url = format!(
-            "data:text/html;base64,{}",
-            base64_encode(html.as_bytes())
-        );
+        let data_url = format!("data:text/html;base64,{}", base64_encode(html.as_bytes()));
         let _ = window.navigate(data_url.parse().unwrap());
 
         #[cfg(target_os = "linux")]
         {
-            use webkit2gtk::WebViewExt;
             use webkit2gtk::PermissionRequestExt;
+            use webkit2gtk::WebViewExt;
             let _ = window.with_webview(|webview| {
                 webview.inner().connect_permission_request(|_, request| {
                     request.allow();
@@ -444,7 +494,7 @@ fn spawn_health_monitor(app_handle: tauri::AppHandle, server_port: u16) {
 // ============================================================
 // Extracted: Tray menu creation
 // ============================================================
-fn create_tray_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu> {
+fn create_tray_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let open_item = MenuItemBuilder::with_id("open", "Show warpdrv").build(app)?;
     let hide_item = MenuItemBuilder::with_id("hide", "Hide warpdrv").build(app)?;
     let restart_item = MenuItemBuilder::with_id("restart", "Restart Server").build(app)?;
@@ -519,17 +569,26 @@ fn handle_quit_action(app: &tauri::AppHandle, server_port: u16) {
     if let Some(window) = app.get_webview_window("main") {
         if let Ok(size) = window.inner_size() {
             let _ = save_window_size(size.width, size.height);
-            println!("[WarpCore] Saved window size: {}x{}", size.width, size.height);
+            println!(
+                "[WarpCore] Saved window size: {}x{}",
+                size.width, size.height
+            );
         }
     }
 
     if is_server_running(server_port) {
         let _ = reqwest::blocking::Client::new()
-            .post(format!("http://localhost:{}/api/servers/stop-all", server_port))
+            .post(format!(
+                "http://localhost:{}/api/servers/stop-all",
+                server_port
+            ))
             .send();
         thread::sleep(Duration::from_millis(500));
         let _ = reqwest::blocking::Client::new()
-            .post(format!("http://localhost:{}/api/whisper-servers/stop-all", server_port))
+            .post(format!(
+                "http://localhost:{}/api/whisper-servers/stop-all",
+                server_port
+            ))
             .send();
         thread::sleep(Duration::from_millis(500));
     }
@@ -550,7 +609,10 @@ fn setup_window_close_handler(window: &tauri::WebviewWindow) {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
             if let Ok(size) = w.inner_size() {
                 let _ = save_window_size(size.width, size.height);
-                println!("[WarpCore] Saved window size: {}x{}", size.width, size.height);
+                println!(
+                    "[WarpCore] Saved window size: {}x{}",
+                    size.width, size.height
+                );
             }
             api.prevent_close();
             let _ = w.hide();
@@ -560,7 +622,10 @@ fn setup_window_close_handler(window: &tauri::WebviewWindow) {
 
 fn main() {
     let server_port = get_server_port();
-    println!("[WarpCore] Using API port: {} (from env or settings)", server_port);
+    println!(
+        "[WarpCore] Using API port: {} (from env or settings)",
+        server_port
+    );
 
     let launched_hidden = std::env::args().any(|arg| arg == "--hidden");
 
@@ -593,8 +658,9 @@ fn main() {
         .manage(ServerProcess(Mutex::new(None)))
         .manage(ServerPort(server_port))
         .setup(move |app| {
+            let handle = app.handle().clone();
             let should_start_minimized = launched_hidden && read_start_minimized_setting();
-            setup_window(app, server_port, should_start_minimized);
+            setup_window(&handle, server_port, should_start_minimized);
 
             // Global hotkey listener
             let hk_handle = app.handle().clone();
@@ -605,7 +671,10 @@ fn main() {
                         rdev::EventType::KeyRelease(k) => (format!("{:?}", k), false),
                         _ => return,
                     };
-                    let _ = hk_handle.emit("hotkey://key", serde_json::json!({ "code": code, "down": down }));
+                    let _ = hk_handle.emit(
+                        "hotkey://key",
+                        serde_json::json!({ "code": code, "down": down }),
+                    );
                 });
             });
 
@@ -614,7 +683,7 @@ fn main() {
             spawn_health_monitor(app_handle, server_port);
 
             // Tray menu
-            let menu = create_tray_menu(app)?;
+            let menu = create_tray_menu(&handle)?;
             let _tray = TrayIconBuilder::with_id("warpcore-tray")
                 .icon(Image::from_bytes(include_bytes!("../icons/icon.png"))?)
                 .menu(&menu)
