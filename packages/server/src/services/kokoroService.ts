@@ -9,7 +9,13 @@ declare const __filename: string | undefined;
 const requireFn = (process as any).pkg && process.env.WARPCORE_RESOURCE_DIR
 	? createRequire(path.join(process.env.WARPCORE_RESOURCE_DIR, 'binaries', 'index.js'))
 	: createRequire(typeof __filename !== 'undefined' ? __filename : import.meta.url);
-let kokoroInstance: any = null;
+
+interface IKokoroTTSInstance {
+	stream(splitter: any, opts: { voice: string; speed: number }): AsyncIterable<{ audio: { toWav: () => Uint8Array } }>;
+	dispose?: () => void;
+}
+
+let kokoroInstance: IKokoroTTSInstance | null = null;
 let isReady = false;
 const KOKORO_AUTHOR = 'onnx-community';
 const KOKORO_MODEL = 'Kokoro-82M-v1.0-ONNX';
@@ -24,12 +30,35 @@ export interface IPendingStream {
 }
 const pendingStreams: Record<string, IPendingStream> = {};
 const STREAM_TTL_MS = 30_000;
-setInterval(() => {
-	const now = Date.now();
-	for (const id of Object.keys(pendingStreams)) {
-		if (now - pendingStreams[id].createdAt > STREAM_TTL_MS) delete pendingStreams[id];
+let _streamCleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+	function _startStreamCleanup(): void {
+		_streamCleanupTimer = setInterval(() => {
+			const now = Date.now();
+			for (const id of Object.keys(pendingStreams)) {
+				const entry = pendingStreams[id];
+				if (entry && now - entry.createdAt > STREAM_TTL_MS) delete pendingStreams[id];
+			}
+		}, 10_000);
+		if (_streamCleanupTimer.unref) _streamCleanupTimer.unref();
 	}
-}, 10_000);
+_startStreamCleanup();
+
+export function cleanupKokoroService(): void {
+	if (_streamCleanupTimer) {
+		clearInterval(_streamCleanupTimer);
+		_streamCleanupTimer = null;
+	}
+	if (kokoroInstance && typeof kokoroInstance.dispose === 'function') {
+		try { kokoroInstance.dispose(); } catch { /* ignore */ }
+	}
+	kokoroInstance = null;
+	isReady = false;
+	for (const id of Object.keys(pendingStreams)) {
+		const entry = pendingStreams[id];
+		if (entry) entry.aborted = true;
+	}
+}
 export async function initKokoroService(): Promise<void> {
 	if (isReady) return;
 	try {

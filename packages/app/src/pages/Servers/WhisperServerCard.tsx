@@ -2,13 +2,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Box, Text, HStack, VStack, Flex, Button, Badge, Input, Portal, Popover, HoverCard } from '@chakra-ui/react';
 import { Play, Square, RotateCcw, Mic, Clock, Trash2, X, Plus, Terminal, Edit, Blocks } from 'lucide-react';
 import { FaBrain, FaBookOpen } from 'react-icons/fa6';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/Card';
 import { StatusBadge } from '@/pages/Servers/StatusBadge';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { useMutation } from '@/hooks/useQuery';
 import { useStore } from '@/store';
 import { stopWhisperServer, restartWhisperServer, updateWhisperServer } from '@/api/whisperServices';
-import type { IWhisperServer, IWhisperModel } from '@warpcore/shared';
+import type { IWhisperServer, IWhisperModel, IApiResponse } from '@warpcore/shared';
 import { EWhisperServerStatus, EServerStatus } from '@warpcore/shared';
 import { formatUptime, StatPill, formatLaunchCommand } from './utils';
 
@@ -27,6 +28,7 @@ export const WhisperServerCard = React.memo(({
 	onEdit,
 	onConfirmDelete,
 }: IWhisperServerCardProps) => {
+	const { t } = useTranslation('servers');
 	const server = useStore((s) => s.whisperServers[serverId]);
 	const whisperBackends = useStore((s) => s.whisperBackends);
 
@@ -36,8 +38,8 @@ export const WhisperServerCard = React.memo(({
 	const backend = server?.backendId ? whisperBackends[server.backendId] : null;
 	const model = server ? modelByPath[server.modelPath] : null;
 
-	const { mutate: stopMut } = useMutation<string, IWhisperServer>(useCallback((id: string) => stopWhisperServer(id), []));
-	const { mutate: restartMut } = useMutation<string, IWhisperServer>(useCallback((id: string) => restartWhisperServer(id), []));
+	const { mutate: stopMut, loading: stopLoading } = useMutation<string, void>(useCallback((id: string): Promise<IApiResponse<void>> => stopWhisperServer(id).then(() => ({ ok: true, data: undefined, error: null })), []));
+	const { mutate: restartMut, loading: restartLoading } = useMutation<string, void>(useCallback((id: string): Promise<IApiResponse<void>> => restartWhisperServer(id).then(() => ({ ok: true, data: undefined, error: null })), []));
 
 	const handleStop = useCallback(() => { stopMut(serverId); }, [stopMut, serverId]);
 	const handleRestart = useCallback(() => { restartMut(serverId); }, [restartMut, serverId]);
@@ -47,8 +49,11 @@ export const WhisperServerCard = React.memo(({
 	const [addingAliasOpen, setAddingAliasOpen] = useState(false);
 	const [newAliasValue, setNewAliasValue] = useState('');
 
-	const updateCallback = useCallback(([id, data]: Array<any>) => updateWhisperServer(id, data), []);
-	const { mutate: updateMut, loading } = useMutation<[string, Partial<Pick<IWhisperServer, 'serverAlias'>>], IWhisperServer>(updateCallback);
+	const updateCallback = useCallback(async ([id, data]: [string, Partial<Pick<IWhisperServer, 'serverAlias'>>]): Promise<IApiResponse<IWhisperServer | null>> => {
+		const result = await updateWhisperServer(id, data);
+		return { ok: true, data: result, error: null };
+	}, []);
+	const { mutate: updateMut, loading: updateLoading } = useMutation<[string, Partial<Pick<IWhisperServer, 'serverAlias'>>], IWhisperServer | null>(updateCallback);
 
 	const handleRemoveAlias = useCallback(async () => {
 		if (!removingAlias) return;
@@ -76,7 +81,7 @@ export const WhisperServerCard = React.memo(({
 
 	if (!server) return null;
 
-	const backendName = backend?.name ?? 'Backend Not Found!';
+	const backendName = backend?.name ?? t('labels.backendNotFound');
 	const modelMeta = model?.primaryFile?.metadata ?? null;
 
 	return (
@@ -124,7 +129,7 @@ export const WhisperServerCard = React.memo(({
 										</HoverCard.Positioner>
 									</Portal>
 								</HoverCard.Root>
-								<StatusBadge status={server.status as EServerStatus} port={server.port} />
+								<StatusBadge status={server.status as unknown as EServerStatus} port={server.port} />
 								{server.serverAlias && server.serverAlias.length > 0 && (
 									<>
 										{server.serverAlias.map(alias => (
@@ -154,13 +159,13 @@ export const WhisperServerCard = React.memo(({
 											<Popover.Content maxW="320px" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-overlay)" borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)">
 												<Popover.Arrow />
 												<Popover.Body p="4">
-													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">Add alias for "{server.serverName}"</Text>
+													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">{t('labels.addAliasFor', { name: server.serverName })}</Text>
 													<HStack gap="2">
 														<Input
 															value={newAliasValue}
 															onChange={(e) => setNewAliasValue(e.target.value)}
 															onKeyDown={(e) => { if (e.key === 'Enter') handleAddAlias(); }}
-															placeholder="Enter comma separated aliases..."
+															placeholder={t('labels.aliasPlaceholder')}
 															size="sm"
 															bg="var(--wc-bg-subtle)"
 															borderColor="var(--wc-border-overlay)"
@@ -193,7 +198,7 @@ export const WhisperServerCard = React.memo(({
 							</HStack>
 							<HStack gap="2.5" flexWrap="wrap" mt="1.5">
 								<HStack gap="1">
-									<StatPill icon={<FaBrain size={12} />} label="Model" value={model?.name ?? modelMeta?.modelSize ?? 'Unknown'} />
+									<StatPill icon={<FaBrain size={12} />} label={t('labels.model')} value={model?.name ?? modelMeta?.modelSize ?? 'Unknown'} />
 									{modelMeta?.ftype && (
 										<Badge
 											px="1.5" py="0.25" borderRadius="md" fontSize="10px"
@@ -207,7 +212,7 @@ export const WhisperServerCard = React.memo(({
 										</Badge>
 									)}
 								</HStack>
-								<StatPill icon={<Blocks size={12} />} label="Backend" value={backendName} />
+								<StatPill icon={<Blocks size={12} />} label={t('labels.backend')} value={backendName} />
 							</HStack>
 							{server.error && (
 								<Text fontSize="11px" color="var(--wc-accent-red)" lineClamp={1} mt="0.5">{server.error}</Text>
@@ -249,10 +254,10 @@ export const WhisperServerCard = React.memo(({
 
 			{removingAlias && (
 				<ConfirmDialog
-					title="Remove Alias?"
-					message={`This will remove the alias "${removingAlias}" from the server. This won't affect the running server.`}
+					title={t('dialogs.removeAliasTitle')}
+					message={t('dialogs.removeAliasMessage', { alias: removingAlias })}
 					isOpen={true}
-					isLoading={loading}
+					isLoading={updateLoading}
 					onCancel={() => setRemovingAlias(null)}
 					onConfirm={handleRemoveAlias}
 				/>

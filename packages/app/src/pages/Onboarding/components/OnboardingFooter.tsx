@@ -1,4 +1,5 @@
-import { Box, Button, Flex } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
+import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface IOnboardingFooterProps {
@@ -28,12 +29,9 @@ export function OnboardingFooter({
 				<Button
 					variant="ghost"
 					color="var(--wc-text-secondary)"
-					_hover={{ color: 'var(--wc-text-primary)' }}
 					borderRadius="lg"
 					fontSize="13px"
-					leftIcon={<ArrowLeft size={16} />}
 					onClick={onBack}
-					disabled={disableBack}
 				>
 					{backLabel}
 				</Button>
@@ -41,11 +39,9 @@ export function OnboardingFooter({
 				<Button
 					bg="var(--wc-accent-blue)"
 					color="white"
-					_hover={{ bg: 'var(--wc-accent-blue-hover)' }}
 					borderRadius="lg"
 					fontSize="13px"
 					fontWeight="500"
-					rightIcon={<ArrowRight size={16} />}
 					onClick={onNext}
 				>
 					{nextLabel}

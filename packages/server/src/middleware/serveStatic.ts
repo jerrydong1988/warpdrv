@@ -47,7 +47,7 @@ export function serveStaticApp(app: express.Express): void {
 
 		// Check if auth is required (remote request + auth enabled)
 		const settings = await getSettings();
-		if (isRemote(req) && settings.apiAuthEnabled) {
+		if (isRemote(req as { ip: string; connection: { remoteAddress: string } }) && settings.apiAuthEnabled) {
 			// Redirect to root - React app will show login via AuthProvider
 			return res.redirect('/');
 		}

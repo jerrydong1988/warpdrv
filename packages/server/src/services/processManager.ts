@@ -1,8 +1,8 @@
 import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import http from 'http';
 import net from 'net';
-import type { IServer, ILaunchParams, IChatInferenceParams, IBackend, IBackendGroup, ISettings } from '@warpcore/shared';
-import { EServerStatus, EKvQuantType, DEFAULT_SETTINGS } from '@warpcore/shared';
+import type { IServer, ILaunchParams, IChatInferenceParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams } from '@warpcore/shared';
+import { EServerStatus, EKvQuantType, DEFAULT_SETTINGS, ESpecType } from '@warpcore/shared';
 import { parse as shellParse } from 'shell-quote';
 import { bootstrapServer, teardownServer, parseLogLine } from './slotStateTracker';
 import { listCheckpoints, restoreCheckpoint, saveCheckpoint, getCheckpointsDir } from './checkpointService';
@@ -125,9 +125,9 @@ function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 	// Ngram mode — per-type args based on specType
 	if (isNgram && sd.specType && sd.specType !== 'none') {
 		args.push('--spec-type', sd.specType);
-		const prefix = sd.specType === 'ngram-mod-n' ? 'mod-n'
-			: sd.specType === 'ngram-map-k4v' ? 'map-k4v'
-			: sd.specType === 'ngram-map-k' ? 'map-k' : 'simple';
+		const prefix = sd.specType === ESpecType.NGRAM_MOD ? 'mod'
+			: sd.specType === ESpecType.NGRAM_MAP_K4V ? 'map-k4v'
+			: sd.specType === ESpecType.NGRAM_MAP_K ? 'map-k' : 'simple';
 		if (sd.ngramSizeN) args.push(`--spec-ngram-${prefix}-size-n`, String(sd.ngramSizeN));
 		if (sd.ngramSizeM) args.push(`--spec-ngram-${prefix}-size-m`, String(sd.ngramSizeM));
 		if (sd.ngramMinHits) args.push(`--spec-ngram-${prefix}-min-hits`, String(sd.ngramMinHits));
@@ -155,14 +155,17 @@ function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 
 // Build the llama-server command line args from params
 export function buildArgs(
-	modelPath: string,
-	mmprojPath: string | null,
-	params: ILaunchParams,
-	defaultArgs: string[],
-	buildNumber: number,
-	extraArgs?: Record<string, string>,
-	inferenceParams?: Partial<IChatInferenceParams>,
+	options: {
+		modelPath: string;
+		mmprojPath?: string | null;
+		params: ILaunchParams;
+		defaultArgs: string[];
+		buildNumber: number;
+		extraArgs?: Record<string, string>;
+		inferenceParams?: Partial<IChatInferenceParams>;
+	},
 ): string[] {
+	const { modelPath, mmprojPath, params, defaultArgs, buildNumber, extraArgs, inferenceParams } = options;
 	const args: string[] = [...defaultArgs];
 	const argsSet = new Set(defaultArgs);
 	// Remove -fa and its value from defaultArgs if present (will add properly formatted version below)
@@ -243,14 +246,16 @@ export function buildArgs(
 }
 // Async wrapper that injects checkpoint path
 export async function buildServerArgs(
-	modelPath: string,
-	mmprojPath: string | null,
-	params: ILaunchParams,
-	defaultArgs: string[],
-	buildNumber: number,
+	options: {
+		modelPath: string;
+		mmprojPath?: string | null;
+		params: ILaunchParams;
+		defaultArgs: string[];
+		buildNumber: number;
+	},
 ): Promise<string[]> {
 	const checkpointDir = await getCheckpointsDir();
-	return buildArgs(modelPath, mmprojPath, params, defaultArgs, buildNumber, { 'slot-save-path': checkpointDir });
+	return buildArgs({ ...options, extraArgs: { 'slot-save-path': checkpointDir } });
 }
 // Spawn a llama-server process
 export function spawnServer(
@@ -325,179 +330,140 @@ export function spawnServer(
 			processes.delete(serverId);
 			if (code !== 0 && code !== null) {
 				onStatusChange(EServerStatus.ERROR, `Process exited with code ${code}`);
-				emitServerUpdate(serverId, EServerStatus.ERROR, `Process exited with code ${code}`, null).catch(() => {});
+				emitServerUpdate(serverId, EServerStatus.ERROR, `Process exited with code ${code}`, null).catch(console.error);
 			} else {
 				onStatusChange(EServerStatus.STOPPED);
-				emitServerUpdate(serverId, EServerStatus.STOPPED, null, null).catch(() => {});
+				emitServerUpdate(serverId, EServerStatus.STOPPED, null, null).catch(console.error);
 			}
 		});
 		onStatusChange(EServerStatus.LOADING);
-		emitServerUpdate(serverId, EServerStatus.LOADING, null, null, launchCommand).catch(() => {});
+		emitServerUpdate(serverId, EServerStatus.LOADING, null, null, launchCommand).catch(console.error);
 		return child.pid ?? null;
 	} catch (err) {
 		onStatusChange(EServerStatus.ERROR, String(err));
-		emitServerUpdate(serverId, EServerStatus.ERROR, String(err), null).catch(() => {});
+		emitServerUpdate(serverId, EServerStatus.ERROR, String(err), null).catch(console.error);
 		return null;
 	}
 }
 // Kill a running server process and wait for termination
 export async function killServer(serverId: string, pid?: number): Promise<boolean> {
-    // Auto-save checkpoint before kill if enabled
     await maybeAutoSaveCheckpoint(serverId);
-
     const child = processes.get(serverId);
-    
-// Helper to check if port is free
-	const isPortFree = (port: number): Promise<boolean> => {
-		return new Promise((resolvePort) => {
-			const server = net.createServer();
-			server.listen(port, '127.0.0.1', () => {
-                server.close();
-                resolvePort(true);
-            });
-            server.on('error', () => resolvePort(false));
-        });
-    };
-    
-    // Try to kill from in-memory process first, then fall back to PID
+
     if (child?.pid) {
-        // stopStatsPolling(serverId);
         teardownServer(serverId);
-        
-        return new Promise((resolve) => {
-            const pidToUse = child.pid;
-            let resolved = false;
-            
-            const cleanup = () => {
-                if (!resolved) {
-                    resolved = true;
-                    processes.delete(serverId);
-                }
-            };
-            
-            const finish = (success: boolean) => {
-                cleanup();
-                resolve(success);
-            };
-            
-            // Listen for process exit
-            child.once('exit', (code) => {
-                const status = code !== 0 && code !== null 
-                    ? EServerStatus.ERROR 
-                    : EServerStatus.STOPPED;
-                const error = code !== 0 && code !== null 
-                    ? `Process exited with code ${code}` 
-                    : null;
-                
-                emitServerUpdate(serverId, status, error, null).catch(() => {});
-                
-                // Look up port from server config and wait for it to be free
-                const waitForPort = async () => {
-                    try {
-                        const server = await store.get<IServer>(`${SERVERS_PREFIX}${serverId}`);
-                        const port = server?.port || 0;
-                        
-                        if (port > 0) {
-                            let portAttempts = 0;
-                            const checkPort = async () => {
-                                const free = await isPortFree(port);
-                                if (free) {
-                                    finish(true);
-                                } else if (portAttempts < 20) {
-                                    portAttempts++;
-                                    setTimeout(checkPort, 250);
-                                } else {
-                                    finish(true);
-                                }
-                            };
-                            checkPort();
-                        } else {
-                            finish(true);
-                        }
-                    } catch {
-                        finish(true);
-                    }
-                };
-                
-                waitForPort();
-            });
-            
-			// Send SIGTERM to process tree
-            try {
-                killProcessTree(pidToUse!, 'SIGTERM');
-            } catch (err) {
-                if (isProcessAlive(pidToUse!)) {
-                    finish(false);
-                } else {
-                    finish(true);
-                }
-                return;
-            }
-            
-            // If not exited after 5 seconds, force kill with SIGKILL
-            const timeout = setTimeout(() => {
-                if (isProcessAlive(pidToUse!)) {
-                    try {
-                        killProcessTree(pidToUse!, 'SIGKILL');
-                    } catch {}
-                    setTimeout(() => {
-                        if (!resolved) {
-                            finish(true);
-                        }
-                    }, 200);
-                }
-            }, 5000);
-        });
+        return killWithChildProcess(child, serverId);
     }
-    
-    // If not in map, try to kill using PID from storage (orphan process)
+
     if (pid) {
-        // stopStatsPolling(serverId);
         teardownServer(serverId);
-        if (!isProcessAlive(pid)) {
-            return true;
-        }
-        
-        return new Promise((resolve) => {
-            let resolved = false;
-            
-            const finish = (success: boolean) => {
-                if (!resolved) {
-                    resolved = true;
-                    resolve(success);
-                }
-            };
-            
-            // Send SIGTERM
-            try {
-                killProcessTree(pid, 'SIGTERM');
-            } catch {
-                finish(false);
-                return;
-            }
-            
-            // Poll until process is dead
-            const checkInterval = setInterval(async () => {
-                if (!isProcessAlive(pid)) {
-                    clearInterval(checkInterval);
-                    finish(true);
-                }
-            }, 100);
-            
-            // Force kill after 5 seconds
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                if (isProcessAlive(pid)) {
-                    try {
-                        killProcessTree(pid, 'SIGKILL');
-                    } catch {}
-                    setTimeout(() => finish(true), 200);
-                }
-            }, 5000);
-        });
+        if (!isProcessAlive(pid)) return true;
+        return killWithPid(pid, serverId);
     }
-    
+
     return false;
+}
+
+async function killWithChildProcess(child: ChildProcess, serverId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        const pidToUse = child.pid!;
+        let resolved = false;
+
+        const cleanup = () => {
+            if (!resolved) {
+                resolved = true;
+                processes.delete(serverId);
+            }
+        };
+
+        const finish = (success: boolean) => {
+            cleanup();
+            resolve(success);
+        };
+
+        child.once('exit', (code) => {
+            const status = code !== 0 && code !== null ? EServerStatus.ERROR : EServerStatus.STOPPED;
+            const error = code !== 0 && code !== null ? `Process exited with code ${code}` : null;
+            emitServerUpdate(serverId, status, error, null).catch(console.error);
+            waitForPortAndFinish(serverId, finish);
+        });
+
+        try {
+            killProcessTree(pidToUse, 'SIGTERM');
+        } catch {
+            resolve(isProcessAlive(pidToUse) ? false : true);
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            if (isProcessAlive(pidToUse)) {
+                try { killProcessTree(pidToUse, 'SIGKILL'); } catch {}
+                setTimeout(() => { if (!resolved) finish(true); }, 200);
+            }
+        }, 5000);
+    });
+}
+
+async function killWithPid(pid: number, serverId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        let resolved = false;
+        const finish = (success: boolean) => {
+            if (!resolved) {
+                resolved = true;
+                resolve(success);
+            }
+        };
+
+        try {
+            killProcessTree(pid, 'SIGTERM');
+        } catch {
+            finish(false);
+            return;
+        }
+
+        const checkInterval = setInterval(async () => {
+            if (!isProcessAlive(pid)) {
+                clearInterval(checkInterval);
+                finish(true);
+            }
+        }, 100);
+
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            if (isProcessAlive(pid)) {
+                try { killProcessTree(pid, 'SIGKILL'); } catch {}
+                setTimeout(() => finish(true), 200);
+            }
+        }, 5000);
+    });
+}
+
+async function waitForPortAndFinish(serverId: string, finish: (success: boolean) => void): Promise<void> {
+    const isPortFree = (port: number): Promise<boolean> =>
+        new Promise((resolve) => {
+            const server = net.createServer();
+            server.listen(port, '127.0.0.1', () => { server.close(); resolve(true); });
+            server.on('error', () => resolve(false));
+        });
+
+    try {
+        const server = await store.get<IServer>(`${SERVERS_PREFIX}${serverId}`);
+        const port = server?.port || 0;
+        if (port > 0) {
+            let portAttempts = 0;
+            const checkPort = async () => {
+                const free = await isPortFree(port);
+                if (free) finish(true);
+                else if (portAttempts < 20) { portAttempts++; setTimeout(checkPort, 250); }
+                else finish(true);
+            };
+            checkPort();
+        } else {
+            finish(true);
+        }
+    } catch {
+        finish(true);
+    }
 }
 // Check if a process is still alive by PID
 export function isProcessAlive(pid: number): boolean {
@@ -648,7 +614,7 @@ export async function findRandomAvailablePort(): Promise<number> {
 		const tier = Math.random() * 100;
 		const idx = Math.min(available.length - 1, Math.floor((tier / 100) * available.length));
 		const port = available[idx];
-		if (!usedPorts.has(port)) {
+		if (port !== undefined && !usedPorts.has(port)) {
 			usedPorts.add(port);
 			return port;
 		}
@@ -746,13 +712,13 @@ export async function launchServer(server: IServer): Promise<void> {
 		? parseInt(backend.buildNumber, 10)
 		: 0;
 
-	const args = await buildServerArgs(
-		server.modelPath,
+	const args = await buildServerArgs({
+		modelPath: server.modelPath,
 		mmprojPath,
-		launchParams,
-		backend.defaultArgs,
+		params: launchParams,
+		defaultArgs: backend.defaultArgs,
 		buildNumber,
-	);
+	});
 
 	const pid = spawnServer(
 		server.id,

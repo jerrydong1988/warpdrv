@@ -33,10 +33,17 @@ export async function scanAllWhisperModelRoots(roots: string[]): Promise<IWhispe
 	return scanned;
 }
 
+const MAX_SCAN_DEPTH = 30;
+
 async function scanDirRecursive(
 	dirPath: string,
 	userSegment: string | null,
+	depth: number = 0,
 ): Promise<IWhisperModel[]> {
+	if (depth > MAX_SCAN_DEPTH) {
+		console.warn('[whisperModelScanner] scan depth exceeded, skipping', { depth, dirPath: dirPath.slice(0, 200) });
+		return [];
+	}
 	let entries: Dirent[];
 	try {
 		entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -71,7 +78,7 @@ async function scanDirRecursive(
 		for (const subDir of subDirs) {
 			const childPath = path.join(dirPath, subDir.name);
 			const childUserSegment = userSegment ?? subDir.name;
-			const childModels = await scanDirRecursive(childPath, childUserSegment);
+			const childModels = await scanDirRecursive(childPath, childUserSegment, depth + 1);
 			results.push(...childModels);
 		}
 		return results;
@@ -100,7 +107,7 @@ async function scanDirRecursive(
 	for (const subDir of subDirs) {
 		const childPath = path.join(dirPath, subDir.name);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(childPath, childUserSegment);
+		const childModels = await scanDirRecursive(childPath, childUserSegment, depth + 1);
 		results.push(...childModels);
 	}
 

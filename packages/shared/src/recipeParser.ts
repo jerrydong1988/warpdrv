@@ -16,14 +16,16 @@ export function parseRecipe(source: string): IRecipeParsed {
 	let currentBodyLines: string[] = [];
 	let sawAnyStep = false;
 
+	const inputNames = new Set<string>();
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i] ?? '';
 		const trimmed = line.trim();
 
 		if (trimmed.startsWith(DIRECTIVE_INPUT)) {
 			if (sawAnyStep) throw new Error(`Line ${i + 1}: #!input must appear before any #!step`);
-			const def = parseInputDirective(trimmed, i + 1);
-			if (inputs.some(x => x.name === def.name)) throw new Error(`Line ${i + 1}: duplicate input '${def.name}'`);
+			const def = parseInputDirective(trimmed, i + 1, inputNames);
+			if (inputNames.has(def.name)) throw new Error(`Line ${i + 1}: duplicate input '${def.name}'`);
+			inputNames.add(def.name);
 			inputs.push(def);
 			continue;
 		}
@@ -53,7 +55,7 @@ export function parseRecipe(source: string): IRecipeParsed {
 	return { inputs, steps };
 }
 
-function parseInputDirective(line: string, lineNo: number): IRecipeInputDef {
+function parseInputDirective(line: string, lineNo: number, inputNames?: Set<string>): IRecipeInputDef {
 	// #!input NAME type [options=a,b,c] [default=...]
 	const rest = line.slice(DIRECTIVE_INPUT.length).trim();
 	const tokens = tokenize(rest);
@@ -82,11 +84,13 @@ function parseInputDirective(line: string, lineNo: number): IRecipeInputDef {
 	}
 
 	let options: string[] | undefined;
+	let optionSet: Set<string> | undefined;
 	if (type === ERecipeInputType.CHOICE) {
 		const optRaw = kvPairs.options;
 		if (optRaw === undefined || optRaw === '') throw new Error(`Line ${lineNo}: choice input '${name}' requires options=...`);
 		options = optRaw.split(',').map(x => x.trim()).filter(x => x.length > 0);
 		if (options.length === 0) throw new Error(`Line ${lineNo}: choice input '${name}' has empty options`);
+		optionSet = new Set(options);
 	}
 
 	let defaultValue: string | number | boolean | undefined;
@@ -103,7 +107,7 @@ function parseInputDirective(line: string, lineNo: number): IRecipeInputDef {
 			else throw new Error(`Line ${lineNo}: default for bool input '${name}' must be true or false`);
 		}
 		else if (type === ERecipeInputType.CHOICE) {
-			if (!options!.includes(defRaw)) throw new Error(`Line ${lineNo}: default '${defRaw}' not in options for '${name}'`);
+			if (!optionSet!.has(defRaw)) throw new Error(`Line ${lineNo}: default '${defRaw}' not in options for '${name}'`);
 			defaultValue = defRaw;
 		}
 		else {

@@ -159,21 +159,21 @@ export function spawnWhisperServer(
 		child.on('exit', (code) => {
 			if (healthInterval) clearInterval(healthInterval);
 			processes.delete(serverId);
-			if (code !== 0 && code !== null) {
+if (code !== 0 && code !== null) {
 				onStatusChange(EWhisperServerStatus.ERROR, `Process exited with code ${code}`);
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, `Process exited with code ${code}`, null).catch(() => {});
+				emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, `Process exited with code ${code}`, null).catch(console.error);
 			} else {
 				onStatusChange(EWhisperServerStatus.STOPPED);
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(() => {});
+				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(console.error);
 			}
 		});
 
 		onStatusChange(EWhisperServerStatus.LOADING);
-		emitWhisperServerUpdate(serverId, EWhisperServerStatus.LOADING, null, null, launchCommand).catch(() => {});
+		emitWhisperServerUpdate(serverId, EWhisperServerStatus.LOADING, null, null, launchCommand).catch(console.error);
 		return child.pid ?? null;
 	} catch (err) {
 		onStatusChange(EWhisperServerStatus.ERROR, String(err));
-		emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, String(err), null).catch(() => {});
+		emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, String(err), null).catch(console.error);
 		return null;
 	}
 }
@@ -226,7 +226,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 					finish(true);
 				}
 
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(() => {});
+				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(console.error);
 			});
 
 	try {

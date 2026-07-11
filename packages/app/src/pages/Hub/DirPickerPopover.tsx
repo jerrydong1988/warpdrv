@@ -1,5 +1,6 @@
 import { Box, Text, VStack, HStack, Flex, Portal } from '@chakra-ui/react';
 import { FolderOpen, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface IDirPickerPopoverProps {
 	roots: string[];
@@ -9,6 +10,7 @@ interface IDirPickerPopoverProps {
 }
 
 export function DirPickerPopover({ roots, existsInRoot, onSelect, onClose }: IDirPickerPopoverProps) {
+	const { t } = useTranslation('hub');
 	return (
 		<Portal>
 			<>
@@ -22,7 +24,7 @@ export function DirPickerPopover({ roots, existsInRoot, onSelect, onClose }: IDi
 					zIndex="popover" py="2" minW="320px"
 				>
 				<Text fontSize="11px" color="var(--wc-text-faint)" textTransform="uppercase" letterSpacing="0.05em" px="3" pb="2">
-					Download to
+					{t('dirPicker.downloadTo')}
 				</Text>
 				<VStack align="stretch" gap="0">
 					{roots.map((root: string) => {
@@ -48,7 +50,7 @@ export function DirPickerPopover({ roots, existsInRoot, onSelect, onClose }: IDi
 									{hasFiles && (
 										<HStack gap="1" mt="0.5">
 											<Check size={10} color="var(--wc-accent-blue)" />
-											<Text fontSize="10px" color="var(--wc-accent-blue)">Files from this repo already here</Text>
+											<Text fontSize="10px" color="var(--wc-accent-blue)">{t('dirPicker.filesAlreadyHere')}</Text>
 										</HStack>
 									)}
 								</Box>

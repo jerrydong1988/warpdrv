@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { useHotkey, HotkeyMode, comboStringToRecord } from '@/hooks/useHotKey';
 import { transcribeAudio, float32ToWavBlob } from './WhisperTranscribe';
@@ -138,10 +139,6 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 						console.log('[Dictation] transcription complete, isTranscribing → false');
 						setIsTranscribing(false);
 					}
-				},
-				onError: (err: Error) => {
-					console.error('[Dictation] ERROR — calling stop():', err);
-					stop();
 				},
 				baseAssetPath: '/vad/',
 				model: 'v5',

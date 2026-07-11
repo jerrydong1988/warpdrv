@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, HStack } from '@chakra-ui/react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { RiVoiceprintLine } from 'react-icons/ri';
 import { useStore } from '@/store';
 import { EWhisperServerStatus } from '@warpcore/shared';
-import { createVADSession, float32ToWavBlob } from './VADManager';
+import { createVADSession, float32ToWavBlob, type IVADSession } from './VADManager';
 import { stopTTS } from './KokoroTTS';
 // COMMENTED OUT: per-thread whisper server selection no longer used
 // import { parseWhisperThreadMeta } from './WhisperServerSelector';
@@ -49,7 +50,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 	const vadActive = useStore(s => s.vadActive);
 	const setVadActive = useStore(s => s.setVadActive);
 	const [isVADTranscribing, setIsVADTranscribing] = useState(false);
-	const vadSessionRef = useRef<ReturnType<typeof createVADSession> | null>(null);
+	const vadSessionRef = useRef<IVADSession | null>(null);
 	const vadWaveformStreamRef = useRef<MediaStream | null>(null);
 
 	const whisperServers = useStore(s => s.whisperServers);
@@ -161,7 +162,12 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		if (vadActive) {
 			console.log('[VAD Chat] stopping: destroying session, stopping tracks, setting vadActive=false');
 			stopTTS();
-			vadSessionRef.current?.destroy();
+			const sess = vadSessionRef.current;
+			if (sess instanceof Promise) {
+				sess.then(s => s?.destroy()).catch(console.error);
+			} else {
+				sess?.destroy();
+			}
 			vadSessionRef.current = null;
 			vadWaveformStreamRef.current?.getTracks().forEach(t => t.stop());
 			vadWaveformStreamRef.current = null;
@@ -193,7 +199,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		const session = await createVADSession({
 			onSpeechStart: () => {
 				console.log('[VAD Chat] speech started: cancelling inference, stopping TTS');
-				if (aui.composer().canCancel) {
+				if (aui.composer().cancel) {
 					aui.composer().cancel();
 				}
 				stopTTS();
@@ -252,7 +258,12 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 	// Cleanup on unmount
 	useEffect(() => {
 		return () => {
-			vadSessionRef.current?.destroy();
+			const sess = vadSessionRef.current;
+			if (sess instanceof Promise) {
+				sess.then(s => s?.destroy()).catch(console.error);
+			} else {
+				sess?.destroy();
+			}
 			vadWaveformStreamRef.current?.getTracks().forEach(t => t.stop());
 			pttWaveformStreamRef.current?.getTracks().forEach(t => t.stop());
 			if (mediaRecorderRef.current?.state === 'recording') {
@@ -270,25 +281,23 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		<HStack gap="2">
 			{/* PTT Button — replaced by VAD dictation, hidden */}
 			<Box display="none">
-				<Box
-					as="button"
-					type="button"
-					display="flex"
-					alignItems="center"
-					justifyContent="center"
-					w="36px"
-					h="36px"
-					borderRadius="lg"
-					borderWidth="1px"
-					borderColor={isPTTRecording ? 'var(--wc-accent-red)' : 'var(--wc-border-default)'}
-					bg={isPTTRecording ? 'var(--wc-accent-red-bg-15)' : 'var(--wc-bg-surface)'}
-					cursor={vadActive ? 'not-allowed' : 'pointer'}
-					opacity={vadActive ? 0.4 : 1}
-					_hover={{ bg: vadActive ? undefined : 'var(--wc-bg-hover)' }}
-					onClick={isPTTRecording ? handlePTTEnd : handlePTTStart}
-					disabled={vadActive}
-					title={vadActive ? 'Dictation disabled during voice chat' : isPTTRecording ? 'Stop recording' : 'Start recording (dictation)'}
-				>
+			<Box
+				display="flex"
+				alignItems="center"
+				justifyContent="center"
+				w="36px"
+				h="36px"
+				borderRadius="lg"
+				borderWidth="1px"
+				borderColor={isPTTRecording ? 'var(--wc-accent-red)' : 'var(--wc-border-default)'}
+				bg={isPTTRecording ? 'var(--wc-accent-red-bg-15)' : 'var(--wc-bg-surface)'}
+				cursor={vadActive ? 'not-allowed' : 'pointer'}
+				opacity={vadActive ? 0.4 : 1}
+				_hover={{ bg: vadActive ? undefined : 'var(--wc-bg-hover)' }}
+				_disabled={{ opacity: 0.4, cursor: 'not-allowed' }}
+				onClick={isPTTRecording ? handlePTTEnd : handlePTTStart}
+				title={vadActive ? 'Dictation disabled during voice chat' : isPTTRecording ? 'Stop recording' : 'Start recording (dictation)'}
+			>
 					{isPTTRecording ? (
 						<Square size={16} color="var(--wc-accent-red)" fill="var(--wc-accent-red)" />
 					) : isPTTTranscribing ? (
@@ -302,7 +311,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			{/* VAD Dictation Button */}
 			<Box
 				as="button"
-				type="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -329,8 +337,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 
 			{/* VAD Chat Toggle — disabled when dictation active */}
 			<Box
-				as="button"
-				type="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -343,8 +349,8 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				cursor={dictationActive ? 'not-allowed' : 'pointer'}
 				opacity={dictationActive ? 0.4 : 1}
 				_hover={{ bg: dictationActive ? undefined : 'var(--wc-bg-hover)' }}
+				_disabled={{ opacity: 0.4, cursor: 'not-allowed' }}
 				onClick={handleVADToggle}
-				disabled={dictationActive}
 				title={dictationActive ? 'Voice chat disabled during dictation' : vadActive ? 'Voice chat active (click to stop)' : 'Toggle voice chat mode'}
 			>
 				{isVADTranscribing ? (

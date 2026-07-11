@@ -1,6 +1,7 @@
 import { Box, Text, HStack, Flex } from '@chakra-ui/react';
 import { CheckCircle2, Circle, CircleDot, ChevronRight } from 'lucide-react';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '@/hooks/useDependantState';
 import { Collapsible } from '@chakra-ui/react';
 
@@ -48,7 +49,7 @@ export const StepCollapsible = React.memo(({
 					</Text>
 				</HStack>
 				<Box color="var(--wc-text-tertiary)">
-					<ChevronRight size={16} transform={open ? 'rotate(90deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
+					<ChevronRight size={16} style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
 				</Box>
 			</Flex>
 			<Collapsible.Root open={open}>

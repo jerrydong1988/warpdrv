@@ -182,14 +182,14 @@ hubRouter.post('/download', async (req, res) => {
 			res.json({ ok: true, data: { downloadIds, fileParts: payload.fileParts }, error: null });
 		} else {
 			// Single file download
-			const dl = await startDownload(
-				payload.author,
-				payload.modelName,
-				payload.filename,
-				payload.destRoot,
-				payload.fileParts ?? [payload.filename],
-				0,
-			);
+			const dl = await startDownload({
+				author: payload.author,
+				modelName: payload.modelName,
+				filename: payload.filename,
+				destRoot: payload.destRoot,
+				fileParts: payload.fileParts ?? [payload.filename],
+				partIndex: 0,
+			});
 			res.json({ ok: true, data: dl, error: null });
 		}
 	} catch (err) {

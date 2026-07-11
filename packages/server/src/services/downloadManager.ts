@@ -38,14 +38,17 @@ async function persistDownload(dl: IDownload): Promise<void> {
 }
 
 export async function startDownload(
-	author: string,
-	modelName: string,
-	filename: string,
-	destRoot: string,
-	fileParts: string[] = [],
-	partIndex: number = 0,
-	groupKey?: string,
+	options: {
+		author: string;
+		modelName: string;
+		filename: string;
+		destRoot: string;
+		fileParts?: string[];
+		partIndex?: number;
+		groupKey?: string;
+	},
 ): Promise<IDownload> {
+	const { author, modelName, filename, destRoot, fileParts = [], partIndex = 0, groupKey } = options;
 	const id = makeDownloadId();
 
 	// Handle nested directories - create full path including subdirectories
@@ -198,7 +201,7 @@ export async function startMultiPartDownload(
 
 	// Start all parts in parallel
 	const downloadPromises = fileParts.map((filename, index) =>
-		startDownload(author, modelName, filename, destRoot, fileParts, index).then((dl) => {
+		startDownload({ author, modelName, filename, destRoot, fileParts, partIndex: index }).then((dl) => {
 			downloadIds.push(dl.id);
 			return dl;
 		}),

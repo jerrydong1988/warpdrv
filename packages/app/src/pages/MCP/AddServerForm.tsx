@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack, Input } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import type { IMcpServerEntry } from '@warpcore/shared';
 
 export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry: IMcpServerEntry) => void; onCancel: () => void }) {
+	const { t } = useTranslation('mcp');
 	const [name, setName] = useState('');
 	const [type, setType] = useState<'stdio' | 'http'>('stdio');
 	const [command, setCommand] = useState('');
@@ -28,7 +30,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 		>
 			<VStack gap="2" align="stretch">
 				<Input
-					placeholder="Server name"
+					placeholder={t('fields.name')}
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 					size="sm"
@@ -56,7 +58,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 				{type === 'stdio' ? (
 					<>
 						<Input
-							placeholder="Command (e.g. npx, uvx, node)"
+							placeholder={t('addForm.commandPlaceholder')}
 							value={command}
 							onChange={(e) => setCommand(e.target.value)}
 							size="sm"
@@ -65,7 +67,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 							fontSize="13px"
 						/>
 						<Input
-							placeholder="Arguments (space-separated)"
+							placeholder={t('addForm.argsPlaceholder')}
 							value={args}
 							onChange={(e) => setArgs(e.target.value)}
 							size="sm"
@@ -76,7 +78,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 					</>
 				) : (
 					<Input
-						placeholder="URL (e.g. https://example.com/mcp)"
+						placeholder={t('addForm.urlPlaceholder')}
 						value={url}
 						onChange={(e) => setUrl(e.target.value)}
 						size="sm"
@@ -87,7 +89,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 				)}
 				<HStack gap="2" justify="flex-end">
 					<Box as="button" px="3" py="1" fontSize="12px" color="var(--wc-text-tertiary)" onClick={onCancel}>
-						Cancel
+						{t('actions.cancel')}
 					</Box>
 					<Box
 						as="button"
@@ -100,7 +102,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 						_hover={{ bg: 'var(--wc-bg-active)' }}
 						onClick={handleSubmit}
 					>
-						Add
+						{t('actions.add')}
 					</Box>
 				</HStack>
 			</VStack>

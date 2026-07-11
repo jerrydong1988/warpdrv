@@ -1,0 +1,56 @@
+name: Desktop Build
+
+on:
+  push:
+    branches: [main, master, 'codex/**']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build app
+        run: npm run build -w @warpcore/app
+
+      - name: Create placeholder binaries directory
+        run: |
+          New-Item -ItemType Directory -Path packages\desktop\binaries -Force
+          New-Item -ItemType Directory -Path packages\desktop\binaries\node_modules -Force
+          New-Item -ItemType Directory -Path packages\desktop\app-dist -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\warpcore-server-x86_64-pc-windows-msvc.exe -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\better_sqlite3.node -Force
+          New-Item -ItemType File -Path packages\desktop\binaries\node_modules\.gitkeep -Force
+          New-Item -ItemType File -Path packages\desktop\app-dist\.gitkeep -Force
+          if (!(Test-Path release.json)) { New-Item -ItemType File -Path release.json -Force }
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop build dependencies
+        run: |
+          rustup component add clippy rustfmt
+
+      - name: Build Tauri app
+        run: npx tauri build
+        working-directory: packages/desktop
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: warpdrv-windows-installer
+          path: packages/desktop/target/release/bundle/nsis/*.exe
+          if-no-files-found: warn

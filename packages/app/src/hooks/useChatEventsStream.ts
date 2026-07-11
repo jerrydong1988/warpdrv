@@ -4,11 +4,33 @@ import { useStore } from '../store';
 import { setKokoroCurrentRequestId, startStream } from '../pages/Chat/assistant-ui/KokoroTTS';
 import type { IBridgeEvent } from '@warpcore/bridge';
 
+function isThreadCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.created' } { return e.type === 'thread.created'; }
+function isThreadUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.updated' } { return e.type === 'thread.updated'; }
+function isThreadDeleted(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread.deleted' } { return e.type === 'thread.deleted'; }
+function isMessageCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.created' } { return e.type === 'message.created'; }
+function isMessagePatched(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.patched' } { return e.type === 'message.patched'; }
+function isMessageDeleted(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.deleted' } { return e.type === 'message.deleted'; }
+function isMessageChunk(e: IBridgeEvent): e is IBridgeEvent & { type: 'message.chunk' } { return e.type === 'message.chunk'; }
+function isToolCallStarting(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.starting' } { return e.type === 'tool_call.starting'; }
+function isToolCallCreated(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.created' } { return e.type === 'tool_call.created'; }
+function isToolCallUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'tool_call.updated' } { return e.type === 'tool_call.updated'; }
+function isInferenceStarted(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.started' } { return e.type === 'inference.started'; }
+function isInferenceEnded(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.ended' } { return e.type === 'inference.ended'; }
+function isInferenceError(e: IBridgeEvent): e is IBridgeEvent & { type: 'inference.error' } { return e.type === 'inference.error'; }
+function isElicitationRequest(e: IBridgeEvent): e is IBridgeEvent & { type: 'elicitation_request' } { return e.type === 'elicitation_request'; }
+function isElicitationResolved(e: IBridgeEvent): e is IBridgeEvent & { type: 'elicitation_resolved' } { return e.type === 'elicitation_resolved'; }
+function isEmbeddingError(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.error' } { return e.type === 'embedding.error'; }
+function isEmbeddingEmbedded(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.embedded' } { return e.type === 'embedding.embedded'; }
+function isEmbeddingRemoved(e: IBridgeEvent): e is IBridgeEvent & { type: 'embedding.removed' } { return e.type === 'embedding.removed'; }
+function isWorkspaceStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'workspace_state.updated' } { return e.type === 'workspace_state.updated'; }
+function isThreadStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'thread_state.updated' } { return e.type === 'thread_state.updated'; }
+function isMessageStateUpdated(e: IBridgeEvent): e is IBridgeEvent & { type: 'message_state.updated' } { return e.type === 'message_state.updated'; }
+
 function findLastSentenceEnd(text: string): number {
 	for (let i = text.length - 1; i >= 0; i--) {
 		const c = text[i];
 		if (c === '.' || c === '!' || c === '?') {
-			if (i + 1 >= text.length || /\s/.test(text[i + 1])) {
+			if (i + 1 >= text.length || /\s/.test(text[i + 1] ?? '')) {
 				return i;
 			}
 		}
@@ -29,29 +51,215 @@ export function tryAutoEmbed(messageId: string, threadId: string) {
 		.catch(err => useStore.getState().applyEmbeddingError(String(err)));
 }
 
-export function useChatEventsStream() {
-	const applyThreadCreated = useStore(s => s.applyThreadCreated);
-	const applyThreadUpdated = useStore(s => s.applyThreadUpdated);
-	const applyThreadDeleted = useStore(s => s.applyThreadDeleted);
-	const applyMessageCreated = useStore(s => s.applyMessageCreated);
-	const applyMessagePatched = useStore(s => s.applyMessagePatched);
-	const applyMessageDeleted = useStore(s => s.applyMessageDeleted);
-	const applyMessageChunk = useStore(s => s.applyMessageChunk);
-	const applyToolCallStarting = useStore(s => s.applyToolCallStarting);
-	const applyToolCallCreated = useStore(s => s.applyToolCallCreated);
-	const applyToolCallUpdated = useStore(s => s.applyToolCallUpdated);
-	const applyInferenceStarted = useStore(s => s.applyInferenceStarted);
-	const applyInferenceEnded = useStore(s => s.applyInferenceEnded);
-	const applyInferenceError = useStore(s => s.applyInferenceError);
-	const applyElicitationRequest = useStore(s => s.applyElicitationRequest);
-	const applyElicitationResolved = useStore(s => s.applyElicitationResolved);
-	const applyEmbeddingError = useStore(s => s.applyEmbeddingError);
-	const applyEmbeddingEmbedded = useStore(s => s.applyEmbeddingEmbedded);
-	const removeEmbeddingStatus = useStore(s => s.removeEmbeddingStatus);
-	const applyWorkspaceStateUpdated = useStore(s => s.applyWorkspaceStateUpdated);
-	const applyThreadStateUpdated = useStore(s => s.applyThreadStateUpdated);
-	const applyMessageStateUpdated = useStore(s => s.applyMessageStateUpdated);
+function handleThreadCreated(event: IBridgeEvent) {
+	if (!isThreadCreated(event)) return;
+	const applyThreadCreated = useStore.getState().applyThreadCreated;
+	applyThreadCreated(event.thread);
+}
 
+function handleThreadUpdated(event: IBridgeEvent) {
+	if (!isThreadUpdated(event)) return;
+	const applyThreadUpdated = useStore.getState().applyThreadUpdated;
+	applyThreadUpdated(event.threadId, event.updates);
+}
+
+function handleThreadDeleted(event: IBridgeEvent) {
+	if (!isThreadDeleted(event)) return;
+	const applyThreadDeleted = useStore.getState().applyThreadDeleted;
+	applyThreadDeleted(event.threadId);
+}
+
+function handleMessageCreated(event: IBridgeEvent) {
+	if (!isMessageCreated(event)) return;
+	const applyMessageCreated = useStore.getState().applyMessageCreated;
+	applyMessageCreated(event.message);
+	if (event.message.role === 'user') {
+		tryAutoEmbed(event.message.id, event.message.threadId);
+	}
+}
+
+function handleMessagePatched(event: IBridgeEvent) {
+	if (!isMessagePatched(event)) return;
+	const applyMessagePatched = useStore.getState().applyMessagePatched;
+	applyMessagePatched(event.messageId, event.threadId, event.updates);
+}
+
+function handleMessageDeleted(event: IBridgeEvent) {
+	if (!isMessageDeleted(event)) return;
+	const applyMessageDeleted = useStore.getState().applyMessageDeleted;
+	applyMessageDeleted(event.messageId, event.threadId);
+}
+
+function handleMessageChunk(event: IBridgeEvent) {
+	if (!isMessageChunk(event)) return;
+	const applyMessageChunk = useStore.getState().applyMessageChunk;
+	applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
+
+	if (event.partType !== 'text') return;
+
+	const state = useStore.getState();
+	const guardPass = state.ttsActiveMessageId === event.messageId && state.ttsIsGenerating === 'vad';
+	if (!guardPass) return;
+
+	const msg = state.messagesByThread[event.threadId]?.[event.messageId];
+	if (!msg) return;
+
+	const part = msg.content.find((p: any) => p.id === event.partId);
+	const buffered = state.chunksByMessageId[event.messageId]?.chunk || '';
+	const fullText = ((part as { text?: string })?.text || '') + buffered;
+	const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
+	const remaining = fullText.slice(spoken);
+	const lastEnd = findLastSentenceEnd(remaining);
+
+	if (lastEnd > -1) {
+		const sentence = remaining.slice(0, lastEnd + 1);
+		const reqId = useStore.getState().ttsVadRequestId ?? '';
+		useStore.getState().ttsVadIncSent();
+		startStream(
+			reqId,
+			sentence,
+			state.settings.kokoroVoice || 'af_heart',
+		).catch((err) => { console.error('[TTS SSE] startStream ERROR:', err); });
+		useStore.getState().ttsSetSpokenIndex(event.messageId, spoken + lastEnd + 1);
+	} else {
+		console.log('[TTS SSE] no sentence boundary found in remaining text');
+	}
+}
+
+function handleToolCallStarting(event: IBridgeEvent) {
+	if (!isToolCallStarting(event)) return;
+	const applyToolCallStarting = useStore.getState().applyToolCallStarting;
+	applyToolCallStarting(event.messageId, event.name);
+}
+
+function handleToolCallCreated(event: IBridgeEvent) {
+	if (!isToolCallCreated(event)) return;
+	const applyToolCallCreated = useStore.getState().applyToolCallCreated;
+	applyToolCallCreated(event.toolCall);
+}
+
+function handleToolCallUpdated(event: IBridgeEvent) {
+	if (!isToolCallUpdated(event)) return;
+	const applyToolCallUpdated = useStore.getState().applyToolCallUpdated;
+	applyToolCallUpdated(event.toolCall);
+}
+
+function handleInferenceStarted(event: IBridgeEvent) {
+	if (!isInferenceStarted(event)) return;
+	const applyInferenceStarted = useStore.getState().applyInferenceStarted;
+	applyInferenceStarted(event.threadId, event.messageId);
+
+	const s = useStore.getState();
+	if (!s.vadActive) return;
+
+	s.ttsSetSpokenIndex(event.messageId, 0);
+	s.ttsVadReset();
+	const newId = s.ttsVadNewRequestId();
+	setKokoroCurrentRequestId(newId);
+	s.ttsStart(event.messageId, 'vad');
+}
+
+function handleInferenceEnded(event: IBridgeEvent) {
+	if (!isInferenceEnded(event)) return;
+	const applyInferenceEnded = useStore.getState().applyInferenceEnded;
+	applyInferenceEnded(event.threadId, event.messageId);
+	tryAutoEmbed(event.messageId, event.threadId);
+
+	const vadActive = useStore.getState().vadActive;
+	if (vadActive) {
+		useStore.getState().ttsClearSpokenIndex(event.messageId);
+	}
+}
+
+function handleInferenceError(event: IBridgeEvent) {
+	if (!isInferenceError(event)) return;
+	const applyInferenceError = useStore.getState().applyInferenceError;
+	applyInferenceError(event.threadId, event.messageId, event.error);
+}
+
+function handleElicitationRequest(event: IBridgeEvent) {
+	if (!isElicitationRequest(event)) return;
+	const applyElicitationRequest = useStore.getState().applyElicitationRequest;
+	applyElicitationRequest(event.threadId, event.request);
+}
+
+function handleElicitationResolved(event: IBridgeEvent) {
+	if (!isElicitationResolved(event)) return;
+	const applyElicitationResolved = useStore.getState().applyElicitationResolved;
+	applyElicitationResolved(event.id);
+}
+
+function handleEmbeddingError(event: IBridgeEvent) {
+	if (!isEmbeddingError(event)) return;
+	const applyEmbeddingError = useStore.getState().applyEmbeddingError;
+	applyEmbeddingError(event.error);
+}
+
+function handleEmbeddingEmbedded(event: IBridgeEvent) {
+	if (!isEmbeddingEmbedded(event)) return;
+	const state = useStore.getState();
+	const selectedServerId = state.selectedEmbeddingServerId;
+	const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
+	if (selectedServer?.modelPath === event.modelId && event.topic === 'global' && state.currentThreadId === event.threadId) {
+		const applyEmbeddingEmbedded = useStore.getState().applyEmbeddingEmbedded;
+		applyEmbeddingEmbedded(event.messageId);
+	}
+}
+
+function handleEmbeddingRemoved(event: IBridgeEvent) {
+	if (!isEmbeddingRemoved(event)) return;
+	const state = useStore.getState();
+	const selectedServerId = state.selectedEmbeddingServerId;
+	const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
+	if (selectedServer?.modelPath === event.modelId && event.topic === 'global') {
+		const removeEmbeddingStatus = useStore.getState().removeEmbeddingStatus;
+		removeEmbeddingStatus(event.messageId);
+	}
+}
+
+function handleWorkspaceStateUpdated(event: IBridgeEvent) {
+	if (!isWorkspaceStateUpdated(event)) return;
+	const applyWorkspaceStateUpdated = useStore.getState().applyWorkspaceStateUpdated;
+	applyWorkspaceStateUpdated(event.folderId, event.data);
+}
+
+function handleThreadStateUpdated(event: IBridgeEvent) {
+	if (!isThreadStateUpdated(event)) return;
+	const applyThreadStateUpdated = useStore.getState().applyThreadStateUpdated;
+	applyThreadStateUpdated(event.threadId, event.data);
+}
+
+function handleMessageStateUpdated(event: IBridgeEvent) {
+	if (!isMessageStateUpdated(event)) return;
+	const applyMessageStateUpdated = useStore.getState().applyMessageStateUpdated;
+	applyMessageStateUpdated(event.messageId, event.data);
+}
+
+const eventHandlers: Record<string, (event: IBridgeEvent) => void> = {
+	'thread.created': handleThreadCreated,
+	'thread.updated': handleThreadUpdated,
+	'thread.deleted': handleThreadDeleted,
+	'message.created': handleMessageCreated,
+	'message.patched': handleMessagePatched,
+	'message.deleted': handleMessageDeleted,
+	'message.chunk': handleMessageChunk,
+	'tool_call.starting': handleToolCallStarting,
+	'tool_call.created': handleToolCallCreated,
+	'tool_call.updated': handleToolCallUpdated,
+	'inference.started': handleInferenceStarted,
+	'inference.ended': handleInferenceEnded,
+	'inference.error': handleInferenceError,
+	'elicitation_request': handleElicitationRequest,
+	'elicitation_resolved': handleElicitationResolved,
+	'embedding.error': handleEmbeddingError,
+	'embedding.embedded': handleEmbeddingEmbedded,
+	'embedding.removed': handleEmbeddingRemoved,
+	'workspace_state.updated': handleWorkspaceStateUpdated,
+	'thread_state.updated': handleThreadStateUpdated,
+	'message_state.updated': handleMessageStateUpdated,
+};
+
+export function useChatEventsStream() {
 	useEffect(() => {
 		console.log('[Chat SSE] Creating EventSource connection to /api/chat/events');
 		const es = new EventSource('/api/chat/events');
@@ -62,135 +270,9 @@ export function useChatEventsStream() {
 
 		const handleEvent = (e: MessageEvent) => {
 			const event = JSON.parse(e.data) as IBridgeEvent;
-			switch (event.type) {
-				case 'thread.created':
-					applyThreadCreated(event.thread);
-					break;
-			case 'thread.updated':
-				applyThreadUpdated(event.threadId, event.updates);
-				break;
-			case 'thread.deleted':
-				applyThreadDeleted(event.threadId);
-				break;
-			case 'message.created':
-					applyMessageCreated(event.message);
-					if (event.message.role === 'user') {
-						tryAutoEmbed(event.message.id, event.message.threadId);
-					}
-					break;
-			case 'message.patched':
-				applyMessagePatched(event.messageId, event.threadId, event.updates);
-				break;
-			case 'message.deleted':
-				applyMessageDeleted(event.messageId, event.threadId);
-				break;
-case 'message.chunk':
-				applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
-		if (event.partType === 'text') {
-					const state = useStore.getState();
-					const guardPass = state.ttsActiveMessageId === event.messageId && state.ttsIsGenerating === 'vad';
-					//console.log('[TTS SSE] chunk: messageId=', event.messageId, 'ttsActiveMsg=', state.ttsActiveMessageId, 'generating=', state.ttsIsGenerating, 'guardPass=', guardPass);
-					if (!guardPass) break;
-					const msg = state.messagesByThread[event.threadId]?.[event.messageId];
-					if (msg) {
-						const part = msg.content.find((p: any) => p.id === event.partId);
-						const buffered = state.chunksByMessageId[event.messageId]?.chunk || '';
-						const fullText = (part?.text || '') + buffered;
-						const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
-						const remaining = fullText.slice(spoken);
-						const lastEnd = findLastSentenceEnd(remaining);
-						if (lastEnd > -1) {
-							const sentence = remaining.slice(0, lastEnd + 1);
-							const reqId = useStore.getState().ttsVadRequestId;
-							//console.log('[TTS SSE] calling startStream: requestId=', reqId, 'sentence=', JSON.stringify(sentence.slice(0, 60)));
-							useStore.getState().ttsVadIncSent();
-							startStream(
-								reqId,
-								sentence,
-								state.settings.kokoroVoice || 'af_heart',
-							).catch((err) => { console.error('[TTS SSE] startStream ERROR:', err); });
-							useStore.getState().ttsSetSpokenIndex(event.messageId, spoken + lastEnd + 1);
-						} else {
-							console.log('[TTS SSE] no sentence boundary found in remaining text');
-						}
-					}
-				}
-				break;
-			case 'tool_call.starting':
-				applyToolCallStarting(event.messageId, event.name);
-				break;
-			case 'tool_call.created':
-				applyToolCallCreated(event.toolCall);
-				break;
-			case 'tool_call.updated':
-				applyToolCallUpdated(event.toolCall);
-				break;
-			case 'inference.started':
-				applyInferenceStarted(event.threadId, event.messageId);
-				{
-					const s = useStore.getState();
-					//console.log('[TTS SSE] inference.started: vadActive=', s.vadActive, 'messageId=', event.messageId);
-					if (!s.vadActive) { break; }
-					s.ttsSetSpokenIndex(event.messageId, 0);
-					s.ttsVadReset();
-					const newId = s.ttsVadNewRequestId();
-					setKokoroCurrentRequestId(newId);
-					s.ttsStart(event.messageId, 'vad');
-				}
-				break;
-case 'inference.ended':
-				applyInferenceEnded(event.threadId, event.messageId);
-				tryAutoEmbed(event.messageId, event.threadId);
-				const vadActive = useStore.getState().vadActive;
-				//console.log('[TTS SSE] inference.ended: vadActive=', vadActive);
-				if (vadActive) {
-					useStore.getState().ttsClearSpokenIndex(event.messageId);
-				}
-				break;
-			case 'inference.error':
-				applyInferenceError(event.threadId, event.messageId, event.error);
-				break;
-			case 'elicitation_request':
-				applyElicitationRequest(event.threadId, event.request);
-				break;
-			case 'elicitation_resolved':
-				applyElicitationResolved(event.id);
-				break;
-			case 'embedding.error':
-				applyEmbeddingError(event.error);
-				break;
-			case 'embedding.embedded':
-				{
-					const state = useStore.getState();
-					const selectedServerId = state.selectedEmbeddingServerId;
-					const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
-					if (selectedServer?.modelPath === event.modelId && event.topic === 'global' && state.currentThreadId === event.threadId) {
-						applyEmbeddingEmbedded(event.messageId);
-					}
-				}
-				break;
-			case 'embedding.removed':
-				{
-					const state = useStore.getState();
-					const selectedServerId = state.selectedEmbeddingServerId;
-					const selectedServer = selectedServerId ? state.servers[selectedServerId] : null;
-					if (selectedServer?.modelPath === event.modelId && event.topic === 'global') {
-						removeEmbeddingStatus(event.messageId);
-					}
-				}
-				break;
-			case 'workspace_state.updated':
-				applyWorkspaceStateUpdated(event.folderId, event.data);
-				break;
-			case 'thread_state.updated':
-				applyThreadStateUpdated(event.threadId, event.data);
-				break;
-			case 'message_state.updated':
-				applyMessageStateUpdated(event.messageId, event.data);
-				break;
-			default:
-				// Unknown event type, ignore
-				break;
+			const handler = eventHandlers[event.type];
+			if (handler) {
+				handler(event);
 			}
 		};
 
@@ -224,27 +306,5 @@ case 'inference.ended':
 			console.log('[Chat SSE] Cleaning up EventSource connection');
 			es.close();
 		};
-	}, [
-		applyThreadCreated,
-		applyThreadUpdated,
-		applyThreadDeleted,
-		applyMessageCreated,
-		applyMessagePatched,
-		applyMessageDeleted,
-		applyMessageChunk,
-		applyToolCallStarting,
-		applyToolCallCreated,
-		applyToolCallUpdated,
-		applyInferenceStarted,
-		applyInferenceEnded,
-		applyInferenceError,
-		applyElicitationRequest,
-		applyElicitationResolved,
-applyEmbeddingError,
-				applyEmbeddingEmbedded,
-				removeEmbeddingStatus,
-				applyWorkspaceStateUpdated,
-				applyThreadStateUpdated,
-				applyMessageStateUpdated,
-			]);
+	}, []);
 }

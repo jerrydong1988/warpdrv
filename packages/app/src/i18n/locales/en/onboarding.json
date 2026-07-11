@@ -1,0 +1,64 @@
+{
+  "title": "Onboarding",
+  "steps": {
+    "welcome": {
+      "headerTitle": "Welcome",
+      "title": "Welcome to warpdrv",
+      "body": "Let's get you set up in a few quick steps — configure your model folders, learn the basics, and start running models."
+    },
+    "modelFolders": {
+      "headerTitle": "Model Folders",
+      "addFolderPlaceholder": "Enter a folder path...",
+      "addFolder": "Add Folder",
+      "addFromEnv": "Add from ENV",
+      "scanning": "Scanning...",
+      "scan": "Scan for models",
+      "modelsFound": "Models found: {{count}}",
+      "overview": "Your models are stored in the following folders:",
+      "removeFolder": "Remove folder",
+      "removing": "Removing..."
+    },
+    "backends": {
+      "headerTitle": "Backends",
+      "detectedHardware": "Detected hardware",
+      "llamaBackends": "llama.cpp backends",
+      "whisperBackends": "whisper.cpp backends",
+      "noReleases": "No releases available for this OS.",
+      "voiceOptional": "Voice (optional)",
+      "kokoroInstalled": "Kokoro TTS already installed.",
+      "kokoroTTS": "Kokoro TTS",
+      "startingInstalls": "Starting installs…",
+      "installAndContinue": "Install & continue",
+      "skip": "Skip"
+    },
+    "guide": {
+      "headerTitle": "Getting Started Guide",
+      "slides": {
+        "hub": {
+          "title": "Download Models from the Hub",
+          "description": "Browse the Hub page to search for GGUF models from HuggingFace. Filter by parameters, sort by downloads, and download directly to your model folders."
+        },
+        "backends": {
+          "title": "Add a Backend",
+          "description": "Register your llama.cpp builds on the Backends page. WarpCore validates the binary and detects available GPU devices for each backend."
+        },
+        "launch": {
+          "title": "Launch a Server",
+          "description": "Click the launch button on the Servers page. Pick a backend, select a model, configure GPU layers and context size, then start your inference server."
+        }
+      }
+    },
+    "done": {
+      "headerTitle": "All Done",
+      "title": "All Set",
+      "body": "You're ready to start running local LLMs. Add models, register backends, and launch your first server whenever you're ready. You can always re-run this guide from Settings.",
+      "startUsing": "Start Using warpdrv"
+    }
+  },
+  "navigation": {
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "finish": "Finish"
+  }
+}

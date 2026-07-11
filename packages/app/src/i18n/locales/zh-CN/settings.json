@@ -1,0 +1,154 @@
+{
+  "title": "设置",
+  "subtitle": "WarpCore 配置",
+  "sections": {
+    "theme": "主题",
+    "appearance": "外观",
+    "appZoom": "应用缩放",
+    "chatFontSize": "聊天字体大小",
+    "chatFontFamily": "聊天字体",
+    "fixedChatWidth": "固定聊天宽度",
+    "modelDirectories": "模型目录",
+    "portRange": "端口范围",
+    "checkpoints": "检查点",
+    "generateTitles": "生成对话标题",
+    "voiceInput": "语音输入",
+    "voiceOutput": "语音输出",
+    "dictation": "语音输入",
+    "globalPTT": "全局 PTT",
+    "apiHost": "API 主机",
+    "builtinMcp": "内置 MCP 服务器 (warpmcp)",
+    "router": "路由器",
+    "launchOnStartup": "开机自启",
+    "startMinimized": "启动时最小化",
+    "onboarding": "初始引导",
+    "fsAllowedRoots": "文件系统允许的根目录",
+    "holdMode": "按住模式",
+    "maxDiskUsage": "最大磁盘用量",
+    "port": "端口",
+    "language": "语言"
+  },
+  "descriptions": {
+    "appearance": "界面外观主题",
+    "zoom": "应用缩放和聊天消息样式",
+    "modelDirs": "扫描 GGUF 模型的文件夹（用户/模型结构）",
+    "portRange": "llama-server 实例的自动分配端口范围",
+    "checkpoints": "KV 缓存检查点存储。路径留空则使用默认值。",
+    "generateTitles": "使用已加载的模型为新对话生成简洁标题。禁用时，标题将根据您的第一条消息生成。",
+    "fixedChatWidth": "最大宽度 960px，而非全宽",
+    "voiceInput": "用于语音转文字的麦克风设备",
+    "voiceOutput": "Kokoro TTS 朗读助手消息的语音",
+    "dictation": "语音输入的 PTT 按键。",
+    "globalPtt": "系统全局 PTT 快捷键，随时进行语音输入。",
+    "apiHost": "WarpCore API 监听地址",
+    "builtinMcp": "通过 MCP 暴露内置工具（file_read、file_write、dir_list、shell_exec、fetch）。端口或暴露状态变更后需重启。",
+    "router": "兼容 OpenAI 的代理，按服务器别名路由请求",
+    "launchOnStartup": "登录时自动启动 WarpCore",
+    "startMinimized": "启动时最小化到托盘，不显示窗口（需要开启开机自启）",
+    "onboarding": "重新运行设置引导",
+    "fsAllowedRoots": "留空时 file_read、file_write、dir_list 将被禁用。路径在软链接解析后进行检查。",
+    "language": "界面显示语言"
+  },
+  "themes": {
+    "amoled": "Amoled",
+    "dark": "深色",
+    "light": "浅色",
+    "catppuccinLatte": "Catppuccin (Latte)",
+    "catppuccinFrappe": "Catppuccin (Frappe)",
+    "catppuccinMacchiato": "Catppuccin (Macchiato)",
+    "catppuccinMocha": "Catppuccin (Mocha)",
+    "dracula": "Dracula",
+    "draculaLight": "Dracula Light",
+    "everforest": "Everforest",
+    "everforestHard": "Everforest Hard",
+    "githubDark": "GitHub Dark",
+    "githubLight": "GitHub Light",
+    "gruvbox": "Gruvbox",
+    "gruvboxHard": "Gruvbox Hard",
+    "kanagawa": "Kanagawa",
+    "kimbieDark": "Kimbie Dark",
+    "min": "Min",
+    "monokai": "Monokai",
+    "monokaiPro": "Monokai Pro",
+    "nord": "Nord",
+    "nordLight": "Nord Light",
+    "obsidian": "Obsidian",
+    "oneDark": "One Dark",
+    "oneLight": "One Light",
+    "palenight": "Palenight",
+    "rosePine": "Rosé Pine",
+    "rosePineMoon": "Rose Pine Moon",
+    "rosePineDawn": "Rose Pine Dawn",
+    "solarizedDark": "Solarized Dark",
+    "solarizedLight": "Solarized Light",
+    "tokyoNight": "Tokyo Night",
+    "tokyoNightLight": "Tokyo Night Light",
+    "vesper": "Vesper",
+    "zenburn": "Zenburn"
+  },
+  "voices": {
+    "heart": "Heart（女声，美式）",
+    "bella": "Bella（女声，美式）",
+    "sarah": "Sarah（女声，美式）",
+    "nicole": "Nicole（女声，美式）",
+    "michael": "Michael（男声，美式）",
+    "adam": "Adam（男声，美式）",
+    "emma": "Emma（女声，英式）",
+    "george": "George（男声，英式）"
+  },
+  "fonts": {
+    "default": "默认 (Inter)"
+  },
+  "actions": {
+    "grantMicAccess": "授权麦克风访问",
+    "rerunOnboarding": "重新运行引导",
+    "saveChanges": "保存更改",
+    "browseDirectory": "浏览目录",
+    "reloadAllServers": "重载所有服务器"
+  },
+  "switches": {
+    "fixedChatWidth": "固定聊天宽度",
+    "generateTitles": "生成标题",
+    "startRouterOnLaunch": "应用启动时启动路由器",
+    "exposeExternal": "暴露给外部客户端",
+    "bindAll": "绑定 0.0.0.0（关闭 = 仅本地回环）",
+    "pttHold": "按住录音，松手停止",
+    "pttToggle": "切换开/关"
+  },
+  "placeholders": {
+    "modelPath": "/path/to/models",
+    "checkpointsPath": "~/.config/warpcore/checkpoints/",
+    "fsRoot": "/absolute/path"
+  },
+  "labels": {
+    "pttKey": "PTT 按键"
+  },
+  "options": {
+    "defaultTheme": "深色",
+    "defaultVoice": "Heart（女声，美式）",
+    "defaultMicrophone": "默认麦克风",
+    "noMicDevices": "未找到麦克风设备",
+    "ttsSpeed": "TTS 速度",
+    "desktopApiUnavailable": "桌面 API 不可用 - 开关已禁用"
+  },
+  "units": {
+    "px": "px",
+    "gb": "GB",
+    "to": "至"
+  },
+  "dialog": {
+    "removeModelDirTitle": "移除模型目录？",
+    "removeModelDirMessage": "这将从已配置的模型目录中移除 \"{{path}}\"。"
+  },
+  "toast": {
+    "settingsSaved": "设置已保存",
+    "microphoneGranted": "麦克风权限已授权",
+    "microphoneDenied": "麦克风权限被拒绝",
+    "directoryPickerNotSupported": "此浏览器不支持目录选择器。请手动输入路径。",
+    "autostartUpdateFailed": "更新自启动设置失败"
+  },
+  "languageOptions": {
+    "en": "English",
+    "zhCN": "????"
+  }
+}

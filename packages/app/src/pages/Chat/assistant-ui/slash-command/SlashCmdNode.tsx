@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
@@ -9,7 +10,6 @@ import { commandSuggestion } from "./CmdSuggestion";
 import { SlashCmdServerSelector } from "./SlashCmdServerSelector";
 import { SlashCmdDropdown } from "./SlashCmdDropdown";
 import { SlashCmdDefaultInput } from "./SlashCmdDefaultInput";
-import { SlashCmdToolSelector } from "./SlashCmdToolSelector";
 
 // paramType -> slot renderer; "default", "server", and "dropdown" wired, additional types added as needed
 type TSlotRendererProps = {
@@ -26,7 +26,6 @@ const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
 	default: SlashCmdDefaultInput,
 	server: SlashCmdServerSelector,
 	dropdown: SlashCmdDropdown,
-	tool: SlashCmdToolSelector,
 };
 
 const parseArgs = (raw: string): Record<string, string> => {
@@ -71,28 +70,29 @@ const CommandCard: React.FC<ICommandCardProps> = (p) => createPortal(
 		) : null}
 {p.params.length > 0 ? (
 			<div style={{ marginTop: "8px", border: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))", borderRadius: "6px" }}>
-				{p.params
-					.filter(([key, _]) => key === p.focusedKey)
-					.map(([key, param]) => {
+				<table style={{ width: "100%", borderCollapse: "collapse" }}>
+					<tbody>
+					{p.params.map(([key, param]) => {
 						const active = key === p.focusedKey;
 						return (
-							<div
+							<tr
 								key={key}
 								style={{
 									background: active ? "var(--wc-bg-hover, rgba(255,255,255,0.06))" : "transparent",
 								}}
 							>
-								<div style={{ display: "flex", flexDirection: "row", padding: "4px 8px", verticalAlign: "top", whiteSpace: "nowrap"}}>
-									<div style={{ fontWeight: 600, marginRight: "10px" }}>{key}</div>
-									<div style={{ color: "var(--wc-text-tertiary)", fontStyle: "italic", fontSize: "0.75rem", fontFamily: "var(--wc-font-mono, monospace)" }}>({param.type})</div>
-								</div>
-								
-								<div style={{ padding: "4px 8px", verticalAlign: "top", color: "var(--wc-text-secondary)"}}>
+								<td style={{ padding: "4px 8px", verticalAlign: "top", whiteSpace: "nowrap", borderTop: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))", borderRight: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))" }}>
+									<div style={{ fontWeight: 600 }}>{key}</div>
+									<div style={{ color: "var(--wc-text-tertiary)", fontStyle: "italic", fontSize: "0.75rem", fontFamily: "var(--wc-font-mono, monospace)" }}>{param.type}</div>
+								</td>
+								<td style={{ padding: "4px 8px", verticalAlign: "top", color: "var(--wc-text-secondary)", borderTop: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))" }}>
 									{param.description ?? ""}
-								</div>
-							</div>
+								</td>
+							</tr>
 						);
 					})}
+				</tbody>
+				</table>
 			</div>
 		) : null}
 	</div>,
@@ -184,7 +184,7 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 						<span key={key} style={{ display: "inline-flex", alignItems: "center" }}>
 							<Renderer
 								value={args[key] ?? ""}
-								placeholder={key}
+								placeholder={param.type}
 								inputRef={(el) => { slotRefs.current[i] = el; }}
 								onChange={(next) => setArg(key, next)}
 								onKeyDown={(e) => onSlotKeyDown(i, e)}

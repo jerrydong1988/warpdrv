@@ -282,6 +282,7 @@ export interface IPreset {
 	name: string;
 	backendId: TBackendId;
 	modelPath: string;
+	mmprojPath?: string;
 	params: ILaunchParams;
 	createdAt: number;
 }
@@ -289,6 +290,7 @@ export interface IPresetCreatePayload {
 	name: string;
 	backendId: TBackendId;
 	modelPath: string;
+	mmprojPath?: string;
 	params: ILaunchParams;
 }
 // ============================================================
@@ -339,6 +341,7 @@ export interface ISettings {
 	chatFontFamily?: string;
 	chatFixedWidth?: boolean;
 	dictationPTTKey?: string;
+	locale?: string;
 	dictationPTTModeHold?: boolean;
 	globalPTTKey?: string;
 	globalPTTModeHold?: boolean;

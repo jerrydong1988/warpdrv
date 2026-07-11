@@ -5,6 +5,7 @@ import {
 	ChevronUp,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '@/components/PageHeader';
 import { useStore } from '@/store';
 import { RegisterBackendStep } from './Steps/RegisterBackendStep';
@@ -21,6 +22,7 @@ import { KokoroTile } from './Tiles/KokoroTile';
 import { UpdateBanner } from '@/components/UpdateBanner';
 
 export const HomePage = React.memo(() => {
+	const { t } = useTranslation('home');
 	const servers = useStore((s) => s.servers);
 	const backends = useStore((s) => s.backends);
 	const models = useStore((s) => s.models);
@@ -47,7 +49,7 @@ export const HomePage = React.memo(() => {
 			}}
 		>
 			<PageHeader
-				title="Home"
+				title={t('title')}
 				icon={<HomeIcon size={20} />}
 			/>
 
@@ -59,10 +61,10 @@ export const HomePage = React.memo(() => {
 							<Image src="/logo.png" w="64px" h="64px" borderRadius="md" />
 							<VStack align="flex-start" gap="0">
 								<Text fontSize="20px" fontWeight="500" color="var(--wc-text-tertiary)">
-									Welcome
+									{t('greeting')}
 								</Text>
 								<Text fontSize="24px" fontWeight="600" color="var(--wc-text-heading)">
-									{allComplete ? 'warpdrv is ready!' : "Setup"}
+									{allComplete ? t('readyStatus') : t('setupStatus')}
 								</Text>
 							</VStack>
 						</HStack>
@@ -80,11 +82,11 @@ color="var(--wc-text-muted)"
 								transition="all 0.15s ease"
 								fontSize={"11px"}
 							>	
-								Details&nbsp;
-								{!showSteps 
-									? <ChevronDown size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-									: <ChevronUp size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-								}
+								{t('details')}&nbsp;
+							{!showSteps 
+								? <ChevronDown size={20} style={{ transform: showSteps ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
+								: <ChevronUp size={20} style={{ transform: showSteps ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }} />
+							}
 							</Flex>
 						)}
 					</Flex>

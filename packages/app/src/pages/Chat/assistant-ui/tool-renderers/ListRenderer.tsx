@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FolderOpen, ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
 import { extractResultText } from './utils';
@@ -10,11 +11,17 @@ interface ITreeEntry {
 	children?: ITreeEntry[];
 }
 
-function normalizeEntries(entries: any[]): ITreeEntry[] {
+const MAX_ENTRY_DEPTH = 20;
+
+function normalizeEntries(entries: any[], depth: number = 0): ITreeEntry[] {
+	if (depth > MAX_ENTRY_DEPTH) {
+		console.warn('[normalizeEntries] recursion depth exceeded', { depth });
+		return [];
+	}
 	return entries.map(e => ({
 		name: e.name,
 		type: e.type === 'dir' ? 'directory' : e.type === 'symlink' || e.type === 'other' ? 'file' : e.type,
-		children: Array.isArray(e.children) ? normalizeEntries(e.children) : undefined,
+		children: Array.isArray(e.children) ? normalizeEntries(e.children, depth + 1) : undefined,
 	}));
 }
 
@@ -39,20 +46,28 @@ function parseFlatLines(text: string): ITreeEntry[] {
 	});
 }
 
+const MAX_TREE_DEPTH = 50;
+
 const TreeNode = React.memo(({ entry, depth }: { entry: ITreeEntry, depth: number }) => {
 	const [open, setOpen] = useState(depth < 1);
 	const isDir = entry.type === 'directory';
 	const hasChildren = isDir && Array.isArray(entry.children) && entry.children.length > 0;
+	const isMaxDepth = depth >= MAX_TREE_DEPTH;
 	return (
 		<Box>
-			<HStack gap="1" pl={`${depth * 12}px`} py="0" align="center" cursor={hasChildren ? 'pointer' : 'default'} onClick={() => hasChildren && setOpen(!open)}>
+			<HStack gap="1" pl={`${depth * 12}px`} py="0" align="center" cursor={hasChildren && !isMaxDepth ? 'pointer' : 'default'} onClick={() => hasChildren && !isMaxDepth && setOpen(!open)}>
 				{hasChildren ? (open ? <ChevronDown size={10} /> : <ChevronRight size={10} />) : <Box w="10px" />}
 				{isDir ? <Folder size={11} color="var(--wc-text-secondary)" /> : <File size={11} color="var(--wc-text-faint)" />}
 				<Text fontSize="11px" fontFamily="mono" color={isDir ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}>
 					{entry.name}
 				</Text>
+				{isMaxDepth && hasChildren && (
+					<Text fontSize="9px" color="var(--wc-text-faint)" fontStyle="italic">
+						...({(entry.children as ITreeEntry[]).length} more)
+					</Text>
+				)}
 			</HStack>
-			{hasChildren && open && entry.children!.map((c, i) => (
+			{hasChildren && open && !isMaxDepth && entry.children!.map((c, i) => (
 				<TreeNode key={`${c.name}-${i}`} entry={c} depth={depth + 1} />
 			))}
 		</Box>
@@ -65,6 +80,7 @@ export const ListRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, excludePatterns, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const entries = resultText ? (parseEntries(resultText) ?? parseFlatLines(resultText)) : null;
 	return (

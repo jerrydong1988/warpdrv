@@ -65,7 +65,10 @@ constructor(
 
 		autoStartArr
 			.filter((_, i) => statusArr[i])
-			.map(appletName => this.activeApplets[appletName].eventNode.broadcast(APPLET_READY))
+			.forEach(appletName => {
+				const entry = this.activeApplets[appletName];
+				if (entry) entry.eventNode.broadcast(APPLET_READY);
+			})
 	}
 
 	public async updateScopeValue(newValue: string | undefined): Promise<void> {

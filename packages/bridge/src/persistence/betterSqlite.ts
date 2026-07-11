@@ -253,7 +253,7 @@ export class SqlitePersistence implements IPersistence {
 		if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
 		this.db = new Database(this.dbPath, {
-			nativeBinding: (process as any).pkg
+			nativeBinding: (process as unknown as Record<string, unknown>).pkg
 				? path.join(process.env.WARPCORE_RESOURCE_DIR ?? path.dirname(process.execPath), 'binaries', 'better_sqlite3.node')
 				: undefined
 		});
@@ -287,7 +287,7 @@ export class SqlitePersistence implements IPersistence {
 			for (const f of folders) {
 				this.db!.prepare(`UPDATE ${this.t.folders} SET topic = ? WHERE id = ?`).run(folderNameToTopic(f.name), f.id);
 			}
-			console.log(`[migration] Added topic to ${folders.length} folders`);
+
 		} catch {
 			// Column already exists
 		}
@@ -310,7 +310,6 @@ export class SqlitePersistence implements IPersistence {
 
 			const mpCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.messagePartsFts}`).get() as { c: number };
 			const thCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.threadFts}`).get() as { c: number };
-			console.log(`[FTS5] Indexed ${mpCount.c} message parts, ${thCount.c} threads`);
 		} catch (err) {
 			console.error('[FTS5] Index build failed:', err);
 		}
@@ -589,7 +588,7 @@ export class SqlitePersistence implements IPersistence {
 			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(msg.parentId, id);
 			this.db!.prepare(`DELETE FROM ${this.t.messages} WHERE id = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messageStates} WHERE messageId = ?`).run(id);
-		}) as any)();
+		}) as Database.Transaction)();
 	}
 
 	async getMessages(threadId: TThreadId): Promise<IChatMessage[]> {
@@ -852,7 +851,7 @@ export class SqlitePersistence implements IPersistence {
 	async searchMessages(q: string, options: ISearchOptions): Promise<ISearchResult[]> {
 		const processed = this.preprocessQuery(q);
 		if (!processed) return [];
-		console.log(`[FTS5] searchMessages: mode=${options.mode}, query="${q}" -> processed="${processed}"`);
+
 
 		const limit = Math.min(options.limit ?? 50, 200);
 		const offset = options.offset ?? 0;
@@ -871,7 +870,6 @@ export class SqlitePersistence implements IPersistence {
 				 ORDER BY bm25(${this.t.messagePartsFts}), m.createdAt DESC
 				 LIMIT ? OFFSET ?`
 			).all(processed, options.threadId, limit, offset) as Array<Record<string, unknown>>;
-			console.log(`[FTS5] thread mode: ${rows.length} results`);
 			return rows.map(r => ({
 				type: 'message' as const,
 				threadId: r.threadId as string,
@@ -895,7 +893,6 @@ export class SqlitePersistence implements IPersistence {
 				 ORDER BY bm25(${this.t.threadFts}), t.updatedAt DESC
 				 LIMIT ?`
 			).all(processed, halfLimit) as Array<Record<string, unknown>>;
-			console.log(`[FTS5] everywhere: ${threadRows.length} thread results`);
 
 			// Message branch
 			const msgRows = this.db!.prepare(
@@ -910,7 +907,6 @@ export class SqlitePersistence implements IPersistence {
 				 ORDER BY bm25(${this.t.messagePartsFts}), m.createdAt DESC
 				 LIMIT ?`
 			).all(processed, halfLimit) as Array<Record<string, unknown>>;
-			console.log(`[FTS5] everywhere: ${msgRows.length} message results`);
 
 			const results: ISearchResult[] = [];
 

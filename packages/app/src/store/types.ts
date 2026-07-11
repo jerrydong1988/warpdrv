@@ -88,6 +88,7 @@ export interface AppState extends IChatStoreState{
 
 	// Settings
 	settings: ISettings;
+	setLocale: (locale: 'en' | 'zh-CN') => void;
 	// Hardware detection
 	hardware: IHardwareInfo | null;
 	// Llama / Whisper backend releases
@@ -101,6 +102,8 @@ export interface AppState extends IChatStoreState{
 	ttsActiveMessageId: string | null;
 	ttsIsGenerating: 'button' | 'vad' | null;
 	ttsIsSpeaking: boolean;
+	ttsPlaybackQueue: string[];
+	ttsCurrentRequestId: number;
 	ttsSpokenByMessage: Record<string, number>;
 	ttsVadSentencesSent: number;
 	ttsVadSentencesDone: number;

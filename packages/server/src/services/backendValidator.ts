@@ -56,7 +56,7 @@ async function getVersion(binaryPath: string, buildNumber: number): Promise<stri
 		if (buildNumber >= 9100) {
 			// New builds: detect GPU backends from Available devices section
 			const deviceTypeMatch = output.match(/Available devices:.*\n\s+(CUDA|ROCm|Vulkan)\d:/s);
-			if (deviceTypeMatch) {
+			if (deviceTypeMatch?.[1]) {
 				parts.push(deviceTypeMatch[1]);
 			}
 			console.log(`[getVersion] new build detection, parts:`, parts);
@@ -119,19 +119,25 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 		// If the "Available devices:" section was found, use those results
 		// Otherwise fall back to parsing the verbose init output
 		if (devices.length > 0) {
-			// Enrich with compute capability from verbose output
+			// Build lookup maps for O(1) enrichment instead of O(n) per device
+			const cudaByName = new Map<string, IDevice>();
+			const rocmByName = new Map<string, IDevice>();
+			for (const d of devices) {
+				if (d.backendType === EDeviceBackendType.CUDA) cudaByName.set(d.name, d);
+				if (d.backendType === EDeviceBackendType.ROCM) rocmByName.set(d.name, d);
+			}
 			const cudaCapMatch = output.matchAll(/Device \d+: (.+?), compute capability (\S+)/g);
 			for (const match of cudaCapMatch) {
 				const deviceName = match[1]!;
 				const cap = match[2]!;
-				const dev = devices.find(d => d.backendType === EDeviceBackendType.CUDA && d.name.includes(deviceName));
+				const dev = cudaByName.get(deviceName);
 				if (dev) dev.computeCapability = cap;
 			}
 			const rocmCapMatch = output.matchAll(/Device \d+: (.+?), (\w+) \(0x\w+\)/g);
 			for (const match of rocmCapMatch) {
 				const deviceName = match[1]!;
 				const cap = match[2]!;
-				const dev = devices.find(d => d.backendType === EDeviceBackendType.ROCM && d.name.includes(deviceName));
+				const dev = rocmByName.get(deviceName);
 				if (dev) dev.computeCapability = cap;
 			}
 			return devices;
@@ -173,12 +179,18 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 		// Parse Vulkan devices
 		let vulkanIdx = 0;
 		const vulkanVerboseMatch = output.matchAll(/ggml_vulkan: (\d+) = (.+?) \|/g);
+		// Pre-build set of existing Vulkan names for O(1) lookup
+		const existingVulkanNames = new Set(
+			devices
+				.filter(d => d.backendType === EDeviceBackendType.VULKAN)
+				.map(d => d.name.split('(')[0]!.trim())
+		);
 		for (const match of vulkanVerboseMatch) {
-			// Only add if not already covered
 			const idx = parseInt(match[1]!, 10);
 			const name = match[2]!.trim();
-			const exists = devices.some(d => d.backendType === EDeviceBackendType.VULKAN && d.name.includes(name.split('(')[0]!.trim()));
-			if (!exists) {
+			const shortName = name.split('(')[0]!.trim();
+			if (!existingVulkanNames.has(shortName)) {
+				existingVulkanNames.add(shortName);
 				devices.push({
 					id: `Vulkan${idx}`,
 					name,

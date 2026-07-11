@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface IVoiceWaveformProps {
 	stream: MediaStream | null;
@@ -69,7 +70,7 @@ export function VoiceWaveform({
 
 			for (let i = 0; i < halfBarCount; i++) {
 				const binIndex = binStart + Math.floor((i / halfBarCount) * usableBins);
-				const v = data[binIndex] / 255;
+				const v = (data[binIndex] ?? 0) / 255;
 				const barHeight = Math.max(2, v * height);
 				const y = (height - barHeight) / 2;
 

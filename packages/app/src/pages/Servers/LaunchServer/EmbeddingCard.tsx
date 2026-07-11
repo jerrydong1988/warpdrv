@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Flex, HStack, VStack, Text, Switch } from '@chakra-ui/react';
 import { Brain } from 'lucide-react';
 import { Card } from '@/components/Card';

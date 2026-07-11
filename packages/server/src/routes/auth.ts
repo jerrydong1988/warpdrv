@@ -59,7 +59,7 @@ authRouter.post('/login', async (req, res) => {
 authRouter.get('/check', async (req, res) => {
 	// Check if auth is actually required
 	const settings = await getSettings();
-	const authRequired = isRemote(req) && settings.apiAuthEnabled;
+	const authRequired = isRemote(req as { ip: string; connection: { remoteAddress: string } }) && settings.apiAuthEnabled;
 
 	// If auth not required, always return authenticated
 	if (!authRequired) {

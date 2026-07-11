@@ -2,6 +2,7 @@ import { useStore } from '@/store';
 import { HStack, Text, Box } from '@chakra-ui/react';
 import type { ISlotLiveState, ISlotLiveMetadata } from '@warpcore/shared';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const ServerSlots = React.memo(({ serverId }: {
 	serverId: string;

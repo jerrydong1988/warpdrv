@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { AppState, ImmerSet, ImmerGet } from './types';
 import type { TFolderId, IWorkspace, TThreadId } from '@warpcore/bridge';
+import type { IWhisperModel } from '@warpcore/shared';
 import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
 import { sseConnectionSlice } from './slices/sseConnection';
 import { sseHandlersSlice } from './slices/sseHandlers';
@@ -82,6 +83,7 @@ export const useStore = create<AppState>()(
 					setSelectedWhisperServerId: bridge.setSelectedWhisperServerId,
 					models: models.models!,
 					settings: settings.settings!,
+					setLocale: settings.setLocale!,
 					hardware: hardware.hardware!,
 					llamaReleases: releases.llamaReleases!,
 					whisperReleases: releases.whisperReleases!,
@@ -104,6 +106,8 @@ export const useStore = create<AppState>()(
 					ttsVadIncSent: tts.ttsVadIncSent!,
 					ttsVadIncDone: tts.ttsVadIncDone!,
 					ttsVadReset: tts.ttsVadReset!,
+					ttsPlaybackQueue: tts.ttsPlaybackQueue!,
+					ttsCurrentRequestId: tts.ttsCurrentRequestId!,
 					vadActive: tts.vadActive!,
 					setVadActive: tts.setVadActive!,
 					ttsVadNewRequestId: tts.ttsVadNewRequestId!,
@@ -262,6 +266,8 @@ export const useStore = create<AppState>()(
 					// Embedding
 					selectedEmbeddingServerId: embedding.selectedEmbeddingServerId!,
 					setSelectedEmbeddingServerId: embedding.setSelectedEmbeddingServerId!,
+					whisperModels: {} as Record<string, IWhisperModel>,
+					embeddingError: null as { error: string } | null,
 
 					// Chat sidebar state
 					chatSidebarOpen: chatSidebar.chatSidebarOpen!,

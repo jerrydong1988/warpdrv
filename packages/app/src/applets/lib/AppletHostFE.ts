@@ -35,7 +35,6 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					label: opts.label,
 					appletName,
 					componentId: opts.componentId,
-					icon: opts.icon,
 				});
 			},
 			unregisterUiSpaceComponent: (id: TUISpaceComponentId) => {
@@ -50,7 +49,6 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					label: 'UiSpaceChip',
 					appletName,
 					props: options,
-					icon: options.icon,
 				});
 			},
 		};

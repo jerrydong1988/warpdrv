@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
@@ -34,6 +35,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 	items,
 }) => {
 	const resolvedItems = useResolveItems(items);
+	const { t } = useTranslation('chat');
 	const [isOpen, setIsOpen] = useState(false);
 	const [highlight, setHighlight] = useState(0);
 	const inputRefLocal = useRef<HTMLInputElement | null>(null);
@@ -95,7 +97,8 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 			}
 			if (e.key === "Enter" && filtered.length > 0) {
 				e.preventDefault();
-				handleSelect(filtered[highlight]);
+				const item = filtered[highlight];
+				if (item) handleSelect(item);
 				return;
 			}
 			if (e.key === "Escape") {
@@ -227,7 +230,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No matches
+								{t('slashCmd.noMatches')}
 							</div>
 						)}
 						{filtered.map((item, i) => (

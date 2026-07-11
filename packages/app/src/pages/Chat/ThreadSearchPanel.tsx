@@ -1,8 +1,9 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Box, Flex, Input, Text } from '@chakra-ui/react';
 import { SearchIcon, XIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { searchChatMessages } from '@/api/services';
-import type { ISearchResult } from '@warpcore/bridge';
+import type { ISearchResult, ISearchThreadResult } from '@warpcore/bridge';
 
 // ============================================================
 // Types
@@ -58,6 +59,7 @@ function renderSnippet(text: string): React.ReactNode {
 // ============================================================
 
 export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
+	const { t } = useTranslation('chat');
 	const [query, setQuery] = useState('');
 	const [results, setResults] = useState<SearchResultEntry[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
@@ -82,9 +84,9 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 		timerRef.current = setTimeout(async () => {
 			setIsLoading(true);
 			try {
-				const res = await searchChatMessages(q, 'thread', { threadId, limit: 50 });
+				const res = await searchChatMessages(q, 'thread', { threadId: threadId ?? undefined, limit: 50 });
 				if (res.ok && res.data) {
-					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult) =>
+					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult | ISearchThreadResult) =>
 						item as unknown as SearchResultEntry
 					);
 					setResults(entries);
@@ -117,7 +119,7 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				<Input
 					id="chat-thread-search-input"
 					variant="subtle"
-					placeholder="Search in thread..."
+					placeholder={t('threadSearch.placeholder')}
 					value={query}
 					onChange={(e) => {
 						setQuery(e.target.value);
@@ -153,19 +155,19 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 
 				{!isLoading && hasQuery && results.length === 0 && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-muted)">No results</Text>
+						<Text fontSize="13px" color="var(--wc-text-muted)">{t('labels.noSearchResults')}</Text>
 					</Flex>
 				)}
 
 				{!hasQuery && !isLoading && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-disabled)">Type to search this chat</Text>
+						<Text fontSize="13px" color="var(--wc-text-disabled)">{t('threadSearch.typeToSearch')}</Text>
 					</Flex>
 				)}
 
 				{!threadId && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-disabled)">No chat selected</Text>
+						<Text fontSize="13px" color="var(--wc-text-disabled)">{t('threadSearch.noChatSelected')}</Text>
 					</Flex>
 				)}
 
@@ -199,7 +201,7 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 
 			{results.length > 0 && (
 				<Flex justifyContent="space-between" alignItems="center" px="3" py="1.5" borderTop="1px solid var(--wc-border-subtle)">
-					<Text fontSize="11px" color="var(--wc-text-muted)">{results.length} result{results.length > 1 ? 's' : ''}</Text>
+					<Text fontSize="11px" color="var(--wc-text-muted)">{t('search.resultCount', { count: results.length })}</Text>
 				</Flex>
 			)}
 		</Box>

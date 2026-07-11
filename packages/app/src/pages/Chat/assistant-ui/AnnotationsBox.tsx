@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Text, VStack, HStack } from '@chakra-ui/react';
 import { X } from 'lucide-react';
 import { useStore } from '@/store';

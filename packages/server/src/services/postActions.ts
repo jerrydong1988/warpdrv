@@ -74,6 +74,7 @@ async function locateBinaryAction(dl: IDownload, payload: Record<string, unknown
 	if (!dl.postActions) return;
 	for (let i = 0; i < dl.postActions.length; i++) {
 		const action = dl.postActions[i];
+		if (!action) continue;
 		if (action.payload && typeof action.payload === 'object' && (action.payload as Record<string, unknown>)[contextKey] === '__LOCATED__') {
 			(action.payload as Record<string, unknown>)[contextKey] = found;
 		}
@@ -154,7 +155,8 @@ const HANDLERS: Record<EPostActionType, TPostActionHandler> = {
 export async function runPostActions(dl: IDownload, persist: TPersistFn, emit: TEmitFn): Promise<void> {
 	if (!dl.postActions || dl.postActions.length === 0) return;
 	for (let i = 0; i < dl.postActions.length; i++) {
-		const action: IDownloadPostAction = dl.postActions[i];
+		const action = dl.postActions[i];
+		if (!action) continue;
 		const handler = HANDLERS[action.type];
 		if (!handler) {
 			action.status = EPostActionStatus.FAILED;

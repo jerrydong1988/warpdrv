@@ -239,7 +239,7 @@ export class EventNode implements IExternalNode {
 	public async addParent(parent: IExternalNode): Promise<void> {
 		this.parent = parent;
 		this.nodeAddr = parent.nodeAddr + SEP + this.nodeId;
-		for (const id in this.children) await this.children[id].addParent(this);
+		for (const id in this.children) await this.children[id]!.addParent(this);
 		setTimeout(() => this.onReady?.(), 0);
 	}
 
@@ -274,7 +274,7 @@ export class EventNode implements IExternalNode {
 		this.mapCallbackToListener[cbId] = { source: sourceAddr, name };
 		const existing = this.listeners.retrieve(sourceAddr);
 		let nameTree: SegmentTrie<TCallbackId>;
-		if (existing.length > 0) nameTree = existing[0];
+		if (existing.length > 0) nameTree = existing[0]!;
 		else {
 			nameTree = new SegmentTrie<TCallbackId>(".");
 			this.listeners.insert(sourceAddr, nameTree);
@@ -289,7 +289,7 @@ export class EventNode implements IExternalNode {
 		const loc = this.mapCallbackToListener[cbId];
 		if (!loc) return;
 		const trees = this.listeners.retrieve(loc.source);
-		if (trees.length > 0) trees[0].remove(loc.name, cbId);
+		if (trees.length > 0) trees[0]!.remove(loc.name, cbId);
 		delete this.mapCallbackToListener[cbId];
 		this.removeCallback(cbId);
 	}
@@ -498,7 +498,8 @@ export class EventNode implements IExternalNode {
 			const onPath = here.length < target.length && here.every((seg, i) => seg === target[i]);
 			if (onPath) {
 				const childId = target[here.length];
-				const child = this.children[childId];
+				if (!childId) throw new Error("route missing child id");
+				const child = this.children[childId]!;
 				if (!child) throw new Error("route missing child: " + childId);
 				return child.route(ev, { ...r, returnPath: prependSeg(UP, r.returnPath) });
 			}
@@ -521,6 +522,7 @@ export class EventNode implements IExternalNode {
 		}
 		else {
 			const seg = segs[r.cursor];
+			if (!seg) return ev.expectResponse ? (ev.isParallel ? [] : currentResult(ev)) : undefined;
 			if (seg === UP) {
 				if (!this.parent) throw new Error("relative route walks above root");
 				return this.parent.route(ev, { ...r, cursor: r.cursor + 1, returnPath: prependSeg(this.nodeId, r.returnPath) });
@@ -534,7 +536,7 @@ export class EventNode implements IExternalNode {
 				nextCursor = r.cursor + 1;
 			}
 			else {
-				const child = this.children[seg];
+				const child = this.children[seg]!;
 				if (!child) return ev.expectResponse ? (ev.isParallel ? [] : currentResult(ev)) : undefined;
 				return child.route(ev, { ...r, cursor: r.cursor + 1, returnPath: prependSeg(UP, r.returnPath) });
 			}
@@ -545,14 +547,14 @@ export class EventNode implements IExternalNode {
 		const childReturn = prependSeg(UP, r.returnPath);
 		if (!ev.expectResponse) {
 			if (matched) this.consume(ev, r);
-			for (const id in this.children) this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+			for (const id in this.children) this.children[id]!.route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
 			return;
 		}
 
 		if (ev.isParallel) {
 			const pending: Array<Promise<unknown>> = [];
 			if (matched) pending.push(Promise.resolve(this.consume(ev, r)));
-			for (const id in this.children) pending.push(Promise.resolve(this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn })));
+			for (const id in this.children) pending.push(Promise.resolve(this.children[id]!.route(ev, { ...r, cursor: nextCursor, returnPath: childReturn })));
 			const settled = await Promise.all(pending);
 			const out: Array<unknown> = [];
 			for (const part of settled) {
@@ -563,7 +565,7 @@ export class EventNode implements IExternalNode {
 		}
 
 		if (matched) ev.result = await this.consume(ev, r);
-		for (const id in this.children) ev.result = await this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+		for (const id in this.children) ev.result = await this.children[id]!.route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
 		return ev.result;
 	}
 
@@ -607,6 +609,7 @@ export class EventNode implements IExternalNode {
 		const runNext = async (): Promise<unknown> => {
 			if (i >= ids.length) return result;
 			const cbId = ids[i];
+			if (!cbId) { i += 1; return runNext(); }
 			i += 1;
 			const cb = this.callbacks[cbId];
 			if (!cb) return runNext();

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from '@warpcore/bridge';
 import { useStore } from '@/store';
+import { useTranslation } from 'react-i18next';
 import { fetchWorkspace } from '@/api/services';
 import {
 	fetchFolders, fetchThreads, createFolder, updateFolder, deleteFolder, reorderFolders,
@@ -169,6 +170,7 @@ function RenamePopover({ value, onSave, onCancel }: { value: string; onSave: (v:
 // Confirm dialog
 // ============================================================
 function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+	const { t } = useTranslation('chat');
 	return (
 		<Box
 			position="fixed" top="0" left="0" right="0" bottom="0"
@@ -194,7 +196,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onCo
 						bg="var(--wc-accent-red-alt)" color="var(--wc-special-white)"
 						_hover={{ bg: 'var(--wc-accent-red)' }}
 						onClick={onConfirm}
-					>Delete</Box>
+					>{t('actions.delete')}</Box>
 				</HStack>
 			</Box>
 		</Box>
@@ -226,9 +228,10 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 	onSelect: (threadId: string) => void;
 	onDelete: (id: string) => void;
 }) {
+	const { t } = useTranslation('chat');
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
-	const getAnchorRect = useCallback(() => triggerRef.current?.getBoundingClientRect(), [triggerRef]);
+	const getAnchorRect = useCallback((_el?: any) => triggerRef.current?.getBoundingClientRect() ?? null, [triggerRef]);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const selected = thread.id === currentThreadId;
 
@@ -268,10 +271,10 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 					<Box flex="1" display="flex" flexDirection="column" overflow="hidden">
 						<HStack>
 							<Text fontSize="13px" color="var(--wc-text-primary)" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-								{thread.title ?? 'New Chat'}
+								{thread.title ?? t('threadList.newChat')}
 							</Text>
 							<Text fontSize="12px" color="var(--wc-text-faint)">
-								{(() => { const total = (thread.totalPromptTokens ?? 0) + (thread.totalCompletionTokens ?? 0); return total > 0 ? `${(total / 1000).toFixed(1)}k` : (thread.messageCount ?? 0) > 0 ? `${thread.messageCount ?? 0} msg` : 'empty'; })()}
+								{(() => { const total = (thread.totalPromptTokens ?? 0) + (thread.totalCompletionTokens ?? 0); return total > 0 ? `${(total / 1000).toFixed(1)}k` : (thread.messageCount ?? 0) > 0 ? `${thread.messageCount ?? 0} ${t('threadList.msg')}` : t('threadList.empty'); })()}
 							</Text>
 							{/* <Text fontSize="12px" color="rgba(255,255,255,0.35)">
 								{timeAgo(thread.updatedAt)}
@@ -291,7 +294,6 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 							opacity={0}
 							className="group-hover:!opacity-50"
 							_hover={{ bg: 'var(--wc-bg-hover)' }}
-							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<MoreHorizontalIcon size={13} />
@@ -310,7 +312,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 								>
 									<HStack gap="2">
 										<PencilIcon size={12} />
-										<Text>Rename</Text>
+										<Text>{t('threadList.rename')}</Text>
 									</HStack>
 								</Menu.Item>
 								<Menu.Item
@@ -320,7 +322,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 								>
 									<HStack gap="2">
 										<TrashIcon size={12} />
-										<Text>Delete</Text>
+										<Text>{t('threadList.delete')}</Text>
 									</HStack>
 								</Menu.Item>
 							</Menu.Content>
@@ -353,11 +355,12 @@ function FolderSection({
 	onReorderFolder: (fromFolderId: string, toFolderId: string) => void;
 	children: ReactNode;
 }) {
+	const { t } = useTranslation('chat');
 	const [open, setOpen] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const [dragOver, setDragOver] = useState(false);
 	const folderMenuRef = useRef<HTMLButtonElement>(null);
-	const getFolderAnchorRect = useCallback(() => folderMenuRef.current?.getBoundingClientRect(), [folderMenuRef]);
+	const getFolderAnchorRect = useCallback(() => folderMenuRef.current?.getBoundingClientRect() ?? null, [folderMenuRef]);
 	const setActiveWorkspaceId = useStore(s => s.setActiveWorkspaceId);
 	const setCurrentThreadId = useStore(s => s.setCurrentThreadId);
 	const setWorkspace = useStore(s => s.setWorkspace);
@@ -448,7 +451,7 @@ function FolderSection({
 					</Text>
 				)}
 				<Text fontSize="12px" color="var(--wc-text-faint)" flexShrink={0}>{threads.length}</Text>
-				<Menu.Root positioning={{ getFolderAnchorRect }}>
+				<Menu.Root positioning={{ getAnchorRect: getFolderAnchorRect }}>
 					<Menu.Trigger asChild>
 						<Box
 							ref={folderMenuRef as any}
@@ -458,7 +461,6 @@ function FolderSection({
 							className="group-hover:!opacity-100"
 							_hover={{ opacity: 1, bg: 'var(--wc-bg-hover)' }}
 							borderRadius="sm"
-							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<MoreHorizontalIcon size={12} />
@@ -477,7 +479,7 @@ function FolderSection({
 							>
 								<HStack gap="2">
 									<PencilIcon size={12} />
-									<Text>Rename</Text>
+								<Text>{t('threadList.rename')}</Text>
 								</HStack>
 							</Menu.Item>
 							<Menu.Item
@@ -487,7 +489,7 @@ function FolderSection({
 							>
 								<HStack gap="2">
 									<TrashIcon size={12} />
-									<Text>Delete</Text>
+								<Text>{t('threadList.delete')}</Text>
 								</HStack>
 							</Menu.Item>
 						</Menu.Content>
@@ -498,7 +500,7 @@ function FolderSection({
 				<Box pl="4" my="1">
 					{children}
 					{threads.length === 0 && (
-						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">Drop threads here</Text>
+						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">{t('threadList.dropThreadsHere')}</Text>
 					)}
 				</Box>
 			)}
@@ -511,6 +513,7 @@ function FolderSection({
 // ============================================================
 
 export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpenSearch }) => {
+	const { t } = useTranslation('chat');
 	const threadsAPI = useThreadsAndFolders();
 	const [search, setSearch] = useState('');
 	const [sortField, setSortField] = useState<TSortField>('updatedAt');
@@ -554,7 +557,7 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 	}, [threadsAPI.patchFolder]);
 
 	const handleCreateFolder = useCallback(async () => {
-		await threadsAPI.addFolder('New Folder');
+		await threadsAPI.addFolder(t('threadList.newFolder'));
 	}, [threadsAPI.addFolder]);
 
 	const handleDeleteFolder = useCallback(async (id: string) => {
@@ -645,10 +648,10 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 	}, [sortField]);
 
 	const sortLabels = useMemo(() => ({
-		updatedAt: 'Updated',
-		createdAt: 'Created',
-		title: 'Name',
-		messageCount: 'Tokens',
+		updatedAt: t('threadList.sortUpdated'),
+		createdAt: t('threadList.sortCreated'),
+		title: t('threadList.sortName'),
+		messageCount: t('threadList.sortTokens'),
 	}), []);
 
 	return (
@@ -687,7 +690,7 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 						color="var(--wc-text-muted)" bg="var(--wc-bg-subtle)"
 						_hover={{ bg: 'var(--wc-bg-hover)' }}
 						onClick={cycleSortField}
-						title="Click to change sort field"
+						title={t('threadList.sortFieldTooltip')}
 					>
 						{sortLabels[sortField]}
 					</Box>
@@ -696,7 +699,7 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 						color="var(--wc-text-faint)"
 						_hover={{ color: 'var(--wc-text-tertiary)' }}
 						onClick={() => setSortDir(sortDir === 'desc' ? 'asc' : 'desc')}
-						title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+						title={sortDir === 'desc' ? t('threadList.newestFirst') : t('threadList.oldestFirst')}
 					>
 						{sortDir === 'desc' ? <SortDescIcon size={16} /> : <SortAscIcon size={16} />}
 					</Box>
@@ -707,7 +710,7 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 						color="var(--wc-text-faint)"
 						_hover={{ color: 'var(--wc-text-secondary)' }}
 						onClick={handleCreateFolder}
-						title="New folder"
+						title={t('threadList.newFolderTooltip')}
 						mt="1"
 					>
 						<FolderPlusIcon size={16} />
@@ -727,7 +730,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 						onDelete={handleDeleteFolder}
 						onDropThread={handleDropThread}
 						onReorderFolder={handleReorderFolders}
-						w="full"
 					>
 						<VStack gap="1" align="start" w="full">
 							{(threadsByFolderMap[f.id] ?? []).map(thread => (
@@ -738,7 +740,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 									onStartDrag={setDraggingThread}
 									onSelect={handleSelectThread}
 									onDelete={handleDeleteThread}
-									w="full"
 								/>
 							))}
 						</VStack>
@@ -764,7 +765,6 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 								onStartDrag={setDraggingThread}
 								onSelect={handleSelectThread}
 								onDelete={handleDeleteThread}
-								w="full"
 							/>
 						))}
 					</VStack>
@@ -777,10 +777,10 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 					<ConfirmDialog
 						message={
 							confirmDelete.type === 'folder'
-								? 'Delete this folder? Threads inside will be moved to root.'
+								? t('threadList.confirmDeleteFolder')
 								: confirmDelete.type === 'thread'
-									? 'Delete this thread? This cannot be undone.'
-									: 'Delete ALL chats? This cannot be undone.'
+									? t('threadList.confirmDeleteThread')
+									: t('threadList.confirmDeleteAllChats')
 						}
 						onConfirm={() => {
 							if (confirmDelete.type === 'folder' && confirmDelete.id) handleConfirmDeleteFolder(confirmDelete.id);

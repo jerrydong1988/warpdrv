@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
 	Box, Text, HStack, Flex, Input, Button, Slider, Portal,
 } from '@chakra-ui/react';

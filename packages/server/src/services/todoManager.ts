@@ -44,7 +44,8 @@ export class TodoManager {
 		if (index < 0 || index >= todos.length) {
 			throw new Error(`Index ${index} out of range`);
 		}
-		todos[index].status = status;
+		const todo = todos[index];
+		if (todo) todo.status = status;
 		await this.setTodos(threadId, todos);
 		return todos;
 	}

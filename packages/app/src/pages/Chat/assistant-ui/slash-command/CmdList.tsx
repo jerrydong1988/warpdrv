@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import type { SuggestionProps } from "@tiptap/suggestion";
 import type { ISlashCommand } from "@/store/slices/slashCommands";
@@ -39,7 +40,7 @@ export const CommandList = React.memo(forwardRef<ICommandListRef, SuggestionProp
 		<div
 			className="aui-slash-menu"
 			style={{
-				width: "320px",
+				width: "240px",
 				borderRadius: "8px",
 				border: "1px solid var(--wc-border-default)",
 				background: "var(--wc-bg-elevated)",
@@ -68,14 +69,16 @@ export const CommandList = React.memo(forwardRef<ICommandListRef, SuggestionProp
 					<div style={{ fontSize: "0.8125rem" }}>
 						/{item.name}
 					</div>
-					<div style={{
-						fontSize: '0.75rem',
-						color: 'var(--wc-text-muted)',
-						marginTop: '2px',
-						lineHeight: '1.3',
-					}}>
-						{item.description}
-					</div>
+					{index === selected && (
+						<div style={{
+							fontSize: '0.75rem',
+							color: 'var(--wc-text-muted)',
+							marginTop: '2px',
+							lineHeight: '1.3',
+						}}>
+							{item.description}
+						</div>
+					)}
 				</button>
 			))}
 		</div>

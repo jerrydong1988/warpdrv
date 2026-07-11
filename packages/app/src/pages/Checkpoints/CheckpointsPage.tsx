@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Input, Button, InputGroup, Combobox, createListCollection, Portal, Link as ChakraLink } from '@chakra-ui/react';
 import { Database, Trash2, Edit, ChevronDown, ChevronRight, Search, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { updateSettings } from '../../api/services';
@@ -11,13 +12,6 @@ import { openExternal } from '../../utils/openExternal';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
 import type { ICheckpoint, TCheckpointId, TCheckpointSortField, TSortOrder } from '@warpcore/shared';
-
-const FIELD_LABELS: Record<TCheckpointSortField, string> = {
-	recency: 'Recently Saved',
-	size: 'Size',
-	name: 'Name',
-	slot: 'Slot',
-};
 
 function formatBytes(n: number): string {
 	if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
@@ -37,6 +31,7 @@ function formatAge(createdAt: number): string {
 }
 
 export function CheckpointsPage() {
+	const { t } = useTranslation('checkpoints');
 	const { toast } = useToast();
 	const checkpointsRecord = useStore((s) => s.checkpoints);
 
@@ -95,7 +90,10 @@ export function CheckpointsPage() {
 			if (sortField === 'recency') return sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
 			if (sortField === 'size') return sortOrder === 'asc' ? a.totalSize - b.totalSize : b.totalSize - a.totalSize;
 			if (sortField === 'name') return sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-			return sortOrder === 'asc' ? a.items[0].slotIndex - b.items[0].slotIndex : b.items[0].slotIndex - a.items[0].slotIndex;
+			const aFirst = a.items[0];
+		const bFirst = b.items[0];
+		if (!aFirst || !bFirst) return sortOrder === 'asc' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt;
+		return sortOrder === 'asc' ? aFirst.slotIndex - bFirst.slotIndex : bFirst.slotIndex - aFirst.slotIndex;
 		});
 		standalone.sort((a, b) => slotFn(a, b));
 
@@ -119,9 +117,9 @@ export function CheckpointsPage() {
 	async function handleDeleteOne(id: TCheckpointId) {
 		const res = await deleteCheckpoint(id);
 		if (res.ok) {
-			toast('success', 'Checkpoint deleted');
+			toast('success', t('toast.deleted'));
 		} else {
-			toast('error', res.error ?? 'Delete failed');
+			toast('error', res.error ?? t('toast.deleteFailed'));
 		}
 		setDeletingCheckpointId(null);
 	}
@@ -131,7 +129,7 @@ export function CheckpointsPage() {
 		for (const cp of items) {
 			await deleteCheckpoint(cp.id);
 		}
-		toast('success', `Deleted ${items.length} checkpoint(s)`);
+		toast('success', t('toast.bundleDeleted', { count: items.length }));
 		setDeletingBundleId(null);
 	}
 
@@ -144,9 +142,9 @@ export function CheckpointsPage() {
 		if (renamingId == null) return;
 		const res = await updateCheckpoint(renamingId, { name: renameValue });
 		if (res.ok) {
-			toast('success', 'Renamed');
+			toast('success', t('toast.renamed'));
 		} else {
-			toast('error', res.error ?? 'Rename failed');
+			toast('error', res.error ?? t('toast.renameFailed'));
 		}
 		setRenamingId(null);
 		setRenameValue('');
@@ -196,11 +194,11 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 							/>
 						) : (
 							<Text fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace'>
-								Slot {cp.slotIndex}
+								{t('slot', { index: cp.slotIndex })}
 							</Text>
 						)}
 						<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-							{cp.tokens.toLocaleString()} tok
+							{cp.tokens.toLocaleString()} {t('tok')}
 						</Text>
 						<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
 							{formatBytes(cp.sizeBytes)}
@@ -221,8 +219,8 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 	return (
 		<Box>
 			<PageHeader
-				title="KV Cache"
-				subtitle={`${ grouped.bundles.length | grouped.standalone.length } Checkpoints`}
+				title={t('title')}
+				subtitle={t('subtitle', { count: grouped.bundles.length + grouped.standalone.length })}
 				icon={<Database size={20} />}
 				actions={
 					<HStack gap="3">
@@ -231,7 +229,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 								size="sm"
 								value={search}
 								onChange={(e) => setSearch(e.target.value)}
-								placeholder="Search checkpoints..."
+								placeholder={t('searchPlaceholder')}
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
 								color="var(--wc-text-primary)"
@@ -244,7 +242,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 						<HStack gap="3">
 							{(() => {
 								const sortCollection = createListCollection({
-									items: (Object.keys(FIELD_LABELS) as TCheckpointSortField[]).map(f => ({ value: f, label: FIELD_LABELS[f] })),
+									items: (['recency', 'size', 'name', 'slot'] as TCheckpointSortField[]).map(f => ({ value: f, label: t(`sortFields.${f}` as any) })),
 									itemToString: (item) => item.label,
 								});
 								return (
@@ -269,7 +267,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 													fontSize="13px"
 													borderRadius="lg"
 												>
-													{FIELD_LABELS[sortField]}
+													{t(`sortFields.${sortField}` as any)}
 													<ChevronDown size={14} />
 												</Button>
 											</Combobox.Trigger>
@@ -307,7 +305,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 								color="var(--wc-text-tertiary)"
 								borderRadius="md"
 								_hover={{ borderColor: 'var(--wc-border-strong)' }}
-								title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+								title={sortOrder === 'asc' ? t('ascending') : t('descending')}
 								onClick={() => handleSortChange(sortField, sortOrder === 'asc' ? 'desc' : 'asc')}
 							>
 								{sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
@@ -330,13 +328,13 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 				>
 					{grouped.bundles.length === 0 && grouped.standalone.length === 0 && (
 						<Text fontSize="12px" color="var(--wc-text-muted)" textAlign="center" py="8">
-							No checkpoints yet
+							{t('emptyState')}
 							<br />
-							Read the{' '}
+							{t('guideText')}{' '}
 							<ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/checkpoints.md" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/checkpoints.md'); }}>
-								guide
+								{t('guide')}
 							</ChakraLink>{' '}
-							on how to use checkpoints.
+							{t('guideLinkTitle')}
 						</Text>
 					)}
 
@@ -358,7 +356,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 									<VStack gap="0" align="stretch" flex="1">
 										<Text fontSize="13px" color="var(--wc-text-primary)" fontWeight="500">{b.name}</Text>
 										<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-											{b.items.length} slots · {formatBytes(b.totalSize)} · {b.totalTokens.toLocaleString()} tok · {formatAge(b.createdAt)}
+											{b.items.length} {t('slots')} · {formatBytes(b.totalSize)} · {b.totalTokens.toLocaleString()} {t('tok')} · {formatAge(b.createdAt)}
 										</Text>
 									</VStack>
 									<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => setDeletingBundleId(b.bundleId)}>
@@ -396,7 +394,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 										<Text fontSize="13px" color="var(--wc-text-primary)" fontWeight="500">{cp.name}</Text>
 									)}
 									<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-										Slot {cp.slotIndex} · {cp.tokens.toLocaleString()} tok · {formatBytes(cp.sizeBytes)} · {formatAge(cp.createdAt)}
+										{t('slot', { index: cp.slotIndex })} · {cp.tokens.toLocaleString()} {t('tok')} · {formatBytes(cp.sizeBytes)} · {formatAge(cp.createdAt)}
 									</Text>
 								</HStack>
 								<Text fontSize="10px" color="var(--wc-text-faint)" fontFamily='"Geist Mono", monospace'>
@@ -410,7 +408,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 
 				<Flex mt="3" justify="flex-end">
 					<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-						Total disk usage: {formatBytes(totalDiskUsage)}
+						{t('totalDiskUsage', { size: formatBytes(totalDiskUsage) })}
 					</Text>
 				</Flex>
 			</Box>
@@ -418,10 +416,10 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 			{deletingCheckpoint && (
 				<ConfirmDialog
 					isOpen={true}
-					title="Delete checkpoint?"
-					message={`This will remove the checkpoint for slot ${deletingCheckpoint.slotIndex}. This action cannot be undone.`}
-					confirmLabel="Delete"
-					loadingLabel="Deleting..."
+					title={t('dialogs.deleteCheckpointTitle')}
+					message={t('dialogs.deleteCheckpointMessage', { slot: deletingCheckpoint.slotIndex })}
+					confirmLabel={t('dialogs.confirmDelete')}
+					loadingLabel={t('dialogs.deleting')}
 					isLoading={false}
 					onConfirm={() => handleDeleteOne(deletingCheckpoint.id)}
 					onCancel={() => setDeletingCheckpointId(null)}
@@ -430,10 +428,10 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 			{deletingBundleId && (
 				<ConfirmDialog
 					isOpen={true}
-					title="Delete bundle?"
-					message={`This will remove all ${deletingBundleItems.length} checkpoints in this bundle. This action cannot be undone.`}
-					confirmLabel="Delete all"
-					loadingLabel="Deleting..."
+					title={t('dialogs.deleteBundleTitle')}
+					message={t('dialogs.deleteBundleMessage', { count: deletingBundleItems.length })}
+					confirmLabel={t('dialogs.deleteAll')}
+					loadingLabel={t('dialogs.deleting')}
 					isLoading={false}
 					onConfirm={() => handleDeleteBundle(deletingBundleId)}
 					onCancel={() => setDeletingBundleId(null)}

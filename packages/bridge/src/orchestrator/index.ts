@@ -33,7 +33,13 @@ import { parseSSEBuffer, accumulateToolCallDelta, finalizeToolCalls, type IToolC
 import { validateToolArgs, cleanSchema } from '../validation';
 import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from '../messageConverter';
 
-const MAX_PASSES = 10;
+	const MAX_PASSES = 10;
+
+	function checkPassLimit(pass: number): void {
+		if (pass > MAX_PASSES) {
+			throw new Error(`Tool call loop limit exceeded (${MAX_PASSES} passes)`);
+		}
+	}
 
 export interface IOrchestratorConfig {
 	mcpClient: IMcpClient;
@@ -117,39 +123,47 @@ export class Orchestrator {
 		});
 
 		this.eventNode.fn('bridge.handlePureCompletion', async (api) => {
-			const payload = api.payload as {
-				inferenceRequestId: string;
-				inferenceUrl: string;
-				messages: Array<TOpenAIMessage>;
-				inferenceParams?: Record<string, unknown>;
-			};
-			const { inferenceRequestId, inferenceUrl, messages, inferenceParams } = payload;
-			const controller = new AbortController();
-			this.pureCompletionControllers[inferenceRequestId] = controller;
-			try {
-				return await this.handlePureCompletions(
-					inferenceUrl,
-					messages,
-					inferenceParams || {},
-					(partType, deltaText) => {
-						this.eventNode.broadcast('bridge.pure_completion_chunk.' + inferenceRequestId, { partType, deltaText });
-					},
-					controller.signal,
-				);
-			} finally {
-				delete this.pureCompletionControllers[inferenceRequestId];
-			}
+			return await this.installPureCompletionHandler(api);
 		});
 
 		this.eventNode.fn('bridge.cancelPureCompletion', async (api) => {
-			const id = api.payload as string;
-			const controller = this.pureCompletionControllers[id];
-			if (controller) {
-				controller.abort();
-				delete this.pureCompletionControllers[id];
-			}
-			return { cancelled: !!controller };
+			return await this.installCancelPureCompletionHandler(api);
 		});
+	}
+
+	private async installPureCompletionHandler(api: { payload: unknown }): Promise<IPureCompletionResult> {
+		const payload = api.payload as {
+			inferenceRequestId: string;
+			inferenceUrl: string;
+			messages: Array<TOpenAIMessage>;
+			inferenceParams?: Record<string, unknown>;
+		};
+		const { inferenceRequestId, inferenceUrl, messages, inferenceParams } = payload;
+		const controller = new AbortController();
+		this.pureCompletionControllers[inferenceRequestId] = controller;
+		try {
+			return await this.handlePureCompletions(
+				inferenceUrl,
+				messages,
+				inferenceParams || {},
+				(partType, deltaText) => {
+					this.eventNode.broadcast('bridge.pure_completion_chunk.' + inferenceRequestId, { partType, deltaText });
+				},
+				controller.signal,
+			);
+		} finally {
+			delete this.pureCompletionControllers[inferenceRequestId];
+		}
+	}
+
+	private async installCancelPureCompletionHandler(api: { payload: unknown }): Promise<{ cancelled: boolean }> {
+		const id = api.payload as string;
+		const controller = this.pureCompletionControllers[id];
+		if (controller) {
+			controller.abort();
+			delete this.pureCompletionControllers[id];
+		}
+		return { cancelled: !!controller };
 	}
 
 	// Walk parentId chain from a given message ID up to root, return root-to-leaf
@@ -174,7 +188,7 @@ export class Orchestrator {
 	private async buildMessageChain(
 		request: ICompletionRequest,
 		fromMessageId: TMessageId | undefined,
-		extraMessages: Array<any> = [],
+		extraMessages: Array<TOpenAIMessage> = [],
 	): Promise<Array<TOpenAIMessage>> {
 		const baseMessages: Array<TOpenAIMessage> = [];
 
@@ -409,7 +423,9 @@ export class Orchestrator {
 		messages: Array<TOpenAIMessage>,
 		enabledTools: IToolDefinition[],
 		abortSignal: AbortSignal,
+		pass: number = 0,
 	): Promise<void> {
+		checkPassLimit(pass);
 		if (abortSignal.aborted) return;
 
 		// Create new assistant message for this pass
@@ -482,6 +498,7 @@ export class Orchestrator {
 			messages,
 			enabledTools,
 			abortSignal,
+			pass + 1,
 		);
 	}
 
@@ -568,364 +585,55 @@ export class Orchestrator {
 			return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
 		}
 
-		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
-		let buffer = '';
-		let fullText = '';
-		let reasoningText = '';
-		let timings: Record<string, number> | null = null;
-		let usage: Record<string, number> | null = null;
-		let finishReason = '';
-		const toolCallAccumulators: Record<number, IToolCallAccumulator> = {};
-		let streamError: string | null = null;
 
-		try {
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
-				const { chunks, remaining } = parseSSEBuffer(buffer);
-				buffer = remaining;
+		const { fullText, reasoningText, finishReason, toolCallAccumulators, timings, usage } = await this.processSSEStream(
+			response.body.getReader(),
+			decoder,
+			abortSignal,
+			turn,
+			request,
+		);
 
-				for (const chunk of chunks) {
-					if (abortSignal.aborted) {
-						await this.flushReasoningPart(turn);
-						await this.flushTextPart(turn);
-						return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
-					}
-					if (chunk.error || chunk.warpcore_event === 'error') {
-						streamError = chunk.error ?? 'Inference error from server';
-						break;
-					}
-					const delta = chunk.choices?.[0]?.delta;
-
-					if (delta?.content) {
-						fullText += delta.content;
-						if (turn.currentReasoningPart) { await this.flushReasoningPart(turn); }
-						if (!turn.currentTextPart) {
-							turn.currentTextPart = { id: crypto.randomUUID(), text: '' };
-							this.broadcaster.emit({
-								type: 'message.patched',
-								messageId: turn.assistantMessageId,
-								threadId: request.threadId,
-								updates: {
-									addParts: [{
-										id: turn.currentTextPart.id,
-										type: EMessagePartType.TEXT,
-										orderIndex: turn.partOrderCounter,
-										text: '',
-									}],
-								},
-							});
-						}
-						turn.currentTextPart.text += delta.content;
-						this.broadcaster.emit({
-							type: 'message.chunk',
-							messageId: turn.assistantMessageId,
-							threadId: request.threadId,
-							partId: turn.currentTextPart.id,
-							partType: EMessagePartType.TEXT,
-							deltaText: delta.content,
-						});
-					}
-
-					if (delta?.reasoning_content) {
-						reasoningText += delta.reasoning_content;
-						if (turn.currentTextPart) { await this.flushTextPart(turn); }
-						if (!turn.currentReasoningPart) {
-							turn.currentReasoningPart = { id: crypto.randomUUID(), text: '' };
-							this.broadcaster.emit({
-								type: 'message.patched',
-								messageId: turn.assistantMessageId,
-								threadId: request.threadId,
-								updates: {
-									addParts: [{
-										id: turn.currentReasoningPart.id,
-										type: EMessagePartType.REASONING,
-										orderIndex: turn.partOrderCounter,
-										text: '',
-									}],
-								},
-							});
-						}
-						turn.currentReasoningPart.text += delta.reasoning_content;
-						this.broadcaster.emit({
-							type: 'message.chunk',
-							messageId: turn.assistantMessageId,
-							threadId: request.threadId,
-							partId: turn.currentReasoningPart.id,
-							partType: EMessagePartType.REASONING,
-							deltaText: delta.reasoning_content,
-						});
-					}
-
-					if (delta?.tool_calls) {
-						for (const tc of delta.tool_calls) {
-							const hadName = !!toolCallAccumulators[tc.index]?.name;
-							accumulateToolCallDelta(toolCallAccumulators, tc);
-							if (!hadName) {
-								const name = toolCallAccumulators[tc.index]?.name;
-								if (name) {
-									this.broadcaster.emit({
-										type: 'tool_call.starting',
-										threadId: request.threadId,
-										messageId: turn.assistantMessageId,
-										name,
-									});
-								}
-							}
-						}
-					}
-
-					const fr = chunk.choices?.[0]?.finish_reason;
-					if (fr) {
-						//console.log(new Date(), '[Orch] finish_reason received');
-						finishReason = fr;
-					}
-					if (chunk.timings) timings = chunk.timings as Record<string, number>;
-					if (chunk.usage) usage = chunk.usage as Record<string, number>;
-				}
-			}
-		} finally {
-			//console.log(new Date(), '[Orch] stream ended, flushing parts');
-			await this.flushReasoningPart(turn);
-			await this.flushTextPart(turn);
-			//console.log(new Date(), '[Orch] parts flushed');
-		}
-
-		await this.flushReasoningPart(turn);
-		await this.flushTextPart(turn);
-
-		if (streamError) {
-			this.broadcaster.emit({
-				type: 'inference.error',
-				threadId: request.threadId,
-				messageId: turn.assistantMessageId,
-				error: streamError,
-			});
+		if (finishReason === 'aborted') {
 			return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
 		}
 
 		const finalToolCalls = finalizeToolCalls(toolCallAccumulators);
 
 		if (timings || usage) {
-			//console.log(new Date(), '[Orch] emitting stats patch');
-			const actualTokens = Math.ceil((fullText.length + reasoningText.length) / 4);
-			const stats: IChatMessageStats = {
-				promptTokens: (usage?.prompt_tokens ?? timings?.prompt_n ?? 0),
-				completionTokens: (usage?.completion_tokens ?? timings?.predicted_n ?? 0),
-				reasoningTokens: (usage?.reasoning_tokens ?? 0),
-				actualTokens,
-				promptPerSecond: timings?.prompt_per_second ?? 0,
-				predictedPerSecond: timings?.predicted_per_second ?? 0,
-				promptMs: timings?.prompt_ms ?? 0,
-				predictedMs: timings?.predicted_ms ?? 0,
-			};
-			await this.persistence.updateMessage(turn.assistantMessageId, { stats });
-			//console.log(new Date(), '[Orch] stats persisted, emitting patch');
-			this.broadcaster.emit({
-				type: 'message.patched',
-				messageId: turn.assistantMessageId,
-				threadId: request.threadId,
-				updates: { stats },
-			});
-			//console.log(new Date(), '[Orch] stats patch emitted');
-			await this.persistence.incrementThreadTokens(
+			await this.emitStatsPatch(
+				turn.assistantMessageId,
 				request.threadId,
-				0,
-				stats.actualTokens ?? 0,
+				timings,
+				usage,
+				fullText,
+				reasoningText,
 			);
 		}
 
 		messages.push({
 			role: 'assistant',
-			content: fullText || (null as any),
+			content: fullText || '',
 			tool_calls: finalToolCalls.map(tc => ({
 				id: tc.id,
 				type: 'function',
 				function: { name: tc.name, arguments: tc.arguments },
 			})),
-		} as any);
+		} as TOpenAIMessage);
 
 		if (finalToolCalls.length === 0 || finishReason !== 'tool_calls') {
 			return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
 		}
 
-		// Process tool calls — chain tool messages linearly off the assistant
-		let needsAsk = false;
-		let lastToolMessageId: TMessageId | null = null;
-		let previousToolMessageId: TMessageId = turn.assistantMessageId;
-
-		for (const tc of finalToolCalls) {
-			if (abortSignal.aborted) return { hadToolCalls: true, needsAsk: false, lastToolMessageId };
-
-			const enabledTool = enabledTools.find(t => t.name === tc.name);
-			const serverName = enabledTool?.serverName ?? this.mcpClient.findToolServer(tc.name);
-			//console.log('[Orch] tool call:', { toolName: tc.name, serverName, threadId: request.threadId });
-			let args: Record<string, unknown> = {};
-			try { args = JSON.parse(tc.arguments || '{}'); } catch { /* empty */ }
-
-			let validationError: string | null = null;
-			if (!serverName) {
-				validationError = `No MCP server for tool '${tc.name}'`;
-			} else {
-				const toolDef = enabledTools.find(t => t.name === tc.name);
-				if (toolDef) {
-					const validation = validateToolArgs(toolDef.inputSchema, args);
-					if (!validation.valid) {
-						validationError = `Invalid arguments: ${validation.errors.join(', ')}`;
-					}
-				}
-			}
-
-			// Pre-generate IDs so writes happen in the correct event order
-			const toolCallId = crypto.randomUUID();
-			const toolMessageId = crypto.randomUUID();
-
-			const toolCallRecord: IToolCall = {
-				id: toolCallId,
-				messageId: toolMessageId,
-				threadId: request.threadId,
-				serverName: serverName ?? '',
-				toolName: tc.name,
-				arguments: JSON.stringify(args),
-				result: validationError ? JSON.stringify({ error: validationError }) : null,
-				status: validationError ? EToolCallStatus.ERROR : EToolCallStatus.PENDING,
-				error: validationError,
-				createdAt: Date.now(),
-				resolvedAt: validationError ? Date.now() : null,
-			};
-
-			// Order: tool_call.created -> message.patched (assistant gets tool_call part) -> message.created (tool message)
-			await this.persistence.createToolCall(toolCallRecord);
-			this.broadcaster.emit({ type: 'tool_call.created', toolCall: toolCallRecord });
-
-			const toolPart: IMessagePart = {
-				id: crypto.randomUUID(),
-				type: EMessagePartType.TOOL_CALL,
-				orderIndex: turn.partOrderCounter++,
-				toolCallId,
-			};
-			await this.persistence.appendMessagePart(turn.assistantMessageId, toolPart);
-			this.broadcaster.emit({
-				type: 'message.patched',
-				messageId: turn.assistantMessageId,
-				threadId: request.threadId,
-				updates: { addParts: [toolPart] },
-			});
-
-			// Tool message chained off previous tool message (or assistant for first)
-			const toolMsg: IChatMessage = {
-				id: toolMessageId,
-				parentId: previousToolMessageId,
-				threadId: request.threadId,
-				role: EChatRole.TOOL,
-				content: [{
-					id: crypto.randomUUID(),
-					type: EMessagePartType.TOOL_CALL,
-					orderIndex: 0,
-					toolCallId,
-				}],
-				stats: null,
-				createdAt: Date.now(),
-			};
-			await this.persistence.createMessage(toolMsg);
-			this.broadcaster.emit({ type: 'message.created', message: toolMsg });
-
-			previousToolMessageId = toolMessageId;
-			lastToolMessageId = toolMessageId;
-
-			if (validationError) {
-				messages.push({
-					role: 'tool',
-					content: toolCallRecord.result!,
-					tool_call_id: tc.id,
-				} as any);
-				continue;
-			}
-
-			const approvalMode = await this.permissions.getToolApprovalMode(request.threadId, serverName!, tc.name);
-			//console.log('[Orch] approvalMode:', approvalMode);
-
-			if (approvalMode === EToolApprovalMode.ASK) {
-				needsAsk = true;
-				continue;
-			}
-
-			if (approvalMode === EToolApprovalMode.DENIED) {
-				const deniedTc: IToolCall = {
-					...toolCallRecord,
-					status: EToolCallStatus.DENIED,
-					result: JSON.stringify({ error: 'Tool call denied by policy' }),
-					resolvedAt: Date.now(),
-				};
-				await this.persistence.updateToolCall(toolCallId, {
-					status: deniedTc.status,
-					result: deniedTc.result,
-					resolvedAt: deniedTc.resolvedAt,
-				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: deniedTc });
-				messages.push({
-					role: 'tool',
-					content: deniedTc.result!,
-					tool_call_id: tc.id,
-				} as any);
-				continue;
-			}
-
-			// ALLOWED — execute now
-			const executingTc: IToolCall = { ...toolCallRecord, status: EToolCallStatus.EXECUTING };
-			await this.persistence.updateToolCall(toolCallId, { status: EToolCallStatus.EXECUTING });
-			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: executingTc });
-
-			try {
-				const wsVars = await this.resolveWsVars(request.threadId);
-				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars);
-				console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'finalArgs:', JSON.stringify(finalArgs));
-				const mcpResult = await this.mcpClient.executeToolCall(serverName!, tc.name, finalArgs, request.threadId);
-				const resultStr = JSON.stringify(mcpResult.content);
-				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
-				const completedTc: IToolCall = {
-					...toolCallRecord,
-					status: finalStatus,
-					result: resultStr,
-					error: mcpResult.isError ? resultStr : null,
-					resolvedAt: Date.now(),
-				};
-				await this.persistence.updateToolCall(toolCallId, {
-					status: finalStatus,
-					result: resultStr,
-					error: mcpResult.isError ? resultStr : null,
-					resolvedAt: completedTc.resolvedAt,
-				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: completedTc });
-				messages.push({
-					role: 'tool',
-					content: resultStr,
-					tool_call_id: tc.id,
-				} as any);
-			} catch (err) {
-				const errorMsg = err instanceof Error ? err.message : String(err);
-				const errorResult = JSON.stringify({ error: errorMsg });
-				const erroredTc: IToolCall = {
-					...toolCallRecord,
-					status: EToolCallStatus.ERROR,
-					error: errorMsg,
-					resolvedAt: Date.now(),
-				};
-				await this.persistence.updateToolCall(toolCallId, {
-					status: EToolCallStatus.ERROR,
-					error: errorMsg,
-					resolvedAt: erroredTc.resolvedAt,
-				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: erroredTc });
-				messages.push({
-					role: 'tool',
-					content: errorResult,
-					tool_call_id: tc.id,
-				} as any);
-			}
-		}
+		const { needsAsk, lastToolMessageId } = await this.processToolCalls(
+			finalToolCalls,
+			enabledTools,
+			request,
+			abortSignal,
+			turn,
+			messages,
+		);
 
 		return { hadToolCalls: true, needsAsk, lastToolMessageId };
 	}
@@ -950,6 +658,436 @@ export class Orchestrator {
 			text: turn.currentReasoningPart.text,
 		});
 		turn.currentReasoningPart = null;
+	}
+
+	private async processSSEStream(
+		reader: ReadableStreamDefaultReader<Uint8Array>,
+		decoder: TextDecoder,
+		abortSignal: AbortSignal,
+		turn: ITurnState,
+		request: ICompletionRequest,
+	): Promise<{ fullText: string; reasoningText: string; finishReason: string; toolCallAccumulators: Record<number, IToolCallAccumulator>; timings: Record<string, number> | null; usage: Record<string, number> | null }> {
+		let buffer = '';
+		let fullText = '';
+		let reasoningText = '';
+		let finishReason = '';
+		let timings: Record<string, number> | null = null;
+		let usage: Record<string, number> | null = null;
+		const toolCallAccumulators: Record<number, IToolCallAccumulator> = {};
+
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				const { chunks, remaining } = parseSSEBuffer(buffer);
+				buffer = remaining;
+
+				for (const chunk of chunks) {
+					if (abortSignal.aborted) {
+						await this.flushReasoningPart(turn);
+						await this.flushTextPart(turn);
+						return { fullText: '', reasoningText: '', finishReason: 'aborted', toolCallAccumulators, timings: null, usage: null };
+					}
+					if (chunk.error || chunk.warpcore_event === 'error') {
+						break;
+					}
+					const delta = chunk.choices?.[0]?.delta;
+
+					if (delta?.content) {
+						fullText = await this.handleContentDelta(fullText, delta.content, turn, request);
+					}
+
+					if (delta?.reasoning_content) {
+						reasoningText = await this.handleReasoningDelta(reasoningText, delta.reasoning_content, turn, request);
+					}
+
+					if (delta?.tool_calls) {
+						await this.handleToolCallDeltas(delta.tool_calls, toolCallAccumulators, request, turn);
+					}
+
+					const fr = chunk.choices?.[0]?.finish_reason;
+					if (fr) finishReason = fr;
+					if (chunk.timings) timings = chunk.timings as Record<string, number>;
+					if (chunk.usage) usage = chunk.usage as Record<string, number>;
+				}
+			}
+		} finally {
+			await this.flushReasoningPart(turn);
+			await this.flushTextPart(turn);
+		}
+
+		return { fullText, reasoningText, finishReason, toolCallAccumulators, timings, usage };
+	}
+
+	private async handleContentDelta(
+		fullText: string,
+		content: string,
+		turn: ITurnState,
+		request: ICompletionRequest,
+	): Promise<string> {
+		if (turn.currentReasoningPart) { await this.flushReasoningPart(turn); }
+		if (!turn.currentTextPart) {
+			turn.currentTextPart = { id: crypto.randomUUID(), text: '' };
+			this.broadcaster.emit({
+				type: 'message.patched',
+				messageId: turn.assistantMessageId,
+				threadId: request.threadId,
+				updates: {
+					addParts: [{
+						id: turn.currentTextPart.id,
+						type: EMessagePartType.TEXT,
+						orderIndex: turn.partOrderCounter,
+						text: '',
+					}],
+				},
+			});
+		}
+		turn.currentTextPart.text += content;
+		this.broadcaster.emit({
+			type: 'message.chunk',
+			messageId: turn.assistantMessageId,
+			threadId: request.threadId,
+			partId: turn.currentTextPart.id,
+			partType: EMessagePartType.TEXT,
+			deltaText: content,
+		});
+		return fullText + content;
+	}
+
+	private async handleReasoningDelta(
+		reasoningText: string,
+		reasoningContent: string,
+		turn: ITurnState,
+		request: ICompletionRequest,
+	): Promise<string> {
+		if (turn.currentTextPart) { await this.flushTextPart(turn); }
+		if (!turn.currentReasoningPart) {
+			turn.currentReasoningPart = { id: crypto.randomUUID(), text: '' };
+			this.broadcaster.emit({
+				type: 'message.patched',
+				messageId: turn.assistantMessageId,
+				threadId: request.threadId,
+				updates: {
+					addParts: [{
+						id: turn.currentReasoningPart.id,
+						type: EMessagePartType.REASONING,
+						orderIndex: turn.partOrderCounter,
+						text: '',
+					}],
+				},
+			});
+		}
+		turn.currentReasoningPart.text += reasoningContent;
+		this.broadcaster.emit({
+			type: 'message.chunk',
+			messageId: turn.assistantMessageId,
+			threadId: request.threadId,
+			partId: turn.currentReasoningPart.id,
+			partType: EMessagePartType.REASONING,
+			deltaText: reasoningContent,
+		});
+		return reasoningText + reasoningContent;
+	}
+
+	private async handleToolCallDeltas(
+		toolCalls: Array<{ index: number; id?: string; name?: string; arguments?: string }>,
+		toolCallAccumulators: Record<number, IToolCallAccumulator>,
+		request: ICompletionRequest,
+		turn: ITurnState,
+	): Promise<void> {
+		for (const tc of toolCalls) {
+			const hadName = !!toolCallAccumulators[tc.index]?.name;
+			accumulateToolCallDelta(toolCallAccumulators, tc);
+			if (!hadName) {
+				const name = toolCallAccumulators[tc.index]?.name;
+				if (name) {
+					this.broadcaster.emit({
+						type: 'tool_call.starting',
+						threadId: request.threadId,
+						messageId: turn.assistantMessageId,
+						name,
+					});
+				}
+			}
+		}
+	}
+
+	private async emitStatsPatch(
+		assistantMessageId: TMessageId,
+		threadId: TThreadId,
+		timings: Record<string, number> | null,
+		usage: Record<string, number> | null,
+		fullText: string,
+		reasoningText: string,
+	): Promise<void> {
+		const actualTokens = Math.ceil((fullText.length + reasoningText.length) / 4);
+		const stats: IChatMessageStats = {
+			promptTokens: (usage?.prompt_tokens ?? timings?.prompt_n ?? 0),
+			completionTokens: (usage?.completion_tokens ?? timings?.predicted_n ?? 0),
+			reasoningTokens: (usage?.reasoning_tokens ?? 0),
+			actualTokens,
+			promptPerSecond: timings?.prompt_per_second ?? 0,
+			predictedPerSecond: timings?.predicted_per_second ?? 0,
+			promptMs: timings?.prompt_ms ?? 0,
+			predictedMs: timings?.predicted_ms ?? 0,
+		};
+		await this.persistence.updateMessage(assistantMessageId, { stats });
+		this.broadcaster.emit({
+			type: 'message.patched',
+			messageId: assistantMessageId,
+			threadId,
+			updates: { stats },
+		});
+		await this.persistence.incrementThreadTokens(threadId, 0, stats.actualTokens ?? 0);
+	}
+
+	private async processToolCalls(
+		finalToolCalls: Array<{ id: string; name: string; arguments: string }>,
+		enabledTools: IToolDefinition[],
+		request: ICompletionRequest,
+		abortSignal: AbortSignal,
+		turn: ITurnState,
+		messages: Array<TOpenAIMessage>,
+	): Promise<{ needsAsk: boolean; lastToolMessageId: TMessageId | null }> {
+		let needsAsk = false;
+		let lastToolMessageId: TMessageId | null = null;
+		let previousToolMessageId: TMessageId = turn.assistantMessageId;
+
+		const toolDefMap = new Map<string, IToolDefinition>();
+		for (const t of enabledTools) toolDefMap.set(t.name, t);
+
+		for (const tc of finalToolCalls) {
+			if (abortSignal.aborted) return { needsAsk: false, lastToolMessageId };
+
+			const enabledTool = toolDefMap.get(tc.name);
+			const serverName = enabledTool?.serverName ?? this.mcpClient.findToolServer(tc.name);
+			let args: Record<string, unknown> = {};
+			try { args = JSON.parse(tc.arguments || '{}'); } catch { /* empty */ }
+
+			const validationError = this.validateToolCall(tc.name, serverName, args, toolDefMap);
+			const toolCallId = crypto.randomUUID();
+			const toolMessageId = crypto.randomUUID();
+			const { toolCallRecord } = this.buildToolCallRecord(
+				toolCallId,
+				toolMessageId,
+				serverName,
+				tc,
+				args,
+				validationError,
+				request.threadId,
+			);
+
+			await this.persistence.createToolCall(toolCallRecord);
+			this.broadcaster.emit({ type: 'tool_call.created', toolCall: toolCallRecord });
+
+			await this.attachToolCallToAssistant(turn, toolCallId, request.threadId);
+
+			const { toolMsgId, updatedPrevious } = await this.createChainedToolMessage(
+				toolMessageId,
+				previousToolMessageId,
+				toolCallId,
+				request.threadId,
+			);
+			previousToolMessageId = updatedPrevious;
+			lastToolMessageId = toolMsgId;
+
+			if (validationError) {
+				messages.push({
+					role: 'tool',
+					content: toolCallRecord.result!,
+					tool_call_id: tc.id,
+				} as TOpenAIMessage);
+				continue;
+			}
+
+			const approvalMode = await this.permissions.getToolApprovalMode(request.threadId, serverName!, tc.name);
+
+			if (approvalMode === EToolApprovalMode.ASK) {
+				needsAsk = true;
+				continue;
+			}
+
+			if (approvalMode === EToolApprovalMode.DENIED) {
+				await this.handleDeniedToolCall(toolCallRecord, toolCallId, tc.id, messages);
+				continue;
+			}
+
+			await this.executeToolCall(toolCallRecord, tc, serverName!, args, request, messages);
+		}
+
+		return { needsAsk, lastToolMessageId };
+	}
+
+	private buildToolCallRecord(
+		toolCallId: string,
+		toolMessageId: string,
+		serverName: string | null | undefined,
+		tc: { name: string; arguments: string },
+		args: Record<string, unknown>,
+		validationError: string | null,
+		threadId: TThreadId,
+	): { toolCallRecord: IToolCall; toolCallId: string; toolMessageId: string } {
+		const toolCallRecord: IToolCall = {
+			id: toolCallId,
+			messageId: toolMessageId,
+			threadId,
+			serverName: serverName ?? '',
+			toolName: tc.name,
+			arguments: JSON.stringify(args),
+			result: validationError ? JSON.stringify({ error: validationError }) : null,
+			status: validationError ? EToolCallStatus.ERROR : EToolCallStatus.PENDING,
+			error: validationError,
+			createdAt: Date.now(),
+			resolvedAt: validationError ? Date.now() : null,
+		};
+		return { toolCallRecord, toolCallId, toolMessageId };
+	}
+
+	private async attachToolCallToAssistant(
+		turn: ITurnState,
+		toolCallId: string,
+		threadId: TThreadId,
+	): Promise<void> {
+		const toolPart: IMessagePart = {
+			id: crypto.randomUUID(),
+			type: EMessagePartType.TOOL_CALL,
+			orderIndex: turn.partOrderCounter++,
+			toolCallId,
+		};
+		await this.persistence.appendMessagePart(turn.assistantMessageId, toolPart);
+		this.broadcaster.emit({
+			type: 'message.patched',
+			messageId: turn.assistantMessageId,
+			threadId,
+			updates: { addParts: [toolPart] },
+		});
+	}
+
+	private async createChainedToolMessage(
+		toolMessageId: string,
+		previousToolMessageId: TMessageId,
+		toolCallId: string,
+		threadId: TThreadId,
+	): Promise<{ toolMsgId: string; updatedPrevious: TMessageId }> {
+		const toolMsg: IChatMessage = {
+			id: toolMessageId,
+			parentId: previousToolMessageId,
+			threadId,
+			role: EChatRole.TOOL,
+			content: [{
+				id: crypto.randomUUID(),
+				type: EMessagePartType.TOOL_CALL,
+				orderIndex: 0,
+				toolCallId,
+			}],
+			stats: null,
+			createdAt: Date.now(),
+		};
+		await this.persistence.createMessage(toolMsg);
+		this.broadcaster.emit({ type: 'message.created', message: toolMsg });
+		return { toolMsgId: toolMessageId, updatedPrevious: toolMessageId };
+	}
+
+	private async handleDeniedToolCall(
+		toolCallRecord: IToolCall,
+		toolCallId: string,
+		assistantToolCallId: string,
+		messages: Array<TOpenAIMessage>,
+	): Promise<void> {
+		const deniedTc: IToolCall = {
+			...toolCallRecord,
+			status: EToolCallStatus.DENIED,
+			result: JSON.stringify({ error: 'Tool call denied by policy' }),
+			resolvedAt: Date.now(),
+		};
+		await this.persistence.updateToolCall(toolCallId, {
+			status: deniedTc.status,
+			result: deniedTc.result,
+			resolvedAt: deniedTc.resolvedAt,
+		});
+		this.broadcaster.emit({ type: 'tool_call.updated', toolCall: deniedTc });
+		messages.push({
+			role: 'tool',
+			content: deniedTc.result!,
+			tool_call_id: assistantToolCallId,
+		} as TOpenAIMessage);
+	}
+
+	private validateToolCall(
+		toolName: string,
+		serverName: string | null | undefined,
+		args: Record<string, unknown>,
+		toolDefMap: Map<string, IToolDefinition>,
+	): string | null {
+		if (!serverName) return `No MCP server for tool '${toolName}'`;
+		const toolDef = toolDefMap.get(toolName);
+		if (toolDef) {
+			const validation = validateToolArgs(toolDef.inputSchema, args);
+			if (!validation.valid) return `Invalid arguments: ${validation.errors.join(', ')}`;
+		}
+		return null;
+	}
+
+	private async executeToolCall(
+		toolCallRecord: IToolCall,
+		tc: { id: string; name: string; arguments: string },
+		serverName: string,
+		args: Record<string, unknown>,
+		request: ICompletionRequest,
+		messages: Array<TOpenAIMessage>,
+	): Promise<void> {
+		const executingTc: IToolCall = { ...toolCallRecord, status: EToolCallStatus.EXECUTING };
+		await this.persistence.updateToolCall(toolCallRecord.id, { status: EToolCallStatus.EXECUTING });
+		this.broadcaster.emit({ type: 'tool_call.updated', toolCall: executingTc });
+
+		try {
+			const wsVars = await this.resolveWsVars(request.threadId);
+			const finalArgs = this.mcpClient.prepareToolArgs(serverName, tc.name, args, wsVars);
+			console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'finalArgs:', JSON.stringify(finalArgs));
+			const mcpResult = await this.mcpClient.executeToolCall(serverName, tc.name, finalArgs, request.threadId);
+			const resultStr = JSON.stringify(mcpResult.content);
+			const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
+			const completedTc: IToolCall = {
+				...toolCallRecord,
+				status: finalStatus,
+				result: resultStr,
+				error: mcpResult.isError ? resultStr : null,
+				resolvedAt: Date.now(),
+			};
+			await this.persistence.updateToolCall(toolCallRecord.id, {
+				status: finalStatus,
+				result: resultStr,
+				error: mcpResult.isError ? resultStr : null,
+				resolvedAt: completedTc.resolvedAt,
+			});
+			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: completedTc });
+			messages.push({
+				role: 'tool',
+				content: resultStr,
+				tool_call_id: tc.id,
+			} as TOpenAIMessage);
+		} catch (err) {
+			const errorMsg = err instanceof Error ? err.message : String(err);
+			const errorResult = JSON.stringify({ error: errorMsg });
+			const erroredTc: IToolCall = {
+				...toolCallRecord,
+				status: EToolCallStatus.ERROR,
+				error: errorMsg,
+				resolvedAt: Date.now(),
+			};
+			await this.persistence.updateToolCall(toolCallRecord.id, {
+				status: EToolCallStatus.ERROR,
+				error: errorMsg,
+				resolvedAt: erroredTc.resolvedAt,
+			});
+			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: erroredTc });
+			messages.push({
+				role: 'tool',
+				content: errorResult,
+				tool_call_id: tc.id,
+			} as TOpenAIMessage);
+		}
 	}
 
 	// V2: builds message chain from persistence instead of receiving it from frontend
@@ -1071,18 +1209,57 @@ export class Orchestrator {
 	}
 
 	private buildInferenceParams(params: Record<string, unknown>): Record<string, unknown> {
-		const p = params as any;
+		const p = params as Record<string, unknown> & {
+			temperature?: number;
+			topP?: number;
+			topK?: number;
+			maxTokens?: number;
+			frequencyPenalty?: number;
+			presencePenalty?: number;
+			seed?: number;
+			repeatPenalty?: number;
+			minP?: number;
+			mirostatMode?: number;
+			mirostat_tau?: number;
+			mirostat_eta?: number;
+			cachePrompt?: boolean;
+			responseFormat?: string;
+			reasoningFormat?: string;
+			enableThinking?: boolean;
+			reasoningEffort?: string;
+			typicalP?: number;
+			ignoreEos?: boolean;
+			logitBias?: number[];
+			dryMultiplier?: number;
+			dryBase?: number;
+			dryAllowedLength?: number;
+			dryPenaltyLastN?: number;
+			topNSigma?: number;
+			xtcProbability?: number;
+			xtcThreshold?: number;
+			dynatempRange?: number;
+			dynatempExponent?: number;
+			repeatLastN?: number;
+			n_probs?: number;
+			samplers?: string[];
+			grammar?: string;
+			jsonSchema?: unknown;
+			adaptiveTarget?: number;
+			adaptiveDecay?: number;
+			extraSamplingParams?: Record<string, unknown>;
+			stopSequences?: string[];
+		};
 		return {
 			...(p.temperature !== undefined ? { temperature: p.temperature } : {}),
 			...(p.topP !== undefined ? { top_p: p.topP } : {}),
 			...(p.topK !== undefined ? { top_k: p.topK } : {}),
-			...(p.maxTokens > 0 ? { max_tokens: p.maxTokens } : {}),
+			...(p.maxTokens ?? 0 > 0 ? { max_tokens: p.maxTokens } : {}),
 			...(p.frequencyPenalty ? { frequency_penalty: p.frequencyPenalty } : {}),
 			...(p.presencePenalty ? { presence_penalty: p.presencePenalty } : {}),
-			...(p.seed >= 0 ? { seed: p.seed } : {}),
+			...(p.seed ?? 0 >= 0 ? { seed: p.seed } : {}),
 			...(p.repeatPenalty !== 1.0 ? { repeat_penalty: p.repeatPenalty } : {}),
-			...(p.minP > 0 ? { min_p: p.minP } : {}),
-			...(p.mirostatMode > 0 ? { mirostat: p.mirostatMode, mirostat_tau: p.mirostatTau, mirostat_eta: p.mirostatEta } : {}),
+			...(p.minP ?? 0 > 0 ? { min_p: p.minP } : {}),
+			...(p.mirostatMode ?? 0 > 0 ? { mirostat: p.mirostatMode, mirostat_tau: p.mirostatTau, mirostat_eta: p.mirostatEta } : {}),
 			...(p.cachePrompt ? { cache_prompt: true } : {}),
 			...(p.responseFormat && p.responseFormat !== 'text' ? { response_format: { type: p.responseFormat } } : {}),
 			...(p.reasoningFormat && p.reasoningFormat !== 'none' ? { reasoning_format: p.reasoningFormat } : {}),
@@ -1136,8 +1313,9 @@ export class Orchestrator {
 		}
 
 		if (attachedTools && attachedTools.length > 0) {
+			const attachedSet = new Set(attachedTools.map(a => `${a.serverName}::${a.toolName}`));
 			const filtered = allTools.filter(t =>
-				attachedTools.some(a => a.serverName === t.serverName && a.toolName === t.name)
+				attachedSet.has(`${t.serverName}::${t.name}`)
 			);
 			return this.permissions.getEnabledTools(request.threadId, filtered);
 		}
@@ -1165,7 +1343,8 @@ export class Orchestrator {
 				return res.json();
 			})
 			.then(body => {
-				const title = body?.choices?.[0]?.message?.content ?? '';
+				const json = body as { choices?: Array<{ message?: { content?: string } }> };
+				const title = json?.choices?.[0]?.message?.content ?? '';
 				if (!title) throw new Error('Empty title response');
 				return title.replace(/^["']|["']$/g, '').trim();
 			});

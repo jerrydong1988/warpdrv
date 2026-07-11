@@ -1,12 +1,14 @@
 import { Box, Text, HStack, VStack, Flex, Button } from '@chakra-ui/react';
 import { Server, Play, Mic } from 'lucide-react';
 import React, { useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store';
 import { useMutation } from '@/hooks/useQuery';
 import { restartServer } from '@/api/services';
 import { restartWhisperServer } from '@/api/whisperServices';
 import { EServerStatus, EWhisperServerStatus, type IServer, type IWhisperServer } from '@warpcore/shared';
+
 import { StatusDot } from '../StatusDot';
 import { TileContainer } from '../TileContainer';
 
@@ -25,6 +27,7 @@ const statusToState = (status: EServerStatus): 'online' | 'loading' | 'error' | 
 };
 
 export const ServersTile = React.memo(() => {
+	const { t } = useTranslation('home');
 	const navigate = useNavigate();
 	const servers = useStore((s) => s.servers);
 	const whisperServers = useStore((s) => s.whisperServers);
@@ -61,7 +64,7 @@ export const ServersTile = React.memo(() => {
 			llamaDisplay.push({
 				id: mostRecentWhisper.id,
 				serverName: mostRecentWhisper.serverName,
-				status: mostRecentWhisper.status,
+				status: mostRecentWhisper.status as unknown as EServerStatus,
 				isWhisper: true,
 			});
 			return llamaDisplay;
@@ -80,7 +83,7 @@ export const ServersTile = React.memo(() => {
 	);
 
 	const { mutate: restartWhisperMut, loading: loadingWhisper } = useMutation<string, void>(
-		useCallback((id: string) => restartWhisperServer(id), [])
+		useCallback((id: string) => restartWhisperServer(id).then(() => ({ ok: true, data: undefined, error: null })), [])
 	);
 
 	const handleStart = async (id: string, isWhisper: boolean) => {
@@ -96,13 +99,13 @@ export const ServersTile = React.memo(() => {
 	return (
 		<TileContainer
 			icon={<Server size={18} />}
-			label="Servers"
+			label={t('tiles.servers.title')}
 			statusDot={errors.length > 0 ? 'error' : running.length > 0 ? 'online' : 'offline'}
 			onClick={() => navigate('/servers')}
 		>
 			{!hasServers ? (
 				<Text fontSize="13px" color="var(--wc-text-muted)">
-					No servers configured
+					{t('tiles.servers.noServers')}
 				</Text>
 			) : (
 				<VStack align="stretch" gap="2" w="100%">
@@ -117,7 +120,7 @@ export const ServersTile = React.memo(() => {
 										<StatusDot state={statusToState(srv.status as EServerStatus)} />
 									)}
 									<Box overflow="hidden">
-										<Text fontSize="13px" color="var(--wc-text-tertiary)" noOfLines={1}>
+										<Text fontSize="13px" color="var(--wc-text-tertiary)" lineClamp={1}>
 											{srv.serverName}
 										</Text>
 									</Box>
@@ -141,7 +144,7 @@ bg="var(--wc-accent-blue-bg-8)"
 										disabled={loadingLlama || loadingWhisper}
 									>
 										<Play size={12} />
-										Start
+										{t('tiles.servers.start')}
 									</Button>
 								)}
 							</Flex>

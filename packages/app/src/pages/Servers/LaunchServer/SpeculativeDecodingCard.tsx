@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
 	Flex, Box, Text, HStack, VStack, Button, Input, Switch, Portal, Combobox, createListCollection,
 } from '@chakra-ui/react';
@@ -221,7 +222,7 @@ export const SpeculativeDecodingCard = React.memo(({
 						</Box>
 						<Flex gap="4">
 							<NumberField label="Draft Min" value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
-							<NumberField label="Draft N-Max" value={specDecode.specDraftNMax} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
+							<NumberField label="Draft N-Max" value={specDecode.specDraftNMax ?? 1} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
 						</Flex>
 						</VStack>
 					)}
