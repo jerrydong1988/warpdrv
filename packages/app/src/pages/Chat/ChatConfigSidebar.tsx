@@ -16,6 +16,7 @@ import { useJsonValidator } from '@/hooks/useJsonValidator';
 import { useStore } from '@/store';
 import { useQuery, useListQuery } from '@/hooks/useQuery';
 import { useDependantState } from "@/hooks/useDependantState";
+import { useTranslation } from 'react-i18next';
 
 // ============================================================
 // Default params — must match the one in ChatPage
@@ -233,6 +234,7 @@ export function ChatConfigContentPanel({
 	onSystemPromptChange,
 	onPresetSelect,
 }: IChatConfigContentPanelProps) {
+	const { t } = useTranslation();
 	const [presets, setPresets] = useState<IChatPreset[]>([]);
 	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [savePresetName, setSavePresetName] = useState('');
@@ -300,7 +302,7 @@ export function ChatConfigContentPanel({
 		<VStack gap="3" p="3" align="stretch">
 			{/* Preset selector */}
 			<Box>
-				<SectionHeader title="Preset" />
+				<SectionHeader title={t('common:ui.preset')} />
 				<HStack gap="1">
 					<select
 						value={selectedPresetId ?? ''}
@@ -316,7 +318,7 @@ export function ChatConfigContentPanel({
 							height: '28px',
 						}}
 					>
-						<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None (custom)</option>
+						<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>{t('common:ui.noneCustom')}</option>
 						{presets.map((p) => (
 							<option key={p.id} value={p.id} style={{ background: 'var(--wc-bg-elevated)' }}>{p.name}</option>
 						))}
@@ -336,7 +338,7 @@ export function ChatConfigContentPanel({
 					<HStack mt="1.5" gap="1">
 						<Input
 							size="xs"
-							placeholder="Preset name..."
+							placeholder={t('common:ui.presetName')}
 							value={savePresetName}
 							onChange={(e) => setSavePresetName(e.target.value)}
 							onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); if (e.key === 'Escape') setShowSaveInput(false); }}
@@ -356,11 +358,11 @@ export function ChatConfigContentPanel({
 
 			{/* System Prompt */}
 			<Box>
-				<SectionHeader title="System Prompt" />
+				<SectionHeader title={t('common:ui.systemPrompt')} />
 				<Textarea
 					value={systemPrompt}
 					onChange={(e) => onSystemPromptChange(e.target.value)}
-					placeholder="You are a helpful assistant..."
+					placeholder={t('common:ui.youAreAHelpfulAssistant')}
 					fontSize="12px"
 					bg="var(--wc-bg-card)"
 					borderColor="var(--wc-border-default)"
@@ -374,7 +376,7 @@ export function ChatConfigContentPanel({
 
 			{/* Inference Params View Mode */}
 			<Box mt="4">
-				<SectionHeader title="Inference Params" />
+				<SectionHeader title={t('common:ui.inferenceParams')} />
 				<Box mt="2">
 					<SegmentGroup.Root
 						value={showRawJSON ? 'json' : 'ui'}
@@ -395,7 +397,7 @@ export function ChatConfigContentPanel({
 									label: (
 										<HStack gap="1.5" color={showRawJSON ? 'var(--wc-text-muted)' : 'var(--wc-text-heading)'}>
 											<LuLayoutGrid size={14} />
-											<Text fontSize="12px">Controls</Text>
+											<Text fontSize="12px">{t('common:ui.controls')}</Text>
 										</HStack>
 									),
 								},
@@ -404,7 +406,7 @@ export function ChatConfigContentPanel({
 									label: (
 										<HStack gap="1.5" color={showRawJSON ? 'var(--wc-text-heading)' : 'var(--wc-text-muted)'}>
 											<LuCode size={14} />
-											<Text fontSize="12px">Raw</Text>
+											<Text fontSize="12px">{t('common:ui.raw')}</Text>
 										</HStack>
 									),
 								},
@@ -449,8 +451,7 @@ export function ChatConfigContentPanel({
 							</Text>
 						)}
 						<Text fontSize="10px" color="var(--wc-text-faint)" mt="1">
-							Edit JSON directly. Only non-default values are saved as overrides.
-						</Text>
+							{t('common:ui.editJsonDirectlyOnlyNonDefaultValuesAreSavedAsOverrides')}</Text>
 					</Box>
 				)}
 			</Box>
@@ -459,24 +460,24 @@ export function ChatConfigContentPanel({
 				<>
 					{/* Sampling */}
 					<Box>
-						<SectionHeader title="Sampling" />
+						<SectionHeader title={t('common:ui.sampling')} />
 						<VStack gap="2.5" align="stretch">
-							<ParamSlider label="Temperature" value={displayParams.temperature} min={0} max={2} step={0.05} onChange={(v) => updateParam('temperature', v)} />
-							<ParamSlider label="Top P" value={displayParams.topP} min={0} max={1} step={0.05} onChange={(v) => updateParam('topP', v)} />
-							<ParamSlider label="Top K" value={displayParams.topK} min={0} max={200} step={1} onChange={(v) => updateParam('topK', v)} />
-							<ParamSlider label="Min P" value={displayParams.minP} min={0} max={1} step={0.01} onChange={(v) => updateParam('minP', v)} />
-							<ParamSlider label="Repeat Penalty" value={displayParams.repeatPenalty} min={1} max={2} step={0.05} onChange={(v) => updateParam('repeatPenalty', v)} />
-							<ParamSlider label="Frequency Penalty" value={displayParams.frequencyPenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('frequencyPenalty', v)} />
-							<ParamSlider label="Presence Penalty" value={displayParams.presencePenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('presencePenalty', v)} />
+							<ParamSlider label={t('common:ui.temperature')} value={displayParams.temperature} min={0} max={2} step={0.05} onChange={(v) => updateParam('temperature', v)} />
+							<ParamSlider label={t('common:ui.topP')} value={displayParams.topP} min={0} max={1} step={0.05} onChange={(v) => updateParam('topP', v)} />
+							<ParamSlider label={t('common:ui.topK')} value={displayParams.topK} min={0} max={200} step={1} onChange={(v) => updateParam('topK', v)} />
+							<ParamSlider label={t('common:ui.minP')} value={displayParams.minP} min={0} max={1} step={0.01} onChange={(v) => updateParam('minP', v)} />
+							<ParamSlider label={t('common:ui.repeatPenalty')} value={displayParams.repeatPenalty} min={1} max={2} step={0.05} onChange={(v) => updateParam('repeatPenalty', v)} />
+							<ParamSlider label={t('common:ui.frequencyPenalty')} value={displayParams.frequencyPenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('frequencyPenalty', v)} />
+							<ParamSlider label={t('common:ui.presencePenalty')} value={displayParams.presencePenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('presencePenalty', v)} />
 						</VStack>
 					</Box>
 
 					{/* Generation */}
 					<Box>
-						<SectionHeader title="Generation" />
+						<SectionHeader title={t('common:ui.generation')} />
 						<VStack gap="2.5" align="stretch">
 							<Box>
-								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">Max Tokens (-1 = unlimited)</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">{t('common:ui.maxTokens1Unlimited')}</Text>
 								<Input
 									size="xs"
 									fontFamily="mono"
@@ -490,7 +491,7 @@ export function ChatConfigContentPanel({
 								/>
 							</Box>
 							<Box>
-								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">Seed (-1 = random)</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">{t('common:ui.seed1Random')}</Text>
 								<Input
 									size="xs"
 									fontFamily="mono"
@@ -504,7 +505,7 @@ export function ChatConfigContentPanel({
 								/>
 							</Box>
 							<ParamSelect
-								label="Response Format"
+								label={t('common:ui.responseFormat')}
 		value={displayParams.responseFormat}
 								options={[
 									{ value: EResponseFormat.TEXT, label: 'Text' },
@@ -514,10 +515,10 @@ export function ChatConfigContentPanel({
 							/>
 
 						<Box>
-							<ParamToggle label="Enable Thinking" value={displayParams.enableThinking} onChange={(v) => updateParam('enableThinking', v)} />
+							<ParamToggle label={t('common:ui.enableThinking2')} value={displayParams.enableThinking} onChange={(v) => updateParam('enableThinking', v)} />
 							{displayParams.enableThinking && (
 								<ParamSelect
-									label="Reasoning Effort"
+									label={t('common:ui.reasoningEffort2')}
 									value={displayParams.reasoningEffort}
 									options={[
 										{ value: EReasoningEffort.NONE, label: 'None' },
@@ -532,7 +533,7 @@ export function ChatConfigContentPanel({
 
 						<Box>
 							<ParamSelect
-								label="Reasoning Format"
+								label={t('common:ui.reasoningFormat')}
 								value={displayParams.reasoningFormat}
 								options={[
 									{ value: EReasoningFormat.NONE, label: 'None' },
@@ -547,11 +548,11 @@ export function ChatConfigContentPanel({
 
 					{/* Advanced */}
 					<Box>
-						<SectionHeader title="Advanced" collapsed={!advancedOpen} onToggle={() => setAdvancedOpen(!advancedOpen)} />
+						<SectionHeader title={t('common:ui.advanced')} collapsed={!advancedOpen} onToggle={() => setAdvancedOpen(!advancedOpen)} />
 						{advancedOpen && (
 							<VStack gap="2.5" align="stretch">
 								<ParamSelect
-									label="Mirostat Mode"
+									label={t('common:ui.mirostatMode')}
 									value={String(displayParams.mirostatMode)}
 									options={[
 										{ value: '0', label: 'Disabled' },
@@ -562,11 +563,11 @@ export function ChatConfigContentPanel({
 								/>
 								{displayParams.mirostatMode > 0 && (
 									<>
-										<ParamSlider label="Mirostat Tau" value={displayParams.mirostatTau} min={0} max={10} step={0.1} onChange={(v) => updateParam('mirostatTau', v)} />
-										<ParamSlider label="Mirostat Eta" value={displayParams.mirostatEta} min={0} max={1} step={0.01} onChange={(v) => updateParam('mirostatEta', v)} />
+										<ParamSlider label={t('common:ui.mirostatTau')} value={displayParams.mirostatTau} min={0} max={10} step={0.1} onChange={(v) => updateParam('mirostatTau', v)} />
+										<ParamSlider label={t('common:ui.mirostatEta')} value={displayParams.mirostatEta} min={0} max={1} step={0.01} onChange={(v) => updateParam('mirostatEta', v)} />
 									</>
 								)}
-								<ParamToggle label="Cache Prompt" value={displayParams.cachePrompt} onChange={(v) => updateParam('cachePrompt', v)} />
+								<ParamToggle label={t('common:ui.cachePrompt')} value={displayParams.cachePrompt} onChange={(v) => updateParam('cachePrompt', v)} />
 							</VStack>
 						)}
 					</Box>
@@ -583,7 +584,7 @@ export function ChatConfigContentPanel({
 				pb="2"
 			>
 				<RotateCcw size={12} />
-				<Text fontSize="11px">Reset to defaults</Text>
+				<Text fontSize="11px">{t('common:ui.resetToDefaults')}</Text>
 			</HStack>
 		</VStack>
 	);

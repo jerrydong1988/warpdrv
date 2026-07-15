@@ -4,6 +4,7 @@ import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import { ChevronDown, Eye } from "lucide-react";
 import { EServerStatus, IServer } from "@warpcore/shared";
 import { useStore } from "@/store";
+import { useTranslation } from 'react-i18next';
 
 type SlashCmdServerSelectorProps = {
 	value: string;
@@ -47,6 +48,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 	onFocus,
 	onBlur,
 }) => {
+	const { t } = useTranslation();
 	const serversMap = useStore((s) => s.servers);
 	const [isOpen, setIsOpen] = useState(false);
 	const triggerRef = useRef<HTMLSpanElement | null>(null);
@@ -194,7 +196,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 						)}
 					</>
 				) : (
-					<span style={{ color: "var(--wc-text-faint)" }}>Select server</span>
+					<span style={{ color: "var(--wc-text-faint)" }}>{t('common:ui.selectServer')}</span>
 				)}
 				<ChevronDown size={12} style={{ opacity: 0.4, flexShrink: 0 }} />
 			</span>
@@ -225,8 +227,7 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No servers
-							</div>
+								{t('common:ui.noServers')}</div>
 						)}
 						{servers.map((server) => (
 							<div

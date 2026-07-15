@@ -1,6 +1,8 @@
 import { Box, Text, HStack, VStack, Flex, Input, Button, Spinner, Switch, Combobox, createListCollection, Portal, NativeSelect, Slider } from '@chakra-ui/react';
 import { Settings, FolderOpen, Plus, Trash2, Save, ChevronDown, FolderInput, BookOpen, Mic } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { setLocale as setI18nLocale } from '../../i18n';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/Card';
@@ -29,8 +31,10 @@ async function getAutostartApi(): Promise<{ isEnabled: () => Promise<boolean>; e
 }
 
 export function SettingsPage() {
+	const { t, i18n } = useTranslation('settings');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
+	const locale = i18n.resolvedLanguage?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
 	const [portStart, setPortStart] = useDependantState(settings.portRangeStart);
@@ -68,7 +72,7 @@ export function SettingsPage() {
 				if (err.name !== 'AbortError') console.error('[Settings] Failed to open directory picker:', err);
 			}
 		} else {
-			toast('error', 'Directory picker not supported in this browser. Please type the path manually.');
+			toast('error', t('common:toast.directoryPickerNotSupported'));
 		}
 	};
 	const [micDevices, setMicDevices] = useState<Array<{ id: string; label: string }>>([]);
@@ -121,13 +125,13 @@ export function SettingsPage() {
 	});
 	const voiceCollection = createListCollection({
 		items: [
-			{ label: 'Heart (Female, US)', value: 'af_heart' },
-			{ label: 'Bella (Female, US)', value: 'af_bella' },
-			{ label: 'Nicole (Female, US)', value: 'af_nicole' },
-			{ label: 'Adam (Male, US)', value: 'am_adam' },
-			{ label: 'Michael (Male, US)', value: 'am_michael' },
-			{ label: 'Emma (Female, UK)', value: 'bf_emma' },
-			{ label: 'George (Male, UK)', value: 'bm_george' },
+			{ label: t('voices.heart'), value: 'af_heart' },
+			{ label: t('voices.bella'), value: 'af_bella' },
+			{ label: t('voices.nicole'), value: 'af_nicole' },
+			{ label: t('voices.adam'), value: 'am_adam' },
+			{ label: t('voices.michael'), value: 'am_michael' },
+			{ label: t('voices.emma'), value: 'bf_emma' },
+			{ label: t('voices.george'), value: 'bm_george' },
 		],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
@@ -142,6 +146,14 @@ export function SettingsPage() {
 			{ label: 'Georgia', value: 'Georgia, serif' },
 			{ label: 'Times New Roman', value: '"Times New Roman", serif' },
 			{ label: 'Courier New', value: '"Courier New", monospace' },
+		],
+		itemToString: (item) => item.label,
+		itemToValue: (item) => item.value,
+	});
+	const languageCollection = createListCollection({
+		items: [
+			{ label: 'English', value: 'en' },
+			{ label: '简体中文', value: 'zh-CN' },
 		],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
@@ -195,7 +207,7 @@ export function SettingsPage() {
 				const devices = await navigator.mediaDevices.enumerateDevices();
 				const audioInputs = devices
 					.filter(d => d.kind === 'audioinput')
-					.map(d => ({ id: d.deviceId, label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)` }));
+					.map(d => ({ id: d.deviceId, label: d.label || t('options.microphoneFallback', { id: d.deviceId.slice(0, 8) }) }));
 				setMicDevices(audioInputs);
 			} catch {
 				setMicDevices([]);
@@ -203,7 +215,7 @@ export function SettingsPage() {
 		};
 
 		checkMicPermission();
-	}, []);
+	}, [t]);
 
 	const handleGrantMicPermission = async () => {
 		try {
@@ -214,11 +226,11 @@ export function SettingsPage() {
 			const devices = await navigator.mediaDevices.enumerateDevices();
 			const audioInputs = devices
 				.filter(d => d.kind === 'audioinput')
-				.map(d => ({ id: d.deviceId, label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)` }));
+				.map(d => ({ id: d.deviceId, label: d.label || t('options.microphoneFallback', { id: d.deviceId.slice(0, 8) }) }));
 			setMicDevices(audioInputs);
-			toast('success', 'Microphone access granted');
+			toast('success', t('toast.microphoneGranted'));
 		} catch (err) {
-			toast('error', 'Microphone access denied');
+			toast('error', t('toast.microphoneDenied'));
 		}
 	};
 
@@ -253,7 +265,7 @@ export function SettingsPage() {
 				}
 			}
 		} else {
-			toast('error', 'Directory picker not supported in this browser. Please type the path manually.');
+			toast('error', t('common:toast.directoryPickerNotSupported'));
 		}
 	};
 
@@ -338,25 +350,25 @@ dictationPTTKey,
 				setAutoLaunch(isEnabled);
 			} catch (err) {
 				console.error('[Settings] Failed to apply autostart setting:', err);
-				toast('error', `Failed to update autostart: ${String(err)}`);
+				toast('error', t('common:toast.autostartUpdateFailed'));
 			}
 		}
 
 		setIsDirty(false);
-		toast('success', 'Settings saved');
+		toast('success', t('toast.settingsSaved'));
 	};
 
 	return (
 		<Box pb="80px">
-				<PageHeader title="Settings" subtitle="WarpCore configuration" icon={<Settings size={20} />} />
+				<PageHeader title={t('title')} subtitle={t('subtitle')} icon={<Settings size={20} />} />
 				<Box pt="76px" px="4" pb="4">
 		<VStack align="stretch" gap="6">
 					{/* Theme */}
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Theme</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">UI appearance theme</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.theme')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.appearance')}</Text>
 							</Box>
 							<Combobox.Root
 								collection={themeCollection}
@@ -378,7 +390,7 @@ dictationPTTKey,
 											borderRadius="lg"
 											fontWeight="500"
 										>
-											{themeCollection.items.find(i => i.value === localTheme)?.label ?? 'Dark'}
+											{themeCollection.items.find(i => i.value === localTheme)?.label ?? t('options.defaultTheme')}
 											<ChevronDown size={14} />
 										</Button>
 									</Combobox.Trigger>
@@ -406,18 +418,74 @@ dictationPTTKey,
 						</VStack>
 					</Card>
 
+					{/* Language */}
+					<Card>
+						<VStack align="stretch" gap="4">
+							<Box>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.language')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.language')}</Text>
+							</Box>
+							<Combobox.Root
+								collection={languageCollection}
+								value={[locale ?? 'en']}
+								onValueChange={(details) => {
+									const val = (details.value?.[0] ?? 'en') as 'en' | 'zh-CN';
+									void setI18nLocale(val);
+								}}
+							>
+								<Combobox.Control>
+									<Combobox.Trigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											justifyContent="space-between"
+											bg="var(--wc-bg-subtle)"
+											borderColor="var(--wc-border-default)"
+											color="var(--wc-text-primary)"
+											fontSize="13px"
+											borderRadius="lg"
+											fontWeight="500"
+										>
+											{languageCollection.items.find(i => i.value === locale)?.label ?? languageCollection.items[0]?.label}
+											<ChevronDown size={14} />
+										</Button>
+									</Combobox.Trigger>
+								</Combobox.Control>
+								<Portal>
+									<Combobox.Positioner>
+										<Combobox.Content
+											bg="var(--wc-bg-elevated)"
+											borderWidth="1px"
+											borderColor="var(--wc-border-default)"
+											borderRadius="lg"
+											shadow="0 8px 32px rgba(0, 0, 0, 0.5)"
+											p="1"
+										>
+											{languageCollection.items.map((item) => (
+												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
+													<Combobox.ItemIndicator />
+												</Combobox.Item>
+											))}
+										</Combobox.Content>
+									</Combobox.Positioner>
+								</Portal>
+							</Combobox.Root>
+						</VStack>
+					</Card>
+
 					{/* Appearance */}
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Appearance</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">App zoom and chat message styling</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.appearance')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.zoom')}</Text>
 							</Box>
 
 							{/* App Zoom */}
 							<VStack align="stretch" gap="2">
 								<HStack justify="space-between">
-									<Text fontSize="13px" color="var(--wc-text-secondary)">App Zoom</Text>
+									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.appZoom')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>{Math.round(appZoomLevel * 100)}%</Text>
 								</HStack>
 								<Box as="input" type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
@@ -429,16 +497,16 @@ dictationPTTKey,
 
 							{/* Chat Font Size */}
 							<VStack align="stretch" gap="2">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Chat Font Size</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontSize')}</Text>
 								<HStack gap="2">
 									<Input value={chatFontSize} onChange={e => dirtySetter(setChatFontSize, Math.min(32, Math.max(10, Number(e.target.value))))} type="number" min={10} max={32} size="sm" w="80px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
-									<Text fontSize="13px" color="var(--wc-text-muted)">px</Text>
+									<Text fontSize="13px" color="var(--wc-text-muted)">{t('units.px')}</Text>
 								</HStack>
 							</VStack>
 
 							{/* Chat Font Family */}
 							<VStack align="stretch" gap="2">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Chat Font Family</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontFamily')}</Text>
 								<NativeSelect.Root value={chatFontFamily}>
 									<NativeSelect.Field
 										size="sm"
@@ -449,7 +517,7 @@ dictationPTTKey,
 										borderRadius="lg"
 										onChange={(e) => dirtySetter(setChatFontFamily, e.target.value)}
 									>
-										<option value="">Default (Inter)</option>
+										<option value="">{t('fonts.default')}</option>
 										{fontFamilyCollection.items.map(f => (
 											<option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
 										))}
@@ -460,10 +528,10 @@ dictationPTTKey,
 							{/* Fixed Chat Width */}
 							<HStack justify="space-between" alignItems="center">
 								<Box flex="1">
-									<Text fontSize="13px" color="var(--wc-text-secondary)">Fixed Chat Width</Text>
-									<Text fontSize="11px" color="var(--wc-text-muted)">Max-width 960px instead of full-width</Text>
+									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.fixedChatWidth')}</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('descriptions.fixedChatWidth')}</Text>
 								</Box>
-								<Switch.Root label='Fixed chat width' checked={chatFixedWidth} onCheckedChange={(details) => dirtySetter(setChatFixedWidth, details.checked)}>
+								<Switch.Root label={t('switches.fixedChatWidth')} checked={chatFixedWidth} onCheckedChange={(details) => dirtySetter(setChatFixedWidth, details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: chatFixedWidth ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
@@ -477,8 +545,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Model Directories</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Folders to scan for GGUF models (user/model structure)</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.modelDirectories')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.modelDirs')}</Text>
 							</Box>
 
 							<VStack align="stretch" gap="2">
@@ -506,7 +574,7 @@ dictationPTTKey,
 
 								<HStack gap="2">
 									<Input
-										placeholder="/path/to/models"
+										placeholder={t('placeholders.modelPath')}
 										size="sm"
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
@@ -520,7 +588,7 @@ dictationPTTKey,
 										onChange={e => dirtySetter(setNewRoot, e.target.value)}
 										onKeyDown={e => e.key === 'Enter' && handleAddRoot()}
 									/>
-									<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseDirectory} title="Browse directory">
+									<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseDirectory} title={t('actions.browseDirectory')}>
 										<FolderInput size={14} />
 									</Button>
 									<Button
@@ -543,12 +611,12 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Port Range</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Auto-assigned port range for llama-server instances</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.portRange')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.portRange')}</Text>
 							</Box>
 							<HStack gap="3">
 								<Input value={portStart} onChange={e => dirtySetter(setPortStart, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
-								<Text fontSize="13px" color="var(--wc-text-faint)">to</Text>
+								<Text fontSize="13px" color="var(--wc-text-faint)">{t('units.to')}</Text>
 								<Input value={portEnd} onChange={e => dirtySetter(setPortEnd, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 						</VStack>
@@ -558,16 +626,16 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Checkpoints</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">KV cache checkpoint storage. Leave path blank for default.</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.checkpoints')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.checkpoints')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Input value={checkpointsPath} onChange={e => dirtySetter(setCheckpointsPath, e.target.value)} size="sm" flex="1" placeholder="~/.config/warpcore/checkpoints/" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
+								<Input value={checkpointsPath} onChange={e => dirtySetter(setCheckpointsPath, e.target.value)} size="sm" flex="1" placeholder={t('placeholders.checkpointsPath')} bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 							<HStack gap="3">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Max disk usage</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.maxDiskUsage')}</Text>
 								<Input value={maxCheckpointDiskGB} onChange={e => dirtySetter(setMaxCheckpointDiskGB, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
-								<Text fontSize="13px" color="var(--wc-text-muted)">GB</Text>
+								<Text fontSize="13px" color="var(--wc-text-muted)">{t('units.gb')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -577,18 +645,18 @@ dictationPTTKey,
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center" mb="2">
 								<Box flex="1">
-									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">Generate conversation titles</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.generateTitles')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										Use the loaded model to generate a concise title for new conversations. When disabled, titles are derived from your first message.
+										{t('descriptions.generateTitles')}
 									</Text>
 								</Box>
-								<Switch.Root label='Generate titles' checked={!disableTitleGen} onCheckedChange={(details) => dirtySetter(setDisableTitleGen, !details.checked)}>
+								<Switch.Root label={t('switches.generateTitles')} checked={!disableTitleGen} onCheckedChange={(details) => dirtySetter(setDisableTitleGen, !details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: !disableTitleGen ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Generate titles
+										{t('switches.generateTitles')}
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
@@ -599,8 +667,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Voice Input</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Microphone device for speech-to-text</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.voiceInput')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.voiceInput')}</Text>
 							</Box>
 							{!micPermissionGranted ? (
 								<Button
@@ -612,10 +680,10 @@ dictationPTTKey,
 									leftIcon={<Mic size={15} />}
 									onClick={handleGrantMicPermission}
 								>
-									Grant Microphone Access
+									{t('actions.grantMicAccess')}
 								</Button>
 							) : micDevices.length === 0 ? (
-								<Text fontSize="12px" color="var(--wc-text-faint)">No microphone devices found</Text>
+								<Text fontSize="12px" color="var(--wc-text-faint)">{t('options.noMicDevices')}</Text>
 							) : (
 								<NativeSelect.Root value={micDeviceId}>
 									<NativeSelect.Field
@@ -627,7 +695,7 @@ dictationPTTKey,
 										borderRadius="lg"
 										onChange={(e) => dirtySetter(setMicDeviceId, e.target.value)}
 									>
-										<option value="">Default Microphone</option>
+										<option value="">{t('options.defaultMicrophone')}</option>
 										{micDevices.map(d => (
 											<option key={d.id} value={d.id}>{d.label}</option>
 										))}
@@ -641,8 +709,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Voice Output</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Kokoro TTS voice for reading assistant messages</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.voiceOutput')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.voiceOutput')}</Text>
 							</Box>
 							<Combobox.Root
 								collection={voiceCollection}
@@ -664,7 +732,7 @@ dictationPTTKey,
 											borderRadius="lg"
 											fontWeight="500"
 										>
-											{voiceCollection.items.find(i => i.value === kokoroVoice)?.label ?? 'Heart (Female, US)'}
+											{voiceCollection.items.find(i => i.value === kokoroVoice)?.label ?? t('options.defaultVoice')}
 											<ChevronDown size={14} />
 										</Button>
 									</Combobox.Trigger>
@@ -691,7 +759,7 @@ dictationPTTKey,
 							</Combobox.Root>
 							<VStack align="stretch" gap="2">
 								<HStack justify="space-between">
-									<Text fontSize="11px" color="var(--wc-text-muted)">TTS Speed</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('options.ttsSpeed')}</Text>
 									<Text fontSize="11px" color="var(--wc-text-tertiary)">{kokoroSpeed.toFixed(1)}x</Text>
 								</HStack>
 								<Slider.Root
@@ -719,8 +787,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Dictation</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Push-to-talk key for voice dictation.</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.dictation')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.dictation')}</Text>
 							</Box>
 							<KeyCapture
 								value={dictationPTTKey}
@@ -728,14 +796,14 @@ dictationPTTKey,
 								onDisable={() => dirtySetter(setDictationPTTKey, '')}
 							/>
 							<HStack gap="3" align="center">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Hold Mode</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.holdMode')}</Text>
 								<Switch.Root checked={dictationPTTModeHold} onCheckedChange={(details) => dirtySetter(setDictationPTTModeHold, details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: dictationPTTModeHold ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-muted)">{dictationPTTModeHold ? 'Hold to record, release to stop' : 'Toggle on/off'}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{dictationPTTModeHold ? t('switches.pttHold') : t('switches.pttToggle')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -744,24 +812,24 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Global PTT</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">OS-wide push-to-talk shortcut for dictation anywhere.</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.globalPTT')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.globalPtt')}</Text>
 							</Box>
 							<KeyCapture
 								value={globalPTTKey}
 								onChange={(key) => dirtySetter(setGlobalPTTKey, key)}
 								onDisable={() => dirtySetter(setGlobalPTTKey, '')}
-								label="PTT Key"
+								label={t('labels.pttKey')}
 							/>
 							<HStack gap="3" align="center">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Hold Mode</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.holdMode')}</Text>
 								<Switch.Root checked={globalPTTModeHold} onCheckedChange={(details) => dirtySetter(setGlobalPTTModeHold, details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: globalPTTModeHold ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-muted)">{globalPTTModeHold ? 'Hold to record, release to stop' : 'Toggle on/off'}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{globalPTTModeHold ? t('switches.pttHold') : t('switches.pttToggle')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -770,8 +838,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">API Host</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">WarpCore API listen address</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.apiHost')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.apiHost')}</Text>
 							</Box>
 							<HStack gap="3">
 								<Input value={apiHost} onChange={e => dirtySetter(setApiHost, e.target.value)} size="sm" w="140px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
@@ -783,27 +851,27 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Built-in MCP Server (warpmcp)</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Exposes built-in tools (file_read, file_write, dir_list, shell_exec, fetch) via MCP. Restarts on port or exposure change.</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.builtinMcp')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.builtinMcp')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Text fontSize="13px" color="var(--wc-text-muted)" w="100px">Port</Text>
+								<Text fontSize="13px" color="var(--wc-text-muted)" w="100px">{t('sections.port')}</Text>
 								<Input value={builtinMcpPort} onChange={e => dirtySetter(setBuiltinMcpPort, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 							<HStack gap="3">
-								<Switch.Root label='Expose to external clients' checked={builtinMcpExposeExternal} onCheckedChange={(details) => dirtySetter(setBuiltinMcpExposeExternal, details.checked)}>
+								<Switch.Root label={t('switches.exposeExternal')} checked={builtinMcpExposeExternal} onCheckedChange={(details) => dirtySetter(setBuiltinMcpExposeExternal, details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: builtinMcpExposeExternal ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Bind on 0.0.0.0 (off = loopback only)
+										{t('switches.bindAll')}
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
 							<Box>
-								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">File-system allowed roots</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution.</Text>
+								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">{t('sections.fsAllowedRoots')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">{t('descriptions.fsAllowedRoots')}</Text>
 								<VStack align="stretch" gap="2">
 									{fsAllowedRoots.map((root, idx) => (
 										<HStack key={idx} gap="2">
@@ -814,8 +882,8 @@ dictationPTTKey,
 										</HStack>
 									))}
 									<HStack gap="2">
-										<Input value={newFsRoot} onChange={e => setNewFsRoot(e.target.value)} placeholder="/absolute/path" size="sm" flex="1" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" />
-										<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFsRoot} title="Browse directory">
+										<Input value={newFsRoot} onChange={e => setNewFsRoot(e.target.value)} placeholder={t('placeholders.fsRoot')} size="sm" flex="1" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" />
+										<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFsRoot} title={t('actions.browseDirectory')}>
 											<FolderOpen size={14} />
 										</Button>
 										<Button size="sm" variant="ghost" onClick={() => {
@@ -837,20 +905,20 @@ dictationPTTKey,
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center" mb="2">
 								<Box flex="1">
-									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">Router</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.router')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										OpenAI-compatible proxy for routing requests by server alias
+										{t('descriptions.router')}
 									</Text>
 								</Box>
 							</HStack>
 							<HStack gap="3">
-								<Switch.Root label='Start router on App launch' checked={proxyEnabled} onCheckedChange={(details) => dirtySetter(setProxyEnabled, details.checked)}>
+								<Switch.Root label={t('switches.startRouterOnLaunch')} checked={proxyEnabled} onCheckedChange={(details) => dirtySetter(setProxyEnabled, details.checked)}>
 									<Switch.HiddenInput />
 									<Switch.Control css={{ bg: proxyEnabled ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Start router on App launch
+										{t('switches.startRouterOnLaunch')}
 									</Switch.Label>
 								</Switch.Root>
 								<Input value={proxyPort} onChange={e => dirtySetter(setProxyPort, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} disabled={!proxyEnabled} />
@@ -863,13 +931,13 @@ dictationPTTKey,
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center">
 								<Box flex="1">
-									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">Launch on Startup</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.launchOnStartup')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										Start WarpCore automatically when you log in
+										{t('descriptions.launchOnStartup')}
 									</Text>
 									{autoLaunch === null && (
 										<Text fontSize="11px" color="var(--wc-accent-red-alt)" mt="1">
-											Desktop API not available - toggle disabled
+											{t('options.desktopApiUnavailable')}
 										</Text>
 									)}
 								</Box>
@@ -884,9 +952,9 @@ dictationPTTKey,
 							<Box pt="2" borderTop="1px solid var(--wc-border-default)">
 								<HStack justify="space-between" alignItems="center">
 									<Box flex="1">
-										<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)">Start Minimized</Text>
+										<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)">{t('sections.startMinimized')}</Text>
 										<Text fontSize="11px" color="var(--wc-text-muted)">
-											Start to tray without showing window (requires Launch on Startup)
+											{t('descriptions.startMinimized')}
 										</Text>
 									</Box>
 									<Switch.Root checked={startMinimized} onCheckedChange={(details) => dirtySetter(setStartMinimized, details.checked)} disabled={!autoLaunch || autoLaunch === null}>
@@ -904,8 +972,8 @@ dictationPTTKey,
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">Onboarding</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">Re-run the setup guide</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.onboarding')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.onboarding')}</Text>
 							</Box>
 							<Button
 								size="sm"
@@ -916,7 +984,7 @@ dictationPTTKey,
 								leftIcon={<BookOpen size={15} />}
 								onClick={() => updateSettings({ isOnboardingComplete: false })}
 							>
-								Re-run Onboarding
+								{t('actions.rerunOnboarding')}
 							</Button>
 						</VStack>
 					</Card>
@@ -950,7 +1018,7 @@ dictationPTTKey,
 							disabled={saveMut.loading}
 						>
 							{saveMut.loading ? <Spinner size="xs" /> : <Save size={15} />}
-							{'Save Changes'}
+							{t('actions.saveChanges')}
 						</Button>
 					</HStack>
 				</Box>
@@ -958,8 +1026,8 @@ dictationPTTKey,
 
 			{deletingRootIndex !== null && (
 				<ConfirmDialog
-					title="Remove Model Directory?"
-					message={`This will remove "${modelRoots[deletingRootIndex]}" from your configured model directories.`}
+					title={t('dialog.removeModelDirTitle')}
+					message={t('dialog.removeModelDirMessage', { path: modelRoots[deletingRootIndex] })}
 					isOpen={true}
 					onCancel={() => setDeletingRootIndex(null)}
 					onConfirm={() => handleRemoveRoot(deletingRootIndex)}

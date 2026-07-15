@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button, Spinner, Badge } from '@chakra-ui/react';
 import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { restartServer, activateBackendInGroup } from '../../api/services';
 import { useStore } from '../../store';
 import type { TBackendId, TBackendGroupId } from '@warpcore/shared';
@@ -24,6 +25,7 @@ interface IServerState {
 }
 
 export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, onComplete }: IActivateBackendDialogProps) {
+	const { t } = useTranslation('backends');
 	const { toast } = useToast();
 	const group = useStore((s) => s.backendGroups[groupId]);
 	const backends = useStore((s) => s.backends);
@@ -63,15 +65,15 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 		try {
 			const result = await activateBackendInGroup(groupId, newBackendId);
 			if (result.ok) {
-				toast('success', 'The active backend for this group has been updated.');
+				toast('success', t('toast.backendActivated'));
 				handleClose();
 				onComplete?.();
 			} else {
-				toast('error', result.error ?? 'Unable to update the active backend. Please try again.');
+				toast('error', result.error ?? t('toast.updateActiveBackendFailed'));
 				setIsSwitching(false);
 			}
 		} catch {
-			toast('error', 'Unable to update the active backend. Please try again.');
+			toast('error', t('toast.updateActiveBackendFailed'));
 			setIsSwitching(false);
 		}
 	};
@@ -83,7 +85,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 		try {
 			const result = await activateBackendInGroup(groupId, newBackendId);
 			if (!result.ok) {
-				toast('error', result.error ?? 'Unable to update the active backend.');
+				toast('error', result.error ?? t('toast.updateActiveBackendFailed'));
 				setIsSwitching(false);
 				setIsRestarting(false);
 				return;
@@ -91,7 +93,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 			setSwitchingDone(true);
 
 			if (Object.keys(serversState).length === 0) {
-				toast('success', 'The active backend for this group has been updated.');
+				toast('success', t('toast.backendActivated'));
 				handleClose();
 				onComplete?.();
 				return;
@@ -122,7 +124,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 						if (!existing) return prev;
 						return {
 							...prev,
-							[server.id]: { id: existing.id, name: existing.name, port: existing.port, status: 'failed', error: 'Restart failed' },
+							[server.id]: { id: existing.id, name: existing.name, port: existing.port, status: 'failed', error: t('activateDialog.restartFailed') },
 						};
 					});
 				}
@@ -130,11 +132,11 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 
 			await Promise.all(restartPromises);
 
-			toast('success', 'The active backend has been updated and servers restarted.');
+			toast('success', t('toast.backendActivatedAndRestarted'));
 			handleClose();
 			onComplete?.();
 		} catch {
-			toast('error', 'Unable to update the active backend.');
+			toast('error', t('toast.updateActiveBackendFailed'));
 			setIsSwitching(false);
 			setIsRestarting(false);
 		}
@@ -162,17 +164,17 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 
 							<VStack gap="2">
 								<Dialog.Title fontSize="16px" fontWeight="700" color="var(--wc-text-primary)">
-									Switch Active Backend?
+									{t('activateDialog.title')}
 								</Dialog.Title>
 								<Text fontSize="13px" color="var(--wc-text-tertiary)" textAlign="center">
-									Changing from <Text as="span" color="var(--wc-text-primary)" fontWeight="500">{currentBackend?.name ?? '(deleted)'}</Text> to <Text as="span" color="var(--wc-text-primary)" fontWeight="500">{newBackend?.name ?? '(deleted)'}</Text>
+									{t('activateDialog.changingFrom')} <Text as="span" color="var(--wc-text-primary)" fontWeight="500">{currentBackend?.name ?? t('activateDialog.deleted')}</Text> {t('activateDialog.to')} <Text as="span" color="var(--wc-text-primary)" fontWeight="500">{newBackend?.name ?? t('activateDialog.deleted')}</Text>
 								</Text>
 							</VStack>
 
 							{Object.keys(serversState).length > 0 ? (
 								<Box>
 									<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">
-										Affected running servers ({Object.keys(serversState).length}):
+										{t('activateDialog.affectedServers', { count: Object.keys(serversState).length })}:
 									</Text>
 									<Box
 										borderWidth="1px"
@@ -239,17 +241,17 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 													</HStack>
 													{server.status === 'restarting' && (
 <Text fontSize="11px" color="var(--wc-accent-blue)" fontWeight="500">
-														Restarting...
+														{t('activateDialog.restarting')}
 													</Text>
 												)}
 													{server.status === 'completed' && (
 														<Text fontSize="11px" color="var(--wc-accent-green)" fontWeight="500">
-														Restarted
+														{t('activateDialog.restarted')}
 													</Text>
 												)}
 													{server.status === 'failed' && (
 														<Text fontSize="11px" color="var(--wc-accent-red)" fontWeight="500">
-														Failed
+														{t('activateDialog.failed')}
 														</Text>
 													)}
 												</HStack>
@@ -259,7 +261,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 								</Box>
 							) : (
 								<Text fontSize="12px" color="var(--wc-text-muted)" textAlign="center" py="2">
-									No running servers using this group
+									{t('activateDialog.noRunningServers')}
 								</Text>
 							)}
 
@@ -275,7 +277,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 									onClick={handleCancel}
 									disabled={isSwitching && !switchingDone}
 								>
-									Cancel
+									{t('actions.cancel')}
 								</Button>
 								<Button
 									flex="1"
@@ -291,7 +293,7 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 									onClick={handleSwitchOnly}
 									disabled={isSwitching || switchingDone}
 								>
-									{isSwitching ? <Spinner size="xs" /> : 'Switch Only'}
+									{isSwitching ? <Spinner size="xs" /> : t('activateDialog.switchOnly')}
 								</Button>
 								{affectedServers.length > 0 && (
 <Button
@@ -311,10 +313,10 @@ export function ActivateBackendDialog({ isOpen, onClose, groupId, newBackendId, 
 										{isRestarting ? (
 											<HStack gap="1">
 												<Spinner size="xs" />
-												<Text>Restarting...</Text>
+												<Text>{t('activateDialog.restarting')}</Text>
 											</HStack>
 										) : (
-											'Switch & Restart'
+											<Text>{t('activateDialog.switchAndRestart')}</Text>
 										)}
 									</Button>
 								)}

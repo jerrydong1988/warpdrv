@@ -3,6 +3,7 @@ import {
 	Server, Search, ChevronDown, ArrowUpAZ, ArrowDownZA, Play,
 } from 'lucide-react';
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '@/hooks/useDependantState';
 import { PageHeader } from '@/components/PageHeader';
 import { useStore } from '@/store';
@@ -50,6 +51,7 @@ function getBackendName(entry: UnifiedServerEntry, backends: Record<string, IBac
 }
 
 export const ServersPage = React.memo(() => {
+	const { t } = useTranslation('servers');
 	const servers = useStore((s) => s.servers);
 	const serversArr = useMemo(() => Object.values(servers), [servers]);
 	const whisperServers = useStore((s) => s.whisperServers);
@@ -209,14 +211,14 @@ export const ServersPage = React.memo(() => {
 	return (
 		<Box>
 			<PageHeader
-				title="Servers"
-				subtitle={`${llamaRunningCount}/${serversArr.length} LLM, ${whisperRunningCount}/${whisperServersArr.length} Whisper Running`}
+				title={t('title')}
+				subtitle={t('subtitle', { llamaRunning: llamaRunningCount, llamaTotal: serversArr.length, whisperRunning: whisperRunningCount, whisperTotal: whisperServersArr.length })}
 				icon={<Server size={20} />}
 				actions={
 					<HStack gap="3">
 						<InputGroup startElement={<Search size={14} color="var(--wc-text-tertiary)" />} w="200px">
 							<Input
-								placeholder="Search servers..."
+								placeholder={t('searchPlaceholder')}
 								size="sm"
 								bg="var(--wc-bg-subtle)"
 								borderColor="var(--wc-border-default)"
@@ -295,19 +297,19 @@ export const ServersPage = React.memo(() => {
 								color="var(--wc-text-secondary)"
 								borderRadius="md"
 								_hover={{ borderColor: 'var(--wc-border-hover)' }}
-								title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+								title={sortOrder === 'asc' ? t('labels.ascending') : t('labels.descending')}
 								onClick={() => handleSortChange(sortField, sortOrder === 'asc' ? 'desc' : 'asc')}
 							>
 								{sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
 							</Button>
 						</HStack>
-						<Switch.Root label="Show only running servers" checked={runningOnly} onCheckedChange={(details) => setRunningOnly(details.checked)} color={runningOnly ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}>
+						<Switch.Root label={t('labels.showRunningOnly')} checked={runningOnly} onCheckedChange={(details) => setRunningOnly(details.checked)} color={runningOnly ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}>
 							<Switch.HiddenInput />
 							<Switch.Control css={{ bg: runningOnly ? 'var(--wc-accent-blue)' : 'surface.4' }}>
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
 							<Switch.Label ml="2" fontSize="13px" color={runningOnly ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
-								Running only
+								{t('labels.runningOnly')}
 							</Switch.Label>
 						</Switch.Root>
 					</HStack>
@@ -331,7 +333,7 @@ export const ServersPage = React.memo(() => {
 							justifyContent="center"
 						>
 							<Play size={15} />
-							Launch LLaMa
+							{t('actions.launchLLaMa')}
 						</Button>
 						<Button
 							size="sm"
@@ -350,7 +352,7 @@ export const ServersPage = React.memo(() => {
 							justifyContent="center"
 						>
 							<Play size={15} />
-							Launch Whisper
+							{t('actions.launchWhisper')}
 						</Button>
 					</HStack>
 				}
@@ -364,8 +366,8 @@ export const ServersPage = React.memo(() => {
 					>
 						<VStack gap="3" color="var(--wc-text-muted)">
 							<Server size={40} />
-							<Text fontSize="14px">{(serversArr.length + whisperServersArr.length) === 0 ? 'No servers running' : 'No matching servers'}</Text>
-							<Text fontSize="12px" color="var(--wc-text-disabled)">{(serversArr.length + whisperServersArr.length) === 0 ? 'Click "Launch Server" or "Launch Whisper" to get started' : 'Try adjusting your filters or search query'}</Text>
+							<Text fontSize="14px">{(serversArr.length + whisperServersArr.length) === 0 ? t('labels.noServersRunning') : t('labels.noMatchingServers')}</Text>
+							<Text fontSize="12px" color="var(--wc-text-disabled)">{(serversArr.length + whisperServersArr.length) === 0 ? t('labels.launchHint') : t('labels.filterHint')}</Text>
 						</VStack>
 					</Flex>
 				) : (
@@ -435,8 +437,8 @@ export const ServersPage = React.memo(() => {
 
 			{deletingServer && (
 				<ConfirmDialog
-					title="Delete Server?"
-					message={`This will remove "${deletingServer.serverName}" from your configuration. The server process will not be affected.`}
+					title={t('dialogs.deleteServerTitle')}
+					message={t('dialogs.deleteServerMessage', { name: deletingServer.serverName })}
 					isOpen={true}
 					isLoading={loading}
 					onCancel={() => setDeletingServerId(null)}
@@ -457,8 +459,8 @@ export const ServersPage = React.memo(() => {
 
 			{deletingWhisperServerId && whisperServers[deletingWhisperServerId] && (
 				<ConfirmDialog
-					title="Delete Whisper Server?"
-					message={`This will remove "${whisperServers[deletingWhisperServerId]!.serverName}" from your configuration.`}
+					title={t('dialogs.deleteWhisperTitle')}
+					message={t('dialogs.deleteWhisperMessage', { name: whisperServers[deletingWhisperServerId]!.serverName })}
 					isOpen={true}
 					isLoading={false}
 					onCancel={() => setDeletingWhisperServerId(null)}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button, Input, Spinner } from '@chakra-ui/react';
 import { Save } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { saveCheckpoint, fetchCheckpoints, deleteCheckpoint } from '@/api/services';
 import { useToast } from '@/components/ToastProvider';
@@ -18,6 +19,7 @@ interface ISaveCheckpointDialogProps {
 }
 
 export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpointDialogProps) {
+	const { t } = useTranslation('servers');
 	const { toast } = useToast();
 	const serverSlots = useStore((s) => s.serverSlots[server.id] ?? null);
 	const checkpoints = useStore((s) => s.checkpoints);
@@ -79,11 +81,11 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 				notes: null,
 			});
 			if (res.ok) {
-				toast('success', `Saved ${res.data?.checkpoints.length ?? 0} checkpoint(s)`);
+				toast('success', t('toast.checkpointsSaved', { count: res.data?.checkpoints.length ?? 0 }));
 				await fetchCheckpoints(server.id);
 				onClose();
 			} else {
-				toast('error', res.error ?? 'Save failed');
+				toast('error', res.error ?? t('toast.saveCheckpointFailed'));
 			}
 		} catch (err) {
 			toast('error', String(err));
@@ -134,7 +136,7 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 										<Save size={16} color="var(--wc-accent-blue)" />
 									</Box>
 									<Dialog.Title fontSize="15px" fontWeight="700" color="var(--wc-text-primary)">
-										Save Checkpoint
+										{t('checkpoints.saveTitle')}
 									</Dialog.Title>
 								</HStack>
 
@@ -144,19 +146,19 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 										onClick={() => setTab('REPLACE_LATEST')}
 										disabled={latestForServer === null}
 									>
-										Replace latest
+										{t('checkpoints.replaceLatest')}
 									</Button>
 									<Button
 										{...tabButtonStyle(tab === 'NEW')}
 										onClick={() => setTab('NEW')}
 									>
-										New
+										{t('checkpoints.new')}
 									</Button>
 								</HStack>
 
 								{tab === 'REPLACE_LATEST' && latestForServer && (
 									<Box px="3" py="2.5" borderRadius="lg" bg="var(--wc-bg-subtle)" borderWidth="1px" borderColor="var(--wc-border-default)">
-										<Text fontSize="11px" color="var(--wc-text-tertiary)">Overwriting</Text>
+										<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('checkpoints.overwriting')}</Text>
 										<Text fontSize="13px" color="var(--wc-text-primary)" mt="0.5">{latestForServer.name}</Text>
 										<Text fontSize="11px" color="var(--wc-text-tertiary)" mt="0.5">
 											{new Date(latestForServer.createdAt).toLocaleString()}
@@ -166,12 +168,12 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 
 								{tab === 'NEW' && (
 									<VStack gap="1.5" align="stretch">
-										<Text fontSize="11px" color="var(--wc-text-tertiary)">Name</Text>
+										<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('checkpoints.name')}</Text>
 										<Input
 											size="sm"
 											value={name}
 											onChange={(e) => setName(e.target.value)}
-											placeholder="Checkpoint name"
+											placeholder={t('checkpoints.namePlaceholder')}
 											bg="var(--wc-bg-subtle)"
 											borderColor="var(--wc-border-default)"
 											color="var(--wc-text-primary)"
@@ -181,12 +183,12 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 								)}
 
 								<VStack gap="1.5" align="stretch" style={{ display: "none" }}>
-									<Text fontSize="11px" color="var(--wc-text-tertiary)">Select slots</Text>
+									<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.selectSlots')}</Text>
 									<HStack gap="2">
-										<Button {...tabButtonStyle(slotMode === 'ALL')} onClick={() => setSlotMode('ALL')}>All</Button>
-										<Button {...tabButtonStyle(slotMode === 'LATEST')} onClick={() => setSlotMode('LATEST')}>Latest</Button>
-										<Button {...tabButtonStyle(slotMode === 'LARGEST')} onClick={() => setSlotMode('LARGEST')}>Largest</Button>
-										<Button {...tabButtonStyle(slotMode === 'SLOT')} onClick={() => setSlotMode('SLOT')}>Slot</Button>
+										<Button {...tabButtonStyle(slotMode === 'ALL')} onClick={() => setSlotMode('ALL')}>{t('common:ui.all')}</Button>
+										<Button {...tabButtonStyle(slotMode === 'LATEST')} onClick={() => setSlotMode('LATEST')}>{t('common:ui.latest')}</Button>
+										<Button {...tabButtonStyle(slotMode === 'LARGEST')} onClick={() => setSlotMode('LARGEST')}>{t('common:ui.largest')}</Button>
+										<Button {...tabButtonStyle(slotMode === 'SLOT')} onClick={() => setSlotMode('SLOT')}>{t('common:ui.slot')}</Button>
 									</HStack>
 								</VStack>
 
@@ -209,7 +211,7 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 								{previewSlot && (
 									<Box px="3" py="2.5" borderRadius="lg" bg="var(--wc-bg-subtle)" borderWidth="1px" borderColor="var(--wc-border-default)">
 										<HStack justify="space-between">
-											<Text fontSize="11px" color="var(--wc-text-tertiary)">Context</Text>
+											<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.context')}</Text>
 											<Text fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace'>
 												{previewSlot.cachedTokens.toLocaleString()} / {previewSlot.nCtx.toLocaleString()}
 											</Text>
@@ -217,12 +219,12 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 										{previewMeta && (
 											<>
 												<HStack justify="space-between" mt="1">
-													<Text fontSize="11px" color="var(--wc-text-tertiary)">Messages</Text>
+													<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.messages')}</Text>
 													<Text fontSize="12px" color="var(--wc-text-primary)">{previewMeta.messageCount}</Text>
 												</HStack>
 												{previewMeta.lastUserMessagePreview && (
 													<Box mt="2">
-														<Text fontSize="11px" color="var(--wc-text-tertiary)">Last message</Text>
+														<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.lastMessage')}</Text>
 														<Text fontSize="12px" color="var(--wc-text-secondary)" mt="0.5" lineHeight="1.4">
 															{previewMeta.lastUserMessagePreview}
 														</Text>
@@ -245,7 +247,7 @@ color="var(--wc-text-tertiary)"
 										onClick={onClose}
 										disabled={isSaving}
 									>
-										Cancel
+										{t('checkpoints.cancel')}
 									</Button>
 									<Button
 										flex="1"
@@ -261,7 +263,7 @@ bg="var(--wc-accent-blue-bg-12)"
 										onClick={handleSaveClick}
 										disabled={isSaving || slots.length === 0}
 									>
-										{isSaving ? 'Saving...' : 'Save'}
+										{isSaving ? t('checkpoints.saving') : t('checkpoints.save')}
 									</Button>
 								</HStack>
 							</VStack>
@@ -293,10 +295,10 @@ bg="rgba(0,0,0,0.3)"
 			{confirmReplace && latestForServer && (
 				<ConfirmDialog
 					isOpen={confirmReplace}
-					title="Replace existing checkpoint?"
-					message={`This will overwrite "${latestForServer.name}". This action cannot be undone.`}
-					confirmLabel="Replace"
-					loadingLabel="Replacing..."
+					title={t('checkpoints.replaceConfirmTitle')}
+					message={t('checkpoints.replaceConfirmMessage', { name: latestForServer.name })}
+					confirmLabel={t('checkpoints.replace')}
+					loadingLabel={t('checkpoints.replacing')}
 					isLoading={isSaving}
 					onConfirm={() => { setConfirmReplace(false); performSave(); }}
 					onCancel={() => setConfirmReplace(false)}

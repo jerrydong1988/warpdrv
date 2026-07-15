@@ -2,11 +2,13 @@ import React from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { Globe } from 'lucide-react';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 export const FetchRenderer = React.memo((props: {
 	url?: string,
 	[key: string]: unknown
 }) => {
+	const { t } = useTranslation();
 	const { url, method, ...rest } = props;
 	const extras = Object.entries(rest).filter(([, v]) => v !== undefined);
 
@@ -15,11 +17,11 @@ export const FetchRenderer = React.memo((props: {
 			<HStack gap="2" align="center">
 				<Globe size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{url ?? '(no url)'}
+					{url ?? t('common:ui.noUrl')}
 				</Text>
 			</HStack>
 			<Text fontSize="10px" color="var(--wc-text-faint)" pt="1.5" pl="5">
-				Method: <Text as="span" color="var(--wc-text-muted)">{(method as string)}</Text>
+				{t('common:ui.method')}<Text as="span" color="var(--wc-text-muted)">{(method as string)}</Text>
 			</Text>
 			{/* {extras.length > 0 && (
 				<HStack gap="3" mt="1" pl="5" flexWrap="wrap">

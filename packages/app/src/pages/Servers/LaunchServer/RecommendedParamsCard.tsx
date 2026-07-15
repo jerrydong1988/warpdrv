@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, HStack, VStack, Text, Button, Switch, Textarea } from '@chakra-ui/react';
 import { Pencil, Check } from 'lucide-react';
 import { type IModel } from '@warpcore/shared';
@@ -15,6 +16,7 @@ export const RecommendedParamsCard = React.memo(({
 	selectedEntry: { model: IModel } | null;
 	onSave: (modelId: string, text: string) => Promise<void>;
 }) => {
+	const { t } = useTranslation();
 	const originalText = selectedEntry?.model.recommendedInferenceParams ?? '';
 	const [isEditing, setIsEditing] = useState(false);
 	const [draftText, setDraftText] = useState(originalText);
@@ -48,10 +50,10 @@ export const RecommendedParamsCard = React.memo(({
 			<VStack align="stretch" gap="3">
 				<HStack justify="space-between" align="center">
 					<VStack align="start" gap="0.5">
-<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">Model Params</Text>
-					<Text fontSize="11px" color="var(--wc-text-tertiary)">These params will apply to all servers that use this Model.</Text>
+<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.modelParams')}</Text>
+					<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.theseParamsWillApplyToAllServersThatUseThisModel')}</Text>
 					</VStack>
-					<Switch.Root label="Use recommended params" checked={useRecommended} onCheckedChange={(d) => onUseRecommendedChange(d.checked)} color={useRecommended ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'}>
+					<Switch.Root label={t('common:ui.useRecommendedParams')} checked={useRecommended} onCheckedChange={(d) => onUseRecommendedChange(d.checked)} color={useRecommended ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'}>
 						<Switch.HiddenInput />
 						<Switch.Control css={{ bg: useRecommended ? 'var(--wc-accent-blue)' : 'surface.4' }}>
 							<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
@@ -69,13 +71,13 @@ export const RecommendedParamsCard = React.memo(({
 							cursor={isEditing ? "auto" : "default"}
 							style={{ caretColor: isEditing ? "auto" : "transparent" }}
 							resize="vertical" minH="100px" borderRadius="lg"
-							placeholder="No recommended params available for this model"
+							placeholder={t('common:ui.noRecommendedParamsAvailableForThisModel')}
 						/>
 						<HStack position="absolute" bottom="2" right="2" gap="2">
 							{isEditing && (
 								<Button size="xs" variant="ghost" color="var(--wc-text-secondary)"
 									_hover={{ color: 'var(--wc-accent-red-alt)', bg: 'var(--wc-accent-red-bg-12)' }} borderRadius="md" fontSize="10px"
-									onClick={handleCancel}>Cancel</Button>
+									onClick={handleCancel}>{t('common:ui.cancel')}</Button>
 							)}
 							<Button size="xs" variant="outline" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)"
 								_hover={{ borderColor: 'var(--wc-border-hover)', color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }}

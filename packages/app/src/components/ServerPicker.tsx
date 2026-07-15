@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import { EServerStatus } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 
 export function ServerDot({ status }: { status: EServerStatus }) {
 	if (status === EServerStatus.RUNNING) return <Box w="8px" h="8px" borderRadius="full" bg="var(--wc-accent-green-icon)" flexShrink={0} />;
@@ -14,6 +15,7 @@ export function ServerDot({ status }: { status: EServerStatus }) {
 }
 
 export const ServerPicker = React.memo(({ value, onChange }: { value: string; onChange: (serverId: string) => void }) => {
+	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const triggerRef = useRef<HTMLDivElement | null>(null);
 	const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -92,8 +94,7 @@ export const ServerPicker = React.memo(({ value, onChange }: { value: string; on
 				) : (
 					<>
 						<Text flex="1" color="var(--wc-text-faint)" fontSize="12px">
-							Select
-						</Text>
+							{t('common:ui.select')}</Text>
 						<ChevronDown size={12} style={{ opacity: 0.4 }} />
 					</>
 				)}
@@ -117,8 +118,7 @@ export const ServerPicker = React.memo(({ value, onChange }: { value: string; on
 				>
 					{servers.length === 0 && (
 						<div style={{ padding: '8px 12px', fontSize: '0.75rem', color: 'var(--wc-text-faint)' }}>
-							No servers
-						</div>
+							{t('common:ui.noServers')}</div>
 					)}
 					{servers.map((s) => (
 						<div

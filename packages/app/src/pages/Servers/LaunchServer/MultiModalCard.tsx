@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Flex, HStack, VStack, Text, Switch } from '@chakra-ui/react';
 import { Eye } from 'lucide-react';
 import { Card } from '@/components/Card';
@@ -12,6 +13,7 @@ export const MultiModalCard = React.memo(({
 	onUseMultiModalChange: (v: boolean) => void;
 	hasMmproj: boolean;
 }) => {
+	const { t } = useTranslation();
 	return (
 		<Card bg={useMultiModal ? 'var(--wc-accent-yellow-bg-8)' : undefined} borderColor={useMultiModal ? 'var(--wc-accent-yellow-border)' : undefined}>
 			<HStack justify="space-between" align="center">
@@ -21,11 +23,11 @@ export const MultiModalCard = React.memo(({
 						<Eye size={14} color={useMultiModal ? 'var(--wc-accent-yellow)' : 'var(--wc-text-tertiary)'} />
 					</Flex>
 					<VStack align="start" gap="0.5">
-<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">Multi-modal</Text>
-					<Text fontSize="11px" color="var(--wc-text-tertiary)">Vision requires mmproj.GGUF</Text>
+<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.multiModal')}</Text>
+					<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.visionRequiresMmprojGguf')}</Text>
 					</VStack>
 				</HStack>
-				<Switch.Root label="Use multi-modal (mmproj)" checked={useMultiModal} onCheckedChange={(d) => onUseMultiModalChange(d.checked)} disabled={!hasMmproj} color={useMultiModal ? 'var(--wc-accent-yellow)' : 'var(--wc-text-tertiary)'}>
+				<Switch.Root label={t('common:ui.useMultiModalMmproj')} checked={useMultiModal} onCheckedChange={(d) => onUseMultiModalChange(d.checked)} disabled={!hasMmproj} color={useMultiModal ? 'var(--wc-accent-yellow)' : 'var(--wc-text-tertiary)'}>
 					<Switch.HiddenInput />
 					<Switch.Control css={{ bg: useMultiModal ? 'var(--wc-accent-yellow)' : 'surface.4' }}>
 						<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />

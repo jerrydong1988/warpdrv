@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ISettings, IHubModel, IDownload } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { HubModelCard } from './HubModelCard';
 import { HubModelDetail } from './HubModelDetail';
@@ -32,16 +33,16 @@ enum ESortOrder {
 	ASC = 'asc',
 }
 
-const SORT_FIELD_OPTIONS: { value: EHubSortField; label: string }[] = [
-	{ value: EHubSortField.DOWNLOADS, label: 'Downloads' },
-	{ value: EHubSortField.LIKES, label: 'Likes' },
-	{ value: EHubSortField.MODIFIED, label: 'Last Modified' },
-	{ value: EHubSortField.CREATED, label: 'Created Date' },
-];
-
 const PARAM_STEPS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 17, 20, 24, 27, 30, 36, 45, 90, 140, 280, 560, 1000];
 
 export const HubPage = React.memo(() => {
+	const { t } = useTranslation('hub');
+	const sortFieldOptions: { value: EHubSortField; label: string }[] = [
+		{ value: EHubSortField.DOWNLOADS, label: t('sortFields.downloads') },
+		{ value: EHubSortField.LIKES, label: t('sortFields.likes') },
+		{ value: EHubSortField.MODIFIED, label: t('sortFields.lastModified') },
+		{ value: EHubSortField.CREATED, label: t('sortFields.createdDate') },
+	];
 	const { toast } = useToast();
 	const navigate = useNavigate();
 	const settings = useStore(s => s.settings);
@@ -124,37 +125,35 @@ export const HubPage = React.memo(() => {
 	if (!hasModelDirs) {
 		return (
 			<Box>
-				<PageHeader title="Hub" subtitle="Browse and download models from HuggingFace" icon={<Globe size={20} />} />
+				<PageHeader title={t('title')} subtitle={t('common:ui.browseAndDownloadModelsFromHuggingface')} icon={<Globe size={20} />} />
 				<Flex h="calc(100vh - 89px)" alignItems="center" justifyContent="center">
 					<VStack gap="4" maxW="400px" textAlign="center">
 						<Flex w="14" h="14" borderRadius="xl" alignItems="center" justifyContent="center" bg="var(--wc-accent-yellow-bg-8)" borderWidth="1px" borderColor="var(--wc-accent-yellow-border)">
 							<AlertCircle size={28} color="var(--wc-accent-yellow)" />
 						</Flex>
-						<Text fontSize="16px" fontWeight="600" color="var(--wc-text-primary)">No model directory configured</Text>
+						<Text fontSize="16px" fontWeight="600" color="var(--wc-text-primary)">{t('common:ui.noModelDirectoryConfigured')}</Text>
 						<Text fontSize="13px" color="var(--wc-text-muted)">
-							Add a model directory in Settings first to enable downloading.
-						</Text>
+							{t('common:ui.addAModelDirectoryInSettingsFirstToEnableDownloading')}</Text>
 						<Button size="sm" bg="var(--wc-accent-blue-bg-12)" color="var(--wc-accent-blue)" borderWidth="1px" borderColor="var(--wc-accent-blue-border)" _hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }} borderRadius="lg" fontSize="13px" fontWeight="500" onClick={() => navigate('/settings')}>
-							<Settings size={14} /> Go to Settings
-						</Button>
+							<Settings size={14} /> {t('common:ui.goToSettings')}</Button>
 					</VStack>
 				</Flex>
 			</Box>
 		);
 	}
 
-	const selectedSortLabel = SORT_FIELD_OPTIONS.find(o => o.value === sortField)?.label ?? 'Sort';
+	const selectedSortLabel = sortFieldOptions.find(o => o.value === sortField)?.label ?? '';
 
 	return (
 		<Box>
 			<PageHeader
-				title="HuggingFace"
+				title={t('title')}
 				icon={<Globe size={20} />}
 				actions={
 					<HStack gap="3">
 						<Box position="relative">
 							<Input
-								placeholder="Search models or users..."
+								placeholder={t('searchPlaceholder')}
 								size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)"
 								color="var(--wc-text-primary)" fontSize="13px" borderRadius="lg" pl="9"
 								_placeholder={{ color: 'var(--wc-text-faint)' }}
@@ -168,7 +167,7 @@ export const HubPage = React.memo(() => {
 							</Box>
 						</Box>
 						<HStack gap="3" alignItems="center">
-							<Text fontSize="11px" color="var(--wc-text-faint)">Params</Text>
+							<Text fontSize="11px" color="var(--wc-text-faint)">{t('common:fields.params')}</Text>
 							<Slider.Root
 								w="150px"
 								size="sm"
@@ -195,8 +194,7 @@ export const HubPage = React.memo(() => {
 							onClick={handleSearch} disabled={!query.trim() || searching} px="5"
 						>
 							{searching ? <Spinner size="xs" /> : <Search size={14} />}
-							Search
-						</Button>
+							{t('common:ui.search')}</Button>
 					</HStack>
 				}
 				actionsRight={
@@ -210,7 +208,7 @@ export const HubPage = React.memo(() => {
 						onClick={() => setShowDownloads(!showDownloads)}
 					>
 						<Download size={14} />
-						Downloads
+						{t('sections.downloads')}
 						{activeDownloadCount > 0 && (
 							<Badge px="1.5" py="0" borderRadius="full" fontSize="10px" bg="var(--wc-accent-blue-bg-10)" color="var(--wc-accent-blue)" ml="1">
 								{activeDownloadCount}
@@ -227,7 +225,7 @@ export const HubPage = React.memo(() => {
 						<Flex flex="1" alignItems="center" justifyContent="center">
 							<VStack gap="3" color="var(--wc-text-disabled)">
 								<Globe size={40} />
-								<Text fontSize="13px">Search HuggingFace for GGUF models</Text>
+								<Text fontSize="13px">{t('common:ui.searchHuggingfaceForGgufModels')}</Text>
 							</VStack>
 						</Flex>
 					) : searching ? (
@@ -236,7 +234,7 @@ export const HubPage = React.memo(() => {
 						</Flex>
 					) : results.length === 0 ? (
 						<Flex flex="1" alignItems="center" justifyContent="center">
-							<Text fontSize="12px" color="var(--wc-text-faint)">No results found</Text>
+							<Text fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noResultsFound')}</Text>
 						</Flex>
 					) : (
 						<>
@@ -257,7 +255,7 @@ export const HubPage = React.memo(() => {
 												<>
 													<Box position="fixed" inset="0" zIndex="dropdown" onClick={() => setShowSortMenu(false)} />
 													<Box position="absolute" top="100%" right="0" mt="1" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-overlay)" borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" zIndex="dropdown" py="1" minW="140px">
-														{SORT_FIELD_OPTIONS.map(opt => (
+												{sortFieldOptions.map(opt => (
 															<Box key={opt.value} px="3" py="1.5" fontSize="11px"
 																color={sortField === opt.value ? 'var(--wc-accent-blue)' : 'var(--wc-text-secondary)'}
 																bg={sortField === opt.value ? 'var(--wc-accent-blue-bg-8)' : 'transparent'}
@@ -304,7 +302,7 @@ export const HubPage = React.memo(() => {
 						<Flex h="100%" alignItems="center" justifyContent="center">
 							<VStack gap="3" color="var(--wc-text-disabled)">
 								<Package size={40} />
-								<Text fontSize="13px">Select a model to view details</Text>
+								<Text fontSize="13px">{t('common:ui.selectAModelToViewDetails')}</Text>
 							</VStack>
 						</Flex>
 					)}

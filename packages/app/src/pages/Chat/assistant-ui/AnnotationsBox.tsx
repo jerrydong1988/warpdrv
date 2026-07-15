@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Text, VStack, HStack } from '@chakra-ui/react';
 import { X } from 'lucide-react';
 import { useStore } from '@/store';
 
 export const AnnotationsBox = React.memo(() => {
+	const { t } = useTranslation();
 	const annotations = useStore(s => s.annotations);
 	const removeAnnotation = useStore(s => s.removeAnnotation);
 	const clearAnnotations = useStore(s => s.clearAnnotations);
@@ -13,7 +15,7 @@ export const AnnotationsBox = React.memo(() => {
 	return (
 		<Box borderWidth="1px" borderColor="var(--wc-border-default)" borderRadius="lg" bg="var(--wc-bg-elevated)" p="3" maxH="320px" overflow="auto">
 			<HStack justify="space-between" align="center" mb="2">
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-text-primary)">Annotations ({annotations.length})</Text>
+				<Text fontSize="11px" fontWeight="600" color="var(--wc-text-primary)">{t('common:ui.annotations')}{annotations.length})</Text>
 				<Box
 					as="button"
 					display="flex"
@@ -28,8 +30,7 @@ export const AnnotationsBox = React.memo(() => {
 					onClick={clearAnnotations}
 				>
 					<X size={12} />
-					Clear all
-				</Box>
+					{t('common:ui.clearAll')}</Box>
 			</HStack>
 			<VStack gap="2" align="stretch">
 				{annotations.map((annotation, index) => (

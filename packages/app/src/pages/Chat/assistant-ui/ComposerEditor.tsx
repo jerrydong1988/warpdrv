@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useImperativeHandle, forwardRef, useRef } from "react";
 import { useEditor, EditorContent, Extension, type Editor } from "@tiptap/react";
 import Document from "@tiptap/extension-document";

@@ -17,6 +17,7 @@ import type { IModel, IWhisperModel } from '@warpcore/shared';
 // ============================================================
 
 import { QUANT_COLORS } from '@/lib/constants';
+import { useTranslation } from 'react-i18next';
 
 type TModelType = 'llama' | 'whisper';
 
@@ -118,6 +119,7 @@ function sortModels(models: IDisplayModel[], sort: ISortState): IDisplayModel[] 
 // ============================================================
 
 function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose: () => void; onReparse: (id: string) => void }) {
+	const { t } = useTranslation();
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -160,7 +162,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				}}
 			>
 				<ExternalLink size={14} />
-				<Text fontSize="12px">Open on HuggingFace</Text>
+				<Text fontSize="12px">{t('models:actions.openOnHuggingFace')}</Text>
 			</HStack>
 			<HStack
 				gap="2"
@@ -176,7 +178,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				}}
 			>
 				<FolderIcon size={14} />
-				<Text fontSize="12px">Copy folder path</Text>
+				<Text fontSize="12px">{t('models:actions.copyFolderPath')}</Text>
 			</HStack>
 			{model._modelType === 'llama' && (
 				<HStack
@@ -193,7 +195,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 					}}
 				>
 					<RefreshCw size={14} />
-					<Text fontSize="12px">Re-parse Metadata</Text>
+					<Text fontSize="12px">{t('models:actions.reparseMetadata')}</Text>
 				</HStack>
 			)}
 			<Box h="1px" bg="var(--wc-border-subtle)" my="1" />
@@ -205,7 +207,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				color="var(--wc-text-disabled)"
 			>
 				<Trash2 size={14} />
-				<Text fontSize="12px">Delete</Text>
+				<Text fontSize="12px">{t('servers:dialogs.confirmDelete')}</Text>
 			</HStack>
 		</Box>
 	);
@@ -255,6 +257,7 @@ function SortHeader({
 // ============================================================
 
 export function ModelsPage() {
+	const { t } = useTranslation();
 	const modelsRecord = useStore(s => s.models);
 	const whisperModelsRecord = useStore(s => s.whisperModels);
 	const allModels: IDisplayModel[] = useMemo(() => [
@@ -319,7 +322,7 @@ const [search, setSearch] = useState('');
 	return (
 		<Box>
 <PageHeader
-				title="Models"
+				title={t('models:title')}
 				subtitle={`${allModels.length} model${allModels.length !== 1 ? 's' : ''}`}
 				icon={<FolderOpen size={20} />}
 				actions={
@@ -337,7 +340,7 @@ const [search, setSearch] = useState('');
 								}}
 							/>
 							<Input
-								placeholder="Search models..."
+								placeholder={t('models:searchPlaceholder')}
 								value={search}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
 								size="sm"
@@ -370,8 +373,7 @@ const [search, setSearch] = useState('');
 						disabled={scanMut.loading}
 					>
 						{scanMut.loading ? <Spinner size="xs" /> : <Search size={15} />}
-						Re-Scan Folders
-					</Button>
+						{t('models:actions.reScanFolders')}</Button>
 				}
 			/>
 
@@ -384,15 +386,15 @@ const [search, setSearch] = useState('');
 					borderBottomWidth="1px"
 					borderColor="var(--wc-border-subtle)"
 				>
-					<Box w={cols.type}><SortHeader label="Type" sortKey="type" sort={sort} onSort={handleSort} /></Box>
-					<Box flex={cols.name}><SortHeader label="Model" sortKey="name" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.user}><SortHeader label="User" sortKey="user" sort={sort} onSort={handleSort} /></Box>
-<Box w={cols.quant}><SortHeader label="Quant" sortKey="quant" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.vision}><SortHeader label="Vision" sortKey="vision" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.params}><SortHeader label="Params" sortKey="params" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.size}><SortHeader label="Size" sortKey="size" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.context}><SortHeader label="Context" sortKey="context" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.files}><SortHeader label="Files" sortKey="files" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.type}><SortHeader label={t('recipes:fields.inputType')} sortKey="type" sort={sort} onSort={handleSort} /></Box>
+					<Box flex={cols.name}><SortHeader label={t('servers:launch.model')} sortKey="name" sort={sort} onSort={handleSort} /></Box>
+					<Box w={cols.user}><SortHeader label={t('models:columns.user')} sortKey="user" sort={sort} onSort={handleSort} /></Box>
+<Box w={cols.quant}><SortHeader label={t('models:columns.quant')} sortKey="quant" sort={sort} onSort={handleSort} /></Box>
+				<Box w={cols.vision}><SortHeader label={t('servers:labels.vision')} sortKey="vision" sort={sort} onSort={handleSort} /></Box>
+				<Box w={cols.params}><SortHeader label={t('models:columns.params')} sortKey="params" sort={sort} onSort={handleSort} /></Box>
+					<Box w={cols.size}><SortHeader label={t('models:columns.size')} sortKey="size" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.context}><SortHeader label={t('servers:labels.context')} sortKey="context" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.files}><SortHeader label={t('models:columns.files')} sortKey="files" sort={sort} onSort={handleSort} align="right" /></Box>
 					<Box w={cols.actions} />
 				</Flex>
 
@@ -400,8 +402,7 @@ const [search, setSearch] = useState('');
 				{allModels.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models found. Configure a directory in Settings, then scan.
-						</Text>
+							{t('models:emptyState')}</Text>
 					</Flex>
 				)}
 

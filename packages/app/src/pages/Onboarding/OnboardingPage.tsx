@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box } from '@chakra-ui/react';
 import { updateSettings } from '@/api/services';
 import { StepWelcome } from './steps/StepWelcome';
@@ -18,6 +19,7 @@ export interface IStepProps {
 }
 
 export function OnboardingPage() {
+	const { t } = useTranslation('onboarding');
 	const [currentStep, setCurrentStep] = useState(0);
 
 	const goNext = () => {

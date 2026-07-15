@@ -5,6 +5,7 @@ import {
 import {
 	X, Blocks, Terminal, FolderSearch, Plus, CheckCircle, AlertCircle, FileInput,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { EValidationStatus, ALL_COMMON_FLAGS, TOGGLE_FLAG_MAPPINGS, getFlagMapping } from '@warpcore/shared';
 import { Card } from '../../components/Card';
 import { createBackend, updateBackend } from '../../api/services';
@@ -29,6 +30,7 @@ const FLAG_VALUE_PAIRS: Record<string, RegExp> = {
 };
 
 export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
+	const { t } = useTranslation('backends');
 	const { toast } = useToast();
 	const backend = editBackendId ? useStore((s) => s.backends[editBackendId]) : undefined;
 	const isEdit = !!backend;
@@ -109,7 +111,7 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 				}
 			}
 		} else {
-			toast('error', 'File picker not supported in this browser. Please type the path manually.');
+			toast('error', t('toast.filePickerNotSupported'));
 		}
 	};
 
@@ -125,10 +127,10 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 
 		setSaving(false);
 		if (result.ok) {
-			toast('success', isEdit ? `Backend "${name}" updated` : `Backend "${name}" added`);
+			toast('success', isEdit ? t('toast.backendUpdatedToast', { name }) : t('toast.backendAddedToast', { name }));
 			onClose();
 		} else {
-			toast('error', result.error ?? 'Failed to save backend');
+			toast('error', result.error ?? t('toast.saveFailed'));
 		}
 	};
 
@@ -146,8 +148,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 							<Blocks size={18} color="var(--wc-accent-purple)" />
 						</Flex>
 						<Box>
-							<Text fontSize="16px" fontWeight="700" color="var(--wc-text-primary)">{isEdit ? 'Edit Backend' : 'Add Backend'}</Text>
-							<Text fontSize="12px" color="var(--wc-text-muted)">Register a llama.cpp build</Text>
+							<Text fontSize="16px" fontWeight="700" color="var(--wc-text-primary)">{isEdit ? t('dialog.editBackend') : t('dialog.addBackend')}</Text>
+							<Text fontSize="12px" color="var(--wc-text-muted)">{t('dialog.registerLlamacpp')}</Text>
 						</Box>
 					</HStack>
 					<Button size="sm" variant="ghost" color="var(--wc-text-faint)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} borderRadius="md" onClick={onClose} minW="8" px="0">
@@ -159,28 +161,28 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 				<Box flex="1" overflowY="auto" p="6">
 					<VStack align="stretch" gap="5">
 						<Box>
-							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">Name</Text>
+							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('dialog.name')}</Text>
 							<Input placeholder="e.g. ROCm 7.2 — Strix Halo" size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontSize="13px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={name} onChange={e => setName(e.target.value)} />
 						</Box>
 
 						<Box>
-							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">Binary Path</Text>
+							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('dialog.binaryPath')}</Text>
 							<HStack gap="2">
 								<Input placeholder="/path/to/llama-server" size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={path} onChange={e => setPath(e.target.value)} flex="1" />
-								<Button size="sm" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-bg-8)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFile} title="Browse file">
+								<Button size="sm" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-bg-8)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFile} title={t('common:ui.browseFile')}>
 									<FileInput size={14} />
 								</Button>
 							</HStack>
-							<Text fontSize="10px" color="var(--wc-text-disabled)" mt="1">Binary is validated and devices are discovered when saved</Text>
+							<Text fontSize="10px" color="var(--wc-text-disabled)" mt="1">{t('dialog.binaryValidationHint')}</Text>
 						</Box>
 
 						<Box>
-							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">Description (optional)</Text>
-							<Textarea placeholder="Notes about this backend..." size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontSize="12px" borderRadius="lg" rows={2} resize="none" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={description} onChange={e => setDescription(e.target.value)} />
+							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('dialog.descriptionOptional')}</Text>
+							<Textarea placeholder={t('dialog.backendDescPlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontSize="12px" borderRadius="lg" rows={2} resize="none" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={description} onChange={e => setDescription(e.target.value)} />
 						</Box>
 
 						<Box>
-							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Default Arguments</Text>
+							<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('dialog.defaultArgs')}</Text>
 							<HStack gap="1.5" mb="3" flexWrap="wrap">
 								{ALL_COMMON_FLAGS.map(({ flag, label }) => {
 									const parts = flag.split(' ');
@@ -229,10 +231,10 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 
 				{/* Footer */}
 				<Flex px="6" py="4" justify="flex-end" gap="2" borderTopWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-surface)">
-					<Button size="sm" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} borderRadius="lg" fontSize="13px" onClick={onClose}>Cancel</Button>
+					<Button size="sm" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} borderRadius="lg" fontSize="13px" onClick={onClose}>{t('actions.cancel')}</Button>
 					<Button size="sm" disabled={!canSave} bg="var(--wc-accent-purple-bg-15)" color="var(--wc-accent-purple)" borderWidth="1px" borderColor="var(--wc-accent-purple-border)" _hover={{ bg: 'var(--wc-accent-purple-hover-bg)' }} _disabled={{ opacity: 0.3, cursor: 'not-allowed' }} borderRadius="lg" fontSize="13px" fontWeight="600" px="5" onClick={handleSave}>
 						{saving ? <Spinner size="xs" /> : <Blocks size={14} />}
-						{isEdit ? 'Save Changes' : 'Add Backend'}
+						{isEdit ? t('actions.saveChanges') : t('actions.addBackend')}
 					</Button>
 				</Flex>
 			</Box>

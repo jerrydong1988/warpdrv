@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { Box, Text, HStack, VStack, Input, Textarea } from '@chakra-ui/react';
 import { PencilIcon, CheckIcon, XIcon } from 'lucide-react';
@@ -48,6 +49,7 @@ interface WorkspaceThreadRowProps {
 	onSelect: (threadId: string) => void;
 }
 function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
+	const { t } = useTranslation();
 	const totalTokens = (thread.totalPromptTokens ?? 0) + (thread.totalCompletionTokens ?? 0);
 	return (
 		<Box
@@ -68,13 +70,12 @@ function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
 					whiteSpace="nowrap"
 					flex="1"
 				>
-					{thread.title || 'New Chat'}
+					{thread.title || t('common:ui.newChat')}
 				</Text>
 				<HStack gap="2" flexShrink={0}>
 					{totalTokens > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
-							{(totalTokens / 1000).toFixed(1)}k tokens
-						</Text>
+							{(totalTokens / 1000).toFixed(1)}{t('common:ui.kTokens')}</Text>
 					)}
 					{(thread.messageCount ?? 0) > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
@@ -91,6 +92,7 @@ function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
 }
 
 export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
+	const { t } = useTranslation();
 	const folders = useStore(s => s.folders);
 	const folder = folders.find(f => f.id === folderId);
 	const setWorkspace = useStore(s => s.setWorkspace);
@@ -231,7 +233,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 					<Textarea
 						value={description}
 						onChange={(e) => handleDescriptionChange(e.target.value)}
-						placeholder="Describe this workspace..."
+						placeholder={t('common:ui.describeThisWorkspace')}
 						rows={3}
 						bg="var(--wc-bg-card)"
 						borderColor="var(--wc-border-default)"
@@ -249,8 +251,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<Box w="full" mt="2">
 					<HStack justify="space-between" px="3" py="2">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
-							Threads
-						</Text>
+							{t('common:ui.threads')}</Text>
 						<Text fontSize="11px" color="var(--wc-text-disabled)">
 							{workspaceThreads.length}
 						</Text>
@@ -258,8 +259,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 					<VStack gap="0" align="stretch" w="full">
 						{workspaceThreads.length === 0 && (
 							<Text fontSize="12px" color="var(--wc-text-disabled)" px="3" py="4" textAlign="center">
-								No threads yet
-							</Text>
+								{t('common:ui.noThreadsYet')}</Text>
 						)}
 						{workspaceThreads.map(thread => (
 							<WorkspaceThreadRow

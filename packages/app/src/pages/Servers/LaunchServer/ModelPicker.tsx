@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, Badge, Portal, Combobox, createListCollection } from '@chakra-ui/react';
 import { Layers, Cpu, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { type IModel } from '@warpcore/shared';
 import { QUANT_COLORS } from '@/pages/Servers/utils';
 
@@ -29,6 +30,7 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect }: {
 	selectedPath: string | null;
 	onSelect: (path: string) => void;
 }) => {
+	const { t } = useTranslation();
 	const [inputValue, setInputValue] = useState('');
 	const filteredItems = useMemo(() => {
 		if (!inputValue) return entries;
@@ -59,7 +61,7 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect }: {
 		>
 			<Combobox.Control>
 				<Combobox.Input
-					placeholder="Search models..."
+					placeholder={t('common:ui.searchModels')}
 					bg="var(--wc-bg-subtle)"
 					borderColor="var(--wc-border-default)"
 					color="var(--wc-text-secondary)"
@@ -81,7 +83,7 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect }: {
 						borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" p="1"
 					>
 						<Combobox.Empty>
-							<Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">No matches</Text>
+							<Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">{t('common:ui.noMatches')}</Text>
 						</Combobox.Empty>
 						{collection.items.map((item) => {
 							const entry = (item as { entry: TModelEntry }).entry;
@@ -129,21 +131,22 @@ export const ModelPicker = React.memo(({
 	onSelectModel: (path: string) => void;
 	selectedEntry: TModelEntry | null;
 }) => {
+	const { t } = useTranslation('servers');
 	return (
 		<Box>
-			<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">Model</Text>
+			<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="3">{t('launch.model')}</Text>
 			{modelCount === 0 ? (
-				<Text fontSize="12px" color="var(--wc-text-muted)">No models scanned. Go to Settings and scan.</Text>
+				<Text fontSize="12px" color="var(--wc-text-muted)">{t('launch.noModels')}</Text>
 			) : (
 				<ModelCombobox entries={modelEntries} selectedPath={selectedModelPath} onSelect={onSelectModel} />
 			)}
 			{selectedEntry?.file.metadata && (
 				<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-blue-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-blue-border)">
-					<HStack gap="1.5"><Layers size={12} color="var(--wc-text-muted)" /><Text fontSize="11px" color="var(--wc-text-tertiary)">{selectedEntry.file.metadata.nLayers} layers</Text></HStack>
+					<HStack gap="1.5"><Layers size={12} color="var(--wc-text-muted)" /><Text fontSize="11px" color="var(--wc-text-tertiary)">{selectedEntry.file.metadata.nLayers} {t('launch.layers')}</Text></HStack>
 					<HStack gap="1.5"><Cpu size={12} color="var(--wc-text-muted)" /><Text fontSize="11px" color="var(--wc-text-tertiary)">{selectedEntry.file.metadata.paramCount}</Text></HStack>
 					<HStack gap="1.5"><Package size={12} color="var(--wc-text-muted)" /><Text fontSize="11px" color="var(--wc-text-tertiary)" fontFamily='"Geist Mono", monospace'>{formatSize(selectedEntry.model.totalSizeMb)}</Text></HStack>
 					{selectedEntry.file.metadata.contextLength > 0 && (
-						<HStack gap="1.5"><Text fontSize="11px" color="var(--wc-text-muted)">{(selectedEntry.file.metadata.contextLength / 1024).toFixed(0)}k ctx</Text></HStack>
+						<HStack gap="1.5"><Text fontSize="11px" color="var(--wc-text-muted)">{(selectedEntry.file.metadata.contextLength / 1024).toFixed(0)}k {t('launch.ctx')}</Text></HStack>
 					)}
 					{selectedEntry.model.mmprojFile && (
 						<HStack gap="1.5"><Package size={12} color="var(--wc-accent-purple)" /><Text fontSize="11px" color="var(--wc-accent-purple)">mmproj</Text></HStack>

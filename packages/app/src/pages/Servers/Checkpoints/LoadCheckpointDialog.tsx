@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button, Spinner } from '@chakra-ui/react';
 import { Upload } from 'lucide-react';
 import { useStore } from '@/store';
@@ -26,14 +28,15 @@ function formatBytes(n: number): string {
 function formatAge(createdAt: number): string {
 	const ms = Date.now() - createdAt;
 	const mins = Math.floor(ms / 60000);
-	if (mins < 60) return `${mins}m ago`;
+	if (mins < 60) return i18next.t('servers:checkpoints.ageMinutes', { count: mins });
 	const hours = Math.floor(mins / 60);
-	if (hours < 24) return `${hours}h ago`;
+	if (hours < 24) return i18next.t('servers:checkpoints.ageHours', { count: hours });
 	const days = Math.floor(hours / 24);
-	return `${days}d ago`;
+	return i18next.t('servers:checkpoints.ageDays', { count: days });
 }
 
 export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpointDialogProps) {
+	const { t } = useTranslation();
 	const { toast } = useToast();
 	const allCheckpoints = useStore((s) => s.checkpoints);
 	const serverSlots = useStore((s) => s.serverSlots[server.id] ?? null);
@@ -203,6 +206,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 	});
 
 	function CheckpointRow({ cp, indent }: { cp: ICheckpoint; indent: boolean }) {
+		const { t } = useTranslation();
 		const isSelected = cp.id in selected;
 		const target = selected[cp.id];
 		return (
@@ -229,7 +233,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 				<VStack gap="0" align="stretch" flex="1">
 					<HStack gap="2">
 						<Text fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace'>
-							Slot {cp.slotIndex}
+							{t('common:ui.slot')}{cp.slotIndex}
 						</Text>
 						<Text fontSize="11px" color="var(--wc-text-secondary)" fontFamily='"Geist Mono", monospace'>
 							{cp.tokens.toLocaleString()} tok
@@ -262,6 +266,7 @@ background: 'var(--wc-bg-subtle)',
 	}
 
 	function BundleHeader({ bundleId, items }: { bundleId: string; items: ICheckpoint[] }) {
+		const { t } = useTranslation();
 		const allSelected = items.every(cp => cp.id in selected);
 		const someSelected = !allSelected && items.some(cp => cp.id in selected);
 		const first = items[0]!;
@@ -289,7 +294,7 @@ background: 'var(--wc-bg-subtle)',
 				<VStack gap="0" align="stretch" flex="1">
 					<Text fontSize="12px" color="var(--wc-text-primary)" fontWeight="500">{first.name}</Text>
 					<Text fontSize="10px" color="var(--wc-text-tertiary)" fontFamily='"Geist Mono", monospace'>
-						{items.length} slots · {formatBytes(totalSize)} · {formatAge(first.createdAt)}
+						{items.length} {t('common:ui.slots')}{formatBytes(totalSize)} · {formatAge(first.createdAt)}
 					</Text>
 				</VStack>
 			</HStack>
@@ -317,17 +322,14 @@ background: 'var(--wc-bg-subtle)',
 										<Upload size={16} color="var(--wc-accent-blue)" />
 									</Box>
 									<Dialog.Title fontSize="15px" fontWeight="700" color="var(--wc-text-primary)">
-										Load Checkpoint
-									</Dialog.Title>
+										{t('common:ui.loadCheckpoint')}</Dialog.Title>
 								</HStack>
 
 								<HStack gap="2">
 									<Button {...filterButtonStyle(filter === 'THIS_SERVER')} onClick={() => setFilter('THIS_SERVER')}>
-										This server
-									</Button>
+										{t('common:ui.thisServer')}</Button>
 									<Button {...filterButtonStyle(filter === 'ALL_COMPATIBLE')} onClick={() => setFilter('ALL_COMPATIBLE')}>
-										All compatible
-									</Button>
+										{t('common:ui.allCompatible')}</Button>
 								</HStack>
 
 								<VStack
@@ -343,8 +345,7 @@ bg="var(--wc-bg-subtle)"
 								>
 									{bundles.bundleGroups.length === 0 && bundles.standalone.length === 0 && (
 										<Text fontSize="12px" color="var(--wc-text-disabled)" textAlign="center" py="4">
-											No checkpoints available
-										</Text>
+											{t('common:ui.noCheckpointsAvailable')}</Text>
 									)}
 									{bundles.bundleGroups.map(({ bundleId, items }) => (
 										<VStack key={bundleId} gap="0" align="stretch">
@@ -362,8 +363,8 @@ bg="var(--wc-bg-subtle)"
 								<HStack justify="space-between">
 									<Text fontSize="11px" color={hasDuplicateTargets ? 'var(--wc-accent-red)' : 'var(--wc-text-secondary)'}>
 										{hasDuplicateTargets
-											? 'Duplicate target slots - adjust assignments'
-											: `Loading ${mappings.length} slot(s) into target server`}
+											? t('common:ui.duplicateTargetSlotsAdjustAssignments')
+											: t('servers:checkpoints.loadingSlots', { count: mappings.length })}
 									</Text>
 								</HStack>
 
@@ -379,8 +380,7 @@ color="var(--wc-text-tertiary)"
 										onClick={onClose}
 										disabled={isLoading}
 									>
-										Cancel
-									</Button>
+										{t('common:ui.cancel')}</Button>
 									<Button
 										flex="1"
 										size="sm"
@@ -427,9 +427,9 @@ bg="rgba(0,0,0,0.3)"
 			{confirmOpen && (
 				<ConfirmDialog
 					isOpen={confirmOpen}
-					title="Overwrite target slots?"
-					message="Loading will replace the current KV cache in the selected target slots."
-					confirmLabel="Load"
+					title={t('common:ui.overwriteTargetSlots')}
+					message={t('common:ui.loadingWillReplaceTheCurrentKvCacheInTheSelectedTargetSlots')}
+					confirmLabel={t('servers:checkpoints.load')}
 					loadingLabel="Loading..."
 					isLoading={isLoading}
 					onConfirm={() => { setConfirmOpen(false); performLoad(); }}

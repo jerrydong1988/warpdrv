@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Popover, Text, VStack, Box, HStack, Switch } from '@chakra-ui/react';
 import { IconButton } from '@chakra-ui/react';
 import { LuDatabaseZap } from 'react-icons/lu';
@@ -7,6 +8,7 @@ import { EServerStatus } from '@warpcore/shared';
 import { useThreadAutoEmbed } from '@/hooks/useThreadAutoEmbed';
 
 export const EmbeddingToggle: React.FC = () => {
+	const { t } = useTranslation('chat');
 	const servers = useStore(s => s.servers);
 	const selectedEmbeddingServerId = useStore(s => s.selectedEmbeddingServerId);
 	const setSelectedEmbeddingServerId = useStore(s => s.setSelectedEmbeddingServerId);
@@ -49,11 +51,11 @@ export const EmbeddingToggle: React.FC = () => {
 					_hover={{ bg: 'var(--wc-bg-hover)' }}
 					color={serverActive ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'}
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
-					title={`Embedding: ${serverName}${enableAutoEmbed ? ' (auto)' : ''}`}
+					title={t('dynamic.embeddingTitle', { server: serverName, auto: enableAutoEmbed ? t('dynamic.autoSuffix') : '' })}
 				>
 					<LuDatabaseZap size={16} />
 					{enableAutoEmbed && (
-						<Text fontSize="10px" fontWeight="600" ml="0.5" textTransform="uppercase">Auto</Text>
+						<Text fontSize="10px" fontWeight="600" ml="0.5" textTransform="uppercase">{t('common:ui.auto')}</Text>
 					)}
 				</IconButton>
 			</Popover.Trigger>
@@ -68,7 +70,7 @@ export const EmbeddingToggle: React.FC = () => {
 				>
 					<Popover.Body p="2">
 						{embeddingServers.length === 0 ? (
-							<Text fontSize="12px" color="var(--wc-text-muted)" textAlign="center" py="2">No embedding servers running</Text>
+							<Text fontSize="12px" color="var(--wc-text-muted)" textAlign="center" py="2">{t('common:ui.noEmbeddingServersRunning')}</Text>
 						) : (
 							<VStack align="stretch" gap="0.5">
 								{embeddingServers.map(server => {
@@ -94,7 +96,7 @@ export const EmbeddingToggle: React.FC = () => {
 								})}
 								<Box pt="1" borderTopWidth="1px" borderColor="var(--wc-border-default)">
 									<Switch.Root
-										label="Auto-embed messages"
+										label={t('common:ui.autoEmbedMessages')}
 										checked={enableAutoEmbed}
 										onCheckedChange={(details) => {
 											handleAutoEmbedToggle(details.checked);
@@ -108,8 +110,7 @@ export const EmbeddingToggle: React.FC = () => {
 												<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 											</Switch.Control>
 											<Switch.Label ml="0" fontSize="12px" color={enableAutoEmbed ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'} userSelect="none">
-												Auto-embed
-											</Switch.Label>
+												{t('common:ui.autoEmbed')}</Switch.Label>
 										</HStack>
 									</Switch.Root>
 								</Box>

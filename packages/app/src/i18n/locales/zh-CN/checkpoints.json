@@ -1,0 +1,37 @@
+{
+  "title": "KV 缓存",
+  "subtitle": "{{count}} 个检查点",
+  "searchPlaceholder": "搜索检查点...",
+  "sortFields": {
+    "recency": "最近保存",
+    "size": "大小",
+    "name": "名称",
+    "slot": "槽位"
+  },
+  "emptyState": "暂无检查点",
+  "guideText": "阅读",
+  "guide": "指南",
+  "guideLinkTitle": "了解如何使用检查点。",
+  "slot": "槽位 {{index}}",
+  "tok": "tok",
+  "slots": "个槽位",
+  "totalDiskUsage": "磁盘总用量：{{size}}",
+  "ascending": "升序",
+  "descending": "降序",
+  "dialogs": {
+    "deleteCheckpointTitle": "删除检查点？",
+    "deleteCheckpointMessage": "这将删除槽位 {{slot}} 的检查点。此操作不可撤销。",
+    "confirmDelete": "删除",
+    "deleting": "删除中...",
+    "deleteBundleTitle": "删除捆绑包？",
+    "deleteBundleMessage": "这将删除此捆绑包中的全部 {{count}} 个检查点。此操作不可撤销。",
+    "deleteAll": "全部删除"
+  },
+  "toast": {
+    "deleted": "检查点已删除",
+    "deleteFailed": "删除失败",
+    "bundleDeleted": "已删除 {{count}} 个检查点",
+    "renamed": "已重命名",
+    "renameFailed": "重命名失败"
+  }
+}

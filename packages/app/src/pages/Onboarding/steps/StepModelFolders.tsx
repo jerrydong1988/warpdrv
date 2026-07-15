@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Box, Text, Input, Button, Spinner, HStack, Flex, VStack } from '@chakra-ui/react';
 import { Plus, Trash2, FolderInput, FolderOpen, Check, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '@/hooks/useDependantState';
 import { useStore } from '@/store';
 import { scanModels, updateSettings } from '@/api/services';
@@ -10,6 +11,7 @@ import { OnboardingFooter } from '../components/OnboardingFooter';
 import type { IStepProps } from '../OnboardingPage';
 
 export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProps) {
+	const { t } = useTranslation('onboarding');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
 	const models = useStore(s => s.models);
@@ -73,14 +75,13 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 	return (
 		<Box display="flex" flexDirection="column" h="100%">
 			<Box px="4" pt="8">
-				<OnboardingHeader title="Model Folders" step={1} totalSteps={4} />
+				<OnboardingHeader title={t('common:ui.modelFolders')} step={1} totalSteps={4} />
 			</Box>
 
 			<Box flex="1" display="flex" alignItems="center" px="4" py="4" overflow="auto">
 				<Box w="100%" maxW="520px" mx="auto">
 					<Text fontSize="14px" color="var(--wc-text-muted)" textAlign="center" mb="6">
-						Tell WarpCore where your GGUF models live. Models should follow the user/model folder structure.
-					</Text>
+						{t('common:ui.tellWarpcoreWhereYourGgufModelsLiveModelsShouldFollowTheUserModelFolderStructure')}</Text>
 
 					<VStack align="stretch" gap="2" mb="5">
 						{modelRoots.map((root, idx) => (
@@ -131,7 +132,7 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 								minW="8"
 								px="0"
 								onClick={handleBrowseDirectory}
-								title="Browse directory"
+								title={t('common:ui.browseDirectory')}
 							>
 								<FolderInput size={14} />
 							</Button>
@@ -162,7 +163,7 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 							onClick={handleSaveAndScan}
 							disabled={modelRoots.length === 0 || isScanning}
 						>
-							{isScanning ? 'Scanning...' : 'Save & Scan'}
+							{isScanning ? 'Scanning...' : t('common:ui.saveScan')}
 						</Button>
 					</Flex>
 

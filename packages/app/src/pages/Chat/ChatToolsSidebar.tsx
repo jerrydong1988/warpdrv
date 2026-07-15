@@ -6,6 +6,7 @@
 // ============================================================
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import {
 	Wrench,
@@ -92,6 +93,7 @@ function ThreadApprovalButton({ mode, currentMode, isOverridden, isActive, onSel
 }
 
 export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+	const { t } = useTranslation();
 	const mcpServers = useStore((s) => s.mcpServers);
 	const serverPerms = useStore((s) => s.serverPermissions);
 	const toolPerms = useStore((s) => s.toolPermissions);
@@ -139,8 +141,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 					<ChevronRight size={12} color="var(--wc-text-muted)" />
 				</Box>
 				<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)" textTransform="uppercase" letterSpacing="0.05em">
-					Tools
-				</Text>
+					{t('common:ui.tools')}</Text>
 				<Badge fontSize="9px" px="1.5" borderRadius="sm" bg="var(--wc-bg-surface)" color="var(--wc-text-faint)">
 					{totalTools}
 				</Badge>
@@ -167,7 +168,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 								{name}
 							</Text>
 							{!serverEnabled && (
-								<Text fontSize="9px" color="var(--wc-accent-red-border)">OFF</Text>
+								<Text fontSize="9px" color="var(--wc-accent-red-border)">{t('common:ui.off')}</Text>
 							)}
 						</HStack>
 
@@ -198,7 +199,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 									);
 								})}
 								{state.tools.length === 0 && (
-									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">No tools</Text>
+									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">{t('common:ui.noTools')}</Text>
 								)}
 							</VStack>
 						)}
@@ -208,8 +209,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 
 			{serverEntries.length === 0 && (
 				<Text fontSize="11px" color="var(--wc-text-faint)" textAlign="center" py="4">
-					No MCP servers
-				</Text>
+					{t('common:ui.noMcpServers')}</Text>
 			)}
 		</Box>
 	);
@@ -219,6 +219,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 // Content panel for tabbed sidebar (no header, no toggle strip)
 // ============================================================
 export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }) {
+	const { t } = useTranslation();
 	const mcpServers = useStore((s) => s.mcpServers);
 	const serverPerms = useStore((s) => s.serverPermissions);
 	const toolPerms = useStore((s) => s.toolPermissions);
@@ -281,7 +282,7 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 								{name}
 							</Text>
 							{!serverEnabled && (
-								<Text fontSize="9px" color="var(--wc-accent-red-border)">OFF</Text>
+								<Text fontSize="9px" color="var(--wc-accent-red-border)">{t('common:ui.off')}</Text>
 							)}
 						</HStack>
 
@@ -331,7 +332,7 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 									);
 								})}
 								{state.tools.length === 0 && (
-									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">No tools</Text>
+									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">{t('common:ui.noTools')}</Text>
 								)}
 							</VStack>
 						)}
@@ -341,8 +342,7 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 
 			{serverEntries.length === 0 && (
 				<Text fontSize="11px" color="var(--wc-text-faint)" textAlign="center" py="4">
-					No MCP servers
-				</Text>
+					{t('common:ui.noMcpServers')}</Text>
 			)}
 		</Box>
 	);

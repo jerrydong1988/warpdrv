@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 "use client";
 
 import { memo, useCallback, useRef, useState } from "react";
@@ -212,6 +213,7 @@ function ToolFallbackResult({
 }: React.ComponentProps<"div"> & {
   result?: unknown;
 }) {
+	const { t } = useTranslation();
   if (result === undefined) return null;
 
   return (
@@ -223,7 +225,7 @@ function ToolFallbackResult({
       )}
       {...props}
     >
-      <p className="aui-tool-fallback-result-header font-semibold">Result:</p>
+      <p className="aui-tool-fallback-result-header font-semibold">{t('common:ui.result2')}</p>
       <pre className="aui-tool-fallback-result-content whitespace-pre-wrap">
         {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
       </pre>

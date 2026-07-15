@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
 	Flex, Box, Text, HStack, VStack, Button, Input, Switch, Portal, Combobox, createListCollection,
 } from '@chakra-ui/react';
@@ -25,6 +26,7 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 	onSelect: (path: string) => void;
 	placeholder: string;
 }) => {
+	const { t } = useTranslation();
 	const [inputValue, setInputValue] = useState('');
 	const filteredItems = useMemo(() => {
 		if (!inputValue) return entries;
@@ -59,7 +61,7 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 				<Combobox.Positioner>
 					<Combobox.Content maxH="280px" overflowY="auto" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-default)"
 						borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" p="1">
-						<Combobox.Empty><Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">No matches</Text></Combobox.Empty>
+						<Combobox.Empty><Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">{t('common:ui.noMatches')}</Text></Combobox.Empty>
 						{collection.items.map((item) => {
 							const entry = (item as { entry: TModelEntry }).entry;
 							return (
@@ -99,6 +101,7 @@ export const SpeculativeDecodingCard = React.memo(({
 	deviceOptions: string[];
 	deviceIdToName: Record<string, string>;
 }) => {
+	const { t } = useTranslation();
 	return (
 		<Card bg={specDecode.enabled ? 'var(--wc-accent-purple-bg-8)' : undefined} borderColor={specDecode.enabled ? 'var(--wc-accent-purple-border)' : undefined}>
 			<HStack justify="space-between" align="center">
@@ -108,11 +111,11 @@ export const SpeculativeDecodingCard = React.memo(({
 						<Sparkles size={14} color={specDecode.enabled ? 'var(--wc-accent-purple)' : 'var(--wc-text-tertiary)'} />
 					</Flex>
 					<VStack align="start" gap="0.5">
-<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">Speculative Decoding</Text>
-					<Text fontSize="11px" color="var(--wc-text-tertiary)">{specDecode.mode === 'ngram' ? 'Draftless n-gram speculation' : specDecode.mode === 'mtp' ? 'Mamba Transition Prediction' : 'Use a smaller model as the draft driver'}</Text>
+<Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.speculativeDecoding')}</Text>
+					<Text fontSize="11px" color="var(--wc-text-tertiary)">{specDecode.mode === 'ngram' ? t('common:ui.draftlessNGramSpeculation') : specDecode.mode === 'mtp' ? t('common:ui.mambaTransitionPrediction') : t('common:ui.useASmallerModelAsTheDraftDriver')}</Text>
 					</VStack>
 				</HStack>
-				<Switch.Root label="Enable speculative decoding" checked={specDecode.enabled} onCheckedChange={(d) => onSpecParamChange('enabled', d.checked)} color={specDecode.enabled ? 'var(--wc-accent-purple)' : 'var(--wc-text-tertiary)'}>
+				<Switch.Root label={t('common:ui.enableSpeculativeDecoding')} checked={specDecode.enabled} onCheckedChange={(d) => onSpecParamChange('enabled', d.checked)} color={specDecode.enabled ? 'var(--wc-accent-purple)' : 'var(--wc-text-tertiary)'}>
 					<Switch.HiddenInput />
 					<Switch.Control css={{ bg: specDecode.enabled ? 'var(--wc-accent-purple)' : 'surface.4' }}>
 						<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
@@ -130,7 +133,7 @@ export const SpeculativeDecodingCard = React.memo(({
 							bg={specDecode.mode === 'draft' ? 'var(--wc-accent-purple-bg-8)' : 'var(--wc-bg-subtle)'}
 							_hover={{ borderColor: specDecode.mode === 'draft' ? 'var(--wc-accent-purple-hover)' : 'var(--wc-border-hover)' }}
 							onClick={() => onSpecParamChange('mode', 'draft')}
-						><Text fontSize="13px" fontWeight="500">Draft Model</Text></Button>
+						><Text fontSize="13px" fontWeight="500">{t('common:ui.draftModel')}</Text></Button>
 						<Button size="sm" variant="outline" flex="1" justifyContent="center"
 							borderColor={specDecode.mode === 'mtp' ? 'var(--wc-accent-purple-border)' : 'var(--wc-border-subtle)'}
 							borderWidth={specDecode.mode === 'mtp' ? '2px' : '1px'}
@@ -152,15 +155,15 @@ export const SpeculativeDecodingCard = React.memo(({
 					{specDecode.mode === 'draft' && (
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Draft Model</Text>
+								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftModel')}</Text>
 								{!targetArchitecture ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">Select a target model first to see compatible draft models.</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.selectATargetModelFirstToSeeCompatibleDraftModels')}</Text>
 								) : draftModelEntries.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">No compatible draft models found. Draft models must share the same architecture ({targetArchitecture}).</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.noCompatibleDraftModelsFoundDraftModelsMustShareTheSameArchitecture')}{targetArchitecture}).</Text>
 								) : (
 									<ModelCombobox entries={draftModelEntries} selectedPath={specDecode.draftModelPath || null}
 										onSelect={(path) => onSpecParamChange('draftModelPath', path)}
-										placeholder="Search compatible draft models..." />
+										placeholder={t('common:ui.searchCompatibleDraftModels')} />
 								)}
 								{selectedDraftEntry?.file.metadata && (
 									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">
@@ -173,10 +176,10 @@ export const SpeculativeDecodingCard = React.memo(({
 
 							{deviceOptions.length > 0 && (
 								<Box>
-									<SelectField label="Draft Device" value={specDecode.draftDevice} options={['', ...deviceOptions]}
+									<SelectField label={t('common:ui.draftDevice')} value={specDecode.draftDevice} options={['', ...deviceOptions]}
 										onChange={v => onSpecParamChange('draftDevice', v)} mono
-										optionLabels={{ '': 'Same as target', ...deviceIdToName }} />
-									<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">Leave empty to use target device.</Text>
+										optionLabels={{ '': t('common:ui.sameAsTarget'), ...deviceIdToName }} />
+									<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">{t('common:ui.leaveEmptyToUseTargetDevice')}</Text>
 								</Box>
 							)}
 
@@ -184,7 +187,7 @@ export const SpeculativeDecodingCard = React.memo(({
 								{selectedDraftEntry?.file.metadata ? (
 									<Box flex="1">
 										<Text fontSize="11px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
-											GPU Layers <Text as="span" color="var(--wc-text-muted)">/ {selectedDraftEntry.file.metadata.nLayers}</Text>
+											{t('common:ui.gpuLayers')}<Text as="span" color="var(--wc-text-muted)">/ {selectedDraftEntry.file.metadata.nLayers}</Text>
 										</Text>
 										<Input type="number" value={specDecode.draftGpuLayers} onChange={e => onSpecParamChange('draftGpuLayers', Number(e.target.value))} size="sm"
 											bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)"
@@ -193,13 +196,13 @@ export const SpeculativeDecodingCard = React.memo(({
 										/>
 									</Box>
 								) : (
-									<NumberField label="GPU Layers" value={specDecode.draftGpuLayers} onChange={v => onSpecParamChange('draftGpuLayers', v)} min={0} max={999} />
+									<NumberField label={t('common:ui.gpuLayers')} value={specDecode.draftGpuLayers} onChange={v => onSpecParamChange('draftGpuLayers', v)} min={0} max={999} />
 								)}
-								<NumberField label="Context Size" value={specDecode.draftContextSize} onChange={v => onSpecParamChange('draftContextSize', v)} min={0} step={1024} suffix="0 = auto" />
+								<NumberField label={t('common:ui.contextSize')} value={specDecode.draftContextSize} onChange={v => onSpecParamChange('draftContextSize', v)} min={0} step={1024} suffix={t('common:ui.0Auto')} />
 							</Flex>
 
 							<Box>
-								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Accept Threshold</Text>
+								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.acceptThreshold')}</Text>
 								<Input type="number" value={specDecode.draftPMin} onChange={e => onSpecParamChange('draftPMin', Number(e.target.value))} size="sm"
 									bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 									fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg"
@@ -212,7 +215,7 @@ export const SpeculativeDecodingCard = React.memo(({
 					{specDecode.mode === 'mtp' && (
 						<VStack align="stretch" gap="4">
 					<Box>
-							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Accept Threshold</Text>
+							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.acceptThreshold')}</Text>
 							<Input type="number" value={specDecode.draftPMin} onChange={e => onSpecParamChange('draftPMin', Number(e.target.value))} size="sm"
 								bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 								fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg"
@@ -220,38 +223,38 @@ export const SpeculativeDecodingCard = React.memo(({
 							<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">0.0 - 1.0</Text>
 						</Box>
 						<Flex gap="4">
-							<NumberField label="Draft Min" value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
-							<NumberField label="Draft N-Max" value={specDecode.specDraftNMax} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
+							<NumberField label={t('common:ui.draftMin')} value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
+							<NumberField label={t('common:ui.draftNMax')} value={specDecode.specDraftNMax} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
 						</Flex>
 						</VStack>
 					)}
 
 					{specDecode.mode === 'ngram' && (
 						<VStack align="stretch" gap="4">
-							<SelectField label="Spec Type" value={specDecode.specType ?? ESpecType.NGRAM_SIMPLE}
+							<SelectField label={t('common:ui.specType')} value={specDecode.specType ?? ESpecType.NGRAM_SIMPLE}
 								options={[ESpecType.NGRAM_SIMPLE, ESpecType.NGRAM_CACHE, ESpecType.NGRAM_MAP_K, ESpecType.NGRAM_MAP_K4V, ESpecType.NGRAM_MOD]}
 								onChange={v => onSpecParamChange('specType', v as ESpecType)}
 								optionLabels={{
-									[ESpecType.NGRAM_SIMPLE]: 'ngram-simple (fastest)', [ESpecType.NGRAM_CACHE]: 'ngram-cache (legacy)',
-									[ESpecType.NGRAM_MAP_K]: 'ngram-map-k (hash map)', [ESpecType.NGRAM_MAP_K4V]: 'ngram-map-k4v (multi-value)',
-									[ESpecType.NGRAM_MOD]: 'ngram-mod (best MoE/code)',
+									[ESpecType.NGRAM_SIMPLE]: t('common:ui.ngramSimpleFastest'), [ESpecType.NGRAM_CACHE]: t('common:ui.ngramCacheLegacy'),
+									[ESpecType.NGRAM_MAP_K]: t('common:ui.ngramMapKHashMap'), [ESpecType.NGRAM_MAP_K4V]: t('common:ui.ngramMapK4vMultiValue'),
+									[ESpecType.NGRAM_MOD]: t('common:ui.ngramModBestMoeCode'),
 								}} />
 							<Flex gap="4">
-								<NumberField label="N-Gram Size (n)" value={specDecode.ngramSizeN ?? 12} onChange={v => onSpecParamChange('ngramSizeN', v)} min={1} max={64} />
-								<NumberField label="M-Gram Size (m)" value={specDecode.ngramSizeM ?? 48} onChange={v => onSpecParamChange('ngramSizeM', v)} min={1} max={256} />
+								<NumberField label={t('common:ui.nGramSizeN')} value={specDecode.ngramSizeN ?? 12} onChange={v => onSpecParamChange('ngramSizeN', v)} min={1} max={64} />
+								<NumberField label={t('common:ui.mGramSizeM')} value={specDecode.ngramSizeM ?? 48} onChange={v => onSpecParamChange('ngramSizeM', v)} min={1} max={256} />
 							</Flex>
 							{(specDecode.specType === ESpecType.NGRAM_MAP_K || specDecode.specType === ESpecType.NGRAM_MAP_K4V) && (
-								<NumberField label="Min Hits" value={specDecode.ngramMinHits ?? 1} onChange={v => onSpecParamChange('ngramMinHits', v)} min={1} max={32} />
+								<NumberField label={t('common:ui.minHits')} value={specDecode.ngramMinHits ?? 1} onChange={v => onSpecParamChange('ngramMinHits', v)} min={1} max={32} />
 							)}
 						</VStack>
 					)}
 
 					{specDecode.mode !== 'mtp' && (
 						<Box>
-							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Drafting Parameters</Text>
+							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftingParameters')}</Text>
 							<Flex gap="4">
-								<NumberField label="Draft Max" value={specDecode.draftMax} onChange={v => onSpecParamChange('draftMax', v)} min={1} max={128} />
-								<NumberField label="Draft Min" value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
+								<NumberField label={t('common:ui.draftMax')} value={specDecode.draftMax} onChange={v => onSpecParamChange('draftMax', v)} min={1} max={128} />
+								<NumberField label={t('common:ui.draftMin')} value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
 							</Flex>
 						</Box>
 					)}

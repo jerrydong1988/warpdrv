@@ -1,6 +1,7 @@
 import { Box, Text, HStack, Slider } from '@chakra-ui/react';
 import { Mic, ChevronDown, MicOff } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { EWhisperServerStatus, TWhisperServerId } from '@warpcore/shared';
 import { updateSettings } from '@/api/services';
@@ -16,6 +17,7 @@ import { updateSettings } from '@/api/services';
 // }
 
 export const ThreadWhisperServerSelector = React.memo(() => {
+	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 
 	const whisperServersMap = useStore(s => s.whisperServers);
@@ -95,7 +97,7 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 						<>
 							<Box px="3" py="2">
 								<HStack justify="space-between" mb="1">
-									<Text fontSize="11px" color="var(--wc-text-muted)">TTS Speed</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.ttsSpeed')}</Text>
 									<Text fontSize="11px" color="var(--wc-text-tertiary)">{kokoroSpeed.toFixed(1)}x</Text>
 								</HStack>
 								<Slider.Root
@@ -143,7 +145,7 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 						</HStack>
 					))}
 					{whisperServers.length === 0 && (
-						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">No servers</Text>
+						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noServers')}</Text>
 					)}
 				</Box>
 			)}

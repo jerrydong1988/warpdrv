@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslation } from 'react-i18next';
+
 import "@assistant-ui/react-markdown/styles/dot.css";
 
 import {
@@ -83,6 +85,7 @@ const MarkdownTextImpl = () => {
 export const MarkdownText = memo(MarkdownTextImpl);
 
 const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
+  const { t } = useTranslation();
   const { isCopied, copyToClipboard } = useCopyToClipboard();
   const onCopy = () => {
     if (!code || isCopied) return;
@@ -94,7 +97,7 @@ const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
       <span className="aui-code-header-language font-medium text-muted-foreground lowercase">
         {language}
       </span>
-      <TooltipIconButton tooltip="Copy" onClick={onCopy}>
+      <TooltipIconButton tooltip={t('chat:actions.copy')} onClick={onCopy}>
         {!isCopied && <CopyIcon />}
         {isCopied && <CheckIcon />}
       </TooltipIconButton>

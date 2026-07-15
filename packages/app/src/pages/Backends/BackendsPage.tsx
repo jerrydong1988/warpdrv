@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Badge, Button, Input, Collapsible, InputGroup, Combobox, createListCollection, Portal, Link as ChakraLink } from '@chakra-ui/react';
 import { Blocks, Plus, Terminal, Layers, ChevronDown, ChevronRight, Search, ArrowUpAZ, ArrowDownZA, CheckCircle, AlertCircle, Edit, Trash2, Mic } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/Card';
@@ -20,13 +21,8 @@ import { EValidationStatus } from '@warpcore/shared';
 import { removeWhisperBackend, createWhisperBackend } from '../../api/whisperServices';
 import { EServerStatus } from '@warpcore/shared';
 
-const FIELD_LABELS: Record<TBackendSortField, string> = {
-	name: 'Name',
-	createdAt: 'Creation date',
-	updatedAt: 'Update date',
-};
-
 export function BackendsPage() {
+	const { t } = useTranslation('backends');
 	const backends = useStore((s) => s.backends);
 	const groups = useStore((s) => s.backendGroups);
 	const whisperBackends = useStore((s) => s.whisperBackends);
@@ -187,14 +183,14 @@ export function BackendsPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Llamas"
-				subtitle={` ${backendsArr.length} Builds, ${groupsArr.length} Groups`}
+				title={t('title')}
+				subtitle={t('summary', { builds: backendsArr.length, groups: groupsArr.length })}
 				icon={<Blocks size={20} />}
 				actions={
 					<HStack gap="3">
 						<InputGroup startElement={<Search size={14} color="var(--wc-text-muted)" />} w="220px">
 							<Input
-								placeholder="Search backends and groups"
+								placeholder={t('searchPlaceholder')}
 								size="sm"
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
@@ -210,7 +206,7 @@ export function BackendsPage() {
 						<HStack gap="3">
 							{(() => {
 								const sortCollection = createListCollection({
-									items: (Object.keys(FIELD_LABELS) as TBackendSortField[]).map(f => ({ value: f, label: FIELD_LABELS[f] })),
+									items: (['name', 'createdAt', 'updatedAt'] as TBackendSortField[]).map(f => ({ value: f, label: t(`sortFields.${f}` as any) })),
 									itemToString: (item) => item.label ?? '',
 								});
 								return (
@@ -235,7 +231,7 @@ export function BackendsPage() {
 													fontSize="13px"
 													borderRadius="lg"
 												>
-													{FIELD_LABELS[sortField]}
+													{t(`sortFields.${sortField}` as any)}
 													<ChevronDown size={14} />
 												</Button>
 											</Combobox.Trigger>
@@ -292,7 +288,7 @@ export function BackendsPage() {
 						<HStack gap="3">
 							<Box color="var(--wc-text-muted)">{backendsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</Box>
 							<Terminal size={16} color="var(--wc-text-tertiary)" />
-							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">Backends</Text>
+							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">{t('common:ui.backends')}</Text>
 							<Badge size="sm" px="1.5" borderRadius="full" bg="var(--wc-bg-hover)" color="var(--wc-text-muted)" fontSize="10px" fontWeight="600">{filteredAndSortedBackends.length}</Badge>
 						</HStack>
 						<Button size="xs" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ bg: 'var(--wc-accent-blue-bg-15)', color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.stopPropagation(); setShowAddDialog(true); }}>
@@ -306,17 +302,15 @@ export function BackendsPage() {
 							<Flex h="200px" alignItems="center" justifyContent="center">
 								<VStack gap="3" color="var(--wc-text-faint)">
 									<Blocks size={40} />
-									<Text fontSize="14px">No backends registered</Text>
+									<Text fontSize="14px">{t('common:ui.noBackendsRegistered')}</Text>
 								<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center">
-									Download a llama.cpp build from{' '}
+									{t('common:ui.downloadALlamaCppBuildFrom')}{' '}
 									<ChakraLink href="https://github.com/ggml-org/llama.cpp/releases" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/ggml-org/llama.cpp/releases'); }}>
-										Official releases
-									</ChakraLink>.
+										{t('common:ui.officialReleases')}</ChakraLink>.
 									<br />
-									Or build llama.cpp from source following the{' '}
+									{t('common:ui.orBuildLlamaCppFromSourceFollowingThe')}{' '}
 									<ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md'); }}>
-										guide for Recipes
-									</ChakraLink>.
+										{t('common:ui.guideForRecipes')}</ChakraLink>.
 								</Text>
 								</VStack>
 							</Flex>
@@ -324,8 +318,8 @@ export function BackendsPage() {
 							<Flex h="200px" alignItems="center" justifyContent="center">
 								<VStack gap="3" color="var(--wc-text-faint)">
 									<Blocks size={40} />
-									<Text fontSize="14px">No matching backends</Text>
-									<Text fontSize="12px" color="var(--wc-text-disabled)">Try adjusting your search query</Text>
+									<Text fontSize="14px">{t('common:ui.noMatchingBackends')}</Text>
+									<Text fontSize="12px" color="var(--wc-text-disabled)">{t('common:ui.tryAdjustingYourSearchQuery')}</Text>
 								</VStack>
 							</Flex>
 						) : (
@@ -351,7 +345,7 @@ export function BackendsPage() {
 						<HStack gap="3">
 							<Box color="var(--wc-text-muted)">{groupsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</Box>
 							<Layers size={16} color="var(--wc-text-tertiary)" />
-							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">Groups</Text>
+							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">{t('common:ui.groups')}</Text>
 							<Badge size="sm" px="1.5" borderRadius="full" bg="var(--wc-bg-hover)" color="var(--wc-text-muted)" fontSize="10px" fontWeight="600">{filteredAndSortedGroups.length}</Badge>
 						</HStack>
 						<Button size="xs" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ bg: 'var(--wc-accent-purple-bg-15)', color: 'var(--wc-accent-purple)' }} onClick={(e) => { e.stopPropagation(); setShowAddGroup(true); }}>
@@ -365,22 +359,21 @@ export function BackendsPage() {
 							<Flex h="200px" alignItems="center" justifyContent="center">
 								<VStack gap="3" color="var(--wc-text-faint)">
 									<Layers size={40} />
-									<Text fontSize="14px">No backend groups</Text>
+									<Text fontSize="14px">{t('common:ui.noBackendGroups')}</Text>
 								<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center">
-									Read the{' '}
+									{t('common:ui.readThe')}{' '}
 									<ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/backend-groups.md" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/backend-groups.md'); }}>
 										guide
 									</ChakraLink>{' '}
-									on how to use backend groups.
-								</Text>
+									{t('common:ui.onHowToUseBackendGroups')}</Text>
 								</VStack>
 							</Flex>
 						) : filteredAndSortedGroups.length === 0 && searchQuery.trim() ? (
 							<Flex h="200px" alignItems="center" justifyContent="center">
 								<VStack gap="3" color="var(--wc-text-faint)">
 									<Layers size={40} />
-									<Text fontSize="14px">No matching groups</Text>
-									<Text fontSize="12px" color="var(--wc-text-disabled)">Try adjusting your search query</Text>
+									<Text fontSize="14px">{t('common:ui.noMatchingGroups')}</Text>
+									<Text fontSize="12px" color="var(--wc-text-disabled)">{t('common:ui.tryAdjustingYourSearchQuery')}</Text>
 								</VStack>
 							</Flex>
 						) : (
@@ -407,7 +400,7 @@ export function BackendsPage() {
 						<HStack gap="3">
 							<Box color="var(--wc-text-muted)">{whisperExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}</Box>
 							<Blocks size={16} color="var(--wc-text-tertiary)" />
-							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">Whisper.cpp Backends</Text>
+							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">{t('common:ui.whisperCppBackends')}</Text>
 							<Badge size="sm" px="1.5" borderRadius="full" bg="var(--wc-bg-hover)" color="var(--wc-text-muted)" fontSize="10px" fontWeight="600">{whisperBackendsArr.length}</Badge>
 						</HStack>
 						<Button size="xs" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ bg: 'var(--wc-accent-green-bg-15)', color: 'var(--wc-accent-green)' }} onClick={(e) => { e.stopPropagation(); setShowAddWhisperDialog(true); }}>
@@ -421,10 +414,9 @@ export function BackendsPage() {
 									<Flex h="150px" alignItems="center" justifyContent="center">
 										<VStack gap="3" color="var(--wc-text-faint)">
 											<Blocks size={40} />
-											<Text fontSize="14px">No whisper backends registered</Text>
+											<Text fontSize="14px">{t('common:ui.noWhisperBackendsRegistered')}</Text>
 											<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center">
-												Build whisper.cpp from source and register the whisper-server binary here.
-											</Text>
+												{t('common:ui.buildWhisperCppFromSourceAndRegisterTheWhisperServerBinaryHere')}</Text>
 										</VStack>
 									</Flex>
 								) : (
@@ -480,7 +472,7 @@ export function BackendsPage() {
 
 			{deletingId && (
 				<ConfirmDialog
-					title="Delete Backend?"
+					title={t('common:ui.deleteBackend')}
 					message={`This will remove the backend from your configuration. Any servers using this backend will stop.`}
 					isOpen={true}
 					isLoading={deleteMut.loading}
@@ -491,8 +483,8 @@ export function BackendsPage() {
 
 			{deletingGroupId && (
 				<ConfirmDialog
-					title="Delete Backend Group?"
-					message={`This will remove the group "${groups[deletingGroupId]?.name}". Servers using this group will need to be reassigned.`}
+					title={t('common:ui.deleteBackendGroup')}
+					message={t('dialogs.deleteGroupMessage', { name: groups[deletingGroupId]?.name ?? '' })}
 					isOpen={true}
 					isLoading={deleteGroupMut.loading}
 					onCancel={() => setDeletingGroupId(null)}
@@ -537,8 +529,8 @@ export function BackendsPage() {
 
 			{deletingWhisperId && (
 				<ConfirmDialog
-					title="Delete Whisper Backend?"
-					message="This will remove the whisper backend from your configuration."
+					title={t('common:ui.deleteWhisperBackend')}
+					message={t('common:ui.thisWillRemoveTheWhisperBackendFromYourConfiguration')}
 					isOpen={true}
 					isLoading={deleteWhisperMut.loading}
 					onCancel={() => setDeletingWhisperId(null)}

@@ -20,6 +20,8 @@ import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
+import { useTranslation } from 'react-i18next';
+import i18next from 'i18next';
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrail> = {};
@@ -33,6 +35,7 @@ function useGuardrailItems(): TDropdownItem[] {
 }
 
 const TodoPanel = React.memo(() => {
+	const { t } = useTranslation();
 	const threadId = useStore(s => s.currentThreadId);
 	const todos = useStore(s => {
 		if (!threadId) return EMPTY_TODOS;
@@ -151,15 +154,14 @@ const TodoPanel = React.memo(() => {
 		return (
 			<Box p="3">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center" mb="2">
-					No todos yet
-				</Text>
+					{t('common:ui.noTodosYet')}</Text>
 				<Input
 					size="xs"
 					fontSize="xs"
 					value={addText}
 					onChange={(e) => setAddText(e.target.value)}
 					onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
-					placeholder="Add todo..."
+					placeholder={t('common:ui.addTodo')}
 				/>
 			</Box>
 		);
@@ -288,17 +290,17 @@ const TodoPanel = React.memo(() => {
 				value={addText}
 				onChange={(e) => setAddText(e.target.value)}
 				onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
-				placeholder="Add todo..."
+				placeholder={t('common:ui.addTodo')}
 			/>
 
 			{deleteConfirm !== null && (
 				<ConfirmDialog
-					title="Delete Todo"
-					message={`Are you sure you want to delete "${todos[deleteConfirm]?.text}"?`}
+					title={t('common:ui.deleteTodo')}
+					message={t('common:ui.deleteNamedItemConfirm', { name: todos[deleteConfirm]?.text ?? '' })}
 					isOpen={true}
 					onConfirm={() => deleteTodo(deleteConfirm)}
 					onCancel={() => setDeleteConfirm(null)}
-					confirmLabel="Delete"
+					confirmLabel={t('common:ui.delete')}
 				/>
 			)}
 		</VStack>
@@ -326,6 +328,7 @@ const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponent
 });
 
 const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
+	const { t } = useTranslation();
 	const [expanded, setExpanded] = useState(false);
 	const [editingName, setEditingName] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -438,21 +441,19 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 				<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch" opacity={guardrail.isActive ? 1 : 0.4}>
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Server
-						</Text>
+							{t('common:ui.server')}</Text>
 						<ServerPicker value={guardrail.serverId} onChange={(id) => updateGuardrail({ serverId: id })} />
 					</Box>
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Trigger only on tool calls
-						</Text>
+							{t('common:ui.triggerOnlyOnToolCalls')}</Text>
 						<Input
 							size="xs"
 							fontSize="xs"
 							value={guardrail.triggerOnTools || ''}
 							onChange={(e) => updateGuardrail({ triggerOnTools: e.target.value })}
-							placeholder="Comma-separated tool names"
+							placeholder={t('common:ui.commaSeparatedToolNames')}
 						/>
 					</Box>
 
@@ -471,14 +472,13 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Enable thinking</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">{t('common:ui.enableThinking')}</Text>
 					</Flex>
 
 					{!!guardrail.inferenceParams?.enableThinking && (
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Reasoning effort
-							</Text>
+								{t('common:ui.reasoningEffort')}</Text>
 							<SegmentGroup.Root value={guardrail.inferenceParams?.reasoningEffort as string || 'medium'} onValueChange={(details) => {
 								const newParams = { ...(guardrail.inferenceParams || {}), reasoningEffort: details.value };
 								updateGuardrail({ inferenceParams: newParams });
@@ -501,13 +501,12 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Include root message</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">{t('common:ui.includeRootMessage')}</Text>
 					</Flex>
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Include previous n messages
-						</Text>
+							{t('common:ui.includePreviousNMessages')}</Text>
 						<Input
 							size="xs"
 							fontSize="xs"
@@ -521,8 +520,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Custom Prompt
-						</Text>
+							{t('common:ui.customPrompt')}</Text>
 						<Textarea
 							size="xs"
 							fontSize="11px"
@@ -531,7 +529,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 							onBlur={handlePromptBlur}
 							rows={3}
 							resize="vertical"
-							placeholder="Custom rules..."
+							placeholder={t('common:ui.customRules')}
 						/>
 					</Box>
 					
@@ -550,20 +548,19 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 							onClick={() => setDeleteConfirmOpen(true)}
 						>
 							<Trash2 size={10} style={{ marginRight: '4px' }} />
-							Delete
-						</Button>
+							{t('servers:dialogs.confirmDelete')}</Button>
 					</Flex>
 				</VStack>
 			)}
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Guardrail"
-					message={`Are you sure you want to delete "${draftName}"?`}
+						title={t('common:ui.deleteGuardrail')}
+						message={t('common:ui.deleteNamedItemConfirm', { name: draftName })}
 					isOpen={true}
 					onConfirm={handleDelete}
 					onCancel={() => setDeleteConfirmOpen(false)}
-					confirmLabel="Delete"
+						confirmLabel={t('common:ui.delete')}
 				/>
 			)}
 		</Box>
@@ -571,6 +568,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 });
 
 const GuardrailsPanel = React.memo(() => {
+	const { t } = useTranslation();
 	const guardrails = useStore(s => {
 		const ts = s.getCurrentThreadState(s);
 		return ts?.guardrails || EMPTY_GUARDRAILS;
@@ -581,8 +579,7 @@ const GuardrailsPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No guardrails
-				</Text>
+					{t('common:ui.noGuardrails')}</Text>
 			</Box>
 		);
 	}
@@ -597,6 +594,7 @@ const GuardrailsPanel = React.memo(() => {
 });
 
 const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
+	const { t } = useTranslation();
 	const messageId = useAuiState(s => s.message.id);
 	const role = useAuiState(s => s.message.role);
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
@@ -648,8 +646,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 							<HStack gap="2">
 								<FaShieldAlt size={16} color="var(--wc-text-muted)" />
 								<Text fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
-									Guardrails
-								</Text>
+									{t('common:ui.guardrails')}</Text>
 								{totalViolations > 0 && (
 									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalViolations} Violations</Badge>
 								)}
@@ -666,7 +663,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 						<AccordionItemContent>
 							<Box p="2.5">
 								{allClear
-									? <Text fontSize="sm" color="var(--wc-accent-green)">All clear</Text>
+									? <Text fontSize="sm" color="var(--wc-accent-green)">{t('common:ui.allClear')}</Text>
 									: <VStack gap="2" align="stretch">
 										{processingEntries.map(([name]) => (
 											<HStack key={name} gap="2">
@@ -689,6 +686,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 });
 
 const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
+	const { t } = useTranslation();
 	const addAnnotation = useStore(s => s.addAnnotation);
 	const isViolation = item.type === EGuardrailIssueType.VIOLATION;
 
@@ -708,7 +706,7 @@ const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName:
 				<Box
 					as="button"
 					onClick={() => addAnnotation(item.quote, item.issue)}
-					title="Add to annotations"
+					title={t('common:ui.addToAnnotations')}
 					flexShrink={0}
 					ml="2"
 					p="1"
@@ -759,6 +757,7 @@ const registerGuardrailChip = (api: IAppletAPIFE, name: string) => {
 };
 
 const fn: IAppletFn<IAppletAPIFE> = async (api) => {
+	const t = i18next.t.bind(i18next);
 	console.log('[FEApplet] Started!');
 
 	api.onReady(() => {
@@ -766,18 +765,18 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.registerSlashCommand({
 			name: 'compact',
-			description: 'Compact the conversation thread. Add a message in chat for custom instructions.',
+			description: t('common:ui.compactTheConversationThreadAddAMessageInChatForCustomInstructions'),
 			params: {},
 			execute: async (api, params) => { console.log('[FEApplet] /compact executed'); },
 		});
 
 		api.registerSlashCommand({
 			name: 'guardrail',
-			description: 'Create a custom guardrail',
+			description: t('common:ui.createACustomGuardrail'),
 			params: {
-				name: { type: 'string', description: 'Guardrail name', index: 0 },
-				tools: { type: 'tool', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
-				server: { type: 'server', description: 'Server used for processing (empty = same as chat server)', index: 2 },
+				name: { type: 'string', description: t('common:ui.guardrailName'), index: 0 },
+				tools: { type: 'tool', description: t('common:ui.triggerOnlyOnSpecificToolCalls'), index: 1 },
+				server: { type: 'server', description: t('common:ui.serverUsedForProcessing'), index: 2 },
 			},
 			execute: async (_api, params, extraParams) => {
 				const state = api.useStore.getState();
@@ -796,12 +795,12 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.registerSlashCommand({
 			name: 'toggle_guardrail',
-			description: 'Activate or deactivate a guardrail',
+			description: t('common:ui.activateOrDeactivateAGuardrail'),
 			params: {
-				name: { type: 'dropdown', description: 'Guardrail name', index: 0, props: {
+				name: { type: 'dropdown', description: t('common:ui.guardrailName'), index: 0, props: {
 					items: useGuardrailItems,
 				}},
-				action: { type: 'dropdown', description: 'on/off', index: 1, props: {
+				action: { type: 'dropdown', description: t('common:ui.onOff'), index: 1, props: {
 					items: [{ label: 'on', value: 'on' }, { label: 'off', value: 'off' }],
 				}},
 			},
@@ -817,7 +816,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.registerSlashCommand({
 			name: 'todo',
-			description: 'Add a new todo item',
+			description: t('common:ui.addANewTodoItem'),
 			params: {},
 			execute: async (_api, _params, extraParams) => {
 				const text = extraParams?.prompt;
@@ -830,9 +829,9 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			},
 		});
 		
-		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
-		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
+		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, TodoPanel, { label: t('common:ui.toDo'), icon: LuListTodo });
+		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, GuardrailsPanel, { label: t('common:ui.guardrails'), icon: FaShieldAlt });
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: t('common:ui.compactIndicator') });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 
 		const unsubscribe = useStore.subscribe(

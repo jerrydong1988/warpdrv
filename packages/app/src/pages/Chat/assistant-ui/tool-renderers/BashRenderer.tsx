@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Terminal, ChevronDown, ChevronRight } from 'lucide-react';
 import { parse } from 'shell-quote';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -30,6 +31,7 @@ export const BashRenderer = React.memo((props: {
 	shell?: string,
 	result?: unknown,
 }) => {
+	const { t } = useTranslation('chat');
 	const { command, cwd, shell, result } = props;
 	const subCommands = command ? splitCommand(command) : [];
 	const resultText = extractResultText(result);
@@ -47,7 +49,7 @@ export const BashRenderer = React.memo((props: {
 
 			<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="2" overflow="auto">
 				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" whiteSpace="pre-wrap" wordBreak="break-all">
-					{command ?? '(no command)'}
+					{command ?? t('common:ui.noCommand')}
 				</Text>
 			</Box>
 			
@@ -65,7 +67,7 @@ export const BashRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Output</Text>
+						<Text fontSize="11px" color="var(--wc-text-muted)">{t('tool.output')}</Text>
 					</HStack>
 					{resultExpanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">

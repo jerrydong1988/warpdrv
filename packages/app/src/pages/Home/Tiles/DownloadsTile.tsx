@@ -1,11 +1,13 @@
 import { Download } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store';
 import { EDownloadStatus } from '@warpcore/shared';
 import { TileContainer } from '../TileContainer';
 
 export const DownloadsTile = React.memo(() => {
+	const { t } = useTranslation('home');
 	const navigate = useNavigate();
 	const downloads = useStore((s) => s.downloads);
 
@@ -39,7 +41,7 @@ export const DownloadsTile = React.memo(() => {
 	return (
 		<TileContainer
 			icon={<Download size={18} />}
-			label="Downloads"
+			label={t('tiles.downloads.title')}
 			statusDot={state}
 			onClick={() => navigate('/hub')}
 		>

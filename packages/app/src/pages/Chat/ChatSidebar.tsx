@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex } from '@chakra-ui/react';
 import { Settings, ChevronRight, SearchIcon } from 'lucide-react';
 import { Plug } from 'lucide-react';

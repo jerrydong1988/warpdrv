@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -13,6 +14,7 @@ export const ReadFileRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, head, tail, offset, length, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const [expanded, setExpanded] = useState(false);
 	const rangeBits: string[] = [];
@@ -26,7 +28,7 @@ export const ReadFileRenderer = React.memo((props: {
 			<HStack gap="2" align="center">
 				<FileText size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+					{path ?? t('common:ui.noPath')}
 				</Text>
 				{rangeBits.length > 0 && (
 					<Text fontSize="10px" color="var(--wc-text-faint)">
@@ -38,7 +40,7 @@ export const ReadFileRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Contents ({lineCount} lines)</Text>
+						<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.contents')}{lineCount} {t('common:ui.lines')}</Text>
 					</HStack>
 					{expanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">

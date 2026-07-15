@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 interface ICarouselSlide {
@@ -12,6 +13,7 @@ interface IImageCarouselProps {
 }
 
 export function ImageCarousel({ slides }: IImageCarouselProps) {
+	const { t } = useTranslation();
 	const [index, setIndex] = useState(0);
 	const slide = slides[index]!;
 
@@ -83,7 +85,7 @@ export function ImageCarousel({ slides }: IImageCarouselProps) {
 						color: 'var(--wc-text-disabled)',
 					}}>
 						<ImageIcon size={32} />
-						<div style={{ fontSize: '12px' }}>Screenshot placeholder</div>
+						<div style={{ fontSize: '12px' }}>{t('common:ui.screenshotPlaceholder')}</div>
 					</div>
 				)}
 			</div>

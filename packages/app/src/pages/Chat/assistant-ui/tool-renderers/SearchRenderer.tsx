@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text, HStack, VStack, Link } from '@chakra-ui/react';
 import { Search, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -29,6 +30,7 @@ export const SearchRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { query, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const results = resultText ? parseSearchResults(resultText) : null;
 	return (
@@ -36,7 +38,7 @@ export const SearchRenderer = React.memo((props: {
 			<HStack gap="2" align="center" mb={results ? '2' : '0'}>
 				<Search size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="12px" color="var(--wc-text-primary)" wordBreak="break-word">
-					{query ?? '(no query)'}
+					{query ?? t('common:ui.noQuery')}
 				</Text>
 			</HStack>
 			{results && results.length > 0 && (

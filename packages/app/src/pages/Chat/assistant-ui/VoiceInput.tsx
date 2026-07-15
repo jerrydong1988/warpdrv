@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, HStack } from '@chakra-ui/react';
 import { Mic, Square, Loader2 } from 'lucide-react';
 import { RiVoiceprintLine } from 'react-icons/ri';
@@ -37,6 +38,7 @@ async function transcribeAudioRaw(serverId: string, _server: any, audioBlob: Blo
 }
 
 export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamChange }: IVoiceInputProps) => {
+	const { t } = useTranslation();
 	const { setWaveformStream, isActive: dictationActive, source: dictationSource, isTranscribing: dictationTranscribing, start: startDictation, stop: stopDictation, setIsActive, setSource, sendTextToPopover } = useDictation();
 	// PTT state (independent)
 	const [isPTTRecording, setIsPTTRecording] = useState(false);
@@ -287,7 +289,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 					_hover={{ bg: vadActive ? undefined : 'var(--wc-bg-hover)' }}
 					onClick={isPTTRecording ? handlePTTEnd : handlePTTStart}
 					disabled={vadActive}
-					title={vadActive ? 'Dictation disabled during voice chat' : isPTTRecording ? 'Stop recording' : 'Start recording (dictation)'}
+					title={vadActive ? t('common:ui.dictationDisabledDuringVoiceChat') : isPTTRecording ? t('common:ui.stopRecording') : t('common:ui.startRecordingDictation')}
 				>
 					{isPTTRecording ? (
 						<Square size={16} color="var(--wc-accent-red)" fill="var(--wc-accent-red)" />
@@ -315,7 +317,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				cursor="pointer"
 				_hover={{ bg: 'var(--wc-bg-hover)' }}
 				onClick={handleDictationToggle}
-				title={dictationActive ? 'Stop dictation' : 'Start dictation'}
+				title={dictationActive ? t('common:ui.stopDictation') : t('common:ui.startDictation')}
 				data-dictation-btn="composer"
 			>
 				{dictationTranscribing ? (
@@ -345,7 +347,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				_hover={{ bg: dictationActive ? undefined : 'var(--wc-bg-hover)' }}
 				onClick={handleVADToggle}
 				disabled={dictationActive}
-				title={dictationActive ? 'Voice chat disabled during dictation' : vadActive ? 'Voice chat active (click to stop)' : 'Toggle voice chat mode'}
+				title={dictationActive ? t('common:ui.voiceChatDisabledDuringDictation') : vadActive ? t('common:ui.voiceChatActiveClickToStop') : t('common:ui.toggleVoiceChatMode')}
 			>
 				{isVADTranscribing ? (
 					<Loader2 size={16} color="var(--wc-accent-green)" className="animate-spin" />

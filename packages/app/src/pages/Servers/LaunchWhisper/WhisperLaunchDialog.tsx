@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, HStack, VStack, Button, Input, Switch, Textarea, Badge, Portal, Combobox, createListCollection } from '@chakra-ui/react';
 import { X, Mic, Play, RotateCcw, Package, Check } from 'lucide-react';
 import { DEFAULT_WHISPER_LAUNCH_PARAMS, type IWhisperLaunchParams, type IWhisperModel } from '@warpcore/shared';
@@ -25,6 +26,7 @@ function WhisperBackendCombobox({ entries, selectedId, onSelect }: {
 	selectedId: string | null;
 	onSelect: (id: string) => void;
 }) {
+	const { t } = useTranslation();
 	const [inputValue, setInputValue] = useState('');
 	const filteredItems = useMemo(() => {
 		if (!inputValue) return entries;
@@ -48,7 +50,7 @@ function WhisperBackendCombobox({ entries, selectedId, onSelect }: {
 		>
 			<Combobox.Control>
 				<Combobox.Input
-					placeholder="Search backends..."
+					placeholder={t('common:ui.searchBackends')}
 					bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)"
 					fontSize="13px" borderRadius="lg"
 					_placeholder={{ color: 'var(--wc-text-faint)' }}
@@ -62,7 +64,7 @@ function WhisperBackendCombobox({ entries, selectedId, onSelect }: {
 						maxH="280px" overflowY="auto" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-default)"
 						borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" p="1"
 					>
-						<Combobox.Empty><Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">No matches</Text></Combobox.Empty>
+						<Combobox.Empty><Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">{t('common:ui.noMatches')}</Text></Combobox.Empty>
 						{collection.items.map((item) => (
 							<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer"
 								_hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-accent-green-bg-8)' }}>
@@ -84,6 +86,7 @@ function WhisperModelCombobox({ entries, selectedPath, onSelect }: {
 	selectedPath: string | null;
 	onSelect: (path: string) => void;
 }) {
+	const { t } = useTranslation();
 	const [inputValue, setInputValue] = useState('');
 	const filteredItems = useMemo(() => {
 		if (!inputValue) return entries;
@@ -116,7 +119,7 @@ function WhisperModelCombobox({ entries, selectedPath, onSelect }: {
 		>
 			<Combobox.Control>
 				<Combobox.Input
-					placeholder="Search whisper models..."
+					placeholder={t('common:ui.searchWhisperModels')}
 					bg="var(--wc-bg-subtle)"
 					borderColor="var(--wc-border-default)"
 					color="var(--wc-text-secondary)"
@@ -138,7 +141,7 @@ function WhisperModelCombobox({ entries, selectedPath, onSelect }: {
 						borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" p="1"
 					>
 						<Combobox.Empty>
-							<Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">No matches</Text>
+							<Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">{t('common:ui.noMatches')}</Text>
 						</Combobox.Empty>
 						{collection.items.map((item) => {
 							const entry = (item as { entry: TWhisperModelEntry }).entry;
@@ -193,6 +196,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLaunchDialogProps) => {
+	const { t } = useTranslation();
 	const { toast } = useToast();
 	const server = useStore(s => serverId ? s.whisperServers[serverId] : null);
 	const isEdit = !!server;
@@ -292,10 +296,10 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 						</Flex>
 						<Box>
 							<Text fontSize="16px" fontWeight="700" color="var(--wc-text-primary)" letterSpacing="-0.01em">
-								{isEdit ? 'Edit Whisper Server' : 'Launch Whisper Server'}
+								{isEdit ? t('common:ui.editWhisperServer') : t('common:ui.launchWhisperServer')}
 							</Text>
 							<Text fontSize="12px" color="var(--wc-text-tertiary)">
-								{isEdit ? 'Modify launch parameters — requires relaunch' : 'Configure and start a whisper-server instance'}
+								{isEdit ? t('common:ui.modifyLaunchParametersRequiresRelaunch') : t('common:ui.configureAndStartAWhisperServerInstance')}
 							</Text>
 						</Box>
 					</HStack>
@@ -309,9 +313,9 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 					<Flex gap="6">
 						{/* Left column */}
 						<VStack align="stretch" gap="5" flex="1" minW="0">
-							<Card title="Backend">
+							<Card title={t('common:ui.backend')}>
 								{whisperBackendsArr.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-faint)">No whisper backends. Add one in Backends page.</Text>
+									<Text fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noWhisperBackendsAddOneInBackendsPage')}</Text>
 								) : (
 									<WhisperBackendCombobox
 										entries={whisperBackendsArr.map(b => ({ id: b.id, name: b.name }))}
@@ -321,9 +325,9 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 								)}
 							</Card>
 
-							<Card title="Model">
+							<Card title={t('common:ui.model')}>
 								{whisperModelEntries.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">No whisper models scanned.</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.noWhisperModelsScanned')}</Text>
 								) : (
 									<WhisperModelCombobox entries={whisperModelEntries} selectedPath={selectedModelPath} onSelect={setSelectedModelPath} />
 								)}
@@ -342,10 +346,10 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 								)}
 							</Card>
 
-							<Card title="Server Info">
+							<Card title={t('common:ui.serverInfo')}>
 								<VStack gap="3" align="stretch">
 									<Box>
-										<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">Server Name <Text as="span" color="var(--wc-text-faint)" fontWeight="400">(optional)</Text></Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">{t('common:ui.serverName')}<Text as="span" color="var(--wc-text-faint)" fontWeight="400">{t('common:ui.optional')}</Text></Text>
 										<Input
 											value={serverName} onChange={(e) => setServerName(e.target.value)}
 											placeholder={selectedModelPath ? selectedModelPath.split('/').pop()?.replace(/\.(gguf|bin)$/, '') ?? 'whisper-server' : 'whisper-server'}
@@ -356,7 +360,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 										/>
 									</Box>
 									<Box>
-										<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">Aliases <Text as="span" color="var(--wc-text-faint)" fontWeight="400">(comma-separated, for proxy routing)</Text></Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">{t('common:ui.aliases')}<Text as="span" color="var(--wc-text-faint)" fontWeight="400">{t('common:ui.commaSeparatedForProxyRouting')}</Text></Text>
 										<Input
 											value={serverAliasesInput} onChange={(e) => setServerAliasesInput(e.target.value)}
 											placeholder="e.g. whisper-large, stt-primary"
@@ -372,10 +376,10 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 
 						{/* Right column */}
 						<VStack gap="5" flex="1" minW="0" align="stretch">
-							<Card title="Parameters">
+							<Card title={t('common:ui.parameters')}>
 								<Flex gap="4" flexWrap="wrap">
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Threads (-t)</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.threadsT')}</Text>
 										<Input type="number" value={params.threads} onChange={e => updateParam('threads', Number(e.target.value))} min={0} max={128}
 											size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 											fontSize="12px" borderRadius="lg" textAlign="center"
@@ -383,7 +387,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 									</VStack>
 
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Processors (-p)</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.processorsP')}</Text>
 										<Input type="number" value={params.processors} onChange={e => updateParam('processors', Number(e.target.value))} min={0} max={32}
 											size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 											fontSize="12px" borderRadius="lg" textAlign="center"
@@ -391,7 +395,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 									</VStack>
 
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Beam Size (-bs)</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.beamSizeBs')}</Text>
 										<Input type="number" value={params.beamSize} onChange={e => updateParam('beamSize', Number(e.target.value))} min={0} max={10}
 											size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 											fontSize="12px" borderRadius="lg" textAlign="center"
@@ -399,7 +403,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 									</VStack>
 
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Temperature (-tp)</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.temperatureTp')}</Text>
 										<Input type="number" value={params.temperature} onChange={e => updateParam('temperature', Number(e.target.value))} min={0} max={1} step={0.1}
 											size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
 											fontSize="12px" borderRadius="lg" textAlign="center"
@@ -409,7 +413,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 
 								<Flex gap="4" mt="3" flexWrap="wrap">
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Language (-l)</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.languageL')}</Text>
 										<Input
 											value={params.language} onChange={(e) => updateParam('language', e.target.value)}
 											placeholder="auto"
@@ -421,10 +425,10 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 									</VStack>
 
 									<VStack gap="2" flex="1" minW="100px">
-										<Text fontSize="11px" color="var(--wc-text-muted)">Prompt</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.prompt')}</Text>
 										<Input
 											value={params.prompt} onChange={(e) => updateParam('prompt', e.target.value)}
-											placeholder="Initial prompt"
+											placeholder={t('common:ui.initialPrompt')}
 											size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)"
 											color="var(--wc-text-primary)" fontSize="12px" borderRadius="lg"
 											_placeholder={{ color: 'var(--wc-text-faint)' }}
@@ -434,22 +438,22 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 								</Flex>
 							</Card>
 
-							<Card title="Options">
+							<Card title={t('common:ui.options')}>
 								<VStack align="stretch" gap="3">
-									<Text fontSize="11px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">Options</Text>
+									<Text fontSize="11px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.options')}</Text>
 									<HStack gap="2" flexWrap="wrap">
-										<ToggleChip label="No GPU" active={params.noGpu} onClick={() => updateParam('noGpu', !params.noGpu)} />
-										<ToggleChip label="Flash Attention" active={params.flashAttn} onClick={() => updateParam('flashAttn', !params.flashAttn)} />
-										<ToggleChip label="Translate" active={params.translate} onClick={() => updateParam('translate', !params.translate)} />
-										<ToggleChip label="Convert (ffmpeg)" active={params.convert} onClick={() => updateParam('convert', !params.convert)} />
+										<ToggleChip label={t('common:ui.noGpu')} active={params.noGpu} onClick={() => updateParam('noGpu', !params.noGpu)} />
+										<ToggleChip label={t('common:ui.flashAttention')} active={params.flashAttn} onClick={() => updateParam('flashAttn', !params.flashAttn)} />
+										<ToggleChip label={t('common:ui.translate')} active={params.translate} onClick={() => updateParam('translate', !params.translate)} />
+										<ToggleChip label={t('common:ui.convertFfmpeg')} active={params.convert} onClick={() => updateParam('convert', !params.convert)} />
 									</HStack>
 								</VStack>
 							</Card>
 
-							<Card title="Extra Args">
+							<Card title={t('common:ui.extraArgs')}>
 								<Textarea
 									value={params.extraArgs} onChange={(e) => updateParam('extraArgs', e.target.value)}
-									placeholder="Additional whisper-server flags"
+									placeholder={t('common:ui.additionalWhisperServerFlags')}
 									rows={3} resize="none"
 									size="sm" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)"
 									color="var(--wc-text-primary)" fontSize="12px" borderRadius="lg"
@@ -464,16 +468,16 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 				{/* Footer */}
 				<Flex px="6" py="4" justify="space-between" align="center" borderTopWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-surface)">
 					<HStack gap="4">
-						<Switch.Root label="Auto-launch at startup" checked={autoLaunch} onCheckedChange={(d) => setAutoLaunch(d.checked)} color={autoLaunch ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'}>
+						<Switch.Root label={t('common:ui.autoLaunchAtStartup')} checked={autoLaunch} onCheckedChange={(d) => setAutoLaunch(d.checked)} color={autoLaunch ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'}>
 							<Switch.HiddenInput />
 							<Switch.Control css={{ bg: autoLaunch ? 'var(--wc-accent-blue)' : 'var(--wc-bg-card)' }}>
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
-							<Switch.Label ml="2" fontSize="13px" color={autoLaunch ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'} userSelect="none">Auto-launch at startup</Switch.Label>
+							<Switch.Label ml="2" fontSize="13px" color={autoLaunch ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'} userSelect="none">{t('common:ui.autoLaunchAtStartup')}</Switch.Label>
 						</Switch.Root>
 					</HStack>
 					<HStack gap="2">
-						<Button size="sm" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-secondary)', bg: 'var(--wc-bg-hover)' }} borderRadius="lg" fontSize="13px" onClick={onClose}>Cancel</Button>
+						<Button size="sm" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-secondary)', bg: 'var(--wc-bg-hover)' }} borderRadius="lg" fontSize="13px" onClick={onClose}>{t('common:ui.cancel')}</Button>
 						{isEdit ? (
 							<Button size="sm" disabled={!canLaunch || launching}
 								bgGradient="to-r" gradientFrom="var(--wc-gradient-yellow-from)" gradientTo="var(--wc-gradient-yellow-to)" color="var(--wc-bg-elevated)"

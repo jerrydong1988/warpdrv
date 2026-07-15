@@ -1,0 +1,26 @@
+{
+  "title": "模型",
+  "subtitle": "{{count}} 个{{type}}模型{{suffix}}",
+  "subtitle_llm": "大语言模型",
+  "subtitle_whisper": "Whisper",
+  "actions": {
+    "reScanFolders": "重新扫描文件夹",
+    "openOnHuggingFace": "在 HuggingFace 中打开",
+    "copyFolderPath": "复制文件夹路径",
+    "reparseMetadata": "重新解析元数据",
+    "delete": "删除"
+  },
+  "columns": {
+    "model": "模型",
+    "user": "用户",
+    "quant": "量化",
+    "vision": "视觉",
+    "params": "参数",
+    "size": "大小",
+    "context": "上下文",
+    "files": "文件"
+  },
+  "emptyState": "未找到模型。请在设置中配置目录，然后扫描。",
+  "noResults": "没有匹配 \"{{search}}\" 的模型",
+  "searchPlaceholder": "搜索模型..."
+}

@@ -1,41 +1,43 @@
 import { Text, VStack, Link as ChakraLink } from '@chakra-ui/react';
 import React from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { StepCollapsible } from '../StepCollapsible';
 
-export const CreateServerStep = React.memo(({ done, isOpenDefault, isHighlighted }: { done: boolean; isOpenDefault: boolean; isHighlighted?: boolean }) => (
+export const CreateServerStep = React.memo(({ done, isOpenDefault, isHighlighted }: { done: boolean; isOpenDefault: boolean; isHighlighted?: boolean }) => {
+	const { t } = useTranslation('home');
+	return (
 	<StepCollapsible
-		title={done ? 'Server created' : 'Create a server'}
+		title={done ? t('steps.createServer.title_done') : t('steps.createServer.title_todo')}
 		done={done}
 		isOpenDefault={isOpenDefault}
 		isHighlighted={isHighlighted}
 	>
 		<VStack align="stretch" gap="3">
 			<Text fontSize="13px" color="var(--wc-text-tertiary)" lineHeight="1.6">
-				1. Navigate to the{' '}
-				<ChakraLink as={NavLink} to="/servers" style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }}>
-					Servers
-				</ChakraLink>{' '}
-				page.
+				<Trans t={t} i18nKey="steps.createServer.step1" components={{
+					linkServers: <ChakraLink as={NavLink} to="/servers" style={{ textDecoration: 'none' }} color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} />,
+				}} />
 				<br />
 				<br />
-				2. Click Launch Server.
+				<Trans t={t} i18nKey="steps.createServer.step2" />
 				<br />
 				<br />
-				3. Select the model you added from the dropdown list of models.
+				<Trans t={t} i18nKey="steps.createServer.step3" />
 				<br />
 				<br />
-				4. Select the backend you registered from the dropdown list of backends.
+				<Trans t={t} i18nKey="steps.createServer.step4" />
 				<br />
 				<br />
-				5. Select the device to load the model on.
+				<Trans t={t} i18nKey="steps.createServer.step5" />
 				<br />
 				<br />
-				6. Configure params such as context length (how much text the model can remember), number of threads (CPU cores for inference), and GPU layers (how many model layers to offload to GPU for faster inference). Adjust these based on your hardware - more GPU layers means faster inference but requires more VRAM.
+				<Trans t={t} i18nKey="steps.createServer.step6" />
 				<br />
 				<br />
-				7. Click Launch to start the server.
+				<Trans t={t} i18nKey="steps.createServer.step7" />
 			</Text>
 		</VStack>
 	</StepCollapsible>
-));
+	);
+});

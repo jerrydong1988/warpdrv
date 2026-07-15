@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, type FC } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Volume2, Loader2 } from 'lucide-react';
 import { FaStop } from 'react-icons/fa';
 import { useAuiState } from '@assistant-ui/react';

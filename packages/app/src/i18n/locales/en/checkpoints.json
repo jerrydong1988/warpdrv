@@ -1,0 +1,37 @@
+{
+  "title": "KV Cache",
+  "subtitle": "{{count}} Checkpoints",
+  "searchPlaceholder": "Search checkpoints...",
+  "sortFields": {
+    "recency": "Recently Saved",
+    "size": "Size",
+    "name": "Name",
+    "slot": "Slot"
+  },
+  "emptyState": "No checkpoints yet",
+  "guideText": "Read the",
+  "guide": "guide",
+  "guideLinkTitle": "on how to use checkpoints.",
+  "slot": "Slot {{index}}",
+  "tok": "tok",
+  "slots": "slots",
+  "totalDiskUsage": "Total disk usage: {{size}}",
+  "ascending": "Ascending",
+  "descending": "Descending",
+  "dialogs": {
+    "deleteCheckpointTitle": "Delete checkpoint?",
+    "deleteCheckpointMessage": "This will remove the checkpoint for slot {{slot}}. This action cannot be undone.",
+    "confirmDelete": "Delete",
+    "deleting": "Deleting...",
+    "deleteBundleTitle": "Delete bundle?",
+    "deleteBundleMessage": "This will remove all {{count}} checkpoints in this bundle. This action cannot be undone.",
+    "deleteAll": "Delete all"
+  },
+  "toast": {
+    "deleted": "Checkpoint deleted",
+    "deleteFailed": "Delete failed",
+    "bundleDeleted": "Deleted {{count}} checkpoint(s)",
+    "renamed": "Renamed",
+    "renameFailed": "Rename failed"
+  }
+}

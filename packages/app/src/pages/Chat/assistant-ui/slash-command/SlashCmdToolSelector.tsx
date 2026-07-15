@@ -4,6 +4,7 @@ import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import { ChevronDown, ChevronRight, Check } from "lucide-react";
 import { EMcpServerStatus } from "@warpcore/bridge";
 import { useStore } from "@/store";
+import { useTranslation } from 'react-i18next';
 
 type SlashCmdToolSelectorProps = {
   value: string;
@@ -22,6 +23,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
   onFocus,
   onBlur,
 }) => {
+	const { t } = useTranslation();
   const mcpServers = useStore((s) => s.mcpServers);
   const [isOpen, setIsOpen] = useState(false);
   const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
@@ -269,7 +271,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
               {isAllMessages && (
                 <Check size={14} color="var(--wc-accent-green)" />
               )}
-              <span style={{ flex: 1 }}>All messages</span>
+              <span style={{ flex: 1 }}>{t('common:ui.allMessages')}</span>
             </div>
 
             {/* Separator */}
@@ -289,8 +291,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
                   color: "var(--wc-text-faint)",
                 }}
               >
-                No tools available
-              </div>
+                {t('common:ui.noToolsAvailable')}</div>
             ) : (
               connectedServers.map(([serverName, state]) => {
                 const isExpanded = expandedServers.has(serverName);

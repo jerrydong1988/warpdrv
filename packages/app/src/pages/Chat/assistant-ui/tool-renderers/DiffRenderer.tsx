@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FileText } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
+import { useTranslation } from 'react-i18next';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {
@@ -24,13 +25,14 @@ export const DiffRenderer = React.memo((props: {
 	strategy?: EDiffStrategy,
 }) => {
 	const { path, old, new: newVal, edits, content, strategy } = props;
+	const { t } = useTranslation('chat');
 
 	return (
 		<Box px="3" py="2">
 			<HStack gap="2" align="center" mb="2">
 				<FileText size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+					{path ?? t('common:ui.noPath')}
 				</Text>
 			</HStack>
 

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Flex, Text, HStack, VStack } from '@chakra-ui/react';
 import { Plug, Plus, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { useStore } from '../../store';
 import {
@@ -22,6 +23,7 @@ import type { IMcpConfigFile, IMcpServerEntry } from '@warpcore/shared';
 import { EToolApprovalMode } from '@warpcore/bridge';
 
 export function McpPage() {
+	const { t } = useTranslation('mcp');
 	const mcpServers = useStore((s) => s.mcpServers);
 	const serverPerms = useStore((s) => s.serverPermissions);
 	const toolPerms = useStore((s) => s.toolPermissions);
@@ -81,8 +83,8 @@ export function McpPage() {
 	return (
 		<Flex direction="column" h="100%" overflow="hidden">
 			<PageHeader
-				title="MCP"
-				subtitle={`${Object.entries(serverEntries).length} Servers`}
+				title={t('title')}
+				subtitle={t('subtitle', { count: Object.entries(serverEntries).length })}
 				icon={<Plug size={20} />}
 				actions={
 					<HStack gap="2">
@@ -98,7 +100,7 @@ export function McpPage() {
 								color={viewMode === m ? 'var(--wc-text-heading)' : 'var(--wc-text-muted)'}
 								onClick={() => setViewMode(m)}
 							>
-								{m === 'cards' ? 'Servers' : 'JSON'}
+								{m === 'cards' ? t('labels.builtinServer') : 'JSON'}
 							</Box>
 						))}
 						<Box
@@ -107,7 +109,7 @@ export function McpPage() {
 							borderRadius="sm"
 							_hover={{ bg: 'var(--wc-bg-hover)' }}
 							onClick={() => reloadMcpServers()}
-							title="Reload all servers"
+							title={t('actions.reloadConfig')}
 						>
 							<RefreshCw size={14} color="var(--wc-text-tertiary)" />
 						</Box>
@@ -117,7 +119,7 @@ export function McpPage() {
 							borderRadius="sm"
 							_hover={{ bg: 'var(--wc-bg-hover)' }}
 							onClick={() => setShowAddForm(true)}
-							title="Add server"
+							title={t('actions.addServer')}
 						>
 							<Plus size={14} color="var(--wc-text-tertiary)" />
 						</Box>
@@ -149,7 +151,7 @@ export function McpPage() {
 							))}
 							{Object.keys(serverEntries).length === 0 && !showAddForm && (
 								<Text fontSize="13px" color="var(--wc-text-muted)" textAlign="center" py="8">
-									No MCP servers configured. Click + to add one, or edit the JSON directly.
+									{t('labels.noServersDesc')}
 								</Text>
 							)}
 						</VStack>

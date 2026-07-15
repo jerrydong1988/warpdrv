@@ -1,6 +1,7 @@
 import { Box, Text, HStack, VStack, Flex, Badge, Button, Input, InputGroup, Combobox, createListCollection, Portal, Link as ChakraLink } from '@chakra-ui/react';
 import { Play, Plus, Edit, Trash2, ScrollText, Lock, AlertCircle, CheckCircle, XCircle, Search, ChevronDown, ArrowUpAZ, ArrowDownZA } from 'lucide-react';
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { useMutation } from '../../hooks/useQuery';
@@ -12,13 +13,8 @@ import { RecipeEditorDialog } from './RecipeEditorDialog';
 import { RunRecipeDialog } from './RunRecipeDialog';
 import { ERecipeRunStatus, type IRecipe, type TRecipeSortField } from '@warpcore/shared';
 
-const RECIPE_FIELD_LABELS: Record<TRecipeSortField, string> = {
-	name: 'Name',
-	createdAt: 'Creation date',
-	updatedAt: 'Update date',
-};
-
 export function RecipesPage() {
+	const { t } = useTranslation('recipes');
 	const recipes = useStore((s) => s.recipes);
 	const recipesArr = useMemo(() => Object.values(recipes), [recipes]);
 	const activeRun = useStore((s) => s.activeRun);
@@ -80,14 +76,14 @@ export function RecipesPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Recipes"
-				subtitle={`${recipes.length} Pipelines`}
+				title={t('title')}
+				subtitle={t('subtitle', { count: recipes.length })}
 				icon={<ScrollText size={20} />}
 				actions={
 					<HStack gap="3">
 						<InputGroup startElement={<Search size={14} color="var(--wc-text-muted)" />} w="200px">
 							<Input
-								placeholder="Search recipes..."
+								placeholder={t('searchPlaceholder')}
 								size="sm"
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
@@ -103,7 +99,7 @@ export function RecipesPage() {
 						<HStack gap="3">
 							{(() => {
 								const sortCollection = createListCollection({
-									items: (Object.keys(RECIPE_FIELD_LABELS) as TRecipeSortField[]).map(f => ({ value: f, label: RECIPE_FIELD_LABELS[f] })),
+									items: (['name', 'createdAt', 'updatedAt'] as TRecipeSortField[]).map(f => ({ value: f, label: (['Name', 'Creation date', 'Update date'] as const)[['name', 'createdAt', 'updatedAt'].indexOf(f)] })),
 									itemToString: (item) => item.label ?? '',
 								});
 								return (
@@ -128,7 +124,7 @@ export function RecipesPage() {
 													fontSize="13px"
 													borderRadius="lg"
 												>
-													{RECIPE_FIELD_LABELS[sortField]}
+													{(['Name', t('common:ui.creationDate'), t('common:ui.updateDate')] as const)[['name', 'createdAt', 'updatedAt'].indexOf(sortField)]}
 													<ChevronDown size={14} />
 												</Button>
 											</Combobox.Trigger>
@@ -183,11 +179,10 @@ export function RecipesPage() {
 						<Flex px="4" py="3" borderRadius="xl" borderWidth="1px" borderColor="var(--wc-accent-yellow-border)" bg="var(--wc-accent-yellow-bg-8)" align="center" justify="space-between">
 							<HStack gap="3">
 								<Box color="var(--wc-accent-yellow)"><Play size={14} /></Box>
-								<Text fontSize="13px" color="var(--wc-text-secondary)">Currently running: <Text as="span" fontWeight="600" color="var(--wc-accent-yellow)">{activeRunRecipe.name}</Text></Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('common:ui.currentlyRunning')}<Text as="span" fontWeight="600" color="var(--wc-accent-yellow)">{activeRunRecipe.name}</Text></Text>
 							</HStack>
 							<Button size="xs" bg="var(--wc-accent-yellow-hover-bg)" color="var(--wc-accent-yellow)" _hover={{ bg: 'var(--wc-accent-yellow)' }} onClick={() => setRunningRecipe(activeRunRecipe)}>
-								Monitor
-							</Button>
+								{t('common:ui.monitor')}</Button>
 						</Flex>
 					)}
 
@@ -196,7 +191,7 @@ export function RecipesPage() {
 						<Flex px="4" py="3" align="center" justify="space-between">
 							<HStack gap="3">
 								<ScrollText size={16} color="var(--wc-text-secondary)" />
-								<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">All Recipes</Text>
+								<Text fontSize="13px" fontWeight="600" color="var(--wc-text-heading)">{t('common:ui.allRecipes')}</Text>
 								<Badge size="sm" px="1.5" borderRadius="full" bg="var(--wc-bg-hover)" color="var(--wc-text-tertiary)" fontSize="10px" fontWeight="600">{recipesArr.length}</Badge>
 							</HStack>
 							<Button size="xs" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ bg: 'var(--wc-accent-blue-bg-8)', color: 'var(--wc-accent-blue-hover)' }} onClick={() => setShowAddDialog(true)}>
@@ -209,23 +204,21 @@ export function RecipesPage() {
 								<Flex h="200px" alignItems="center" justifyContent="center">
 									<VStack gap="3" color="var(--wc-text-placeholder)">
 										<ScrollText size={40} />
-										<Text fontSize="14px">No recipes yet</Text>
+										<Text fontSize="14px">{t('common:ui.noRecipesYet')}</Text>
 										<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" mb="4">
-											Read the{' '}
+											{t('common:ui.readThe')}{' '}
 											<ChakraLink href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md'); }}>
 												guide
 											</ChakraLink>{' '}
-											on how to use Recipes.
-											<br />
-											Or add a{' '}
+											{t('common:ui.onHowToUseRecipes')}<br />
+											{t('common:ui.orAddA')}{' '}
 											<ChakraLink href="https://github.com/mikjee/warpdrv/tree/master/docs/recipes" color="var(--wc-accent-blue)" _hover={{ color: 'var(--wc-accent-blue-hover)' }} onClick={(e) => { e.preventDefault(); openExternal('https://github.com/mikjee/warpdrv/tree/master/docs/recipes'); }}>
 												sample
 											</ChakraLink>{' '}
-											recipe from the docs.
-										</Text>
+											{t('common:ui.recipeFromTheDocs')}</Text>
 										<Button size="xs" bg="var(--wc-accent-blue-bg-12)" color="var(--wc-accent-blue-hover)" _hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }} onClick={() => setShowAddDialog(true)}>
 											<Plus size={13} />
-											<Text ml="1.5">Create your first recipe</Text>
+											<Text ml="1.5">{t('common:ui.createYourFirstRecipe')}</Text>
 										</Button>
 									</VStack>
 								</Flex>
@@ -252,8 +245,8 @@ export function RecipesPage() {
 			{runningRecipe && <RunRecipeDialog recipe={runningRecipe} onClose={() => setRunningRecipe(null)} />}
 			{deletingId && (
 				<ConfirmDialog
-					title="Delete Recipe?"
-					message={`This will permanently delete "${recipes[deletingId]?.name}".`}
+					title={t('common:ui.deleteRecipe')}
+					message={t('dialogs.deleteRecipeMessage', { name: recipes[deletingId]?.name ?? '' })}
 					isOpen={true}
 					isLoading={deleteMut.loading}
 					onCancel={() => setDeletingId(null)}
@@ -272,6 +265,7 @@ interface IRecipeRowProps {
 }
 
 function RecipeRow({ recipe, onRun, onEdit, onDelete }: IRecipeRowProps) {
+	const { t } = useTranslation();
 	const activeRun = useStore((s) => s.activeRun);
 	const isThisActive = activeRun !== null && activeRun.recipeId === recipe.id && activeRun.status === ERecipeRunStatus.RUNNING;
 	const isOtherActive = activeRun !== null && activeRun.recipeId !== recipe.id && activeRun.status === ERecipeRunStatus.RUNNING;
@@ -288,11 +282,11 @@ function RecipeRow({ recipe, onRun, onEdit, onDelete }: IRecipeRowProps) {
 							<Text fontSize="14px" fontWeight="600" color="var(--wc-special-card-name)">{recipe.name}</Text>
 							{recipe.isBuiltIn && (
 								<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-purple-bg-8)" color="var(--wc-accent-purple)" fontSize="10px" fontWeight="600">
-									<HStack gap="1"><Lock size={9} /><Text>Built-in</Text></HStack>
+									<HStack gap="1"><Lock size={9} /><Text>{t('common:ui.builtIn')}</Text></HStack>
 								</Badge>
 							)}
 							{isThisActive && (
-								<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-yellow-hover-bg)" color="var(--wc-accent-yellow)" fontSize="10px" fontWeight="600">Running</Badge>
+								<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-yellow-hover-bg)" color="var(--wc-accent-yellow)" fontSize="10px" fontWeight="600">{t('common:ui.running')}</Badge>
 							)}
 						</HStack>
 						{recipe.description && (

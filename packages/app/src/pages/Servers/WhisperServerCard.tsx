@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Box, Text, HStack, VStack, Flex, Button, Badge, Input, Portal, Popover, HoverCard } from '@chakra-ui/react';
 import { Play, Square, RotateCcw, Mic, Clock, Trash2, X, Plus, Terminal, Edit, Blocks } from 'lucide-react';
 import { FaBrain, FaBookOpen } from 'react-icons/fa6';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/Card';
 import { StatusBadge } from '@/pages/Servers/StatusBadge';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
@@ -27,6 +28,7 @@ export const WhisperServerCard = React.memo(({
 	onEdit,
 	onConfirmDelete,
 }: IWhisperServerCardProps) => {
+	const { t } = useTranslation('servers');
 	const server = useStore((s) => s.whisperServers[serverId]);
 	const whisperBackends = useStore((s) => s.whisperBackends);
 
@@ -76,7 +78,7 @@ export const WhisperServerCard = React.memo(({
 
 	if (!server) return null;
 
-	const backendName = backend?.name ?? 'Backend Not Found!';
+	const backendName = backend?.name ?? t('labels.backendNotFound');
 	const modelMeta = model?.primaryFile?.metadata ?? null;
 
 	return (
@@ -145,7 +147,7 @@ export const WhisperServerCard = React.memo(({
 								)}
 								<Popover.Root lazyMount unmountOnExit open={addingAliasOpen} onOpenChange={(details) => { if (!details.open) { setAddingAliasOpen(false); setNewAliasValue(''); } }}>
 									<Popover.Trigger asChild>
-										<Badge px="1.5" py="0.25" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-special-indigo-bg-subtle)" color="var(--wc-special-indigo)" borderWidth="1px" borderColor="var(--wc-special-indigo-border-subtle)" cursor="pointer" onClick={(e) => { e.stopPropagation(); setAddingAliasOpen(true); }} title="Add Alias">
+										<Badge px="1.5" py="0.25" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-special-indigo-bg-subtle)" color="var(--wc-special-indigo)" borderWidth="1px" borderColor="var(--wc-special-indigo-border-subtle)" cursor="pointer" onClick={(e) => { e.stopPropagation(); setAddingAliasOpen(true); }} title={t('common:ui.addAlias')}>
 											<Plus size={10} />
 										</Badge>
 									</Popover.Trigger>
@@ -154,13 +156,13 @@ export const WhisperServerCard = React.memo(({
 											<Popover.Content maxW="320px" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-overlay)" borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)">
 												<Popover.Arrow />
 												<Popover.Body p="4">
-													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">Add alias for "{server.serverName}"</Text>
+													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">{t('labels.addAliasFor', { name: server.serverName })}</Text>
 													<HStack gap="2">
 														<Input
 															value={newAliasValue}
 															onChange={(e) => setNewAliasValue(e.target.value)}
 															onKeyDown={(e) => { if (e.key === 'Enter') handleAddAlias(); }}
-															placeholder="Enter comma separated aliases..."
+															placeholder={t('labels.aliasPlaceholder')}
 															size="sm"
 															bg="var(--wc-bg-subtle)"
 															borderColor="var(--wc-border-overlay)"
@@ -193,7 +195,7 @@ export const WhisperServerCard = React.memo(({
 							</HStack>
 							<HStack gap="2.5" flexWrap="wrap" mt="1.5">
 								<HStack gap="1">
-									<StatPill icon={<FaBrain size={12} />} label="Model" value={model?.name ?? modelMeta?.modelSize ?? 'Unknown'} />
+									<StatPill icon={<FaBrain size={12} />} label={t('labels.model')} value={model?.name ?? modelMeta?.modelSize ?? 'Unknown'} />
 									{modelMeta?.ftype && (
 										<Badge
 											px="1.5" py="0.25" borderRadius="md" fontSize="10px"
@@ -207,7 +209,7 @@ export const WhisperServerCard = React.memo(({
 										</Badge>
 									)}
 								</HStack>
-								<StatPill icon={<Blocks size={12} />} label="Backend" value={backendName} />
+								<StatPill icon={<Blocks size={12} />} label={t('labels.backend')} value={backendName} />
 							</HStack>
 							{server.error && (
 								<Text fontSize="11px" color="var(--wc-accent-red)" lineClamp={1} mt="0.5">{server.error}</Text>
@@ -218,28 +220,28 @@ export const WhisperServerCard = React.memo(({
 					<HStack gap="1" my="auto" pl="3">
 						<Box w="1px" h="16px" bg="var(--wc-border-subtle)" my="auto" />
 						{!isRunning && !isLoading && (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title="Launch Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title={t('common:ui.launchServer')}>
 								<Play size={14} />
 							</Button>
 						)}
 						{(isRunning || isLoading) && (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title="Restart Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title={t('common:ui.restartServer')}>
 								<RotateCcw size={14} />
 							</Button>
 						)}
-						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-special-cyan)', bg: 'var(--wc-special-cyan-bg)' }} borderRadius="md" onClick={() => onShowLogs(serverId)} title="Server logs">
+						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-special-cyan)', bg: 'var(--wc-special-cyan-bg)' }} borderRadius="md" onClick={() => onShowLogs(serverId)} title={t('common:ui.serverLogs')}>
 							<Terminal size={14} />
 						</Button>
-						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onEdit(serverId)} title="Edit Server">
+						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onEdit(serverId)} title={t('common:ui.editServer')}>
 							<Edit size={14} />
 						</Button>
 						<Box w="1px" h="16px" bg="var(--wc-border-subtle)" my="auto" />
 						{(isRunning || isLoading) ? (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={handleStop} title="Stop Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={handleStop} title={t('common:ui.stopServer')}>
 								<Square size={14} />
 							</Button>
 						) : (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => onConfirmDelete(serverId)} title="Delete Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => onConfirmDelete(serverId)} title={t('common:ui.deleteServer')}>
 								<Trash2 size={14} />
 							</Button>
 						)}
@@ -249,8 +251,8 @@ export const WhisperServerCard = React.memo(({
 
 			{removingAlias && (
 				<ConfirmDialog
-					title="Remove Alias?"
-					message={`This will remove the alias "${removingAlias}" from the server. This won't affect the running server.`}
+					title={t('dialogs.removeAliasTitle')}
+					message={t('dialogs.removeAliasMessage', { alias: removingAlias })}
 					isOpen={true}
 					isLoading={loading}
 					onCancel={() => setRemovingAlias(null)}

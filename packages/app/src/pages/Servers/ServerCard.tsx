@@ -7,6 +7,7 @@ import {
 import { LuSaveOff } from "react-icons/lu";
 import { GoEyeClosed } from "react-icons/go";
 import { FaBrain, FaBookOpen, FaRegEye } from 'react-icons/fa6';
+import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/Card';
 import { StatusBadge } from '@/pages/Servers/StatusBadge';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
@@ -38,6 +39,7 @@ export const ServerCard = React.memo(({
 	onLoadCheckpoint,
 	onConfirmDelete,
 }: IServerCardProps) => {
+	const { t } = useTranslation('servers');
 	const server = useStore((s) => s.servers[serverId])!;
 	const group = useStore((s) => server.backendGroupId ? s.backendGroups[server.backendGroupId] : null);
 
@@ -119,7 +121,7 @@ export const ServerCard = React.memo(({
 	// const configuredCtx = server.params.contextSize;
 	// const displayCtx = useMemo(() => configuredCtx === 0 ? (modelMaxCtx ? formatCount(modelMaxCtx) : 'auto') : formatCount(configuredCtx), [configuredCtx, modelMaxCtx]);
 	// const backendName = useMemo(() => group?.name ? `${group.name} (${backend?.name ?? 'Unknown'})` : backend?.name ?? "Backend Not Found!", [group, backend]);
-	const backendName = useMemo(() => group?.name ?? backend?.name ?? "Backend Not Found!", [group, backend]);
+	const backendName = useMemo(() => group?.name ?? backend?.name ?? t('labels.backendNotFound'), [group, backend, t]);
 
 	return (
 		<Card
@@ -193,7 +195,7 @@ color="var(--wc-special-indigo)"
 								)}
 								<Popover.Root lazyMount unmountOnExit open={addingAliasOpen} onOpenChange={(details) => { if (!details.open) { setAddingAliasOpen(false); setNewAliasValue(''); } }}>
 									<Popover.Trigger asChild>
-										<Badge px="1.5" py="0.5" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-special-indigo-bg-subtle)" color="var(--wc-special-indigo)" borderWidth="1px" borderColor="var(--wc-special-indigo-border-subtle)" cursor="pointer" onClick={(e) => { e.stopPropagation(); setAddingAliasOpen(true); }}  title="Add Alias">
+										<Badge px="1.5" py="0.5" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-special-indigo-bg-subtle)" color="var(--wc-special-indigo)" borderWidth="1px" borderColor="var(--wc-special-indigo-border-subtle)" cursor="pointer" onClick={(e) => { e.stopPropagation(); setAddingAliasOpen(true); }}  title={t('common:ui.addAlias')}>
 											<Plus size={10} />
 										</Badge>
 									</Popover.Trigger>
@@ -202,13 +204,13 @@ color="var(--wc-special-indigo)"
 											<Popover.Content maxW="320px" bg="var(--wc-bg-elevated)" borderWidth="1px" borderColor="var(--wc-border-overlay)" borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)">
 												<Popover.Arrow />
 												<Popover.Body p="4">
-													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">Add alias for "{server.serverName}"</Text>
+													<Text fontSize="12px" fontWeight="medium" color="var(--wc-text-primary)" mb="3">{t('labels.addAliasFor', { name: server.serverName })}</Text>
 													<HStack gap="2">
 														<Input
 															value={newAliasValue}
 															onChange={(e) => setNewAliasValue(e.target.value)}
 															onKeyDown={(e) => { if (e.key === 'Enter') handleAddAlias(); }}
-															placeholder="Enter comma separated aliases..."
+															placeholder={t('labels.aliasPlaceholder')}
 															size="sm"
 bg="var(--wc-bg-subtle)"
 															borderColor="var(--wc-border-overlay)"
@@ -243,15 +245,15 @@ bg="var(--wc-bg-subtle)"
 							</HStack>
 							<HStack gap="4" flexWrap="wrap" mt="2.5">
 								<HStack gap="1">
-									<StatPill icon={<FaBrain size={13} />} label="Model" value={model?.name ?? "Model Not Found!"} />
+									<StatPill icon={<FaBrain size={13} />} label={t('labels.model')} value={model?.name ?? t('labels.modelNotFound')} />
 									{model?.mmprojFile && server.useMultiModal && (
-										<Icon color="var(--wc-special-vision-yellow)" boxSize="14px" ml="1" mr="1"><FaRegEye title="Vision"/></Icon>
+										<Icon color="var(--wc-special-vision-yellow)" boxSize="14px" ml="1" mr="1"><FaRegEye title={t('common:ui.vision')}/></Icon>
 									)}
 									{model?.mmprojFile && !server.useMultiModal && (
-										<Icon color="var(--wc-special-vision-red)" boxSize="14px" ml="1" mr="1"><GoEyeClosed  title="Multi-modal disabled"/></Icon>
+										<Icon color="var(--wc-special-vision-red)" boxSize="14px" ml="1" mr="1"><GoEyeClosed  title={t('common:ui.multiModalDisabled')}/></Icon>
 									)}
 									{model?.mmprojFile && server.useMultiModal && (
-										<Icon color="var(--wc-special-vision-red)" boxSize="14px" ml="1" mr="1"><LuSaveOff title="Cannot save checkpoints when multi-modal is enabled" /></Icon>
+										<Icon color="var(--wc-special-vision-red)" boxSize="14px" ml="1" mr="1"><LuSaveOff title={t('common:ui.cannotSaveCheckpointsWhenMultiModalIsEnabled')} /></Icon>
 									)}
 									{/* {model?.primaryFile?.metadata?.quantType ? (
 										<Badge
@@ -265,22 +267,22 @@ bg="var(--wc-bg-subtle)"
 											{model?.name ?? "Model Not Found!"}
 										</Badge>
 									) : (
-										<StatPill icon={<FaBrain size={12} />} label="Model" value={model?.name ?? "Model Not Found!"} />
+										<StatPill icon={<FaBrain size={12} />} label={t('labels.model')} value={model?.name ?? t('labels.modelNotFound')} />
 									)} */}
 								</HStack>
 								{server.params.specDecode?.enabled && (
 									server.params.specDecode.mode === 'mtp' && (
-										<StatPill icon={<Sparkles size={13} />} label="Spec" value="MTP" />
+										<StatPill icon={<Sparkles size={13} />} label={t('labels.spec')} value="MTP" />
 									) ||
 									server.params.specDecode.mode === 'ngram' && (
-										<StatPill icon={<Sparkles size={13} />} label="Spec" value="Ngram" />
+										<StatPill icon={<Sparkles size={13} />} label={t('labels.spec')} value="Ngram" />
 									) ||
 									server.params.specDecode.mode === 'draft' && (
-										<StatPill icon={<Sparkles size={13} />} label="Spec" value={"Draft"} />
+										<StatPill icon={<Sparkles size={13} />} label={t('labels.spec')} value={"Draft"} />
 									)
 								)}
-								<StatPill icon={<Blocks size={13} />} label={backend?.name || "Backend"} value={backendName} />
-								<StatPill icon={<BsGpuCard size={13} />} label="Device" value={deviceName} />
+								<StatPill icon={<Blocks size={13} />} label={t('labels.backend')} value={backendName} />
+								<StatPill icon={<BsGpuCard size={13} />} label={t('labels.device')} value={deviceName} />
 								{/* <StatPill icon={<FaBookOpen size={12} />} label="Context" value={`${displayCtx}`} /> */}
 							</HStack>
 							{server.error && (
@@ -290,38 +292,38 @@ bg="var(--wc-bg-subtle)"
 					</HStack>
 
 					<HStack gap="1" my="auto" pl="3">
-						{showCheckpointButtons && <Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onLoadCheckpoint(serverId)} title="Load KV Checkpoint">
+						{showCheckpointButtons && <Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onLoadCheckpoint(serverId)} title={t('common:ui.loadKvCheckpoint')}>
 							<Zap size={14} />
 						</Button>}
 						{isRunning && showCheckpointButtons && (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onSaveCheckpoint(serverId)} title="Save KV Checkpoint">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onSaveCheckpoint(serverId)} title={t('common:ui.saveKvCheckpoint')}>
 								<Save size={14} />
 							</Button>
 						)}
 						<Box w="1px" h="16px" bg="var(--wc-border-subtle)" my="auto" />
 						{!isRunning && !isLoading && (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title="Launch Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title={t('common:ui.launchServer')}>
 								<Play size={14} />
 							</Button>
 						)}
 						{(isRunning || isLoading) && (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title="Restart Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-yellow)', bg: 'var(--wc-accent-yellow-bg-8)' }} borderRadius="md" onClick={handleRestart} title={t('common:ui.restartServer')}>
 								<RotateCcw size={14} />
 							</Button>
 						)}
-						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-special-cyan)', bg: 'var(--wc-special-cyan-bg)' }} borderRadius="md" onClick={() => onShowLogs(serverId)} title="Server logs">
+						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-special-cyan)', bg: 'var(--wc-special-cyan-bg)' }} borderRadius="md" onClick={() => onShowLogs(serverId)} title={t('common:ui.serverLogs')}>
 							<Terminal size={14} />
 						</Button>
-						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onEdit(serverId)} title="Edit Server">
+						<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-8)' }} borderRadius="md" onClick={() => onEdit(serverId)} title={t('common:ui.editServer')}>
 							<Edit size={14} />
 						</Button>
 						<Box w="1px" h="16px" bg="var(--wc-border-subtle)" my="auto" />
 						{(isRunning || isLoading) ? (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={handleStop}  title="Stop Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={handleStop}  title={t('common:ui.stopServer')}>
 								<Square size={14} />
 							</Button>
 						) : (
-							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => onConfirmDelete(serverId)} title="Delete Server">
+							<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => onConfirmDelete(serverId)} title={t('common:ui.deleteServer')}>
 								<Trash2 size={14} />
 							</Button>
 						)}
@@ -331,8 +333,8 @@ bg="var(--wc-bg-subtle)"
 
 			{removingAlias && (
 				<ConfirmDialog
-					title="Remove Alias?"
-					message={`This will remove the alias "${removingAlias}" from the server. This won't affect the running server.`}
+					title={t('dialogs.removeAliasTitle')}
+					message={t('dialogs.removeAliasMessage', { alias: removingAlias })}
 					isOpen={true}
 					isLoading={loading}
 					onCancel={() => setRemovingAlias(null)}

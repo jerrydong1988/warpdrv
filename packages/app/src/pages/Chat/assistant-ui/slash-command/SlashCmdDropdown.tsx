@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
+import { useTranslation } from 'react-i18next';
 
 export type TDropdownItem = { label: string; value: string };
 
@@ -33,6 +34,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 	onBlur,
 	items,
 }) => {
+	const { t } = useTranslation();
 	const resolvedItems = useResolveItems(items);
 	const [isOpen, setIsOpen] = useState(false);
 	const [highlight, setHighlight] = useState(0);
@@ -227,8 +229,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No matches
-							</div>
+								{t('common:ui.noMatches')}</div>
 						)}
 						{filtered.map((item, i) => (
 							<div

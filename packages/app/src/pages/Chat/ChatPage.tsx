@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRealm } from '@/hooks/useRealm';
 import { Box, Button, Flex, IconButton, Text, HStack, Popover, Portal, Switch, Slider, VStack, Combobox, createListCollection } from '@chakra-ui/react';
 import { MessageSquare, ChevronDown, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
 	AssistantRuntimeProvider,
 	useExternalStoreRuntime,
@@ -606,8 +607,9 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	);
 });
 export const ChatPage = React.memo(() => {
+	const { t } = useTranslation('chat');
 
-	const title = useStore(s => s.currentThreadId ? s.threads[s.currentThreadId]?.title || "New Chat" : "New Chat");
+	const title = useStore(s => s.currentThreadId ? s.threads[s.currentThreadId]?.title || t('actions.newChat') : t('actions.newChat'));
 	const setCurrentThreadId = useStore(s => s.setCurrentThreadId);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const [threadsListCollapsed, setThreadsListCollapsed] = useState(false);
@@ -659,14 +661,14 @@ export const ChatPage = React.memo(() => {
 	return (
 		<Flex direction="column" h="100%" overflow="hidden">
 			<PageHeader
-				title="Chat"
+				title={t('common:ui.chat')}
 				icon={<MessageSquare size={20} />}
 				actionsRight={
 					<>
 						<Popover.Root>
 						<Popover.Trigger asChild>
 							<IconButton
-								aria-label="Chat settings"
+								aria-label={t('common:ui.chatSettings')}
 								variant="ghost"
 								size="sm"
 								borderWidth="1px"
@@ -693,11 +695,11 @@ export const ChatPage = React.memo(() => {
 									</Popover.Arrow>
 									<Popover.Body p="3">
 										<VStack align="stretch" gap="3">
-											<Text fontSize="12px" fontWeight="600" color="var(--wc-text-heading)">Chat Appearance</Text>
+											<Text fontSize="12px" fontWeight="600" color="var(--wc-text-heading)">{t('common:ui.chatAppearance')}</Text>
 
 											<VStack align="stretch" gap="2">
 												<HStack justify="space-between">
-													<Text fontSize="11px" color="var(--wc-text-muted)">Font Size</Text>
+													<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.fontSize')}</Text>
 													<Text fontSize="11px" color="var(--wc-text-tertiary)">{chatFontSize}px</Text>
 												</HStack>
 												<Slider.Root
@@ -719,7 +721,7 @@ export const ChatPage = React.memo(() => {
 											</VStack>
 
 											<VStack align="stretch" gap="2">
-												<Text fontSize="11px" color="var(--wc-text-muted)">Font Family</Text>
+												<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.fontFamily')}</Text>
 												<Combobox.Root
 													collection={fontFamilyCollection}
 													value={[chatFontFamily || '']}
@@ -738,7 +740,7 @@ export const ChatPage = React.memo(() => {
 																borderRadius="md"
 																fontWeight="500"
 															>
-																{chatFontFamily ? (fontFamilyCollection.items.find(i => i.value === chatFontFamily)?.label || 'Default (Inter)') : 'Default (Inter)'}
+																{chatFontFamily ? (fontFamilyCollection.items.find(i => i.value === chatFontFamily)?.label || t('common:ui.defaultInter')) : t('common:ui.defaultInter')}
 																<ChevronDown size={12} />
 															</Button>
 														</Combobox.Trigger>
@@ -755,8 +757,8 @@ export const ChatPage = React.memo(() => {
 																maxH="200px"
 																overflowY="auto"
 															>
-																<Combobox.Item item={{ label: 'Default (Inter)', value: '' }} px="2" py="1.5" borderRadius="sm" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
-																	<Text fontSize="11px" color="var(--wc-text-primary)">Default (Inter)</Text>
+																<Combobox.Item item={{ label: t('common:ui.defaultInter'), value: '' }} px="2" py="1.5" borderRadius="sm" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+																	<Text fontSize="11px" color="var(--wc-text-primary)">{t('common:ui.defaultInter')}</Text>
 																	<Combobox.ItemIndicator />
 																</Combobox.Item>
 																{fontFamilyCollection.items.map((item) => (
@@ -771,14 +773,13 @@ export const ChatPage = React.memo(() => {
 												</Combobox.Root>
 											</VStack>
 
-											<Switch.Root label="Fixed chat width" checked={chatFixedWidth} onCheckedChange={(details) => updateSettings({ chatFixedWidth: details.checked })}>
+											<Switch.Root label={t('common:ui.fixedChatWidth')} checked={chatFixedWidth} onCheckedChange={(details) => updateSettings({ chatFixedWidth: details.checked })}>
 												<Switch.HiddenInput />
 												<Switch.Control css={{ bg: chatFixedWidth ? 'var(--wc-accent-blue)' : 'surface.4' }}>
 													<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 												</Switch.Control>
 												<Switch.Label ml="2" fontSize="12px" color={chatFixedWidth ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
-													Fixed width
-												</Switch.Label>
+													{t('common:ui.fixedWidth')}</Switch.Label>
 											</Switch.Root>
 										</VStack>
 									</Popover.Body>
@@ -787,7 +788,7 @@ export const ChatPage = React.memo(() => {
 						</Portal>
 					</Popover.Root>
 						<IconButton
-							aria-label="Toggle right panel"
+							aria-label={t('common:ui.toggleRightPanel')}
 							variant="ghost"
 							size="sm"
 							borderWidth="1px"
@@ -804,7 +805,7 @@ export const ChatPage = React.memo(() => {
 				actions={
 					<>
 						<IconButton
-							aria-label="Toggle threads list"
+							aria-label={t('common:ui.toggleThreadsList')}
 							variant="ghost"
 							size="sm"
 							mr="5"
@@ -827,8 +828,7 @@ export const ChatPage = React.memo(() => {
 							onClick={() => setCurrentThreadId(nanoid(6))}
 						>
 							<Plus size={15} />
-							New Chat
-						</Button>
+							{t('common:ui.newChat')}</Button>
 						<span style={{
 							fontSize: "13px",
 							color: "var(--wc-text-muted)",

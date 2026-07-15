@@ -1,6 +1,7 @@
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { ChevronDown, Eye } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '@/store';
 import { EServerStatus, TServerId, IModel } from '@warpcore/shared';
 import { updateThread } from '@/api/services';
@@ -27,6 +28,7 @@ export const ThreadServerSelector = React.memo(({
 }: {
 	threadId: string | null;
 }) => {
+	const { t } = useTranslation('chat');
 	const [open, setOpen] = useState(false);
 	const [shake, setShake] = useState(false);
 
@@ -123,7 +125,7 @@ export const ThreadServerSelector = React.memo(({
 				) : (
 					<>
 						<Text flex="1" color="var(--wc-text-faint)" fontSize="12px">
-							Select
+							{t('serverSelector.selectServer')}
 						</Text>
 						<ChevronDown size={12} style={{ opacity: 0.4 }} />
 					</>
@@ -185,7 +187,7 @@ export const ThreadServerSelector = React.memo(({
 						</HStack>
 					))}
 					{servers.length === 0 && (
-						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">No servers</Text>
+						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noServers')}</Text>
 					)}
 				</Box>
 			)}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FolderOpen, ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -65,6 +66,7 @@ export const ListRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, excludePatterns, result } = props;
+	const { t } = useTranslation('chat');
 	const resultText = extractResultText(result);
 	const entries = resultText ? (parseEntries(resultText) ?? parseFlatLines(resultText)) : null;
 	return (
@@ -72,7 +74,7 @@ export const ListRenderer = React.memo((props: {
 			<HStack gap="2" align="center" mb={entries ? '2' : '0'}>
 				<FolderOpen size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+					{path ?? t('common:ui.noPath')}
 				</Text>
 				{excludePatterns && excludePatterns.length > 0 && (
 					<Text fontSize="10px" color="var(--wc-text-faint)">

@@ -4,6 +4,7 @@
 // Used when no custom renderer matches the tool.
 // ============================================================
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -21,6 +22,7 @@ function formatJson(jsonStr: string): string {
 }
 
 export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) => {
+	const { t } = useTranslation();
 	const [argsExpanded, setArgsExpanded] = useState(false);
 	const [resultExpanded, setResultExpanded] = useState(false);
 
@@ -29,7 +31,7 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 			<Box px="3" py="1">
 				<HStack gap="1" cursor="pointer" onClick={() => setArgsExpanded(!argsExpanded)} py="1">
 					{argsExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-					<Text fontSize="11px" color="var(--wc-text-muted)">Arguments</Text>
+					<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.arguments')}</Text>
 				</HStack>
 				{argsExpanded && (
 					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="200px">
@@ -43,7 +45,7 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 				<Box px="3" py="1">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Result</Text>
+						<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.result')}</Text>
 					</HStack>
 					{resultExpanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="300px">

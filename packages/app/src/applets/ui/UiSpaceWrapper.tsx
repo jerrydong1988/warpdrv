@@ -3,8 +3,10 @@ import { Box } from '@chakra-ui/react';
 import { useStore } from '@/store';
 import { WithErrorBoundary } from '@/components/WithErrorBoundary';
 import type { TUISpaceComponentId } from '@/store/slices/uiSpaces';
+import { useTranslation } from 'react-i18next';
 
 export const UiSpaceWrapper = ({ componentId, children }: { componentId: TUISpaceComponentId; children?: React.ReactNode }) => {
+	const { t } = useTranslation();
     const entry = useStore(s => s.uiSpaceComponentsById[componentId]);
     if (!entry) return children;
 
@@ -14,8 +16,7 @@ export const UiSpaceWrapper = ({ componentId, children }: { componentId: TUISpac
             name={entry.label}
             fallback={
                 <Box color="red.500" fontSize="xs">
-                    {entry.label} — error
-                </Box>
+                    {entry.label} {t('common:ui.error')}</Box>
             }
         >
             <Comp def={entry} {...(entry.props || {})}>{children}</Comp>
