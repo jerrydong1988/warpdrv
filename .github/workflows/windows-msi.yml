@@ -1,0 +1,84 @@
+name: Windows MSI
+
+on:
+  push:
+    branches: ['codex/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/desktop/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate translations
+        run: npm run i18n:check -w @warpcore/app
+
+      - name: Run core tests
+        run: npm test -w @warpcore/realmcore
+
+      - name: Build frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npx vite build
+        working-directory: packages/app
+
+      - name: Build server binary
+        shell: pwsh
+        working-directory: packages/server
+        run: |
+          npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
+          Copy-Item ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
+          npx @yao-pkg/pkg dist/server.cjs --target node24-win-x64 --output dist/warpcore-server.exe --compress GZip
+          node ..\..\.github\scripts\copy-runtime-deps.cjs win32 x64
+
+      - name: Prepare Tauri sidecar
+        shell: pwsh
+        working-directory: packages/desktop
+        run: |
+          $targetTriple = (rustc --print host-tuple).Trim()
+          New-Item -ItemType Directory -Force -Path binaries\node_modules | Out-Null
+          Copy-Item ..\server\dist\warpcore-server.exe "binaries\warpcore-server-$targetTriple.exe"
+          Copy-Item ..\server\dist\better_sqlite3.node binaries\
+          Copy-Item -Recurse ..\server\dist\node_modules\* binaries\node_modules\
+          Remove-Item -Recurse -Force app-dist -ErrorAction SilentlyContinue
+          Copy-Item -Recurse ..\app\dist app-dist
+
+      - name: Build MSI
+        run: npx tauri build --bundles msi
+        working-directory: packages/desktop
+
+      - name: Upload MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: warpdrv-windows-msi
+          path: packages/desktop/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 7
