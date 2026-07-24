@@ -17,6 +17,7 @@ import { settingsSlice } from './slices/settings';
 import { proxySlice } from './slices/proxy';
 import { recipesSlice } from './slices/recipes';
 import { checkpointsSlice } from './slices/checkpoints';
+import { modesSlice } from './slices/modes';
 import { hardwareSlice } from './slices/hardware';
 import { releasesSlice } from './slices/releases';
 import { kokoroSlice } from './slices/kokoro';
@@ -61,6 +62,7 @@ export const useStore = create<AppState>()(
 				const proxy = proxySlice(set, get);
 				const recipes = recipesSlice(set, get);
 				const checkpoints = checkpointsSlice(set, get);
+			const modes = modesSlice(set, get);
 				const hardware = hardwareSlice(set, get);
 				const releases = releasesSlice(set, get);
 				const kokoro = kokoroSlice(set, get);
@@ -125,6 +127,7 @@ export const useStore = create<AppState>()(
 					activeRun: recipes.activeRun!,
 					stepOutputs: recipes.stepOutputs!,
 					checkpoints: checkpoints.checkpoints!,
+					modes: modes.modes!,
 					SSEHandlers: sseHandlers.SSEHandlers!,
 					elicitationByThread: bridge.elicitationByThread,
 					applyElicitationRequest: bridge.applyElicitationRequest,

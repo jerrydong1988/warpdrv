@@ -1,5 +1,5 @@
 import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { TServerId, IServer, IServerStats, TDownloadId, IDownload, TBackendId, IBackend, TBackendGroupId, IBackendGroup, TRecipeId, IRecipe, IRecipeRunState, IRecipesInitPayload, IRunsStepStartedPayload, IRunsStepOutputPayload, IRunsStepFinishedPayload, IRunsFinishedPayload, ERecipeStreamKind, ISseSlotStatePayload, ISseServerSlotsSnapshotPayload, IServerSlotsState, ISseCheckpointPayload, ISseCheckpointDeletedPayload, ICheckpoint, TCheckpointId, TModelId, IModel, ISettings, TWhisperBackendId, IWhisperBackend, TWhisperServerId, IWhisperServer, IWhisperModel, IChatPreset } from '@warpcore/shared';
+import type { TServerId, IServer, IServerStats, TDownloadId, IDownload, TBackendId, IBackend, TBackendGroupId, IBackendGroup, TRecipeId, IRecipe, IRecipeRunState, IRecipesInitPayload, IRunsStepStartedPayload, IRunsStepOutputPayload, IRunsStepFinishedPayload, IRunsFinishedPayload, ERecipeStreamKind, ISseSlotStatePayload, ISseServerSlotsSnapshotPayload, IServerSlotsState, ISseCheckpointPayload, ISseCheckpointDeletedPayload, ICheckpoint, TCheckpointId, TModelId, IModel, ISettings, TWhisperBackendId, IWhisperBackend, TWhisperServerId, IWhisperServer, IWhisperModel, IChatPreset, IMode, TModeId } from '@warpcore/shared';
 import { ERecipeStepStatus, EServerStatus, EWhisperServerStatus } from '@warpcore/shared';
 
 interface SSEHandlersSlice {
@@ -255,6 +255,17 @@ export const sseHandlersSlice = (
 		}),
 		'chatPresets:delete': (data: { id: string }) => setState((state) => {
 			state.chatPresets = state.chatPresets.filter(p => p.id !== data.id);
+		}),
+
+		// Modes
+		'modes:init': (data: Record<TModeId, IMode>) => setState((state) => {
+			state.modes = data;
+		}),
+		'modes:update': (data: IMode) => setState((state) => {
+			state.modes[data.id] = data;
+		}),
+		'modes:delete': (data: IMode) => setState((state) => {
+			delete state.modes[data.id];
 		}),
 	},
 });

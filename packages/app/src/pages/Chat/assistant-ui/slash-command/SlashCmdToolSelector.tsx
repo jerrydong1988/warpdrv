@@ -13,6 +13,7 @@ type SlashCmdToolSelectorProps = {
   onKeyDown: (e: React.KeyboardEvent) => void;
   onFocus: () => void;
   onBlur: (e: React.FocusEvent) => void;
+  showAllMessages?: boolean;
 };
 
 export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
@@ -21,6 +22,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
   onChange,
   onFocus,
   onBlur,
+  showAllMessages = true,
 }) => {
   const mcpServers = useStore((s) => s.mcpServers);
   const [isOpen, setIsOpen] = useState(false);
@@ -161,7 +163,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
   }, [isOpen]);
 
   const displayLabel = isAllMessages
-    ? "All messages"
+    ? (showAllMessages ? "All messages" : "Tools")
     : `${selectedTools.size} tool(s)`;
 
   return (
@@ -236,50 +238,54 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
               padding: "4px",
             }}
           >
-            {/* "All messages" option */}
-            <div
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleSelectAllMessages}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.75rem",
-                color: "var(--wc-text-primary)",
-                background: isAllMessages
-                  ? "var(--wc-bg-selected)"
-                  : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (!isAllMessages) {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "var(--wc-bg-card)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isAllMessages) {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "transparent";
-                }
-              }}
-            >
-              {isAllMessages && (
-                <Check size={14} color="var(--wc-accent-green)" />
-              )}
-              <span style={{ flex: 1 }}>All messages</span>
-            </div>
+            {showAllMessages && (
+              <>
+                {/* "All messages" option */}
+                <div
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleSelectAllMessages}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    color: "var(--wc-text-primary)",
+                    background: isAllMessages
+                      ? "var(--wc-bg-selected)"
+                      : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isAllMessages) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "var(--wc-bg-card)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isAllMessages) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "transparent";
+                    }
+                  }}
+                >
+                  {isAllMessages && (
+                    <Check size={14} color="var(--wc-accent-green)" />
+                  )}
+                  <span style={{ flex: 1 }}>All messages</span>
+                </div>
 
-            {/* Separator */}
-            <div
-              style={{
-                height: "1px",
-                background: "var(--wc-border-subtle)",
-                margin: "4px 0",
-              }}
-            />
+                {/* Separator */}
+                <div
+                  style={{
+                    height: "1px",
+                    background: "var(--wc-border-subtle)",
+                    margin: "4px 0",
+                  }}
+                />
+              </>
+            )}
 
             {totalCount === 0 ? (
               <div
@@ -404,3 +410,11 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
     </>
   );
 };
+
+export const SlashCmdMessageType: React.FC<SlashCmdToolSelectorProps> = (props) => (
+  <SlashCmdToolSelector {...props} showAllMessages={true} />
+);
+
+export const SlashCmdTools: React.FC<SlashCmdToolSelectorProps> = (props) => (
+  <SlashCmdToolSelector {...props} showAllMessages={false} />
+);

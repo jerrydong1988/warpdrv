@@ -8,6 +8,7 @@ export * from './recipeParser';
 export * from './checkpoint-types';
 export * from './whisper-types';
 export * from './guardrail-types';
+export * from './mode-types';
 export * from './codegraph-types';
 export type { IChatInferenceParams, IChatPreset, IChatPresetCreatePayload, IThreadConfig } from "./types";
 export { EResponseFormat, EReasoningFormat, EReasoningEffort } from "./enums";

@@ -54,3 +54,5 @@ export const GUARDRAIL_RULESET_GENERIC_PROMPT = `
 `;
 
 export const TRAILING_SYSTEM_PROMPT = `This message part is appended to provide the current state. You can use the data in this part to keep track. This message part will always contain the latest state and variables, such as todos and etags, if any.`;
+
+export const CORE_INSTRUCTION_PROMPT = `Core instructions - 1. Only use tools that are allowed in the reminder in the last message.`;

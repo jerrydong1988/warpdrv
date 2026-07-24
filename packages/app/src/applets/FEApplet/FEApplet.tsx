@@ -12,8 +12,9 @@ import { nanoid } from 'nanoid';
 import { useAuiState } from '@assistant-ui/react';
 import { useStore } from '@/store';
 import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
-import type { ITodoItem, IGuardrail, IGuardrailIssue } from '@warpcore/shared';
+import type { ITodoItem, IGuardrail, IGuardrailIssue, IMode, TModeId } from '@warpcore/shared';
 import { EGuardrailIssueType } from '@warpcore/shared';
+import { createMode as createModeApi } from '@/api/mode-services';
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
 import React from 'react';
@@ -21,6 +22,7 @@ import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
+import { ModeBadge } from '../ui/ModeBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrail> = {};
@@ -31,6 +33,19 @@ function useGuardrailItems(): TDropdownItem[] {
     return ts?.guardrails as Record<string, IGuardrail>;
   });
   return useMemo(() => guardrails ? Object.keys(guardrails).map(n => ({ label: n, value: n })) : [], [guardrails]);
+}
+
+function useModeItems(): TDropdownItem[] {
+  const modes = useStore(s => s.modes);
+  const currentThreadId = useStore(s => s.currentThreadId);
+  const threads = useStore(s => s.threads);
+  const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+  return useMemo(() => {
+    const scope = folderId || 'global';
+    return Object.values(modes)
+      .filter((m: IMode) => m.scope === 'global' || m.scope === scope)
+      .map((m: IMode) => ({ label: m.name, value: m.id }));
+  }, [modes, scope]);
 }
 
 const TodoPanel = React.memo(() => {
@@ -777,7 +792,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			description: 'Create a custom guardrail',
 			params: {
 				name: { type: 'string', description: 'Guardrail name', index: 0 },
-				tools: { type: 'tool', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
+				tools: { type: 'message_type', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
 				server: { type: 'server', description: 'Server used for processing (empty = same as chat server)', index: 2 },
 			},
 			execute: async (_api, params, extraParams) => {
@@ -844,11 +859,60 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				state.setThreadState(threadId, { projectRoot: params.path });
 			},
 		});
+
+		api.registerSlashCommand({
+			name: 'create_mode',
+			description: 'Create a new mode with allowed tools and optional tail prompt',
+			params: {
+				name: { type: 'string', description: 'Mode name', index: 0 },
+				scope: { type: 'dropdown', description: 'global or workspace', index: 1, props: {
+					items: [{ label: 'global', value: 'global' }, { label: 'workspace', value: 'workspace' }],
+				}},
+				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
+			},
+			execute: async (_api, params, extraParams) => {
+				const state = api.useStore.getState();
+				const threadId = state.currentThreadId;
+				const threads = state.threads;
+				const folderId = threadId ? threads[threadId]?.folderId : null;
+				const scope = params.scope === 'workspace' ? (folderId || 'global') : 'global';
+				await createModeApi({
+					id: nanoid(6),
+					name: params.name!,
+					scope,
+					prompt: extraParams?.prompt || undefined,
+					allowedTools: params.tools ? params.tools.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+				});
+			},
+		});
+
+		api.registerSlashCommand({
+			name: 'mode',
+			description: 'Set or clear a mode for this thread',
+			params: {
+				action: { type: 'dropdown', description: 'set or clear', index: 0, props: {
+					items: [{ label: 'set', value: 'set' }, { label: 'clear', value: 'clear' }],
+				}},
+				name: { type: 'dropdown', description: 'Mode name', index: 1, props: {
+					items: useModeItems,
+				}},
+			},
+			execute: async (_api, params) => {
+				const state = api.useStore.getState();
+				const threadId = state.currentThreadId;
+				if (params.action === 'clear') {
+					state.setThreadState(threadId, { modeId: null });
+				} else {
+					state.setThreadState(threadId, { modeId: params.name });
+				}
+			},
+		});
 		
 		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
 		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
 
 		const unsubscribe = useStore.subscribe(
 			(s) => s.getCurrentThreadState(s)?.guardrails,
@@ -867,7 +931,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.onTerminate(() => { unsubscribe(); });
 
-		const blockingSlashCommands = ['guardrail', 'toggle_guardrail', 'todo'];
+		const blockingSlashCommands = ['guardrail', 'toggle_guardrail', 'todo', 'create_mode', 'mode'];
 
 		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
 			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };

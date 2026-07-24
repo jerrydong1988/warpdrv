@@ -1,9 +1,10 @@
 import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
-import type { IGuardrail, IGuardrailIssue, IServer, ITodoItem } from '@warpcore/shared';
-import { COMPACTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
+import type { IGuardrail, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
 import { store } from '../../util/store';
+import { getMode } from '../../services/modeStore';
 import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
 
 const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
@@ -71,13 +72,28 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             ) as Record<string, unknown> | null;
             
             let content = '';
+            let isToolsIncluded = false;
+            let isTodosIncluded = false;
+
+            // --- Mode tools section ---
+
+            const modeId = threadState?.modeId as string | undefined;
+            let mode: IMode | null = null;
+
+            if (modeId) {
+                mode = await getMode(modeId);
+            }
+
+            if (mode && mode.allowedTools.length > 0) {
+                content += `\nTools\nAllowed tools: ${mode.allowedTools.join(', ')}\n`;
+                if (mode.prompt) content += `\nMode Prompt\n${mode.prompt}\n`;
+                isToolsIncluded = true;
+            }
 
             // ---
 
             const todos = threadState?.todos as ITodoItem[] | undefined;
             const todoEtag = threadState?.todoEtag as string | undefined;
-
-            let isTodosIncluded = false;
 
             if (todos && todos.length > 0) {
                 const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
@@ -88,12 +104,34 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             // ---
 
             if (
-                isTodosIncluded
+                isToolsIncluded || isTodosIncluded
             ) {
-                const messages = eventApi.result as Array<{
+                let messages = eventApi.result as Array<{
                     role: string;
                     content: string | Array<{ type: string; text?: string }>;
                 }>;
+
+                // Inject core instruction as first system message (only if mode is set)
+                if (isToolsIncluded) {
+                    const firstMsg = messages[0];
+                    if (firstMsg?.role === 'system') {
+                        if (typeof firstMsg.content === 'string') {
+                            messages[0] = { ...firstMsg, content: CORE_INSTRUCTION_PROMPT + '\n' + firstMsg.content };
+                        } else {
+                            const partIndex = firstMsg.content.findIndex(p => p.type === 'text');
+                            if (partIndex >= 0) {
+                                const newContent = firstMsg.content.map((p, i) =>
+                                    i === partIndex ? { ...p, text: CORE_INSTRUCTION_PROMPT + '\n' + (p.text ?? '') } : p
+                                );
+                                messages[0] = { ...firstMsg, content: newContent };
+                            } else {
+                                messages[0] = { ...firstMsg, content: [{ type: 'text', text: CORE_INSTRUCTION_PROMPT }, ...firstMsg.content] };
+                            }
+                        }
+                    } else {
+                        messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
+                    }
+                }
 
                 const lastIndex = messages.length - 1;
 
