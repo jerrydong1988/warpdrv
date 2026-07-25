@@ -1,12 +1,20 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, HStack, IconButton } from '@chakra-ui/react';
-import { ChevronDown, Check, Zap } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import type { IMode, TModeId } from '@warpcore/shared';
 
 const EMPTY_MODES: Record<TModeId, IMode> = {};
+
+const hexToRgba = (hex: string): string => {
+    const cleaned = hex.replace('#', '');
+    const r = parseInt(cleaned.slice(0, 2), 16);
+    const g = parseInt(cleaned.slice(2, 4), 16);
+    const b = parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r},${g},${b}`;
+};
 
 export const ModeBadge = memo(() => {
     const modes = useStore(s => s.modes) ?? EMPTY_MODES;
@@ -73,6 +81,8 @@ export const ModeBadge = memo(() => {
 
     const isActive = !!currentMode;
     const label = currentMode?.name ?? 'No mode';
+    const modeColor = currentMode?.color || '#a78bfa';
+    const modeColorRgba = hexToRgba(modeColor);
 
     return (
         <>
@@ -87,13 +97,20 @@ export const ModeBadge = memo(() => {
                 cursor="pointer"
                 userSelect="none"
                 transition="all 0.15s ease"
-                bg={isActive ? 'var(--wc-accent-purple-bg-15, rgba(167,139,250,0.15))' : 'var(--wc-bg-subtle)'}
+                bg={isActive ? `${modeColorRgba},0.15)` : 'var(--wc-bg-subtle)'}
                 borderWidth="1px"
-                borderColor={isActive ? 'var(--wc-accent-purple-border, rgba(167,139,250,0.25))' : 'var(--wc-border-subtle)'}
+                borderColor={isActive ? `${modeColorRgba},0.25)` : 'var(--wc-border-subtle)'}
                 opacity={isActive ? 1 : 0.6}
                 onClick={handleToggle}
             >
-                <Zap style={{ fontSize: '12px', color: 'var(--wc-text-muted)' }} />
+                <Box
+                    style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '2px',
+                        background: isActive ? modeColor : 'transparent',
+                    }}
+                />
                 <Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
                     {label}
                 </Box>
@@ -158,6 +175,7 @@ export const ModeBadge = memo(() => {
                     ) : (
                         availableModes.map((m: IMode) => {
                             const isSelected = modeId === m.id;
+                            const mc = m.color || '#a78bfa';
                             return (
                                 <div
                                     key={m.id}
@@ -185,7 +203,16 @@ export const ModeBadge = memo(() => {
                                         }
                                     }}
                                 >
-                                    {isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
+                                    {isSelected && <Check size={12} color={mc} />}
+                                    <Box
+                                        style={{
+                                            width: '8px',
+                                            height: '8px',
+                                            borderRadius: '2px',
+                                            background: mc,
+                                            flexShrink: 0,
+                                        }}
+                                    />
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {m.name}
                                     </span>

@@ -47,6 +47,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
 	const threadState = useStore(s => {
 		if (!currentThreadId) return null;
 		return s.threadStates[currentThreadId] ?? s.tempThreadState;
@@ -59,7 +60,9 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 		if (!isModeActive) return null;
 		const result: IToolAttachment[] = [];
 		const seen = new Set<string>();
-		for (const m of Object.values(modes)) {
+		const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+		const scope = folderId || 'global';
+		for (const m of Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope)) {
 			for (const t of m.allowedTools) {
 				if (typeof t === 'string') continue;
 				const key = `${t.serverName}:${t.toolName}`;
@@ -70,7 +73,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 			}
 		}
 		return result;
-	}, [isModeActive, modes]);
+	}, [isModeActive, modes, currentThreadId, threads]);
 
 	const [deciding, setDeciding] = useState(false);
 	const toast = useToast();

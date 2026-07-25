@@ -1014,7 +1014,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				scope: { type: 'dropdown', description: 'global or workspace', index: 1, props: {
 					items: [{ label: 'global', value: 'global' }, { label: 'workspace', value: 'workspace' }],
 				}},
-				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
+				color: { type: 'color', description: 'Mode color', index: 2 },
+				tools: { type: 'tools', description: 'Allowed tools', index: 3 },
 			},
 			execute: async (_api, params, extraParams) => {
 				const state = api.useStore.getState();
@@ -1026,6 +1027,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					id: nanoid(6),
 					name: params.name!,
 					scope,
+					color: params.color || '#a78bfa',
 					prompt: extraParams?.prompt || undefined,
 					allowedTools: parseToolValue(params.tools || ''),
 				});
