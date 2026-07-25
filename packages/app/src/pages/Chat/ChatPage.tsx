@@ -202,10 +202,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	const attachedTools = useStore(s => s.attachedTools);
 	const modes = useStore(s => s.modes);
 	const threads = useStore(s => s.threads);
-	const threadState = useStore(s => {
-		if (!currentThreadId) return null;
-		return s.threadStates[currentThreadId] ?? s.tempThreadState;
-	});
+	const threadState = useStore(s => s.getCurrentThreadState(s));
 	const modeId = threadState?.modeId as string | undefined;
 	const currentMode = modeId ? modes[modeId] : null;
 	const isModeActive = !!currentMode;

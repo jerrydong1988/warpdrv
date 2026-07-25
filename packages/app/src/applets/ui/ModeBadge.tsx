@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, HStack, IconButton } from '@chakra-ui/react';
 import { ChevronDown, Check } from 'lucide-react';
+import { TiFlowSwitch } from 'react-icons/ti';
 import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import type { IMode, TModeId } from '@warpcore/shared';
@@ -20,10 +21,7 @@ export const ModeBadge = memo(() => {
     const modes = useStore(s => s.modes) ?? EMPTY_MODES;
     const currentThreadId = useStore(s => s.currentThreadId);
     const threads = useStore(s => s.threads);
-    const threadState = useStore(s => {
-        if (!currentThreadId) return null;
-        return s.threadStates[currentThreadId] ?? s.tempThreadState;
-    });
+    const threadState = useStore(s => s.getCurrentThreadState(s));
     const setThreadState = useStore(s => s.setThreadState);
     const modeId = threadState?.modeId as TModeId | undefined;
     const currentMode = modeId ? modes[modeId] : null;
@@ -103,14 +101,7 @@ export const ModeBadge = memo(() => {
                 opacity={isActive ? 1 : 0.6}
                 onClick={handleToggle}
             >
-                <Box
-                    style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '2px',
-                        background: isActive ? modeColor : 'transparent',
-                    }}
-                />
+                <TiFlowSwitch size={14} color={isActive ? modeColor : 'var(--wc-text-muted)'} />
                 <Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
                     {label}
                 </Box>
@@ -204,15 +195,7 @@ export const ModeBadge = memo(() => {
                                     }}
                                 >
                                     {isSelected && <Check size={12} color={mc} />}
-                                    <Box
-                                        style={{
-                                            width: '8px',
-                                            height: '8px',
-                                            borderRadius: '2px',
-                                            background: mc,
-                                            flexShrink: 0,
-                                        }}
-                                    />
+                                    <TiFlowSwitch size={14} color={mc} />
                                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {m.name}
                                     </span>
