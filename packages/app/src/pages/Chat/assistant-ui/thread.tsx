@@ -102,6 +102,14 @@ export const ServerStatusContext = React.createContext<IServerStatusContext>({
 	supportsMultiModal: false,
 });
 
+const hexToRgba = (hex: string): string => {
+	const cleaned = hex.replace('#', '');
+	const r = parseInt(cleaned.slice(0, 2), 16);
+	const g = parseInt(cleaned.slice(2, 4), 16);
+	const b = parseInt(cleaned.slice(4, 6), 16);
+	return `rgba(${r},${g},${b}`;
+};
+
 export const Thread: FC<{
 	isLoading?: boolean,
 	currentServerId: TServerId | null
@@ -335,6 +343,14 @@ const Composer: FC = () => {
 	const composerText = useAuiState(s => s.composer.text);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const editorRef = useRef<IWarpComposerEditorRef>(null);
+	const modes = useStore(s => s.modes);
+	const modeId = useStore(s => {
+		const ts = s.getCurrentThreadState(s);
+		return ts?.modeId as string | undefined;
+	});
+	const modeColor = useMemo(() => {
+		return modeId ? modes[modeId]?.color : null;
+	}, [modeId, modes]);
 
 	const handleChangeText = useCallback((text: string) => {
 		aui.composer().setText(text);
@@ -403,11 +419,15 @@ const Composer: FC = () => {
 			<ComposerPrimitive.AttachmentDropzone asChild>
 				<div
 					data-slot="composer-shell"
-					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow focus-within:border-[var(--wc-border-default)] data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
-						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
-						borderColor: "var(--wc-border-default)",
+						boxShadow: modeColor
+							? `0 0 0 1px ${hexToRgba(modeColor)},0.15)}, 0px 10px 10px 10px rgba(0,0,0,0.15)`
+							: "0px 10px 10px 10px rgba(0,0,0,0.15)",
+						borderColor: modeColor
+							? `${hexToRgba(modeColor)},0.4)`
+							: "var(--wc-border-default)",
 						color: "var(--wc-text-primary)",
 					}}
 				>
