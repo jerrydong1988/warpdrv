@@ -1142,7 +1142,7 @@ export class Orchestrator {
 
 	private async resolveEnabledTools(request: ICompletionRequest): Promise<IToolDefinition[]> {
 		// Save to DB — convenience for UI reload only, doesn't affect filtering
-		if (request.attachAllTools !== undefined || request.attachedTools !== undefined) {
+		if (!request.skipToolsSave && (request.attachAllTools !== undefined || request.attachedTools !== undefined)) {
 			await this.persistence.saveThreadAttachedTools(
 				request.threadId,
 				request.attachAllTools ?? false,

@@ -1,3 +1,5 @@
+import type { IToolAttachment } from './types';
+
 export enum EGuardrailIssueType {
 	VIOLATION = 'violation',
 	WARNING = 'warning',
@@ -14,7 +16,7 @@ export interface IGuardrail {
 	serverId: string;
 	isActive: boolean;
 	prompt?: string;
-	triggerOnTools?: string;
+	triggerOnTools?: IToolAttachment[];
 	inferenceParams?: Record<string, unknown>;
 	messagesCount?: number;
 	includeBaseMessage?: boolean;

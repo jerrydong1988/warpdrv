@@ -472,6 +472,17 @@ const ToolsSelector: FC = React.memo(() => {
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
+	const currentThreadId = useStore(s => s.currentThreadId);
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const threadState = useStore(s => {
+		if (!currentThreadId) return null;
+		return s.threadStates[currentThreadId] ?? s.tempThreadState;
+	});
+
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
 
 	const connectedServers = useMemo(() => {
 		const entries = Object.entries(mcpServers).filter(([, state]) => state.status === EMcpServerStatus.CONNECTED);
@@ -480,20 +491,56 @@ const ToolsSelector: FC = React.memo(() => {
 
 	const totalCount = useMemo(() => connectedServers.reduce((sum, [, s]) => sum + s.tools.length, 0), [connectedServers]);
 
-	const color = (attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)';
-	const label = attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${String(attachedTools.length)} Tool(s)` : 'Off';
+	// Mode-active tools
+	const modeToolSet = useMemo(() => {
+		if (!isModeActive || !currentMode) return null;
+		const s = new Set<string>();
+		for (const t of currentMode.allowedTools) {
+			if (typeof t === 'string') continue;
+			s.add(`${t.serverName}:${t.toolName}`);
+		}
+		return s;
+	}, [isModeActive, currentMode]);
+
+	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
+	const effectiveTools = isModeActive ? modeToolSet : null;
+
+	const color = isModeActive
+		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
+		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
+	const label = isModeActive
+		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Off')
+		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tool(s)` : 'Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
+		if (isModeActive) return;
 		if (checked) {
 			setAttachedTools(true, []);
 		} else {
 			setAttachedTools(false, attachedTools);
 		}
-	}, [attachedTools]);
+	}, [attachedTools, isModeActive]);
 
-	const handleToolChange = useCallback((serverName: string, toolName: string, checked: boolean) => {
-		if (attachAllTools) return;
+	const handleToolChange = useCallback(async (serverName: string, toolName: string, checked: boolean) => {
 		const tool: IToolAttachment = { serverName, toolName };
+		if (isModeActive && currentMode) {
+			// Update mode's allowedTools
+			const currentTools = currentMode.allowedTools.filter((t: any) => typeof t !== 'string') as IToolAttachment[];
+			let next: IToolAttachment[];
+			if (checked) {
+				next = [...currentTools, tool];
+			} else {
+				next = currentTools.filter(t => !(t.serverName === serverName && t.toolName === toolName));
+			}
+			try {
+				const { updateMode } = await import('@/api/mode-services');
+				await updateMode(currentMode.id, { allowedTools: next });
+			} catch (e) {
+				console.error('[ToolsSelector] Failed to update mode:', e);
+			}
+			return;
+		}
+		if (attachAllTools) return;
 		let next: IToolAttachment[];
 		if (checked) {
 			next = [...attachedTools, tool];
@@ -503,7 +550,9 @@ const ToolsSelector: FC = React.memo(() => {
 		setAttachedTools(false, next);
 	}, [
 		attachAllTools,
-		attachedTools
+		attachedTools,
+		isModeActive,
+		currentMode,
 	]);
 
 	return (
@@ -542,24 +591,28 @@ const ToolsSelector: FC = React.memo(() => {
 							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">No tools available</Text>
 						) : (
 							<VStack gap="3" align="stretch">
-								<HStack gap="2">
-									<Switch.Root
-										label="All tools"
-										checked={attachAllTools}
-										onCheckedChange={(details) => handleAllToolsChange(details.checked)}
-									>
-										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
-										</Switch.Control>
-										<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
-											All tools
-										</Switch.Label>
-									</Switch.Root>
-								</HStack>
+								{!isModeActive && (
+									<HStack gap="2">
+										<Switch.Root
+											label="All tools"
+											checked={attachAllTools}
+											onCheckedChange={(details) => handleAllToolsChange(details.checked)}
+										>
+											<Switch.HiddenInput />
+											<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+												<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
+											</Switch.Control>
+											<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
+												All tools
+											</Switch.Label>
+										</Switch.Root>
+									</HStack>
+								)}
 								<AccordionRoot collapsible defaultValue={[]}>
 							{connectedServers.map(([serverName, state]) => {
-									const activeCount = attachedTools.filter(t => t.serverName === serverName).length;
+									const activeCount = isModeActive
+										? state.tools.filter(t => modeToolSet?.has(`${serverName}:${t.name}`)).length
+										: attachedTools.filter(t => t.serverName === serverName).length;
 									return (
 										<AccordionItemComp key={serverName} value={serverName} style={{ border: 'none' }}>
 											<AccordionItemTrigger
@@ -583,19 +636,21 @@ const ToolsSelector: FC = React.memo(() => {
 											<AccordionItemContent pt="1" pb="2" px="2" style={{ border: 'none' }}>
 												<VStack gap="1.5" align="stretch">
 													{state.tools.map(tool => {
-														const isSelected = attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name);
+														const isSelected = isModeActive
+															? !!modeToolSet?.has(`${serverName}:${tool.name}`)
+															: (attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name));
 														return (
-															<HStack key={tool.name} gap="2" opacity={attachAllTools ? 0.4 : 1}>
+															<HStack key={tool.name} gap="2" opacity={(isModeActive ? false : attachAllTools) ? 0.4 : 1}>
 																<Switch.Root
 																	label={tool.name}
 																	checked={isSelected}
-																	disabled={attachAllTools}
+																	disabled={!isModeActive && attachAllTools}
 																	onCheckedChange={(details) => {
-																		if (!attachAllTools) handleToolChange(serverName, tool.name, details.checked);
+																		handleToolChange(serverName, tool.name, details.checked);
 																	}}
 																>
 																	<Switch.HiddenInput />
-																	<Switch.Control css={{ bg: isSelected && !attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+																	<Switch.Control css={{ bg: isSelected ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
 <Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)'}} />
 								</Switch.Control>
 								<Switch.Label ml="0" fontSize="12px" color={isSelected ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} userSelect="none">

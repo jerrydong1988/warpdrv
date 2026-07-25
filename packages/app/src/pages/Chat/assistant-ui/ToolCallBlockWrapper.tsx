@@ -4,6 +4,7 @@ import { Wrench, Check, Ban, Loader, AlertCircle, X, Lock } from 'lucide-react';
 import { ToolCallBlock } from '@/pages/Chat/assistant-ui/ToolCallBlock';
 import { useStore } from '@/store';
 import { EToolCallStatus, EToolApprovalMode } from '@warpcore/bridge';
+import type { IToolAttachment } from '@warpcore/shared';
 import { ServerStatusContext } from './thread';
 import { autoResolveRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
@@ -45,6 +46,32 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const toolCallRenderers = useStore(s => s.toolCallRenderers);
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
+	const modes = useStore(s => s.modes);
+	const threadState = useStore(s => {
+		if (!currentThreadId) return null;
+		return s.threadStates[currentThreadId] ?? s.tempThreadState;
+	});
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
+
+	const modeUnionTools = useMemo(() => {
+		if (!isModeActive) return null;
+		const result: IToolAttachment[] = [];
+		const seen = new Set<string>();
+		for (const m of Object.values(modes)) {
+			for (const t of m.allowedTools) {
+				if (typeof t === 'string') continue;
+				const key = `${t.serverName}:${t.toolName}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					result.push(t);
+				}
+			}
+		}
+		return result;
+	}, [isModeActive, modes]);
+
 	const [deciding, setDeciding] = useState(false);
 	const toast = useToast();
 
@@ -52,17 +79,19 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 		if (!currentThreadId || !currentServerId) return;
 		setDeciding(true);
 		try {
+			const tools = isModeActive ? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true } : { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
 			await decideMcpToolCall(
 				toolCallId, decision, currentThreadId, currentServerId,
 				currentSystemPrompt, currentInferenceParams,
 				undefined,
-				attachAllTools,
-				attachedTools
+				tools.attachAllTools,
+				tools.attachedTools,
+				tools.skipToolsSave
 			);
 		} finally {
 			setDeciding(false);
 		}
-	}, [toolCallId, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools]);
+	}, [toolCallId, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools]);
 
 	const handleAlwaysApprove = useCallback(async () => {
 		if (!currentThreadId || !currentServerId || !serverName) return;
@@ -71,18 +100,20 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 			await setThreadToolPermission(currentThreadId, serverName, toolName, true, EToolApprovalMode.ALLOWED);
 			const res = await fetchThreadPermissions(currentThreadId);
 			if (res.ok) useStore.getState().setThreadToolPermissions(currentThreadId, res.data.threadOverrides);
+			const tools = isModeActive ? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true } : { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
 			await decideMcpToolCall(
 				toolCallId, 'approve', currentThreadId, currentServerId,
 				currentSystemPrompt, currentInferenceParams,
 				undefined,
-				attachAllTools,
-				attachedTools
+				tools.attachAllTools,
+				tools.attachedTools,
+				tools.skipToolsSave
 			);
 			toast({ title: `"${toolName}" will always be approved for this thread`, status: 'success', duration: 3000 });
 		} finally {
 			setDeciding(false);
 		}
-	}, [toolCallId, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, toast]);
+	}, [toolCallId, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools, toast]);
 
 
 	const displayStatus: EToolCallStatus = toolCall?.status ?? (

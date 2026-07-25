@@ -1,3 +1,5 @@
+import type { IToolAttachment } from './types';
+
 export type TModeId = string;
 
 export interface IMode {
@@ -5,12 +7,12 @@ export interface IMode {
 	name: string;
 	scope: 'global' | string;
 	prompt?: string;
-	allowedTools: string[];
+	allowedTools: IToolAttachment[];
 }
 
 export interface IModeCreatePayload {
 	name: string;
 	scope: 'global' | string;
 	prompt?: string;
-	allowedTools: string[];
+	allowedTools: IToolAttachment[];
 }

@@ -608,3 +608,10 @@ export interface ITodoItem {
 	text: string;
 	status: 'pending' | 'done';
 }
+// ============================================================
+// Tool Attachments
+// ============================================================
+export interface IToolAttachment {
+	serverName: string;
+	toolName: string;
+}

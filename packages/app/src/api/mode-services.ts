@@ -7,6 +7,12 @@ export async function createMode(payload: IModeCreatePayload): Promise<IMode> {
 	return res.data!;
 }
 
+export async function updateMode(id: TModeId, payload: Partial<IMode>): Promise<IMode> {
+	const res = await api.put<IMode>(`/modes/${id}`, payload);
+	if (!res.ok) throw new Error(res.error);
+	return res.data!;
+}
+
 export async function deleteMode(id: TModeId): Promise<void> {
 	const res = await api.delete<null>(`/modes/${id}`);
 	if (!res.ok) throw new Error(res.error);

@@ -85,7 +85,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             }
 
             if (mode && mode.allowedTools.length > 0) {
-                content += `\nTools\nAllowed tools: ${mode.allowedTools.join(', ')}\n`;
+                const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
+                content += `\nTools\nAllowed tools: ${toolNames.join(', ')}\n`;
                 if (mode.prompt) content += `\nMode Prompt\n${mode.prompt}\n`;
                 isToolsIncluded = true;
             }
@@ -222,7 +223,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             // Filter guardrails by triggerOnTools
             const applicableGuardrails = activeGuardrails.filter(g => {
                 if (!g.triggerOnTools) return true;
-                const tools = g.triggerOnTools.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+                const tools = typeof g.triggerOnTools[0] === 'string'
+                    ? g.triggerOnTools.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+                    : g.triggerOnTools.map((t: any) => t.toolName.toLowerCase());
                 if (!tools.length) return true;
                 return tools.some(t => toolNames.includes(t));
             });

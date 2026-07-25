@@ -15,7 +15,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/PageHeader';
 import { useStore } from '@/store';
 import type { AppState } from '@/store/types';
-import type { IChatPreset } from '@warpcore/shared';
+import type { IChatPreset, IToolAttachment } from '@warpcore/shared';
 import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
 import './assistant-ui/styles/assistant-ui.css';
 import { createContext } from 'react';
@@ -200,6 +200,33 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	useThreadAttachedTools();
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const threadState = useStore(s => {
+		if (!currentThreadId) return null;
+		return s.threadStates[currentThreadId] ?? s.tempThreadState;
+	});
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
+
+	// Compute union of all modes' tools when mode is active
+	const modeUnionTools = useMemo(() => {
+		if (!isModeActive) return null;
+		const result: IToolAttachment[] = [];
+		const seen = new Set<string>();
+		for (const m of Object.values(modes)) {
+			for (const t of m.allowedTools) {
+				if (typeof t === 'string') continue;
+				const key = `${t.serverName}:${t.toolName}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					result.push(t);
+				}
+			}
+		}
+		return result;
+	}, [isModeActive, modes]);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const clearPendingSlashCommands = useStore(s => s.clearPendingSlashCommands);
 	const executeCommands = useSlashCommandProcessor();
@@ -434,8 +461,14 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			inferenceParams: currentInferenceParams,
 			presetId: selectedPresetId,
 			generateTitle,
-			attachAllTools,
-			attachedTools: attachAllTools ? undefined : attachedTools,
+			...(isModeActive ? {
+				attachAllTools: false,
+				attachedTools: modeUnionTools,
+				skipToolsSave: true,
+			} : {
+				attachAllTools,
+				attachedTools: attachAllTools ? undefined : attachedTools,
+			}),
 			messageState: slashCommands.length > 0 ? { slashCommands } : {},
 			threadState: (isNewThread && tempState) ? tempState : undefined,
 		};
@@ -463,7 +496,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 		});
-	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents]);
+	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents]);
 
 	const onReloadV2 = useCallback(async (parentId: string | null) => {
 		if (!isValidServer || !parentId) return;
@@ -482,11 +515,17 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 				inferenceParams: currentInferenceParams,
 				presetId: selectedPresetId,
 				generateTitle,
-				attachAllTools,
-				attachedTools: attachAllTools ? undefined : attachedTools,
+				...(isModeActive ? {
+					attachAllTools: false,
+					attachedTools: modeUnionTools,
+					skipToolsSave: true,
+				} : {
+					attachAllTools,
+					attachedTools: attachAllTools ? undefined : attachedTools,
+				}),
 			}),
 		});
-	}, [currentThreadId, currentSystemPrompt, currentInferenceParams, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools]);
+	}, [currentThreadId, currentSystemPrompt, currentInferenceParams, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools]);
 
 	const onCancel = useCallback(async () => {
 		if (currentThreadId && isValidServer) {

@@ -25,6 +25,29 @@ modesRouter.post('/', async (req, res) => {
 	}
 });
 
+// PUT /api/modes/:id
+modesRouter.put('/:id', async (req, res) => {
+	try {
+		const existing = await getMode(req.params.id);
+		if (!existing) {
+			res.status(404).json({ ok: false, data: null, error: 'Mode not found' });
+			return;
+		}
+		const body = req.body as Partial<IMode>;
+		const updated: IMode = {
+			...existing,
+			...(body.name !== undefined && { name: body.name }),
+			...(body.prompt !== undefined && { prompt: body.prompt }),
+			...(body.allowedTools !== undefined && { allowedTools: body.allowedTools }),
+		};
+		await putMode(updated);
+		sseManager.emit('modes:update', updated);
+		res.json({ ok: true, data: updated, error: null });
+	} catch (err) {
+		res.status(500).json({ ok: false, data: null, error: String(err) });
+	}
+});
+
 // DELETE /api/modes/:id
 modesRouter.delete('/:id', async (req, res) => {
 	try {
