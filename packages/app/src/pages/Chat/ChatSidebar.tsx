@@ -11,12 +11,14 @@ import { LuPlug, LuSlidersHorizontal, LuListTodo } from 'react-icons/lu';
 import { VscTools } from 'react-icons/vsc';
 import { TbApps } from 'react-icons/tb';
 import { FaShieldAlt } from 'react-icons/fa';
+import { TiFlowSwitch } from 'react-icons/ti';
 import { useStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 import { EUISpaceLoc } from '@/store/slices/uiSpaces';
 import { ChatGuardrailsContentPanel } from './ChatGuardrailsPanel';
 import { ChatTodosContentPanel } from './ChatTodosPanel';
+import { ChatModesContentPanel } from './ChatModesPanel';
 
 interface IChatSidebarProps {
 	configParams: IChatInferenceParams;
@@ -91,6 +93,7 @@ export const ChatSidebar = React.memo(({
 						if (chatSidebarTab === EChatSidebarTab.RIGHT_PANEL) return <UiSpacePanel location={EUISpaceLoc.RIGHT_PANEL} />;
 						if (chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL) return <ChatGuardrailsContentPanel />;
 						if (chatSidebarTab === EChatSidebarTab.TODOS_PANEL) return <ChatTodosContentPanel />;
+						if (chatSidebarTab === EChatSidebarTab.MODES_PANEL) return <ChatModesContentPanel />;
 						return null;
 					})()}
 				</Box>
@@ -172,6 +175,23 @@ export const ChatSidebar = React.memo(({
 					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
 				>
 					<LuListTodo size={18} color={chatSidebarTab === EChatSidebarTab.TODOS_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
+				</Flex>
+
+				{/* Modes tab */}
+				<Flex
+					mt="1"
+					onClick={() => toggleTab(EChatSidebarTab.MODES_PANEL)}
+					px="3"
+					py="2.5"
+					borderRadius="lg"
+					cursor="pointer"
+					transition="all 0.15s"
+					bg={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
+					borderWidth="1px"
+					borderColor={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
+					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
+				>
+					<TiFlowSwitch size={18} color={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
 				</Flex>
 
 				{/* MCP tab */}

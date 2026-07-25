@@ -14,6 +14,7 @@ modesRouter.post('/', async (req, res) => {
 			id: nanoid(6),
 			name: body.name,
 			scope: body.scope,
+			color: body.color || '#a78bfa',
 			prompt: body.prompt || undefined,
 			allowedTools: body.allowedTools || [],
 		};
@@ -37,6 +38,8 @@ modesRouter.put('/:id', async (req, res) => {
 		const updated: IMode = {
 			...existing,
 			...(body.name !== undefined && { name: body.name }),
+			...(body.scope !== undefined && { scope: body.scope }),
+			...(body.color !== undefined && { color: body.color }),
 			...(body.prompt !== undefined && { prompt: body.prompt }),
 			...(body.allowedTools !== undefined && { allowedTools: body.allowedTools }),
 		};

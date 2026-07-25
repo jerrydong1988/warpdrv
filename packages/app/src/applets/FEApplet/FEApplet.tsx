@@ -3,7 +3,7 @@ import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import { EUISpaceLoc } from '@/store/slices/uiSpaces';
 import type { IAppletAPIFE } from '../lib/types';
 import type { TUiSpaceComponentDef } from '@/store/slices/uiSpaces';
-import { Box, Text, VStack, Flex, Spinner, Badge, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, Tabs, Switch, Input, Textarea, Button, SegmentGroup } from '@chakra-ui/react';
+import { Box, Text, VStack, Flex, Spinner, Badge, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, Tabs, Switch, Input, Textarea, Button, SegmentGroup, ColorPicker, parseColor } from '@chakra-ui/react';
 import { ChevronDown, CheckCircle, AlertTriangle, XCircle, ChevronRight, Edit2, Trash2, Check } from 'lucide-react';
 import { FaShieldAlt } from 'react-icons/fa';
 import { LuListTodo } from 'react-icons/lu';
@@ -15,7 +15,7 @@ import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToStri
 import type { ITodoItem, IGuardrail, IGuardrailIssue, IMode, TModeId, IToolAttachment } from '@warpcore/shared';
 import { EMcpServerStatus } from '@warpcore/bridge';
 import { EGuardrailIssueType } from '@warpcore/shared';
-import { createMode as createModeApi } from '@/api/mode-services';
+import { createMode as createModeApi, updateMode as updateModeApi, deleteMode as deleteModeApi } from '@/api/mode-services';
 import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -25,6 +25,7 @@ import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
+import { TiFlowSwitch } from 'react-icons/ti';
 import { ModeBadge } from '../ui/ModeBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
@@ -758,6 +759,210 @@ const GuardrailsPanel = React.memo(() => {
 	);
 });
 
+const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
+	const [expanded, setExpanded] = useState(false);
+	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || '');
+	const [draftScope, setDraftScope] = useDependantState(mode.scope);
+	const [draftColor, setDraftColor] = useDependantState(mode.color || '#a78bfa');
+	const [draftTools, setDraftTools] = useDependantState(mode.allowedTools);
+	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const threads = useStore(s => s.threads);
+	const currentThreadId = useStore(s => s.currentThreadId);
+	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+	const scope = folderId || 'global';
+
+	const updateMode = useCallback(async (patch: Partial<IMode>) => {
+		try {
+			await updateModeApi(mode.id, patch);
+		} catch (e) {
+			console.error('Failed to update mode:', e);
+		}
+	}, [mode.id]);
+
+	const handlePromptBlur = useCallback(() => {
+		if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
+		promptSaveTimerRef.current = setTimeout(() => {
+			if (draftPrompt !== (mode.prompt || '')) {
+				updateMode({ prompt: draftPrompt || undefined });
+			}
+		}, 200);
+	}, [draftPrompt, mode.prompt, updateMode]);
+
+	useEffect(() => {
+		return () => {
+			if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
+		};
+	}, []);
+
+	const handleDelete = async () => {
+		try {
+			await deleteModeApi(mode.id);
+		} catch (e) {
+			console.error('Failed to delete mode:', e);
+		}
+		setDeleteConfirmOpen(false);
+	};
+
+	const mc = mode.color || '#a78bfa';
+
+	return (
+		<>
+			<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="hidden">
+				<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
+					<Box
+						style={{
+							width: '10px',
+							height: '10px',
+							borderRadius: '3px',
+							background: mc,
+							flexShrink: 0,
+						}}
+					/>
+					<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" flex="1" minW="0" textOverflow="ellipsis" overflow="hidden">
+						{mode.name}
+					</Text>
+					{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
+				</Flex>
+
+				{expanded && (
+					<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Color
+							</Text>
+							<ColorPicker.Root defaultValue={parseColor(draftColor)} onValueChange={(details) => {
+								const hex = details.value.toString('hex');
+								setDraftColor(hex);
+								updateMode({ color: hex });
+							}}>
+								<ColorPicker.HiddenInput />
+								<ColorPicker.Control>
+									<ColorPicker.Input />
+									<ColorPicker.Trigger />
+								</ColorPicker.Control>
+								<ColorPicker.Positioner>
+									<ColorPicker.Content>
+										<ColorPicker.Area />
+										<ColorPicker.Sliders />
+									</ColorPicker.Content>
+								</ColorPicker.Positioner>
+							</ColorPicker.Root>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Scope
+							</Text>
+							<Flex gap="1">
+								{['global', scope].filter((v, i, a) => a.indexOf(v) === i).map(s => (
+									<Button
+										key={s}
+										size="xs"
+										fontSize="xs"
+										bg={draftScope === s ? 'var(--wc-accent-purple-bg-15)' : 'var(--wc-bg-subtle)'}
+										color={draftScope === s ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'}
+										borderWidth="1px"
+										borderColor={draftScope === s ? 'var(--wc-accent-purple-border)' : 'var(--wc-border-default)'}
+										onClick={() => { setDraftScope(s); updateMode({ scope: s }); }}
+									>
+										{s}
+									</Button>
+								))}
+							</Flex>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Allowed tools
+							</Text>
+							<GuardrailToolPicker
+								value={draftTools}
+								onChange={(tools) => { setDraftTools(tools); updateMode({ allowedTools: tools }); }}
+							/>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Tail prompt
+							</Text>
+							<Textarea
+								size="xs"
+								fontSize="xs"
+								rows={3}
+								placeholder="Optional tail prompt..."
+								value={draftPrompt}
+								onChange={(e) => setDraftPrompt(e.target.value)}
+								onBlur={handlePromptBlur}
+								bg="var(--wc-bg-subtle)"
+								borderColor="var(--wc-border-default)"
+								borderWidth="1px"
+								borderRadius="md"
+							/>
+						</Box>
+
+						<Flex justify="flex-end">
+							<Button
+								size="xs"
+								fontSize="xs"
+								color="var(--wc-accent-red)"
+								bg="var(--wc-accent-red-bg-8)"
+								leftIcon={<Trash2 size={12} />}
+								onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
+							>
+								Delete
+							</Button>
+						</Flex>
+					</VStack>
+				)}
+			</Box>
+
+			{deleteConfirmOpen && (
+				<ConfirmDialog
+					title="Delete Mode"
+					message={`Are you sure you want to delete "${mode.name}"?`}
+					isOpen={true}
+					onConfirm={handleDelete}
+					onCancel={() => setDeleteConfirmOpen(false)}
+					confirmLabel="Delete"
+				/>
+			)}
+		</>
+	);
+});
+
+const ModesPanel = React.memo(() => {
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const currentThreadId = useStore(s => s.currentThreadId);
+
+	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+	const scope = folderId || 'global';
+
+	const availableModes = useMemo(() => {
+		return Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope);
+	}, [modes, scope]);
+
+	if (!availableModes.length) {
+		return (
+			<Box p="4">
+				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
+					No modes
+				</Text>
+			</Box>
+		);
+	}
+
+	return (
+		<VStack gap="2" p="3" align="stretch">
+			{availableModes.map(m => (
+				<ModeRow key={m.id} mode={m} />
+			))}
+		</VStack>
+	);
+});
+
 const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
 	const messageId = useAuiState(s => s.message.id);
 	const role = useAuiState(s => s.message.role);
@@ -1058,6 +1263,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		
 		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
 		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
+		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, { label: 'Modes', icon: TiFlowSwitch });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });

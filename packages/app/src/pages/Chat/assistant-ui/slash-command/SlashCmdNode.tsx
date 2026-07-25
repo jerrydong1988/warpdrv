@@ -17,7 +17,7 @@ import { SlashCmdColorPicker } from "./SlashCmdColorPicker";
 type TSlotRendererProps = {
 	value: string;
 	placeholder: string;
-	inputRef: (el: HTMLInputElement | null) => void;
+	inputRef: (el: HTMLElement | null) => void;
 	onChange: (next: string) => void;
 	onKeyDown: (e: React.KeyboardEvent) => void;
 	onFocus: () => void;
@@ -107,7 +107,7 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 	const name = props.node.attrs.name as string;
 	const args = parseArgs(props.node.attrs.args as string);
 	const command = useStore((s) => s.slashCommands[name]);
-	const slotRefs = useRef<Array<HTMLInputElement | null>>([]);
+	const slotRefs = useRef<Array<HTMLElement | null>>([]);
 	const paramEntries = command
 		? Object.entries(command.params).sort((a, b) => a[1].index - b[1].index)
 		: [];
