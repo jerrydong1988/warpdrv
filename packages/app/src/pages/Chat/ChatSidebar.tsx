@@ -114,6 +114,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Search in Chat"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.SEARCH && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -131,6 +132,7 @@ export const ChatSidebar = React.memo(({
 						onClick={() => toggleTab(EChatSidebarTab.RIGHT_PANEL)}
 						px="3"
 						py="2.5"
+						title="Applets"
 						borderRadius="lg"
 						cursor="pointer"
 						transition="all 0.15s"
@@ -150,6 +152,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Guardrails"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -167,6 +170,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Todos"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.TODOS_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -183,6 +187,7 @@ export const ChatSidebar = React.memo(({
 					onClick={() => toggleTab(EChatSidebarTab.MODES_PANEL)}
 					px="3"
 					py="2.5"
+					title="Modes"
 					borderRadius="lg"
 					cursor="pointer"
 					transition="all 0.15s"
@@ -201,6 +206,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Permissions"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.TOOLS && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -219,6 +225,7 @@ export const ChatSidebar = React.memo(({
 					py="2.5"
 					borderRadius="lg"
 					cursor="pointer"
+					title="Config"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.CONFIG && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
 					borderWidth="1px"

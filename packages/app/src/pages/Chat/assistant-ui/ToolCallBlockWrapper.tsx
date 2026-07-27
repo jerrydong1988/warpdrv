@@ -162,7 +162,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	}, [serverState, toolName, toolCallRenderers, args, result]);
 
 	return (
-		<Box m="-3.5" borderRadius="lg" bg="var(--wc-bg-surface)" overflow="hidden" borderBottomColor={"var(--wc-border-subtle)"} borderBottomWidth={1}>
+		<Box m="-3.5" borderRadius="lg" bg="var(--wc-bg-interactive)" overflow="hidden" borderBottomColor={"var(--wc-border-default)"} borderBottomWidth={0}>
 			<HStack gap="3" px="3" py="2.5" borderBottomColor={"var(--wc-border-subtle)"} borderBottomWidth={1}>
 				<Wrench size={13} color="var(--wc-text-tertiary)" />
 				<Text fontSize="13px" fontWeight="700" color="var(--wc-text-secondary)">{toolName}</Text>

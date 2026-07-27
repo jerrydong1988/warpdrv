@@ -18,7 +18,6 @@ import { EGuardrailIssueType } from '@warpcore/shared';
 import { createMode as createModeApi, updateMode as updateModeApi, deleteMode as deleteModeApi } from '@/api/mode-services';
 import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
 import React from 'react';
 import { useDependantState } from '@/hooks/useDependantState';
@@ -31,7 +30,7 @@ import { ModeBadge } from '../ui/ModeBadge';
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrail> = {};
 
-const GuardrailToolPicker = React.memo(({ value, onChange }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void }) => {
+const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
 	const mcpServers = useStore(s => s.mcpServers);
 	const [isOpen, setIsOpen] = useState(false);
 	const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
@@ -85,17 +84,17 @@ const GuardrailToolPicker = React.memo(({ value, onChange }: { value: IToolAttac
 				borderColor="var(--wc-border-default)"
 				borderRadius="md"
 				bg="var(--wc-bg-subtle)"
-			 px="2.5"
+				px="2.5"
 				py="1.5"
 				cursor="pointer"
 				minH="32px"
-				onClick={() => setIsOpen(!isOpen)}
+				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
 			>
 				<Text fontSize="xs" color={totalSelected > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
 					{totalSelected > 0 ? `${totalSelected} tool(s)` : 'All tool calls'}
 				</Text>
 			</Box>
-			{isOpen && createPortal(
+			{isOpen && (
 				<Box
 					ref={dropdownRef}
 					position="absolute"
@@ -131,7 +130,7 @@ const GuardrailToolPicker = React.memo(({ value, onChange }: { value: IToolAttac
 									textTransform="uppercase"
 									letterSpacing="0.05em"
 									_hover={{ bg: 'var(--wc-bg-card)' }}
-									onClick={() => setExpandedServers(prev => { const n = new Set(prev); isExpanded ? n.delete(serverName) : n.add(serverName); return n; })}
+									onClick={(e) => { e.stopPropagation(); setExpandedServers(prev => { const n = new Set(prev); isExpanded ? n.delete(serverName) : n.add(serverName); return n; })}}
 								>
 									<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 										{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
@@ -170,8 +169,7 @@ const GuardrailToolPicker = React.memo(({ value, onChange }: { value: IToolAttac
 							</Box>
 						);
 					})}
-				</Box>,
-				document.body
+				</Box>
 			)}
 		</Box>
 	);
@@ -555,7 +553,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 	};
 
 	return (
-		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="hidden">
+		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
 			<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
 				{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
 				{editingName ? (
@@ -576,7 +574,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 						<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" textOverflow="ellipsis" overflow="hidden">
 							{draftName}
 						</Text>
-						
+
 						<Edit2
 							size={10}
 							color="var(--wc-text-faint)"
@@ -616,6 +614,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 						<GuardrailToolPicker
 							value={guardrail.triggerOnTools || []}
 							onChange={(tools) => updateGuardrail({ triggerOnTools: tools })}
+							onClick={(e) => e.stopPropagation()}
 						/>
 					</Box>
 
@@ -697,7 +696,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 							placeholder="Custom rules..."
 						/>
 					</Box>
-					
+
 					<Flex justifyContent="flex-end">
 						<Button
 							size="xs"
@@ -809,7 +808,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 	return (
 		<>
-			<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="hidden">
+			<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
 				<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
 					<Box
 						style={{
@@ -853,33 +852,12 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Scope
-							</Text>
-							<Flex gap="1">
-								{['global', scope].filter((v, i, a) => a.indexOf(v) === i).map(s => (
-									<Button
-										key={s}
-										size="xs"
-										fontSize="xs"
-										bg={draftScope === s ? 'var(--wc-accent-purple-bg-15)' : 'var(--wc-bg-subtle)'}
-										color={draftScope === s ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'}
-										borderWidth="1px"
-										borderColor={draftScope === s ? 'var(--wc-accent-purple-border)' : 'var(--wc-border-default)'}
-										onClick={() => { setDraftScope(s); updateMode({ scope: s }); }}
-									>
-										{s}
-									</Button>
-								))}
-							</Flex>
-						</Box>
-
-						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
 								Allowed tools
 							</Text>
 							<GuardrailToolPicker
 								value={draftTools}
 								onChange={(tools) => { setDraftTools(tools); updateMode({ allowedTools: tools }); }}
+								onClick={(e) => e.stopPropagation()}
 							/>
 						</Box>
 
@@ -955,7 +933,7 @@ const ModesPanel = React.memo(() => {
 	}
 
 	return (
-		<VStack gap="2" p="3" align="stretch">
+		<VStack gap="2" p="3" align="stretch" height="100%">
 			{availableModes.map(m => (
 				<ModeRow key={m.id} mode={m} />
 			))}
@@ -1139,7 +1117,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		});
 
 		api.registerSlashCommand({
-			name: 'guardrail',
+			name: 'create_guardrail',
 			description: 'Create a custom guardrail',
 			params: {
 				name: { type: 'string', description: 'Guardrail name', index: 0 },
@@ -1162,7 +1140,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		});
 
 		api.registerSlashCommand({
-			name: 'toggle_guardrail',
+			name: 'guardrail',
 			description: 'Activate or deactivate a guardrail',
 			params: {
 				name: { type: 'dropdown', description: 'Guardrail name', index: 0, props: {
@@ -1216,22 +1194,14 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			description: 'Create a new mode with allowed tools and optional tail prompt',
 			params: {
 				name: { type: 'string', description: 'Mode name', index: 0 },
-				scope: { type: 'dropdown', description: 'global or workspace', index: 1, props: {
-					items: [{ label: 'global', value: 'global' }, { label: 'workspace', value: 'workspace' }],
-				}},
-				color: { type: 'color', description: 'Mode color', index: 2 },
-				tools: { type: 'tools', description: 'Allowed tools', index: 3 },
+				color: { type: 'color', description: 'Mode color', index: 1 },
+				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
 			},
 			execute: async (_api, params, extraParams) => {
-				const state = api.useStore.getState();
-				const threadId = state.currentThreadId;
-				const threads = state.threads;
-				const folderId = threadId ? threads[threadId]?.folderId : null;
-				const scope = params.scope === 'workspace' ? (folderId || 'global') : 'global';
 				await createModeApi({
 					id: nanoid(6),
 					name: params.name!,
-					scope,
+					scope: 'global',
 					color: params.color || '#a78bfa',
 					prompt: extraParams?.prompt || undefined,
 					allowedTools: parseToolValue(params.tools || ''),
@@ -1260,7 +1230,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				}
 			},
 		});
-		
+
 		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
 		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
 		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, { label: 'Modes', icon: TiFlowSwitch });
@@ -1285,7 +1255,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.onTerminate(() => { unsubscribe(); });
 
-		const blockingSlashCommands = ['guardrail', 'toggle_guardrail', 'todo', 'create_mode', 'mode'];
+		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode'];
 
 		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
 			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };

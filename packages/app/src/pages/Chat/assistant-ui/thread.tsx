@@ -863,7 +863,7 @@ const EmbeddingStatus: FC = React.memo(() => {
 
 const ToolCallRenderer: FC = () => {
 	const part = useAuiState(s => s.part);
-	
+
 	return (
 		<ToolCallBlockWrapper
 			toolCallId={(part as any).toolCallId}
@@ -924,7 +924,7 @@ const AssistantMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px" }}>
+				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px 0 5px 15px", borderRadius: "15px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
@@ -955,7 +955,7 @@ const ReasoningBlock: FC = React.memo(() => {
 	if (!reasoning) return null;
 
 	return (
-		
+
 		<div className="mb-3 rounded-lg border" style={{ borderColor: 'var(--wc-border-subtle)', backgroundColor: 'var(--wc-bg-subtle)' }}>
 			<button
 				type="button"
@@ -1116,7 +1116,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>

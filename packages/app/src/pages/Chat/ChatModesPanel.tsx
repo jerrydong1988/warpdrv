@@ -11,7 +11,8 @@ export const ChatModesContentPanel = React.memo(() => {
     return (
         <Box overflowY="auto" css={{
             '&::-webkit-scrollbar': { width: '4px' },
-            '&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' },
+				'&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' },
+            height: "100%"
         }}>
             {(componentIds ? Object.keys(componentIds) : []).map(id => {
                 const entry = entriesById[id];
