@@ -3,59 +3,47 @@ import { useStore } from '../store';
 import { fetchWorkspaceState } from '@/api/services';
 
 function applyDefaults(wsState: Record<string, unknown>) {
-  const store = useStore.getState();
-  if (wsState.defaultServerId) {
-    store.setTempThreadServerId(wsState.defaultServerId as string);
-  }
-  if (wsState.defaultPresetId) {
-    const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
-    if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
-  }
-  if (wsState.defaultModeId) {
-    store.setThreadState(null, { modeId: wsState.defaultModeId as string });
-  }
+	const store = useStore.getState();
+			if(wsState.defaultServerId) {
+			store.setTempThreadServerId(wsState.defaultServerId as string);
+		}
+		if (wsState.defaultPresetId) {
+			const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
+			if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
+		}
+		if (wsState.defaultModeId) {
+			store.setThreadState(null, { modeId: wsState.defaultModeId as string });
+		}
 }
 
 export function useWorkspace() {
   const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
-  const currentThreadId = useStore(s => s.currentThreadId);
-  const threads = useStore(s => s.threads);
-  const initWorkspaceState = useStore(s => s.initWorkspaceState);
-  const workspaceState = useStore(s => activeWorkspaceId ? s.workspaceStates[activeWorkspaceId] : undefined);
-  const loadedRef = useRef<Set<string>>(new Set());
+  const currentThread = useStore(s => s.currentThreadId ? s.threads[s.currentThreadId] : undefined);
 
-  // Load workspace state when workspace changes
   useEffect(() => {
     if (!activeWorkspaceId) return;
-    if (loadedRef.current.has(activeWorkspaceId)) return;
-    (async () => {
-      const res = await fetchWorkspaceState(activeWorkspaceId);
-      if (res.ok && res.data !== null && res.data !== undefined) {
-        initWorkspaceState(activeWorkspaceId, res.data);
-        loadedRef.current.add(activeWorkspaceId);
-        const state = useStore.getState();
-        const isNew = !state.currentThreadId || !state.threads[state.currentThreadId];
-        if (isNew) applyDefaults(res.data);
-      }
-    })();
-  }, [activeWorkspaceId]);
 
-  // Apply defaults when thread changes (new thread only)
-  useEffect(() => {
-    if (!currentThreadId || !activeWorkspaceId) return;
-    if (threads[currentThreadId]) return;
-    if (workspaceState && Object.keys(workspaceState).length > 0) {
-      applyDefaults(workspaceState);
+    const isNewThread = !currentThread;
+    const store = useStore.getState();
+    const wsState = store.workspaceStates[activeWorkspaceId];
+
+    if (wsState && Object.keys(wsState).length > 0) {
+      if (isNewThread) {
+        setTimeout(() => applyDefaults(wsState), 1);
+      }
       return;
     }
+
     (async () => {
       const res = await fetchWorkspaceState(activeWorkspaceId);
       if (res.ok && res.data !== null && res.data !== undefined) {
-        initWorkspaceState(activeWorkspaceId, res.data);
-        loadedRef.current.add(activeWorkspaceId);
-        applyDefaults(res.data);
+        useStore.getState().initWorkspaceState(activeWorkspaceId, res.data);
+        const state = useStore.getState();
+        const thread = state.currentThreadId ? state.threads[state.currentThreadId] : undefined;
+        if (!thread) {
+          setTimeout(() => applyDefaults(res.data), 1);
+        }
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentThreadId, activeWorkspaceId, workspaceState]);
+  }, [activeWorkspaceId, currentThread]);
 }

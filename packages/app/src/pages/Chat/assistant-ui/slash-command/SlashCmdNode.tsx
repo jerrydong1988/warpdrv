@@ -12,6 +12,7 @@ import { SlashCmdDefaultInput } from "./SlashCmdDefaultInput";
 import { SlashCmdToolSelector, SlashCmdMessageType, SlashCmdTools } from "./SlashCmdToolSelector";
 import { SlashCmdDirectoryPicker } from "./SlashCmdDirectoryPicker";
 import { SlashCmdColorPicker } from "./SlashCmdColorPicker";
+import { SlashCmdGuardrails } from "./SlashCmdGuardrails";
 
 // paramType -> slot renderer; "default", "server", "dropdown", "directory", "color" wired, additional types added as needed
 type TSlotRendererProps = {
@@ -24,15 +25,16 @@ type TSlotRendererProps = {
 	onBlur: (e: React.FocusEvent) => void;
 };
 type TSlotRenderer = React.FC<TSlotRendererProps & Record<string, unknown>>;
-	const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
-		default: SlashCmdDefaultInput,
-		server: SlashCmdServerSelector,
-		dropdown: SlashCmdDropdown,
-		message_type: SlashCmdMessageType,
-		tools: SlashCmdTools,
-		directory: SlashCmdDirectoryPicker,
-		color: SlashCmdColorPicker,
-	};
+		const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
+			default: SlashCmdDefaultInput,
+			server: SlashCmdServerSelector,
+			dropdown: SlashCmdDropdown,
+			message_type: SlashCmdMessageType,
+			tools: SlashCmdTools,
+			guardrails: SlashCmdGuardrails,
+			directory: SlashCmdDirectoryPicker,
+			color: SlashCmdColorPicker,
+		};
 
 const parseArgs = (raw: string): Record<string, string> => {
 	try {

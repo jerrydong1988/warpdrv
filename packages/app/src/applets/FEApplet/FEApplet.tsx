@@ -18,229 +18,19 @@ import { EGuardrailIssueType } from '@warpcore/shared';
 import { createMode as createModeApi, updateMode as updateModeApi, deleteMode as deleteModeApi, updateModeGuardrails as updateModeGuardrailsApi } from '@/api/mode-services';
 import { createGuardrail as createGuardrailApi, updateGuardrail as updateGuardrailApi, deleteGuardrail as deleteGuardrailApi } from '@/api/guardrail-services';
 import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { parseGuardrailValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
-import React from 'react';
 import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
 import { TiFlowSwitch } from 'react-icons/ti';
 import { ModeBadge } from '../ui/ModeBadge';
+import { GuardrailBadge, ModeGuardrailPicker } from '../ui/GuardrailBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
-
-const ModeGuardrailPicker = React.memo(({ modeId, value, onClick }: { modeId: string; value: string[]; onClick?: (e: React.MouseEvent) => void }) => {
-	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
-	const guardrailNames = useMemo(() => Object.keys(guardrails), [guardrails]);
-	const [isOpen, setIsOpen] = useState(false);
-	const dropdownRef = useRef<HTMLDivElement | null>(null);
-	const triggerRef = useRef<HTMLDivElement | null>(null);
-
-	const selectedSet = useMemo(() => new Set(value), [value]);
-
-	const handleToggle = (name: string) => {
-		const next = selectedSet.has(name)
-			? value.filter(n => n !== name)
-			: [...value, name];
-		updateModeGuardrailsApi(modeId, next);
-	};
-
-	useEffect(() => {
-		if (!isOpen) return;
-		const handler = (e: MouseEvent) => {
-			if (dropdownRef.current?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) return;
-			setIsOpen(false);
-		};
-		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [isOpen]);
-
-	return (
-		<Box position="relative">
-			<Box
-				ref={triggerRef}
-				borderWidth="1px"
-				borderColor="var(--wc-border-default)"
-				borderRadius="md"
-				bg="var(--wc-bg-subtle)"
-				px="2.5"
-				py="1.5"
-				cursor="pointer"
-				minH="32px"
-				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
-			>
-				<Text fontSize="xs" color={value.length > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
-					{value.length > 0 ? `${value.length} guardrail${value.length > 1 ? 's' : ''}` : 'No guardrails'}
-				</Text>
-			</Box>
-			{isOpen && (
-				<Box
-					ref={dropdownRef}
-					position="absolute"
-					top="100%"
-					left={0}
-					zIndex={10000}
-					minW="180px"
-					maxW="240px"
-					maxH="200px"
-					overflowY="auto"
-					borderWidth="1px"
-					borderColor="var(--wc-border-overlay)"
-					borderRadius="lg"
-					bg="var(--wc-bg-elevated)"
-					shadow="lg"
-					p="2"
-				>
-					{guardrailNames.length === 0 ? (
-						<Text fontSize="xs" color="var(--wc-text-faint)" p="1">No guardrails</Text>
-					) : (
-						guardrailNames.map(name => {
-							const isSelected = selectedSet.has(name);
-							return (
-								<Box
-									key={name}
-									display="flex"
-									alignItems="center"
-									gap="6px"
-									p="1.5"
-									borderRadius="md"
-									cursor="pointer"
-									fontSize="xs"
-									color="var(--wc-text-primary)"
-									bg={isSelected ? 'var(--wc-bg-selected)' : 'transparent'}
-									_hover={{ bg: isSelected ? 'var(--wc-bg-selected)' : 'var(--wc-bg-card)' }}
-									onClick={() => handleToggle(name)}
-								>
-									{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
-									<span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{name}</span>
-								</Box>
-							);
-						})
-					)}
-				</Box>
-			)}
-		</Box>
-	);
-});
-
-const GuardrailSelector = React.memo(() => {
-	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
-	const currentThreadId = useStore(s => s.currentThreadId);
-	const threadState = useStore(s => s.getCurrentThreadState(s));
-	const setThreadState = useStore(s => s.setThreadState);
-	const modes = useStore(s => s.modes);
-	const modeId = threadState?.modeId as TModeId | undefined;
-	const currentMode = modeId ? modes[modeId] : null;
-
-	const activeNames = useMemo(() => {
-		if (currentMode) return currentMode.activeGuardrails || [];
-		return (threadState?.activeGuardrails as string[]) || [];
-	}, [currentMode, threadState?.activeGuardrails]);
-
-	const guardrailNames = useMemo(() => Object.keys(guardrails), [guardrails]);
-
-	const [isOpen, setIsOpen] = useState(false);
-	const triggerRef = useRef<HTMLDivElement | null>(null);
-	const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-	const handleToggle = useCallback((e: React.MouseEvent, name: string) => {
-		e.stopPropagation();
-		const isActive = activeNames.includes(name);
-		toggleActiveGuardrail(name, !isActive);
-	}, [activeNames]);
-
-	const handleToggleDropdown = useCallback((e: React.MouseEvent) => {
-		e.stopPropagation();
-		setIsOpen(!isOpen);
-	}, [isOpen]);
-
-	useEffect(() => {
-		if (!isOpen) return;
-		const handler = (e: MouseEvent) => {
-			if (dropdownRef.current?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) return;
-			setIsOpen(false);
-		};
-		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [isOpen]);
-
-	const totalActive = activeNames.length;
-
-	return (
-		<Box position="relative">
-			<Box
-				ref={triggerRef}
-				display="inline-flex"
-				alignItems="center"
-				gap="1.5"
-				px="2"
-				py="1"
-				borderRadius="md"
-				cursor="pointer"
-				userSelect="none"
-				bg={totalActive > 0 ? 'var(--wc-bg-selected)' : 'var(--wc-bg-subtle)'}
-				borderWidth="1px"
-				borderColor={totalActive > 0 ? 'var(--wc-accent-purple)' : 'var(--wc-border-subtle)'}
-				opacity={totalActive > 0 ? 1 : 0.6}
-				onClick={handleToggleDropdown}
-			>
-				<FaShieldAlt size={14} color={totalActive > 0 ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'} />
-				<Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
-					{totalActive > 0 ? `${totalActive} guardrail${totalActive > 1 ? 's' : ''}` : 'Guardrails'}
-				</Box>
-				<ChevronDown size={12} color="var(--wc-text-muted)" />
-			</Box>
-			{isOpen && (
-				<Box
-					ref={dropdownRef}
-					position="absolute"
-					top="100%"
-					left={0}
-					zIndex={10000}
-					minW="180px"
-					maxW="240px"
-					maxH="200px"
-					overflowY="auto"
-					borderWidth="1px"
-					borderColor="var(--wc-border-overlay)"
-					borderRadius="lg"
-					bg="var(--wc-bg-elevated)"
-					shadow="lg"
-					p="2"
-				>
-					{guardrailNames.length === 0 ? (
-						<Text fontSize="xs" color="var(--wc-text-faint)" p="1">No guardrails</Text>
-					) : (
-						guardrailNames.map(name => {
-							const isSelected = activeNames.includes(name);
-							return (
-								<Box
-									key={name}
-									display="flex"
-									alignItems="center"
-									gap="6px"
-									p="1.5"
-									borderRadius="md"
-									cursor="pointer"
-									fontSize="xs"
-									color="var(--wc-text-primary)"
-									bg={isSelected ? 'var(--wc-bg-selected)' : 'transparent'}
-									_hover={{ bg: isSelected ? 'var(--wc-bg-selected)' : 'var(--wc-bg-card)' }}
-									onClick={(e) => handleToggle(e, name)}
-								>
-									{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
-									<span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{name}</span>
-								</Box>
-							);
-						})
-					)}
-				</Box>
-			)}
-		</Box>
-	);
-});
 
 const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
 	const mcpServers = useStore(s => s.mcpServers);
@@ -1286,7 +1076,7 @@ const toggleActiveGuardrail = (guardrailName: string, activate: boolean) => {
 		? [...activeNames, guardrailName]
 		: activeNames.filter(n => n !== guardrailName);
 
-	if (modeId) {
+	if (modeId && state.modes[modeId]) {
 		updateModeGuardrailsApi(modeId, newNames);
 	} else {
 		state.setThreadState(threadId, { activeGuardrails: newNames });
@@ -1377,6 +1167,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				name: { type: 'string', description: 'Mode name', index: 0 },
 				color: { type: 'color', description: 'Mode color', index: 1 },
 				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
+				guardrails: { type: 'guardrails', description: 'Active guardrails', index: 3 },
 			},
 			execute: async (_api, params, extraParams) => {
 				await createModeApi({
@@ -1386,7 +1177,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					color: params.color || '#a78bfa',
 					prompt: extraParams?.prompt || undefined,
 					allowedTools: parseToolValue(params.tools || ''),
-					activeGuardrails: [],
+					activeGuardrails: parseGuardrailValue(params.guardrails || ''),
 				});
 			},
 		});
@@ -1419,7 +1210,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
-		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailSelector, { label: 'Guardrails' });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
 
 		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode'];
 
