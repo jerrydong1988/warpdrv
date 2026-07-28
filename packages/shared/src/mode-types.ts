@@ -9,6 +9,7 @@ export interface IMode {
 	color: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
+	activeGuardrails: string[];
 }
 
 export interface IModeCreatePayload {
@@ -17,4 +18,5 @@ export interface IModeCreatePayload {
 	color: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
+	activeGuardrails?: string[];
 }

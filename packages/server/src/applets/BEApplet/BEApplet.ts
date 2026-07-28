@@ -1,7 +1,7 @@
 import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
-import type { IGuardrail, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
 import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
 import { store } from '../../util/store';
 import { getMode } from '../../services/modeStore';
@@ -206,10 +206,25 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 threadId,
             ) as Record<string, unknown> | null;
 
-            const guardrails = threadState?.guardrails as Record<string, IGuardrail> | undefined;
-            if (!guardrails) return;
+            // Resolve active guardrail names: from mode if set, else from threadState
+            const modeId = threadState?.modeId as string | undefined;
+            let activeNames: string[] = [];
+            if (modeId) {
+                const mode = await api.eventNode.invoke('/warpcore', 'bridge.getMode', modeId) as { activeGuardrails?: string[] } | null;
+                activeNames = mode?.activeGuardrails || [];
+            } else {
+                activeNames = threadState?.activeGuardrails as string[] || [];
+            }
+            if (!activeNames.length) return;
 
-            const activeGuardrails = Object.values(guardrails).filter(g => g.isActive);
+            // Fetch all guardrail definitions from DB
+            const allDefinitions = await api.eventNode.invoke('/warpcore', 'bridge.listGuardrails') as Record<string, IGuardrailDefinition>;
+            if (!allDefinitions) return;
+
+            // Look up definitions for active names
+            const activeGuardrails = activeNames
+                .map(name => allDefinitions[name])
+                .filter((g): g is IGuardrailDefinition => !!g);
             if (!activeGuardrails.length) return;
 
             // Find current turn boundary

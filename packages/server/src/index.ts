@@ -33,6 +33,7 @@ import { getAllServerSlots, getServerSlots } from './services/slotStateTracker';
 import { listCheckpoints } from './services/checkpointService';
 import { recipesRouter } from './routes/recipes';
 import { modesRouter } from './routes/modes';
+import { guardrailsRouter } from './routes/guardrails';
 import { checkpointsRouter } from './routes/checkpoints';
 import { clientLogsRouter } from './routes/clientLogs';
 import { whisperBackendsRouter } from './routes/whisperBackends';
@@ -192,6 +193,7 @@ async function main() {
 	app.use('/api/summary', authMiddleware, summaryRouter);
 	app.use('/api/recipes', authMiddleware, recipesRouter);
 	app.use('/api/modes', authMiddleware, modesRouter);
+	app.use('/api/guardrails', authMiddleware, guardrailsRouter);
 	app.use('/api/checkpoints', authMiddleware, checkpointsRouter);
 	app.use('/api/whisper-backends', authMiddleware, whisperBackendsRouter);
 	app.use('/api/whisper-servers', authMiddleware, whisperServersRouter);
@@ -398,6 +400,15 @@ async function main() {
 		const modesMap: Record<string, typeof modes[number]> = {};
 		for (const m of modes) modesMap[m.id] = m;
 		return modesMap;
+	});
+
+	sseManager.onConnect('guardrails:init', async () => {
+		const guardrails = await persistence.listGuardrails();
+		const result: Record<string, typeof guardrails[string]> = {};
+		for (const [name, g] of Object.entries(guardrails)) {
+			result[name] = g;
+		}
+		return result;
 	});
 
 	sseManager.onConnect('chatPresets:init', async () => {

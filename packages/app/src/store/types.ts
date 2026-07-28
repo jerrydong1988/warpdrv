@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { TServerId, IServer, IServerStats, TDownloadId, IDownload, IDevice, TBackendId, IBackend, TBackendGroupId, IBackendGroup, TRecipeId, IRecipe, IRecipeRunState, TStepId, IServerSlotsState, ICheckpoint, TCheckpointId, TModelId, IModel, ISettings, TWhisperBackendId, IWhisperBackend, TWhisperServerId, IWhisperServer, IWhisperModel, IHardwareInfo, IBackendAsset, IKokoroStatus, IChatPreset, IChatPresetCreatePayload, IMode, TModeId } from '@warpcore/shared';
+import type { TServerId, IServer, IServerStats, TDownloadId, IDownload, IDevice, TBackendId, IBackend, TBackendGroupId, IBackendGroup, TRecipeId, IRecipe, IRecipeRunState, TStepId, IServerSlotsState, ICheckpoint, TCheckpointId, TModelId, IModel, ISettings, TWhisperBackendId, IWhisperBackend, TWhisperServerId, IWhisperServer, IWhisperModel, IHardwareInfo, IBackendAsset, IKokoroStatus, IChatPreset, IChatPresetCreatePayload, IMode, TModeId, IGuardrailDefinition } from '@warpcore/shared';
 import type { IProxyStatus, IStickyRouteInfo } from '@/api/services';
 import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
 export { type ImmerSet, type ImmerGet } from '@warpcore/bridge';
@@ -216,6 +216,9 @@ export interface AppState extends IChatStoreState{
 
 	// Modes
 	modes: Record<TModeId, IMode>;
+
+	// Guardrails (global definitions)
+	guardrails: Record<string, IGuardrailDefinition>;
 
 	// Chat Presets
 	chatPresets: IChatPreset[];

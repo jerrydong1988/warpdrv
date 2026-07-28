@@ -116,6 +116,15 @@ export class Orchestrator {
 			await this.persistence.updateMessageState(payload.messageId, payload.data);
 		});
 
+		this.eventNode.fn('bridge.listGuardrails', async () => {
+			return await this.persistence.listGuardrails();
+		});
+
+		this.eventNode.fn('bridge.getMode', async (api) => {
+			const id = api.payload as string;
+			return await this.persistence.getMode(id);
+		});
+
 		this.eventNode.fn('bridge.handlePureCompletion', async (api) => {
 			const payload = api.payload as {
 				inferenceRequestId: string;

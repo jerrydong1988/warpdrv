@@ -1,12 +1,17 @@
-import { store } from '../util/store';
+import { persistence } from '../index';
 import type { IMode, TModeId } from '@warpcore/shared';
 
-const MODE_PREFIX = 'mode:';
-
-function modeKey(id: TModeId): string { return `${MODE_PREFIX}${id}`; }
-
 export async function listModes(): Promise<IMode[]> {
-	return store.list<IMode>(MODE_PREFIX);
+	const rows = await persistence.listModes();
+	return rows.map(r => ({
+		id: r.id,
+		name: r.name,
+		scope: r.scope as 'global' | string,
+		color: r.color,
+		prompt: r.prompt,
+		allowedTools: r.allowedTools,
+		activeGuardrails: r.activeGuardrails,
+	}));
 }
 
 export async function listModesByScope(scope: string): Promise<IMode[]> {
@@ -16,13 +21,31 @@ export async function listModesByScope(scope: string): Promise<IMode[]> {
 }
 
 export async function getMode(id: TModeId): Promise<IMode | null> {
-	return store.get<IMode>(modeKey(id));
+	const row = await persistence.getMode(id);
+	if (!row) return null;
+	return {
+		id: row.id,
+		name: row.name,
+		scope: row.scope as 'global' | string,
+		color: row.color,
+		prompt: row.prompt,
+		allowedTools: row.allowedTools,
+		activeGuardrails: row.activeGuardrails,
+	};
 }
 
 export async function putMode(mode: IMode): Promise<void> {
-	await store.put<IMode>(modeKey(mode.id), mode);
+	await persistence.upsertMode({
+		id: mode.id,
+		name: mode.name,
+		scope: mode.scope,
+		color: mode.color,
+		prompt: mode.prompt,
+		allowedTools: mode.allowedTools,
+		activeGuardrails: mode.activeGuardrails || [],
+	});
 }
 
 export async function deleteMode(id: TModeId): Promise<void> {
-	await store.del(modeKey(id));
+	await persistence.deleteMode(id);
 }

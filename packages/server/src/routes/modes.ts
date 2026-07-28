@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { nanoid } from 'nanoid';
 import { listModes, putMode, deleteMode, getMode } from '../services/modeStore';
 import { sseManager } from '../services/sseManagerInstance';
-import type { IMode, IModeCreatePayload } from '@warpcore/shared';
+import type { IMode, IModeCreatePayload, IToolAttachment } from '@warpcore/shared';
 
 export const modesRouter = Router();
 
@@ -17,6 +17,7 @@ modesRouter.post('/', async (req, res) => {
 			color: body.color || '#a78bfa',
 			prompt: body.prompt || undefined,
 			allowedTools: body.allowedTools || [],
+			activeGuardrails: body.activeGuardrails || [],
 		};
 		await putMode(mode);
 		sseManager.emit('modes:update', mode);
@@ -42,6 +43,7 @@ modesRouter.put('/:id', async (req, res) => {
 			...(body.color !== undefined && { color: body.color }),
 			...(body.prompt !== undefined && { prompt: body.prompt }),
 			...(body.allowedTools !== undefined && { allowedTools: body.allowedTools }),
+			...(body.activeGuardrails !== undefined && { activeGuardrails: body.activeGuardrails }),
 		};
 		await putMode(updated);
 		sseManager.emit('modes:update', updated);
@@ -62,6 +64,42 @@ modesRouter.delete('/:id', async (req, res) => {
 		await deleteMode(req.params.id);
 		sseManager.emit('modes:delete', existing);
 		res.json({ ok: true, data: null, error: null });
+	} catch (err) {
+		res.status(500).json({ ok: false, data: null, error: String(err) });
+	}
+});
+
+// PATCH /api/modes/:id/tools
+modesRouter.patch('/:id/tools', async (req, res) => {
+	try {
+		const existing = await getMode(req.params.id);
+		if (!existing) {
+			res.status(404).json({ ok: false, data: null, error: 'Mode not found' });
+			return;
+		}
+		const body = req.body as { tools: IToolAttachment[] };
+		const updated: IMode = { ...existing, allowedTools: body.tools || [] };
+		await putMode(updated);
+		sseManager.emit('modes:update', updated);
+		res.json({ ok: true, data: updated, error: null });
+	} catch (err) {
+		res.status(500).json({ ok: false, data: null, error: String(err) });
+	}
+});
+
+// PATCH /api/modes/:id/guardrails
+modesRouter.patch('/:id/guardrails', async (req, res) => {
+	try {
+		const existing = await getMode(req.params.id);
+		if (!existing) {
+			res.status(404).json({ ok: false, data: null, error: 'Mode not found' });
+			return;
+		}
+		const body = req.body as { activeGuardrails: string[] };
+		const updated: IMode = { ...existing, activeGuardrails: body.activeGuardrails || [] };
+		await putMode(updated);
+		sseManager.emit('modes:update', updated);
+		res.json({ ok: true, data: updated, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
 	}

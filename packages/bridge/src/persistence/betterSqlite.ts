@@ -74,6 +74,8 @@ function buildTableNames(prefix: string) {
 		codeGraphNodes: `${prefix}code_graph_nodes`,
 		codeGraphEdges: `${prefix}code_graph_edges`,
 		codeGraphNodesFts: `${prefix}code_graph_nodes_fts`,
+		guardrails: `${prefix}guardrails`,
+		modes: `${prefix}modes`,
 	};
 }
 
@@ -291,6 +293,26 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 
 		CREATE VIRTUAL TABLE IF NOT EXISTS ${t.codeGraphNodesFts} USING fts5(
 			nodeId, symbol, kind, signature
+		);
+
+		CREATE TABLE IF NOT EXISTS ${t.guardrails} (
+			name TEXT PRIMARY KEY,
+			serverId TEXT NOT NULL DEFAULT '',
+			prompt TEXT,
+			triggerOnTools TEXT NOT NULL DEFAULT '[]',
+			inferenceParams TEXT NOT NULL DEFAULT '{}',
+			messagesCount INTEGER DEFAULT 0,
+			includeBaseMessage INTEGER DEFAULT 0
+		);
+
+		CREATE TABLE IF NOT EXISTS ${t.modes} (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			scope TEXT NOT NULL DEFAULT 'global',
+			color TEXT NOT NULL DEFAULT '#a78bfa',
+			prompt TEXT,
+			allowedTools TEXT NOT NULL DEFAULT '[]',
+			activeGuardrails TEXT NOT NULL DEFAULT '[]'
 		);
 	`;
 }
@@ -1368,5 +1390,109 @@ export class SqlitePersistence implements IPersistence {
 			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ?)`).run(projectId);
 		});
 		txn();
+	}
+
+	// ============================================================
+	// Guardrails
+	// ============================================================
+
+	async listGuardrails(): Promise<Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
+		const result: Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }> = {};
+		for (const r of rows) {
+			result[r.name as string] = {
+				name: r.name as string,
+				serverId: r.serverId as string,
+				prompt: (r.prompt as string) || undefined,
+				triggerOnTools: JSON.parse(r.triggerOnTools as string) as IToolAttachment[],
+				inferenceParams: JSON.parse(r.inferenceParams as string) as Record<string, unknown>,
+				messagesCount: r.messagesCount as number,
+				includeBaseMessage: (r.includeBaseMessage as number) === 1,
+			};
+		}
+		return result;
+	}
+
+	async upsertGuardrail(guardrail: { name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.guardrails} (name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(name) DO UPDATE SET
+				serverId = excluded.serverId,
+				prompt = excluded.prompt,
+				triggerOnTools = excluded.triggerOnTools,
+				inferenceParams = excluded.inferenceParams,
+				messagesCount = excluded.messagesCount,
+				includeBaseMessage = excluded.includeBaseMessage`
+		).run(
+			guardrail.name,
+			guardrail.serverId,
+			guardrail.prompt ?? null,
+			JSON.stringify(guardrail.triggerOnTools || []),
+			JSON.stringify(guardrail.inferenceParams || {}),
+			guardrail.messagesCount ?? 0,
+			guardrail.includeBaseMessage ? 1 : 0,
+		);
+	}
+
+	async deleteGuardrail(name: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.guardrails} WHERE name = ?`).run(name);
+	}
+
+	// ============================================================
+	// Modes
+	// ============================================================
+
+	async listModes(): Promise<Array<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }>> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.modes}`).all() as Array<Record<string, unknown>>;
+		return rows.map(r => ({
+			id: r.id as string,
+			name: r.name as string,
+			scope: r.scope as string,
+			color: r.color as string,
+			prompt: (r.prompt as string) || undefined,
+			allowedTools: JSON.parse(r.allowedTools as string) as IToolAttachment[],
+			activeGuardrails: JSON.parse(r.activeGuardrails as string) as string[],
+		}));
+	}
+
+	async getMode(id: string): Promise<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] } | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.modes} WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
+		if (!row) return null;
+		return {
+			id: row.id as string,
+			name: row.name as string,
+			scope: row.scope as string,
+			color: row.color as string,
+			prompt: (row.prompt as string) || undefined,
+			allowedTools: JSON.parse(row.allowedTools as string) as IToolAttachment[],
+			activeGuardrails: JSON.parse(row.activeGuardrails as string) as string[],
+		};
+	}
+
+	async upsertMode(mode: { id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.modes} (id, name, scope, color, prompt, allowedTools, activeGuardrails)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(id) DO UPDATE SET
+				name = excluded.name,
+				scope = excluded.scope,
+				color = excluded.color,
+				prompt = excluded.prompt,
+				allowedTools = excluded.allowedTools,
+				activeGuardrails = excluded.activeGuardrails`
+		).run(
+			mode.id,
+			mode.name,
+			mode.scope,
+			mode.color,
+			mode.prompt ?? null,
+			JSON.stringify(mode.allowedTools),
+			JSON.stringify(mode.activeGuardrails),
+		);
+	}
+
+	async deleteMode(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.modes} WHERE id = ?`).run(id);
 	}
 }

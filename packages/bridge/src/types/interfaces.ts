@@ -145,6 +145,17 @@ export interface IPersistence {
 	codeGraphGetCallees(projectId: string, nodeId: string, depth?: number): Promise<ICodeGraphNode[]>;
 	codeGraphGetAmbiguousSymbols(projectId: string): Promise<Set<string>>;
 	codeGraphClearProject(projectId: string): Promise<void>;
+
+	// Guardrails
+	listGuardrails(): Promise<Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>>;
+	upsertGuardrail(guardrail: { name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void>;
+	deleteGuardrail(name: string): Promise<void>;
+
+	// Modes
+	listModes(): Promise<Array<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }>>;
+	getMode(id: string): Promise<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] } | null>;
+	upsertMode(mode: { id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }): Promise<void>;
+	deleteMode(id: string): Promise<void>;
 }
 
 // ============================================================
