@@ -7,6 +7,7 @@ import { useStore } from '@/store';
 import { updateFolder, updateWorkspace, fetchWorkspace, updateFolderTopic } from '@/api/services';
 import { useDependantState } from '@/hooks/useDependantState';
 import { EServerStatus } from '@warpcore/shared';
+import type { IMode, TModeId } from '@warpcore/shared';
 import { ServerDot } from '@/components/ServerPicker';
 
 interface IChatThread extends IBridgeChatThread {
@@ -104,6 +105,8 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	const workspaceState = useStore(s => s.workspaceStates[folderId]);
 	const defaultServerId = workspaceState?.defaultServerId as string | undefined;
 	const defaultPresetId = workspaceState?.defaultPresetId as string | undefined;
+	const defaultModeId = workspaceState?.defaultModeId as TModeId | undefined;
+	const modes = useStore(s => s.modes);
 	const threads = useStore(useShallow(s => {
 		const threadsArray = Object.values(s.threads) as IChatThread[];
 		return threadsArray;
@@ -216,6 +219,10 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 	const handleDefaultPresetChange = (presetId: string) => {
 		setWorkspaceState(folderId, { defaultPresetId: presetId || null });
+	};
+
+	const handleDefaultModeChange = (modeId: string) => {
+		setWorkspaceState(folderId, { defaultModeId: modeId || null });
 	};
 
 	const servers = useMemo(() => Object.values(serversMap).sort((a, b) => {
@@ -450,6 +457,30 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 							<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None</option>
 							{chatPresets.map((p) => (
 								<option key={p.id} value={p.id} style={{ background: 'var(--wc-bg-elevated)' }}>{p.name}</option>
+							))}
+						</select>
+					</Box>
+					<Box flex="1">
+						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
+							Default Mode
+						</Text>
+						<select
+							value={defaultModeId ?? ''}
+							onChange={(e) => handleDefaultModeChange(e.target.value)}
+							style={{
+								width: '100%',
+								background: 'var(--wc-bg-card)',
+								border: '1px solid var(--wc-border-default)',
+								borderRadius: '6px',
+								color: 'var(--wc-text-primary)',
+								fontSize: '12px',
+								padding: '4px 8px',
+								height: '28px',
+							}}
+						>
+							<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None</option>
+							{Object.values(modes).map((m: IMode) => (
+								<option key={m.id} value={m.id} style={{ background: 'var(--wc-bg-elevated)' }}>{m.name}</option>
 							))}
 						</select>
 					</Box>

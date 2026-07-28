@@ -409,7 +409,7 @@ const TodoPanel = React.memo(() => {
 	const threadId = useStore(s => s.currentThreadId);
 	const todos = useStore(s => {
 		if (!threadId) return EMPTY_TODOS;
-		return (s.threadStates[threadId]?.todos as ITodoItem[]) || EMPTY_TODOS;
+		return (s.getCurrentThreadState(s)?.todos as ITodoItem[]) || EMPTY_TODOS;
 	});
 	const setThreadState = useStore(s => s.setThreadState);
 	const annotations = useStore(s => s.annotations);

@@ -11,6 +11,9 @@ function applyDefaults(wsState: Record<string, unknown>) {
     const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
     if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
   }
+  if (wsState.defaultModeId) {
+    store.setThreadState(null, { modeId: wsState.defaultModeId as string });
+  }
 }
 
 export function useWorkspace() {
