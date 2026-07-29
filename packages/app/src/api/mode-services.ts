@@ -14,7 +14,7 @@ export async function updateMode(id: TModeId, payload: Partial<IMode>): Promise<
 }
 
 export async function deleteMode(id: TModeId): Promise<void> {
-	const res = await api.delete<null>(`/modes/${id}`);
+	const res = await api.del<null>(`/modes/${id}`);
 	if (!res.ok) throw new Error(res.error);
 }
 
