@@ -14,12 +14,14 @@ export const fileWriteDefinition = {
 		},
 		required: ['path', 'content'],
 	},
+	resultLimit: 100000,
 };
 export async function fileWriteHandler(deps: IWarpmcpDeps, args: { path: string; content: string; encoding?: string }): Promise<{ bytesWritten: number }> {
 	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
 	const encoding = (args.encoding ?? 'utf8') as BufferEncoding;
 	await fs.mkdir(path.dirname(safePath), { recursive: true });
 	await fs.writeFile(safePath, args.content, { encoding });
+	await deps.onFileWritten?.(safePath);
 	const stat = await fs.stat(safePath);
 	return { bytesWritten: stat.size };
 }

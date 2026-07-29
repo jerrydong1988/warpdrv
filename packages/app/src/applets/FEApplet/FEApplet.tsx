@@ -3,40 +3,203 @@ import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import { EUISpaceLoc } from '@/store/slices/uiSpaces';
 import type { IAppletAPIFE } from '../lib/types';
 import type { TUiSpaceComponentDef } from '@/store/slices/uiSpaces';
-import { Box, Text, VStack, Flex, Spinner, Badge, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, Tabs, Switch, Input, Textarea, Button, SegmentGroup } from '@chakra-ui/react';
+import { Box, Text, VStack, Flex, Spinner, Badge, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, Tabs, Switch, Input, Textarea, Button, SegmentGroup, ColorPicker, parseColor } from '@chakra-ui/react';
 import { ChevronDown, CheckCircle, AlertTriangle, XCircle, ChevronRight, Edit2, Trash2, Check } from 'lucide-react';
 import { FaShieldAlt } from 'react-icons/fa';
 import { LuListTodo } from 'react-icons/lu';
 import { MdDragHandle } from 'react-icons/md';
+import { nanoid } from 'nanoid';
 import { useAuiState } from '@assistant-ui/react';
 import { useStore } from '@/store';
 import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
-import type { ITodoItem, IGuardrail, IGuardrailIssue } from '@warpcore/shared';
+import type { ITodoItem, IGuardrailDefinition, IGuardrailIssue, IMode, TModeId, IToolAttachment } from '@warpcore/shared';
+import { EMcpServerStatus } from '@warpcore/bridge';
 import { EGuardrailIssueType } from '@warpcore/shared';
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { createMode as createModeApi, updateMode as updateModeApi, deleteMode as deleteModeApi, updateModeGuardrails as updateModeGuardrailsApi } from '@/api/mode-services';
+import { createGuardrail as createGuardrailApi, updateGuardrail as updateGuardrailApi, deleteGuardrail as deleteGuardrailApi } from '@/api/guardrail-services';
+import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
+import { parseGuardrailValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
-import React from 'react';
 import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
+import { TiFlowSwitch } from 'react-icons/ti';
+import { ModeBadge } from '../ui/ModeBadge';
+import { GuardrailBadge, ModeGuardrailPicker } from '../ui/GuardrailBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
-const EMPTY_GUARDRAILS: Record<string, IGuardrail> = {};
+const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
+
+const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
+	const mcpServers = useStore(s => s.mcpServers);
+	const [isOpen, setIsOpen] = useState(false);
+	const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
+	const dropdownRef = useRef<HTMLDivElement | null>(null);
+	const triggerRef = useRef<HTMLDivElement | null>(null);
+
+	const connectedServers = useMemo(() => {
+		const entries = Object.entries(mcpServers).filter(([, s]) => s.status === EMcpServerStatus.CONNECTED);
+		return entries as [string, { status: EMcpServerStatus; tools: { name: string; description: string }[] }][];
+	}, [mcpServers]);
+
+	const selectedSet = useMemo(() => {
+		const s = new Set<string>();
+		for (const t of value) s.add(`${t.serverName}:${t.toolName}`);
+		return s;
+	}, [value]);
+
+	const handleToggle = (serverName: string, toolName: string) => {
+		const key = `${serverName}:${toolName}`;
+		const next = new Set(selectedSet);
+		if (next.has(key)) {
+			next.delete(key);
+		} else {
+			next.add(key);
+		}
+		const result: IToolAttachment[] = [];
+		for (const k of next) {
+			const idx = k.indexOf(':');
+			if (idx > 0) result.push({ serverName: k.slice(0, idx), toolName: k.slice(idx + 1) });
+		}
+		onChange(result);
+	};
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const handler = (e: MouseEvent) => {
+			if (dropdownRef.current?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) return;
+			setIsOpen(false);
+		};
+		document.addEventListener('mousedown', handler);
+		return () => document.removeEventListener('mousedown', handler);
+	}, [isOpen]);
+
+	const totalSelected = value.length;
+
+	return (
+		<Box position="relative">
+			<Box
+				ref={triggerRef}
+				borderWidth="1px"
+				borderColor="var(--wc-border-default)"
+				borderRadius="md"
+				bg="var(--wc-bg-subtle)"
+				px="2.5"
+				py="1.5"
+				cursor="pointer"
+				minH="32px"
+				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
+			>
+				<Text fontSize="xs" color={totalSelected > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
+					{totalSelected > 0 ? `${totalSelected} tool(s)` : 'All tool calls'}
+				</Text>
+			</Box>
+			{isOpen && (
+				<Box
+					ref={dropdownRef}
+					position="absolute"
+					top="100%"
+					left={0}
+					zIndex={10000}
+					minW="220px"
+					maxW="280px"
+					maxH="250px"
+					overflowY="auto"
+					borderWidth="1px"
+					borderColor="var(--wc-border-overlay)"
+					borderRadius="lg"
+					bg="var(--wc-bg-elevated)"
+					shadow="lg"
+					p="2"
+				>
+					{connectedServers.map(([serverName, state]) => {
+						const isExpanded = expandedServers.has(serverName);
+						const activeCount = state.tools.filter(t => selectedSet.has(`${serverName}:${t.name}`)).length;
+						return (
+							<Box key={serverName}>
+								<Box
+									display="flex"
+									alignItems="center"
+									justifyContent="space-between"
+									p="1.5"
+									borderRadius="md"
+									cursor="pointer"
+									fontSize="9px"
+									fontWeight="600"
+									color={activeCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}
+									textTransform="uppercase"
+									letterSpacing="0.05em"
+									_hover={{ bg: 'var(--wc-bg-card)' }}
+									onClick={(e) => { e.stopPropagation(); setExpandedServers(prev => { const n = new Set(prev); isExpanded ? n.delete(serverName) : n.add(serverName); return n; })}}
+								>
+									<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+										{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+										{serverName}
+									</span>
+									<span fontSize="8px" fontWeight={400} color="var(--wc-text-faint)">
+										{state.tools.length}{activeCount ? ` (${activeCount})` : ''}
+									</span>
+								</Box>
+								{isExpanded && (
+									<Box pl="2">
+										{state.tools.map(tool => {
+											const isSelected = selectedSet.has(`${serverName}:${tool.name}`);
+											return (
+												<Box
+													key={tool.name}
+													display="flex"
+													alignItems="center"
+													gap="6px"
+													p="1"
+													borderRadius="md"
+													cursor="pointer"
+													fontSize="11px"
+													color="var(--wc-text-primary)"
+													bg={isSelected ? 'var(--wc-bg-selected)' : 'transparent'}
+													_hover={{ bg: isSelected ? 'var(--wc-bg-selected)' : 'var(--wc-bg-card)' }}
+													onClick={() => handleToggle(serverName, tool.name)}
+												>
+													{isSelected && <Check size={10} color="var(--wc-accent-blue)" />}
+													<span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{tool.name}</span>
+												</Box>
+											);
+										})}
+									</Box>
+								)}
+							</Box>
+						);
+					})}
+				</Box>
+			)}
+		</Box>
+	);
+});
 
 function useGuardrailItems(): TDropdownItem[] {
-  const guardrails = useStore(s => {
-    const ts = s.getCurrentThreadState(s);
-    return ts?.guardrails as Record<string, IGuardrail>;
-  });
-  return useMemo(() => guardrails ? Object.keys(guardrails).map(n => ({ label: n, value: n })) : [], [guardrails]);
+  const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
+  return useMemo(() => Object.keys(guardrails).map(n => ({ label: n, value: n })), [guardrails]);
+}
+
+function useModeItems(): TDropdownItem[] {
+  const modes = useStore(s => s.modes);
+  const currentThreadId = useStore(s => s.currentThreadId);
+  const threads = useStore(s => s.threads);
+  const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+  return useMemo(() => {
+    const scope = folderId || 'global';
+    return Object.values(modes)
+      .filter((m: IMode) => m.scope === 'global' || m.scope === scope)
+      .map((m: IMode) => ({ label: m.name, value: m.id }));
+  }, [modes, scope]);
 }
 
 const TodoPanel = React.memo(() => {
 	const threadId = useStore(s => s.currentThreadId);
 	const todos = useStore(s => {
 		if (!threadId) return EMPTY_TODOS;
-		return (s.threadStates[threadId]?.todos as ITodoItem[]) || EMPTY_TODOS;
+		return (s.getCurrentThreadState(s)?.todos as ITodoItem[]) || EMPTY_TODOS;
 	});
 	const setThreadState = useStore(s => s.setThreadState);
 	const annotations = useStore(s => s.annotations);
@@ -58,17 +221,17 @@ const TodoPanel = React.memo(() => {
 	}, [editingIndex, todos]);
 
 	const addTodoAnnotation = useCallback((updatedTodos: ITodoItem[]) => {
-		const existing = annotations.find(a => a.selectedText.startsWith('<todos>'));
-		if (existing) removeAnnotation(existing.id);
-		const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\\n');
-		addAnnotation(`<todos>\\n${formatted}\\n</todos>`, 'Updated Todos');
+		// const existing = annotations.find(a => a.selectedText.startsWith('<todos>'));
+		// if (existing) removeAnnotation(existing.id);
+		// const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\\n');
+		// addAnnotation(`<todos>\\n${formatted}\\n</todos>`, 'Updated Todos');
 	}, [annotations, addAnnotation, removeAnnotation]);
 
 	const toggleDone = useCallback((index: number) => {
 		const updated = todos.map((t, j) =>
 			j === index ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t
 		);
-		setThreadState(threadId, { todos: updated });
+		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 		addTodoAnnotation(updated);
 	}, [todos, setThreadState, threadId, addTodoAnnotation]);
 
@@ -87,7 +250,7 @@ const TodoPanel = React.memo(() => {
 		const updated = todos.map((t, j) =>
 			j === editingIndex ? { ...t, text: trimmed } : t
 		);
-		setThreadState(threadId, { todos: updated });
+		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 		setEditingIndex(null);
 		addTodoAnnotation(updated);
 	}, [editingIndex, draftText, todos, setThreadState, threadId, addTodoAnnotation]);
@@ -98,7 +261,7 @@ const TodoPanel = React.memo(() => {
 
 	const deleteTodo = useCallback((index: number) => {
 		const updated = todos.filter((_, j) => j !== index);
-		setThreadState(threadId, { todos: updated });
+		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 		setDeleteConfirm(null);
 		addTodoAnnotation(updated);
 	}, [todos, setThreadState, threadId, addTodoAnnotation]);
@@ -107,7 +270,7 @@ const TodoPanel = React.memo(() => {
 		const trimmed = addText.trim();
 		if (!trimmed) return;
 		const newTodos = [...todos, { text: trimmed, status: 'pending' }];
-		setThreadState(threadId, { todos: newTodos });
+		setThreadState(threadId, { todos: newTodos, todoEtag: nanoid(6) });
 		setAddText('');
 		addTodoAnnotation(newTodos);
 	}, [addText, todos, setThreadState, threadId, addTodoAnnotation]);
@@ -136,7 +299,7 @@ const TodoPanel = React.memo(() => {
 		const updated = [...todos];
 		const [item] = updated.splice(fromIndex, 1);
 		updated.splice(toIndex, 0, item);
-		setThreadState(threadId, { todos: updated });
+		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 		setDraggingIndex(null);
 		setDragOverIndex(null);
 		addTodoAnnotation(updated);
@@ -325,7 +488,7 @@ const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponent
 	);
 });
 
-const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
+const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinition }) => {
 	const [expanded, setExpanded] = useState(false);
 	const [editingName, setEditingName] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -335,26 +498,23 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const updateGuardrail = useCallback((patch: Partial<IGuardrail>) => {
-		const state = useStore.getState();
-		const threadId = state.currentThreadId;
-		const ts = state.getCurrentThreadState(state);
-		const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-		if (!guardrails[guardrail.name]) return;
-		state.setThreadState(threadId, { guardrails: { ...guardrails, [guardrail.name]: { ...guardrails[guardrail.name], ...patch } } });
-	}, [guardrail.name]);
+	const updateGuardrail = useCallback(async (patch: Partial<IGuardrailDefinition>) => {
+		try {
+			await updateGuardrailApi(guardrail.name, { ...guardrail, ...patch });
+		} catch (e) {
+			console.error('Failed to update guardrail:', e);
+		}
+	}, [guardrail]);
 
-	const flushName = useCallback(() => {
+	const flushName = useCallback(async () => {
 		if (draftName === guardrail.name) return;
-		const state = useStore.getState();
-		const threadId = state.currentThreadId;
-		const ts = state.getCurrentThreadState(state);
-		const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-		if (!guardrails[guardrail.name]) return;
-		const { [guardrail.name]: oldEntry, ...rest } = guardrails;
-		const updatedEntry = { ...oldEntry, name: draftName };
-		state.setThreadState(threadId, { guardrails: { ...rest, [draftName]: updatedEntry } });
-	}, [draftName, guardrail.name]);
+		try {
+			await createGuardrailApi({ ...guardrail, name: draftName });
+			await deleteGuardrailApi(guardrail.name);
+		} catch (e) {
+			console.error('Failed to rename guardrail:', e);
+		}
+	}, [draftName, guardrail]);
 
 	const handleNameBlur = useCallback(() => {
 		setEditingName(false);
@@ -378,18 +538,16 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 		};
 	}, []);
 
-	const handleDelete = () => {
-		const state = useStore.getState();
-		const threadId = state.currentThreadId;
-		const ts = state.getCurrentThreadState(state);
-		const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-		if (!guardrails[guardrail.name]) return;
-		const { [guardrail.name]: _, ...rest } = guardrails;
-		state.setThreadState(threadId, { guardrails: rest });
+	const handleDelete = async () => {
+		try {
+			await deleteGuardrailApi(guardrail.name);
+		} catch (e) {
+			console.error('Failed to delete guardrail:', e);
+		}
 	};
 
 	return (
-		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="hidden">
+		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
 			<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
 				{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
 				{editingName ? (
@@ -410,7 +568,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 						<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" textOverflow="ellipsis" overflow="hidden">
 							{draftName}
 						</Text>
-						
+
 						<Edit2
 							size={10}
 							color="var(--wc-text-faint)"
@@ -419,23 +577,10 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 						/>
 					</Flex>
 				)}
-
-				<Switch.Root
-					size="sm"
-					checked={guardrail.isActive}
-					onCheckedChange={(details) => updateGuardrail({ isActive: details.checked })}
-					onClick={(e) => e.stopPropagation()}
-				>
-					<Switch.HiddenInput />
-					<Switch.Control css={{ bg: guardrail.isActive ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
-						<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
-					</Switch.Control>
-				</Switch.Root>
-
 				</Flex>
 
 			{expanded && (
-				<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch" opacity={guardrail.isActive ? 1 : 0.4}>
+				<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
 							Server
@@ -447,12 +592,10 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
 							Trigger only on tool calls
 						</Text>
-						<Input
-							size="xs"
-							fontSize="xs"
-							value={guardrail.triggerOnTools || ''}
-							onChange={(e) => updateGuardrail({ triggerOnTools: e.target.value })}
-							placeholder="Comma-separated tool names"
+						<GuardrailToolPicker
+							value={guardrail.triggerOnTools || []}
+							onChange={(tools) => updateGuardrail({ triggerOnTools: tools })}
+							onClick={(e) => e.stopPropagation()}
 						/>
 					</Box>
 
@@ -534,7 +677,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 							placeholder="Custom rules..."
 						/>
 					</Box>
-					
+
 					<Flex justifyContent="flex-end">
 						<Button
 							size="xs"
@@ -571,10 +714,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrail }) => {
 });
 
 const GuardrailsPanel = React.memo(() => {
-	const guardrails = useStore(s => {
-		const ts = s.getCurrentThreadState(s);
-		return ts?.guardrails || EMPTY_GUARDRAILS;
-	});
+	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
 	const items = Object.values(guardrails);
 
 	if (!items.length) {
@@ -591,6 +731,200 @@ const GuardrailsPanel = React.memo(() => {
 		<VStack gap="2" p="3" align="stretch">
 			{items.map(g => (
 				<GuardrailRow key={g.name} guardrail={g} />
+			))}
+		</VStack>
+	);
+});
+
+const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
+	const [expanded, setExpanded] = useState(false);
+	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || '');
+	const [draftScope, setDraftScope] = useDependantState(mode.scope);
+	const [draftColor, setDraftColor] = useDependantState(mode.color || '#a78bfa');
+	const [draftTools, setDraftTools] = useDependantState(mode.allowedTools);
+	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const threads = useStore(s => s.threads);
+	const currentThreadId = useStore(s => s.currentThreadId);
+	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+	const scope = folderId || 'global';
+
+	const updateMode = useCallback(async (patch: Partial<IMode>) => {
+		try {
+			await updateModeApi(mode.id, patch);
+		} catch (e) {
+			console.error('Failed to update mode:', e);
+		}
+	}, [mode.id]);
+
+	const handlePromptBlur = useCallback(() => {
+		if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
+		promptSaveTimerRef.current = setTimeout(() => {
+			if (draftPrompt !== (mode.prompt || '')) {
+				updateMode({ prompt: draftPrompt || undefined });
+			}
+		}, 200);
+	}, [draftPrompt, mode.prompt, updateMode]);
+
+	useEffect(() => {
+		return () => {
+			if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
+		};
+	}, []);
+
+	const handleDelete = async () => {
+		try {
+			await deleteModeApi(mode.id);
+		} catch (e) {
+			console.error('Failed to delete mode:', e);
+		}
+		setDeleteConfirmOpen(false);
+	};
+
+	const mc = mode.color || '#a78bfa';
+
+	return (
+		<>
+			<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
+				<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
+					<Box
+						style={{
+							width: '10px',
+							height: '10px',
+							borderRadius: '3px',
+							background: mc,
+							flexShrink: 0,
+						}}
+					/>
+					<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" flex="1" minW="0" textOverflow="ellipsis" overflow="hidden">
+						{mode.name}
+					</Text>
+					{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
+				</Flex>
+
+				{expanded && (
+					<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Color
+							</Text>
+							<ColorPicker.Root defaultValue={parseColor(draftColor)} onValueChange={(details) => {
+								const hex = details.value.toString('hex');
+								setDraftColor(hex);
+								updateMode({ color: hex });
+							}}>
+								<ColorPicker.HiddenInput />
+								<ColorPicker.Control>
+									<ColorPicker.Input />
+									<ColorPicker.Trigger />
+								</ColorPicker.Control>
+								<ColorPicker.Positioner>
+									<ColorPicker.Content>
+										<ColorPicker.Area />
+										<ColorPicker.Sliders />
+									</ColorPicker.Content>
+								</ColorPicker.Positioner>
+							</ColorPicker.Root>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Allowed tools
+							</Text>
+							<GuardrailToolPicker
+								value={draftTools}
+								onChange={(tools) => { setDraftTools(tools); updateMode({ allowedTools: tools }); }}
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Active guardrails
+							</Text>
+							<ModeGuardrailPicker
+								modeId={mode.id}
+								value={mode.activeGuardrails || []}
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</Box>
+
+						<Box>
+							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+								Tail prompt
+							</Text>
+							<Textarea
+								size="xs"
+								fontSize="xs"
+								rows={3}
+								placeholder="Optional tail prompt..."
+								value={draftPrompt}
+								onChange={(e) => setDraftPrompt(e.target.value)}
+								onBlur={handlePromptBlur}
+								bg="var(--wc-bg-subtle)"
+								borderColor="var(--wc-border-default)"
+								borderWidth="1px"
+								borderRadius="md"
+							/>
+						</Box>
+
+						<Flex justify="flex-end">
+							<Button
+								size="xs"
+								fontSize="xs"
+								color="var(--wc-accent-red)"
+								bg="var(--wc-accent-red-bg-8)"
+								leftIcon={<Trash2 size={12} />}
+								onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
+							>
+								Delete
+							</Button>
+						</Flex>
+					</VStack>
+				)}
+			</Box>
+
+			{deleteConfirmOpen && (
+				<ConfirmDialog
+					title="Delete Mode"
+					message={`Are you sure you want to delete "${mode.name}"?`}
+					isOpen={true}
+					onConfirm={handleDelete}
+					onCancel={() => setDeleteConfirmOpen(false)}
+					confirmLabel="Delete"
+				/>
+			)}
+		</>
+	);
+});
+
+const ModesPanel = React.memo(() => {
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const currentThreadId = useStore(s => s.currentThreadId);
+
+	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+	const scope = folderId || 'global';
+
+	const availableModes = useMemo(() => {
+		return Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope);
+	}, [modes, scope]);
+
+	if (!availableModes.length) {
+		return (
+			<Box p="4">
+				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
+					No modes
+				</Text>
+			</Box>
+		);
+	}
+
+	return (
+		<VStack gap="2" p="3" align="stretch" height="100%">
+			{availableModes.map(m => (
+				<ModeRow key={m.id} mode={m} />
 			))}
 		</VStack>
 	);
@@ -729,33 +1063,24 @@ const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName:
 	);
 });
 
-const registerGuardrailChip = (api: IAppletAPIFE, name: string) => {
-	api.registerComposerChip({
-		componentId: `guardrail-${name}`,
-		icon: FaShieldAlt,
-		selectLabel: () => name,
-		selectIsActive: (s) => {
-			const ts = s.getCurrentThreadState(s);
-			const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-			return guardrails?.[name]?.isActive ?? false;
-		},
-		onSetIsActive: (isActive) => {
-			const state = api.useStore.getState();
-			const threadId = state.currentThreadId;
-			const ts = state.getCurrentThreadState(state);
-			const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-			if (!guardrails[name]) return;
-			state.setThreadState(threadId, { guardrails: { ...guardrails, [name]: { ...guardrails[name], isActive } } });
-		},
-		onClose: () => {
-			const state = api.useStore.getState();
-			const threadId = state.currentThreadId;
-			const ts = state.getCurrentThreadState(state);
-			const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-			if (!guardrails[name]) return;
-			state.setThreadState(threadId, { guardrails: { ...guardrails, [name]: { ...guardrails[name], isActive: false } } });
-		},
-	});
+const toggleActiveGuardrail = (guardrailName: string, activate: boolean) => {
+	const state = useStore.getState();
+	const threadId = state.currentThreadId;
+	const ts = state.getCurrentThreadState(state);
+	const modeId = ts?.modeId as string | undefined;
+	const activeNames = (modeId
+		? state.modes[modeId]?.activeGuardrails
+		: ts?.activeGuardrails) as string[] || [];
+
+	const newNames = activate
+		? [...activeNames, guardrailName]
+		: activeNames.filter(n => n !== guardrailName);
+
+	if (modeId && state.modes[modeId]) {
+		updateModeGuardrailsApi(modeId, newNames);
+	} else {
+		state.setThreadState(threadId, { activeGuardrails: newNames });
+	}
 };
 
 const fn: IAppletFn<IAppletAPIFE> = async (api) => {
@@ -772,30 +1097,26 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		});
 
 		api.registerSlashCommand({
-			name: 'guardrail',
+			name: 'create_guardrail',
 			description: 'Create a custom guardrail',
 			params: {
 				name: { type: 'string', description: 'Guardrail name', index: 0 },
-				tools: { type: 'tool', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
+				tools: { type: 'message_type', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
 				server: { type: 'server', description: 'Server used for processing (empty = same as chat server)', index: 2 },
 			},
 			execute: async (_api, params, extraParams) => {
-				const state = api.useStore.getState();
-				const threadId = state.currentThreadId;
-				const ts = state.getCurrentThreadState(state);
-				const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-				state.setThreadState(threadId, { guardrails: { ...guardrails, [params.name!]: {
-					name: params.name,
-					serverId: params.server,
-					isActive: true,
+				await createGuardrailApi({
+					name: params.name!,
+					serverId: params.server || '',
 					prompt: extraParams?.prompt,
-					triggerOnTools: params.tools || undefined,
-				} } });
+					triggerOnTools: parseToolValue(params.tools || ''),
+				});
+				toggleActiveGuardrail(params.name!, true);
 			},
 		});
 
 		api.registerSlashCommand({
-			name: 'toggle_guardrail',
+			name: 'guardrail',
 			description: 'Activate or deactivate a guardrail',
 			params: {
 				name: { type: 'dropdown', description: 'Guardrail name', index: 0, props: {
@@ -806,12 +1127,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				}},
 			},
 			execute: async (_api, params) => {
-				const state = api.useStore.getState();
-				const threadId = state.currentThreadId;
-				const ts = state.getCurrentThreadState(state);
-				const guardrails = (ts?.guardrails || EMPTY_GUARDRAILS) as Record<string, IGuardrail>;
-				if (!guardrails[params.name!]) return;
-				state.setThreadState(threadId, { guardrails: { ...guardrails, [params.name!]: { ...guardrails[params.name!], isActive: params.action === 'on' } } });
+				toggleActiveGuardrail(params.name!, params.action === 'on');
 			},
 		});
 
@@ -826,33 +1142,77 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				const threadId = state.currentThreadId;
 				const ts = state.getCurrentThreadState(state);
 				const todos = (ts?.todos || EMPTY_TODOS) as ITodoItem[];
-				state.setThreadState(threadId, { todos: [...todos, { text, status: 'pending' }] });
+				state.setThreadState(threadId, { todos: [...todos, { text, status: 'pending' }], todoEtag: nanoid(6) });
 			},
 		});
-		
-		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
-		api.registerUiSpaceComponent(EUISpaceLoc.RIGHT_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 
-		const unsubscribe = useStore.subscribe(
-			(s) => s.getCurrentThreadState(s)?.guardrails,
-			(guardrails, prevGuardrails) => {
-				const currNames = guardrails ? Object.keys(guardrails) : [];
-				const prevNames = prevGuardrails ? Object.keys(prevGuardrails) : [];
-				for (const name of currNames.filter(n => !prevNames.includes(n))) {
-					registerGuardrailChip(api, name);
-				}
-				for (const name of prevNames.filter(n => !currNames.includes(n))) {
-					useStore.getState().unregisterUiSpaceComponent('FEApplet', `guardrail-${name}`);
+		api.registerSlashCommand({
+			name: 'set_project_root',
+			description: 'Set the project root directory for this thread',
+			params: {
+				path: { type: 'directory', description: 'Path to project root directory', index: 0 },
+			},
+			execute: async (_api, params) => {
+				const state = api.useStore.getState();
+				const threadId = state.currentThreadId;
+				if (!threadId) return;
+				state.setThreadState(threadId, { projectRoot: params.path });
+			},
+		});
+
+		api.registerSlashCommand({
+			name: 'create_mode',
+			description: 'Create a new mode with allowed tools and optional tail prompt',
+			params: {
+				name: { type: 'string', description: 'Mode name', index: 0 },
+				color: { type: 'color', description: 'Mode color', index: 1 },
+				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
+				guardrails: { type: 'guardrails', description: 'Active guardrails', index: 3 },
+			},
+			execute: async (_api, params, extraParams) => {
+				await createModeApi({
+					id: nanoid(6),
+					name: params.name!,
+					scope: 'global',
+					color: params.color || '#a78bfa',
+					prompt: extraParams?.prompt || undefined,
+					allowedTools: parseToolValue(params.tools || ''),
+					activeGuardrails: parseGuardrailValue(params.guardrails || ''),
+				});
+			},
+		});
+
+		api.registerSlashCommand({
+			name: 'mode',
+			description: 'Set or clear a mode for this thread',
+			params: {
+				action: { type: 'dropdown', description: 'set or clear', index: 0, props: {
+					items: [{ label: 'set', value: 'set' }, { label: 'clear', value: 'clear' }],
+				}},
+				name: { type: 'dropdown', description: 'Mode name', index: 1, props: {
+					items: useModeItems,
+				}},
+			},
+			execute: async (_api, params) => {
+				const state = api.useStore.getState();
+				const threadId = state.currentThreadId;
+				if (params.action === 'clear') {
+					state.setThreadState(threadId, { modeId: null });
+				} else {
+					state.setThreadState(threadId, { modeId: params.name });
 				}
 			},
-			{ fireImmediately: true }
-		);
+		});
 
-		api.onTerminate(() => { unsubscribe(); });
+		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
+		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
+		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, { label: 'Modes', icon: TiFlowSwitch });
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
 
-		const blockingSlashCommands = ['guardrail', 'toggle_guardrail', 'todo'];
+		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode'];
 
 		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
 			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };

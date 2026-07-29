@@ -17,11 +17,14 @@ import { settingsSlice } from './slices/settings';
 import { proxySlice } from './slices/proxy';
 import { recipesSlice } from './slices/recipes';
 import { checkpointsSlice } from './slices/checkpoints';
+import { modesSlice } from './slices/modes';
+import { guardrailsSlice } from './slices/guardrails';
 import { hardwareSlice } from './slices/hardware';
 import { releasesSlice } from './slices/releases';
 import { kokoroSlice } from './slices/kokoro';
 import { ttsSlice } from './slices/tts';
 import { annotationsSlice } from './slices/annotations';
+import { chatPresetsSlice } from './slices/chatPresets';
 import { embeddingSlice } from './slices/embedding';
 import { chatSidebarSlice } from './slices/chatSidebar';
 import { slashCommandsSlice } from './slices/slashCommands';
@@ -34,6 +37,16 @@ import { FetchRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/Fetc
 import { ListRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/ListRenderer';
 import { ReadFileRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/ReadFileRenderer';
 import { SearchRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/SearchRenderer';
+import { TodoItemRendererMeta, TodoListRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/TodoRenderer';
+import { CodeGraphIngestRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphIngestRenderer';
+import { CodeGraphSearchRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphSearchRenderer';
+import { CodeGraphSymbolRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphSymbolRenderer';
+import { CodeGraphCallersRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphCallersRenderer';
+import { CodeGraphCalleesRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphCalleesRenderer';
+import { CodeGraphListRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphListRenderer';
+import { CodeGraphClearRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/CodeGraphClearRenderer';
+import { RgRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/RgRenderer';
+import { EmbeddingSearchRendererMeta } from '@/pages/Chat/assistant-ui/tool-renderers/EmbeddingSearchRenderer';
 
 export const useStore = create<AppState>()(
 	subscribeWithSelector(
@@ -50,11 +63,14 @@ export const useStore = create<AppState>()(
 				const proxy = proxySlice(set, get);
 				const recipes = recipesSlice(set, get);
 				const checkpoints = checkpointsSlice(set, get);
+			const modes = modesSlice(set, get);
+				const guardrails = guardrailsSlice(set, get);
 				const hardware = hardwareSlice(set, get);
 				const releases = releasesSlice(set, get);
 				const kokoro = kokoroSlice(set, get);
 			const tts = ttsSlice(set, get);
 			const annotations = annotationsSlice(set, get);
+			const chatPresets = chatPresetsSlice(set, get);
 			const embedding = embeddingSlice(set, get);
 				const chatSidebar = chatSidebarSlice(set, get);
 				const slashCommands = slashCommandsSlice(set, get);
@@ -113,6 +129,8 @@ export const useStore = create<AppState>()(
 					activeRun: recipes.activeRun!,
 					stepOutputs: recipes.stepOutputs!,
 					checkpoints: checkpoints.checkpoints!,
+					modes: modes.modes!,
+					guardrails: guardrails.guardrails!,
 					SSEHandlers: sseHandlers.SSEHandlers!,
 					elicitationByThread: bridge.elicitationByThread,
 					applyElicitationRequest: bridge.applyElicitationRequest,
@@ -144,7 +162,18 @@ export const useStore = create<AppState>()(
 						FetchRenderer: FetchRendererMeta,
 						ListRenderer: ListRendererMeta,
 						ReadFileRenderer: ReadFileRendererMeta,
+						CodeGraphSearchRenderer: CodeGraphSearchRendererMeta,
 						SearchRenderer: SearchRendererMeta,
+						TodoItemRenderer: TodoItemRendererMeta,
+						TodoListRenderer: TodoListRendererMeta,
+						CodeGraphIngestRenderer: CodeGraphIngestRendererMeta,
+						CodeGraphSymbolRenderer: CodeGraphSymbolRendererMeta,
+						CodeGraphCallersRenderer: CodeGraphCallersRendererMeta,
+						CodeGraphCalleesRenderer: CodeGraphCalleesRendererMeta,
+						CodeGraphListRenderer: CodeGraphListRendererMeta,
+						CodeGraphClearRenderer: CodeGraphClearRendererMeta,
+						RgRenderer: RgRendererMeta,
+						EmbeddingSearchRenderer: EmbeddingSearchRendererMeta,
 					},
 					registerToolCallRenderer: (name, component) => set((state) => {
 						state.toolCallRenderers[name] = component;
@@ -214,7 +243,13 @@ export const useStore = create<AppState>()(
 					attachedTools: bridge.attachedTools,
 					setAttachedTools: bridge.setAttachedTools,
 
-// Chat Folders
+// Chat Presets
+			chatPresets: chatPresets.chatPresets!,
+			setChatPresets: chatPresets.setChatPresets!,
+			addChatPreset: chatPresets.addChatPreset!,
+			removeChatPreset: chatPresets.removeChatPreset!,
+
+		// Chat Folders
 				folders: [],
 				setFolders: (folders) => set(s => { s.folders = folders; }),
 

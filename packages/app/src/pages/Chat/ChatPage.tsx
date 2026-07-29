@@ -15,7 +15,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/PageHeader';
 import { useStore } from '@/store';
 import type { AppState } from '@/store/types';
-import type { IChatPreset } from '@warpcore/shared';
+import type { IChatPreset, IToolAttachment } from '@warpcore/shared';
 import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
 import './assistant-ui/styles/assistant-ui.css';
 import { createContext } from 'react';
@@ -23,6 +23,7 @@ import { ChatSidebar } from './ChatSidebar';
 import { useDerivedMsgsForUI } from '@/hooks/useChatSelectors';
 import { useThreadConfig } from '@/hooks/useThreadConfig';
 import { useThreadAttachedTools } from '@/hooks/useThreadAttachedTools';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { useHotkey, HotkeyMode } from '@/hooks/useHotKey';
 import { useSlashCommandProcessor } from '@/hooks/useSlashCommandProcessor';
 
@@ -199,6 +200,32 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	useThreadAttachedTools();
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const threadState = useStore(s => s.getCurrentThreadState(s));
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
+
+	// Compute union of all relevant modes' tools when mode is active (global + current workspace only)
+	const modeUnionTools = useMemo(() => {
+		if (!isModeActive) return null;
+		const result: IToolAttachment[] = [];
+		const seen = new Set<string>();
+		const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+		const scope = folderId || 'global';
+		for (const m of Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope)) {
+			for (const t of m.allowedTools) {
+				if (typeof t === 'string') continue;
+				const key = `${t.serverName}:${t.toolName}`;
+				if (!seen.has(key)) {
+					seen.add(key);
+					result.push(t);
+				}
+			}
+		}
+		return result;
+	}, [isModeActive, modes, currentThreadId, threads]);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const clearPendingSlashCommands = useStore(s => s.clearPendingSlashCommands);
 	const executeCommands = useSlashCommandProcessor();
@@ -251,7 +278,6 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	// Initial thread load - seed messages and tool calls
 	const seedThreadMessages = useStore(s => s.seedThreadMessages);
 	const applyToolCallCreated = useStore(s => s.applyToolCallCreated);
-	const initWorkspaceState = useStore(s => s.initWorkspaceState);
 	const initThreadState = useStore(s => s.initThreadState);
 	const initMessageStates = useStore(s => s.initMessageStates);
 	const selectedEmbeddingServerId = useStore(s => s.selectedEmbeddingServerId);
@@ -311,19 +337,10 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 				}
 
 				// Fetch persisted states
-				const folderId = data?.folderId;
-				const statePromises: Promise<{ ok: boolean; data: any; error: string | null } | null>[] = [];
-				if (folderId) {
-					statePromises.push(fetch(`/api/chat/workspaces/${folderId}/state`).then(res => res.ok ? res.json() : null));
-				} else {
-					statePromises.push(Promise.resolve(null));
-				}
-				statePromises.push(fetch(`/api/chat/threads/${currentThreadId}/state`).then(res => res.ok ? res.json() : null));
-				statePromises.push(fetch(`/api/chat/threads/${currentThreadId}/message-states`).then(res => res.ok ? res.json() : null));
-				const [wsStateRes, threadStateRes, msgStatesRes] = await Promise.all(statePromises);
-				if (wsStateRes?.data !== undefined && wsStateRes?.data !== null && folderId) {
-					initWorkspaceState(folderId, wsStateRes.data);
-				}
+				const [threadStateRes, msgStatesRes] = await Promise.all([
+					fetch(`/api/chat/threads/${currentThreadId}/state`).then(res => res.ok ? res.json() : null),
+					fetch(`/api/chat/threads/${currentThreadId}/message-states`).then(res => res.ok ? res.json() : null),
+				]);
 				if (threadStateRes?.data !== undefined && threadStateRes?.data !== null) {
 					initThreadState(currentThreadId!, threadStateRes.data);
 				}
@@ -343,7 +360,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			setIsLoadingThread(false);
 		}
 		loadThread();
-	}, [currentThreadId, threadInStore, threadMessages, selectedEmbeddingServerId, servers, seedThreadMessages, applyToolCallCreated, setThreadEmbeddingStatuses, initWorkspaceState, initThreadState, initMessageStates]);
+	}, [currentThreadId, threadInStore, threadMessages, selectedEmbeddingServerId, servers, seedThreadMessages, applyToolCallCreated, setThreadEmbeddingStatuses, initThreadState, initMessageStates]);
 
 	// Realm events and applet state
 	const realmEvents = useRealm(currentThreadId);
@@ -443,8 +460,14 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			inferenceParams: currentInferenceParams,
 			presetId: selectedPresetId,
 			generateTitle,
-			attachAllTools,
-			attachedTools: attachAllTools ? undefined : attachedTools,
+			...(isModeActive ? {
+				attachAllTools: false,
+				attachedTools: modeUnionTools,
+				skipToolsSave: true,
+			} : {
+				attachAllTools,
+				attachedTools: attachAllTools ? undefined : attachedTools,
+			}),
 			messageState: slashCommands.length > 0 ? { slashCommands } : {},
 			threadState: (isNewThread && tempState) ? tempState : undefined,
 		};
@@ -472,7 +495,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 		});
-	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents]);
+	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents]);
 
 	const onReloadV2 = useCallback(async (parentId: string | null) => {
 		if (!isValidServer || !parentId) return;
@@ -491,11 +514,17 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 				inferenceParams: currentInferenceParams,
 				presetId: selectedPresetId,
 				generateTitle,
-				attachAllTools,
-				attachedTools: attachAllTools ? undefined : attachedTools,
+				...(isModeActive ? {
+					attachAllTools: false,
+					attachedTools: modeUnionTools,
+					skipToolsSave: true,
+				} : {
+					attachAllTools,
+					attachedTools: attachAllTools ? undefined : attachedTools,
+				}),
 			}),
 		});
-	}, [currentThreadId, currentSystemPrompt, currentInferenceParams, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools]);
+	}, [currentThreadId, currentSystemPrompt, currentInferenceParams, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools]);
 
 	const onCancel = useCallback(async () => {
 		if (currentThreadId && isValidServer) {
@@ -611,6 +640,8 @@ export const ChatPage = React.memo(() => {
 	const setCurrentThreadId = useStore(s => s.setCurrentThreadId);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const [threadsListCollapsed, setThreadsListCollapsed] = useState(false);
+
+	useWorkspace();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const openChatSidebarTab = useStore(s => s.openChatSidebarTab);
 	const chatSidebarOpen = useStore(s => s.chatSidebarOpen);

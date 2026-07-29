@@ -1,9 +1,10 @@
 import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
-import type { IGuardrail, IGuardrailIssue, IServer } from '@warpcore/shared';
-import { COMPACTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT } from './prompts';
+import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
 import { store } from '../../util/store';
+import { getMode } from '../../services/modeStore';
 import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
 
 const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
@@ -28,9 +29,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 payload.request.threadId,
             ) as Record<string, unknown> | null;
 
-            if (threadState?.ignoreCompactionBase === true) {
-                return eventApi.result;
-            }
+            if (threadState?.ignoreCompactionBase === true) return;
 
             const messageStates = await api.eventNode.invoke(
                 '/warpcore',
@@ -54,8 +53,121 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 }
             }
 
-            if (compactionBaseIndex === -1) return eventApi.result;
+            if (compactionBaseIndex === -1) return;
             return (eventApi.result as any[]).slice(compactionBaseIndex);
+        });
+
+        api.eventNode.hook('/warpcore', 'bridge.preInference', async (eventApi) => {
+            const payload = eventApi.payload as {
+                request: { messageState?: Record<string, unknown>; threadId: string };
+            };
+
+            const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
+            if (commands?.some(c => c.name === 'compact')) return;
+
+            const threadState = await api.eventNode.invoke(
+                '/warpcore',
+                'bridge.getThreadState',
+                payload.request.threadId,
+            ) as Record<string, unknown> | null;
+            
+            let content = '';
+            let isToolsIncluded = false;
+            let isTodosIncluded = false;
+
+            // --- Mode tools section ---
+
+            const modeId = threadState?.modeId as string | undefined;
+            let mode: IMode | null = null;
+
+            if (modeId) {
+                mode = await getMode(modeId);
+            }
+
+            if (mode && mode.allowedTools.length > 0) {
+                const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
+                content += `\nTools\nAllowed tools: ${toolNames.join(', ')}\n`;
+                if (mode.prompt) content += `\nMode Prompt\n${mode.prompt}\n`;
+                isToolsIncluded = true;
+            }
+
+            // ---
+
+            const todos = threadState?.todos as ITodoItem[] | undefined;
+            const todoEtag = threadState?.todoEtag as string | undefined;
+
+            if (todos && todos.length > 0) {
+                const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
+                content += `\nTodos\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
+                isTodosIncluded = true;
+            }
+
+            // ---
+
+            if (
+                isToolsIncluded || isTodosIncluded
+            ) {
+                let messages = eventApi.result as Array<{
+                    role: string;
+                    content: string | Array<{ type: string; text?: string }>;
+                }>;
+
+                // Inject core instruction as first system message (only if mode is set)
+                if (isToolsIncluded) {
+                    const firstMsg = messages[0];
+                    if (firstMsg?.role === 'system') {
+                        if (typeof firstMsg.content === 'string') {
+                            messages[0] = { ...firstMsg, content: CORE_INSTRUCTION_PROMPT + '\n' + firstMsg.content };
+                        } else {
+                            const partIndex = firstMsg.content.findIndex(p => p.type === 'text');
+                            if (partIndex >= 0) {
+                                const newContent = firstMsg.content.map((p, i) =>
+                                    i === partIndex ? { ...p, text: CORE_INSTRUCTION_PROMPT + '\n' + (p.text ?? '') } : p
+                                );
+                                messages[0] = { ...firstMsg, content: newContent };
+                            } else {
+                                messages[0] = { ...firstMsg, content: [{ type: 'text', text: CORE_INSTRUCTION_PROMPT }, ...firstMsg.content] };
+                            }
+                        }
+                    } else {
+                        messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
+                    }
+                }
+
+                const lastIndex = messages.length - 1;
+
+                if (lastIndex < 0) {
+                    console.warn("No message found to inject trailing message! Strange..");
+                    return;
+                }
+
+                const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
+                    + "\n" + content
+                    + "\n</system-reminder>";
+                const lastMsg = messages[lastIndex]!;
+
+                let newLastMsg: typeof lastMsg;
+                if (typeof lastMsg.content === "string") {
+                    newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
+                }
+                else {
+                    const partIndex = lastMsg.content.findIndex(p => p.type === "text");
+                    if (partIndex >= 0) {
+                        const newContent = lastMsg.content.map((p, i) =>
+                            i === partIndex ? { ...p, text: (p.text ?? "") + trailingContent } : p
+                        );
+                        newLastMsg = { ...lastMsg, content: newContent };
+                    }
+                    else {
+                        const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
+                        newLastMsg = { ...lastMsg, content: newContent };
+                    }
+                }
+                const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
+                return newMessages;
+
+            }
+
         });
 
         api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
@@ -64,9 +176,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             };
 
             const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
-            if (!commands?.some(c => c.name === 'compact')) {
-                return eventApi.result;
-            }
+            if (!commands?.some(c => c.name === 'compact')) return;
+            
 
             const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
             for (const part of userMsg.content) {
@@ -76,7 +187,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 }
             }
 
-            return eventApi.result;
+            return { ...(eventApi.result as any) };
         });
 
         api.eventNode.on('/warpcore', 'bridge.inference.finish', async (eventApi) => {
@@ -95,10 +206,25 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 threadId,
             ) as Record<string, unknown> | null;
 
-            const guardrails = threadState?.guardrails as Record<string, IGuardrail> | undefined;
-            if (!guardrails) return;
+            // Resolve active guardrail names: from mode if set, else from threadState
+            const modeId = threadState?.modeId as string | undefined;
+            let activeNames: string[] = [];
+            if (modeId) {
+                const mode = await api.eventNode.invoke('/warpcore', 'bridge.getMode', modeId) as { activeGuardrails?: string[] } | null;
+                activeNames = mode?.activeGuardrails || [];
+            } else {
+                activeNames = threadState?.activeGuardrails as string[] || [];
+            }
+            if (!activeNames.length) return;
 
-            const activeGuardrails = Object.values(guardrails).filter(g => g.isActive);
+            // Fetch all guardrail definitions from DB
+            const allDefinitions = await api.eventNode.invoke('/warpcore', 'bridge.listGuardrails') as Record<string, IGuardrailDefinition>;
+            if (!allDefinitions) return;
+
+            // Look up definitions for active names
+            const activeGuardrails = activeNames
+                .map(name => allDefinitions[name])
+                .filter((g): g is IGuardrailDefinition => !!g);
             if (!activeGuardrails.length) return;
 
             // Find current turn boundary
@@ -112,7 +238,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             // Filter guardrails by triggerOnTools
             const applicableGuardrails = activeGuardrails.filter(g => {
                 if (!g.triggerOnTools) return true;
-                const tools = g.triggerOnTools.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+                const tools = typeof g.triggerOnTools[0] === 'string'
+                    ? g.triggerOnTools.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+                    : g.triggerOnTools.map((t: any) => t.toolName.toLowerCase());
                 if (!tools.length) return true;
                 return tools.some(t => toolNames.includes(t));
             });

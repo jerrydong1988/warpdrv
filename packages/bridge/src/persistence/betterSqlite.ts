@@ -29,6 +29,12 @@ import type {
 	ISearchResult,
 	ISearchThreadResult,
 } from '../types';
+import type {
+	ICodeGraphNode,
+	ICodeGraphEdge,
+	ICodeGraphFile,
+	ICodeGraphSearchOptions,
+} from '@warpcore/shared';
 import { folderNameToTopic } from '../util/topic';
 import {
 	EChatRole,
@@ -64,6 +70,12 @@ function buildTableNames(prefix: string) {
 		messageStates: `${prefix}message_states`,
 		threadFts: `${prefix}threads_fts`,
 		messagePartsFts: `${prefix}message_parts_fts`,
+		codeGraphFiles: `${prefix}code_graph_files`,
+		codeGraphNodes: `${prefix}code_graph_nodes`,
+		codeGraphEdges: `${prefix}code_graph_edges`,
+		codeGraphNodesFts: `${prefix}code_graph_nodes_fts`,
+		guardrails: `${prefix}guardrails`,
+		modes: `${prefix}modes`,
 	};
 }
 
@@ -232,6 +244,76 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 			WHERE (new.type IN ('text','reasoning') AND new.text IS NOT NULL AND length(new.text) > 0)
 			   OR (new.type = 'attachment' AND new.extractedText IS NOT NULL AND length(new.extractedText) > 0);
 		END;
+
+		CREATE TABLE IF NOT EXISTS ${t.codeGraphFiles} (
+			id TEXT PRIMARY KEY,
+			projectId TEXT NOT NULL,
+			filePath TEXT NOT NULL,
+			language TEXT NOT NULL,
+			mtime INTEGER NOT NULL,
+			contentHash TEXT NOT NULL,
+			indexedAt INTEGER NOT NULL,
+			UNIQUE(projectId, filePath)
+		);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphFiles}_project ON ${t.codeGraphFiles}(projectId);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphFiles}_hash ON ${t.codeGraphFiles}(projectId, contentHash);
+
+		CREATE TABLE IF NOT EXISTS ${t.codeGraphNodes} (
+			id TEXT NOT NULL,
+			filePath TEXT NOT NULL,
+			projectId TEXT NOT NULL,
+			symbol TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			language TEXT NOT NULL,
+			startLine INTEGER NOT NULL,
+			endLine INTEGER NOT NULL,
+			startCol INTEGER NOT NULL,
+			endCol INTEGER NOT NULL,
+			signature TEXT,
+			isExported INTEGER DEFAULT 0,
+			PRIMARY KEY (projectId, id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphNodes}_project ON ${t.codeGraphNodes}(projectId);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphNodes}_file ON ${t.codeGraphNodes}(filePath);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphNodes}_symbol ON ${t.codeGraphNodes}(symbol);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphNodes}_kind ON ${t.codeGraphNodes}(kind);
+
+		CREATE TABLE IF NOT EXISTS ${t.codeGraphEdges} (
+			id TEXT PRIMARY KEY,
+			projectId TEXT NOT NULL,
+			sourceId TEXT NOT NULL,
+			filePath TEXT NOT NULL,
+			targetSymbol TEXT NOT NULL,
+			edgeType TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphEdges}_project ON ${t.codeGraphEdges}(projectId);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphEdges}_source ON ${t.codeGraphEdges}(sourceId);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphEdges}_target ON ${t.codeGraphEdges}(targetSymbol);
+		CREATE INDEX IF NOT EXISTS idx_${t.codeGraphEdges}_file ON ${t.codeGraphEdges}(filePath);
+
+		CREATE VIRTUAL TABLE IF NOT EXISTS ${t.codeGraphNodesFts} USING fts5(
+			nodeId, symbol, kind, signature
+		);
+
+		CREATE TABLE IF NOT EXISTS ${t.guardrails} (
+			name TEXT PRIMARY KEY,
+			serverId TEXT NOT NULL DEFAULT '',
+			prompt TEXT,
+			triggerOnTools TEXT NOT NULL DEFAULT '[]',
+			inferenceParams TEXT NOT NULL DEFAULT '{}',
+			messagesCount INTEGER DEFAULT 0,
+			includeBaseMessage INTEGER DEFAULT 0
+		);
+
+		CREATE TABLE IF NOT EXISTS ${t.modes} (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			scope TEXT NOT NULL DEFAULT 'global',
+			color TEXT NOT NULL DEFAULT '#a78bfa',
+			prompt TEXT,
+			allowedTools TEXT NOT NULL DEFAULT '[]',
+			activeGuardrails TEXT NOT NULL DEFAULT '[]'
+		);
 	`;
 }
 
@@ -260,11 +342,28 @@ export class SqlitePersistence implements IPersistence {
 
 		this.db.pragma('journal_mode = WAL');
 		this.db.pragma('foreign_keys = ON');
+		this.migrateCodeGraphSchema();
 		this.db.exec(buildSchema(this.t));
 		this.runMigrations();
 	}
 
-	private runMigrations(): void {
+	private migrateCodeGraphSchema(): void {
+			try {
+				const cols = this.db!.prepare(`PRAGMA table_info(${this.t.codeGraphEdges})`).all() as Array<{ name: string }>;
+				if (cols.length === 0) return;
+				if (cols.some((c) => c.name === 'projectId')) return;
+				this.db!.exec(`
+					DROP TABLE IF EXISTS ${this.t.codeGraphNodesFts};
+					DROP TABLE IF EXISTS ${this.t.codeGraphEdges};
+					DROP TABLE IF EXISTS ${this.t.codeGraphNodes};
+					DROP TABLE IF EXISTS ${this.t.codeGraphFiles};
+				`);
+				console.log('[migration] Dropped code graph tables for multi-project rebuild');
+			} catch (err) {
+				console.error('[migration] Code graph rebuild failed:', err);
+			}
+		}
+		private runMigrations(): void {
 		const columnSchema = [
 			{ name: 'data', type: 'TEXT' },
 			{ name: 'mimeType', type: 'TEXT' },
@@ -580,11 +679,11 @@ export class SqlitePersistence implements IPersistence {
 	async deleteMessage(id: TMessageId): Promise<void> {
 		const msg = this.db!.prepare(`SELECT parentId FROM ${this.t.messages} WHERE id = ?`).get(id) as { parentId?: string | null } | undefined;
 		if (!msg) return;
-		
+
 		if (!msg.parentId) {
 			throw new Error('Cannot delete root message');
 		}
-		
+
 		this.db!.transaction((() => {
 			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(msg.parentId, id);
 			this.db!.prepare(`DELETE FROM ${this.t.messages} WHERE id = ?`).run(id);
@@ -653,7 +752,7 @@ export class SqlitePersistence implements IPersistence {
 					fileSize: (p.fileSize as number) ?? 0,
 					extractedText: (p.extractedText as string) ?? undefined,
 				};
-			} 
+			}
 			return { id: p.id as string, type: EMessagePartType.TOOL_CALL, orderIndex: p.orderIndex as number, toolCallId: p.toolCallId as string };
 		});
 
@@ -1070,5 +1169,330 @@ export class SqlitePersistence implements IPersistence {
 			}
 		}
 		return result;
+	}
+
+	// ============================================================
+	// Code graph
+	// ============================================================
+
+	async codeGraphFindProjectRoot(filePath: string): Promise<string | null> {
+		const absPath = path.resolve(filePath);
+		const row = this.db!.prepare(
+			`SELECT DISTINCT projectId FROM ${this.t.codeGraphFiles}
+			 WHERE ? LIKE projectId || '/%'
+			 ORDER BY LENGTH(projectId) DESC
+			 LIMIT 1`
+		).get(absPath) as { projectId: string } | undefined;
+		return row?.projectId ?? null;
+	}
+
+	async codeGraphGetFile(projectId: string, filePath: string): Promise<ICodeGraphFile | null> {
+		const row = this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`
+		).get(projectId, filePath) as ICodeGraphFile | undefined;
+		return row ?? null;
+	}
+
+	async codeGraphListFiles(projectId: string): Promise<ICodeGraphFile[]> {
+		return this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ?`
+		).all(projectId) as ICodeGraphFile[];
+	}
+
+	async codeGraphUpsertFile(file: ICodeGraphFile): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.codeGraphFiles} (id, projectId, filePath, language, mtime, contentHash, indexedAt)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(projectId, filePath) DO UPDATE SET
+				language = excluded.language,
+				mtime = excluded.mtime,
+				contentHash = excluded.contentHash,
+				indexedAt = excluded.indexedAt`
+		).run(file.id, file.projectId, file.filePath, file.language, file.mtime, file.contentHash, file.indexedAt);
+	}
+
+	async codeGraphDeleteByFile(projectId: string, filePath: string): Promise<void> {
+		const txn = this.db!.transaction(() => {
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(filePath);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+		});
+		txn();
+	}
+
+	async codeGraphUpsertNodes(projectId: string, filePath: string, nodes: ICodeGraphNode[]): Promise<void> {
+		const txn = this.db!.transaction(() => {
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			const insert = this.db!.prepare(
+				`INSERT INTO ${this.t.codeGraphNodes} (id, filePath, projectId, symbol, kind, language, startLine, endLine, startCol, endCol, signature, isExported)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			);
+			for (const n of nodes) {
+				insert.run(n.id, n.filePath, n.projectId, n.symbol, n.kind, n.language, n.startLine, n.endLine, n.startCol, n.endCol, n.signature ?? null, n.isExported ? 1 : 0);
+			}
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`).run(projectId, filePath);
+			const ftsInsert = this.db!.prepare(
+				`INSERT INTO ${this.t.codeGraphNodesFts} (nodeId, symbol, kind, signature) VALUES (?, ?, ?, ?)`
+			);
+			for (const n of nodes) {
+				ftsInsert.run(n.id, n.symbol, n.kind, n.signature ?? '');
+			}
+		});
+		txn();
+	}
+
+	async codeGraphUpsertEdges(projectId: string, filePath: string, edges: ICodeGraphEdge[]): Promise<void> {
+		const txn = this.db!.transaction(() => {
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			const insert = this.db!.prepare(
+				`INSERT INTO ${this.t.codeGraphEdges} (id, projectId, sourceId, filePath, targetSymbol, edgeType)
+				 VALUES (?, ?, ?, ?, ?, ?)`
+			);
+			for (const e of edges) {
+				insert.run(e.id, projectId, e.sourceId, e.filePath, e.targetSymbol, e.edgeType);
+			}
+		});
+		txn();
+	}
+
+	async codeGraphSearchNodes(projectId: string, query: string, options?: ICodeGraphSearchOptions): Promise<ICodeGraphNode[]> {
+		const limit = options?.limit ?? 20;
+		const clauses: string[] = [`n.projectId = ?`];
+		const params: unknown[] = [projectId];
+
+		if (options?.kind) {
+			clauses.push(`n.kind = ?`);
+			params.push(options.kind);
+		}
+		if (options?.filePath) {
+			clauses.push(`n.filePath = ?`);
+			params.push(options.filePath);
+		}
+
+		const where = clauses.join(' AND ');
+
+		if (options?.fuzzy) {
+			const ftsResults = this.db!.prepare(
+				`SELECT nodeId FROM ${this.t.codeGraphNodesFts} WHERE ${this.t.codeGraphNodesFts} MATCH ?`
+			).all(query) as Array<{ nodeId: string }>;
+			if (ftsResults.length === 0) return [];
+			const nodeIds = ftsResults.map(r => r.nodeId);
+			const placeholders = nodeIds.map(() => '?').join(',');
+			const rows = this.db!.prepare(
+				`SELECT * FROM ${this.t.codeGraphNodes} WHERE id IN (${placeholders}) LIMIT ?`
+			).all(...nodeIds, limit) as ICodeGraphNode[];
+			return rows;
+		}
+
+		const rows = this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphNodes} n WHERE ${where} AND (n.symbol LIKE ? OR n.symbol LIKE ?) ORDER BY n.symbol LIMIT ?`
+		).all(...params, `%${query}%`, `${query}.%`, limit) as ICodeGraphNode[];
+		return rows;
+	}
+
+	async codeGraphGetNode(projectId: string, nodeId: string): Promise<ICodeGraphNode | null> {
+		const row = this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE id = ? AND projectId = ?`
+		).get(nodeId, projectId) as ICodeGraphNode | undefined;
+		return row ?? null;
+	}
+
+	async codeGraphGetNodesByFile(projectId: string, filePath: string): Promise<ICodeGraphNode[]> {
+		return this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ? ORDER BY startLine, startCol`
+		).all(projectId, filePath) as ICodeGraphNode[];
+	}
+
+	async codeGraphGetAllNodes(projectId: string): Promise<ICodeGraphNode[]> {
+		return this.db!.prepare(
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? ORDER BY filePath, startLine, startCol`
+		).all(projectId) as ICodeGraphNode[];
+	}
+
+	async codeGraphGetCallers(projectId: string, symbolName: string, depth: number = 1): Promise<ICodeGraphNode[]> {
+		if (depth === 1) {
+			const rows = this.db!.prepare(`
+				SELECT DISTINCT n.* FROM ${this.t.codeGraphNodes} n
+				JOIN ${this.t.codeGraphEdges} e ON n.id = e.sourceId
+				WHERE e.targetSymbol = ? AND n.projectId = ?
+			`).all(symbolName, projectId) as ICodeGraphNode[];
+			return rows;
+		}
+		const withClause = `WITH RECURSIVE callers AS (
+			SELECT DISTINCT n.id, n.symbol, n.kind, n.language, n.filePath,
+				n.startLine, n.endLine, n.startCol, n.endCol, n.signature, n.isExported, 1 as d
+			FROM ${this.t.codeGraphNodes} n
+			JOIN ${this.t.codeGraphEdges} e ON n.id = e.sourceId
+			WHERE e.targetSymbol = ? AND n.projectId = ?
+			UNION
+			SELECT DISTINCT n.id, n.symbol, n.kind, n.language, n.filePath,
+				n.startLine, n.endLine, n.startCol, n.endCol, n.signature, n.isExported, c.d + 1
+			FROM callers c
+			JOIN ${this.t.codeGraphEdges} e ON c.symbol = e.targetSymbol
+			JOIN ${this.t.codeGraphNodes} n ON e.sourceId = n.id
+			WHERE c.d < ? AND n.projectId = ?
+		)`;
+		const rows = this.db!.prepare(
+			`${withClause} SELECT * FROM callers ORDER BY d, symbol`
+		).all(symbolName, projectId, depth, projectId) as ICodeGraphNode[];
+		return rows;
+	}
+
+	async codeGraphGetCallees(projectId: string, nodeId: string, depth: number = 1): Promise<ICodeGraphNode[]> {
+		if (depth === 1) {
+			const rows = this.db!.prepare(`
+				SELECT DISTINCT n.* FROM ${this.t.codeGraphNodes} n
+				JOIN ${this.t.codeGraphEdges} e ON e.targetSymbol = n.symbol
+				WHERE e.sourceId = ? AND n.projectId = ?
+			`).all(nodeId, projectId) as ICodeGraphNode[];
+			return rows;
+		}
+		const withClause = `WITH RECURSIVE callees AS (
+			SELECT DISTINCT n.id, n.symbol, n.kind, n.language, n.filePath,
+				n.startLine, n.endLine, n.startCol, n.endCol, n.signature, n.isExported, 1 as d
+			FROM ${this.t.codeGraphNodes} n
+			JOIN ${this.t.codeGraphEdges} e ON e.targetSymbol = n.symbol
+			WHERE e.sourceId = ? AND n.projectId = ?
+			UNION
+			SELECT DISTINCT n.id, n.symbol, n.kind, n.language, n.filePath,
+				n.startLine, n.endLine, n.startCol, n.endCol, n.signature, n.isExported, c.d + 1
+			FROM callees c
+			JOIN ${this.t.codeGraphEdges} e ON c.id = e.sourceId
+			JOIN ${this.t.codeGraphNodes} n ON e.targetSymbol = n.symbol
+			WHERE c.d < ? AND n.projectId = ?
+		)`;
+		const rows = this.db!.prepare(
+			`${withClause} SELECT * FROM callees ORDER BY d, symbol`
+		).all(nodeId, projectId, depth, projectId) as ICodeGraphNode[];
+		return rows;
+	}
+
+	async codeGraphGetAmbiguousSymbols(projectId: string): Promise<Set<string>> {
+		const rows = this.db!.prepare(`
+			SELECT symbol FROM ${this.t.codeGraphNodes}
+			WHERE projectId = ?
+			GROUP BY symbol
+			HAVING COUNT(*) > 1
+		`).all(projectId) as Array<{ symbol: string }>;
+		return new Set(rows.map(r => r.symbol));
+	}
+
+	async codeGraphClearProject(projectId: string): Promise<void> {
+		const files = this.db!.prepare(
+			`SELECT filePath FROM ${this.t.codeGraphFiles} WHERE projectId = ?`
+		).all(projectId) as Array<{ filePath: string }>;
+		const txn = this.db!.transaction(() => {
+			for (const f of files) {
+				this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, f.filePath);
+				this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(f.filePath);
+			}
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ?`).run(projectId);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ?)`).run(projectId);
+		});
+		txn();
+	}
+
+	// ============================================================
+	// Guardrails
+	// ============================================================
+
+	async listGuardrails(): Promise<Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
+		const result: Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }> = {};
+		for (const r of rows) {
+			result[r.name as string] = {
+				name: r.name as string,
+				serverId: r.serverId as string,
+				prompt: (r.prompt as string) || undefined,
+				triggerOnTools: JSON.parse(r.triggerOnTools as string) as IToolAttachment[],
+				inferenceParams: JSON.parse(r.inferenceParams as string) as Record<string, unknown>,
+				messagesCount: r.messagesCount as number,
+				includeBaseMessage: (r.includeBaseMessage as number) === 1,
+			};
+		}
+		return result;
+	}
+
+	async upsertGuardrail(guardrail: { name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.guardrails} (name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(name) DO UPDATE SET
+				serverId = excluded.serverId,
+				prompt = excluded.prompt,
+				triggerOnTools = excluded.triggerOnTools,
+				inferenceParams = excluded.inferenceParams,
+				messagesCount = excluded.messagesCount,
+				includeBaseMessage = excluded.includeBaseMessage`
+		).run(
+			guardrail.name,
+			guardrail.serverId,
+			guardrail.prompt ?? null,
+			JSON.stringify(guardrail.triggerOnTools || []),
+			JSON.stringify(guardrail.inferenceParams || {}),
+			guardrail.messagesCount ?? 0,
+			guardrail.includeBaseMessage ? 1 : 0,
+		);
+	}
+
+	async deleteGuardrail(name: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.guardrails} WHERE name = ?`).run(name);
+	}
+
+	// ============================================================
+	// Modes
+	// ============================================================
+
+	async listModes(): Promise<Array<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }>> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.modes}`).all() as Array<Record<string, unknown>>;
+		return rows.map(r => ({
+			id: r.id as string,
+			name: r.name as string,
+			scope: r.scope as string,
+			color: r.color as string,
+			prompt: (r.prompt as string) || undefined,
+			allowedTools: JSON.parse(r.allowedTools as string) as IToolAttachment[],
+			activeGuardrails: JSON.parse(r.activeGuardrails as string) as string[],
+		}));
+	}
+
+	async getMode(id: string): Promise<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] } | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.modes} WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
+		if (!row) return null;
+		return {
+			id: row.id as string,
+			name: row.name as string,
+			scope: row.scope as string,
+			color: row.color as string,
+			prompt: (row.prompt as string) || undefined,
+			allowedTools: JSON.parse(row.allowedTools as string) as IToolAttachment[],
+			activeGuardrails: JSON.parse(row.activeGuardrails as string) as string[],
+		};
+	}
+
+	async upsertMode(mode: { id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.modes} (id, name, scope, color, prompt, allowedTools, activeGuardrails)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(id) DO UPDATE SET
+				name = excluded.name,
+				scope = excluded.scope,
+				color = excluded.color,
+				prompt = excluded.prompt,
+				allowedTools = excluded.allowedTools,
+				activeGuardrails = excluded.activeGuardrails`
+		).run(
+			mode.id,
+			mode.name,
+			mode.scope,
+			mode.color,
+			mode.prompt ?? null,
+			JSON.stringify(mode.allowedTools),
+			JSON.stringify(mode.activeGuardrails),
+		);
+	}
+
+	async deleteMode(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.modes} WHERE id = ?`).run(id);
 	}
 }

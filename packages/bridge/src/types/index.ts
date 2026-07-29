@@ -379,6 +379,7 @@ export interface ICompletionRequest {
 	generateTitle?: boolean;
 	attachAllTools?: boolean;
 	attachedTools?: IToolAttachment[];
+	skipToolsSave?: boolean;
 	messageState?: Record<string, unknown>;
 	threadState?: Record<string, unknown>;
 }

@@ -17,6 +17,12 @@ export const ComposerUiSpace = React.memo(() => {
             gap="2"
             overflowX="auto"
             minWidth="0"
+            bg="var(--wc-bg-absolute)"
+            color="var(--wc-fg-absolute)"
+            borderRadius="10px 10px 0 0"
+            mb="1"
+						m="-2"
+						p="1.5"
         >
             {Object.keys(componentIds).map(id => {
                 const entry = entriesById[id];

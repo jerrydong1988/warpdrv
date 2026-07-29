@@ -26,11 +26,14 @@ import { mcpRouter } from './routes/mcp';
 import { proxyRouter } from './routes/proxy';
 import { startModelProxy, getProxyStatus } from './services/modelProxy';
 import { summaryRouter } from './routes/summary';
+import { listChatPresets } from './util/chatPresets';
 import { sseManager } from './services/sseManagerInstance';
 import { getAllServerStats, getServerStats } from './services/statsPoller';
 import { getAllServerSlots, getServerSlots } from './services/slotStateTracker';
 import { listCheckpoints } from './services/checkpointService';
 import { recipesRouter } from './routes/recipes';
+import { modesRouter } from './routes/modes';
+import { guardrailsRouter } from './routes/guardrails';
 import { checkpointsRouter } from './routes/checkpoints';
 import { clientLogsRouter } from './routes/clientLogs';
 import { whisperBackendsRouter } from './routes/whisperBackends';
@@ -38,11 +41,14 @@ import { whisperServersRouter } from './routes/whisperServers';
 import { whisperModelsRouter, loadCachedWhisperModels, getCachedWhisperModels } from './routes/whisperModels';
 import { setRecipeRunnerSSE, getActiveRun } from './services/recipeRunner';
 import { listRecipes } from './services/recipeStore';
+import { listModes } from './services/modeStore';
 import { getAllDownloads, getAllDownloadsRecord } from './services/downloadManager';
 import { SqlitePersistence, SqlitePersistenceWithBroadcast, McpClientManager, McpConfig, PermissionManager, Orchestrator, SseBroadcaster } from '@warpcore/bridge/server';
 import { EventNode } from '@warpcore/realmcore';
 import { bootWarpmcp } from './warpmcpRunner';
 import { TodoManager } from './services/todoManager';
+import { CodeGraphService } from './services/codeGraphService';
+import { getProjectRoot } from './services/projectRoot';
 import { embeddingManager } from './services/embeddingManager';
 import { getDataDir } from './util/mcpConfig';
 import { serveStaticApp } from './middleware/serveStatic';
@@ -59,6 +65,8 @@ export let orchestrator: Orchestrator;
 export let mcpConfig: McpConfig;
 export let broadcaster: SseBroadcaster;
 export let todoManager: TodoManager;
+export { getProjectRoot } from './services/projectRoot';
+export let codeGraphService: CodeGraphService;
 
 import { execSync } from 'child_process';
 import { launchAutoStartServers, reconcileServers } from './services/processManager';
@@ -107,6 +115,7 @@ async function main() {
 	persistence = new SqlitePersistenceWithBroadcast(path.join(dataDir, 'chat.db'), {}, broadcaster);
 	await persistence.init();
 	todoManager = new TodoManager(persistence);
+	codeGraphService = new CodeGraphService(persistence);
 
 	// Initialize MCP
 	mcpConfig = new McpConfig(path.join(dataDir, 'mcp.json'));
@@ -183,6 +192,8 @@ async function main() {
 	app.use('/api/mcp', authMiddleware, mcpRouter);
 	app.use('/api/summary', authMiddleware, summaryRouter);
 	app.use('/api/recipes', authMiddleware, recipesRouter);
+	app.use('/api/modes', authMiddleware, modesRouter);
+	app.use('/api/guardrails', authMiddleware, guardrailsRouter);
 	app.use('/api/checkpoints', authMiddleware, checkpointsRouter);
 	app.use('/api/whisper-backends', authMiddleware, whisperBackendsRouter);
 	app.use('/api/whisper-servers', authMiddleware, whisperServersRouter);
@@ -382,6 +393,26 @@ async function main() {
 		const recipesMap: Record<string, typeof recipes[number]> = {};
 		for (const r of recipes) recipesMap[r.id] = r;
 		return { recipes: recipesMap, activeRun: getActiveRun() };
+	});
+
+	sseManager.onConnect('modes:init', async () => {
+		const modes = await listModes();
+		const modesMap: Record<string, typeof modes[number]> = {};
+		for (const m of modes) modesMap[m.id] = m;
+		return modesMap;
+	});
+
+	sseManager.onConnect('guardrails:init', async () => {
+		const guardrails = await persistence.listGuardrails();
+		const result: Record<string, typeof guardrails[string]> = {};
+		for (const [name, g] of Object.entries(guardrails)) {
+			result[name] = g;
+		}
+		return result;
+	});
+
+	sseManager.onConnect('chatPresets:init', async () => {
+		return listChatPresets();
 	});
 
 	const httpServer = createServer(app);

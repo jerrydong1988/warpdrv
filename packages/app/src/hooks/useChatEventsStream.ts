@@ -1,4 +1,3 @@
-import { EventSource } from 'eventsource';
 import { useEffect } from 'react';
 import { useStore } from '../store';
 import { setKokoroCurrentRequestId, startStream } from '../pages/Chat/assistant-ui/KokoroTTS';
@@ -62,6 +61,7 @@ export function useChatEventsStream() {
 
 		const handleEvent = (e: MessageEvent) => {
 			const event = JSON.parse(e.data) as IBridgeEvent;
+
 			switch (event.type) {
 				case 'thread.created':
 					applyThreadCreated(event.thread);
@@ -84,9 +84,9 @@ export function useChatEventsStream() {
 			case 'message.deleted':
 				applyMessageDeleted(event.messageId, event.threadId);
 				break;
-case 'message.chunk':
-				applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
-		if (event.partType === 'text') {
+			case 'message.chunk':
+							applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
+					if (event.partType === 'text') {
 					const state = useStore.getState();
 					const guardPass = state.ttsActiveMessageId === event.messageId && state.ttsIsGenerating === 'vad';
 					//console.log('[TTS SSE] chunk: messageId=', event.messageId, 'ttsActiveMsg=', state.ttsActiveMessageId, 'generating=', state.ttsIsGenerating, 'guardPass=', guardPass);

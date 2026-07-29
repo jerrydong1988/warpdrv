@@ -8,6 +8,7 @@ import { authorizeAccess, authorizeToolCall } from './auth';
 import type { IStartArgs, IStartResult, IWarpmcpDeps } from './types';
 import { fileReadDefinition, fileReadHandler } from './tools/file_read';
 import { fileWriteDefinition, fileWriteHandler } from './tools/file_write';
+import { filePatchDefinition, filePatchHandler } from './tools/file_patch';
 import { dirListDefinition, dirListHandler } from './tools/dir_list';
 import { shellExecDefinition, shellExecHandler } from './tools/shell_exec';
 import { fetchDefinition, fetchHandler } from './tools/fetch';
@@ -17,6 +18,16 @@ import { todoAddDefinition, todoAddHandler } from './tools/todo';
 import { todoRemoveDefinition, todoRemoveHandler } from './tools/todo';
 import { todoUpdateDefinition, todoUpdateHandler } from './tools/todo';
 import { todoClearDefinition, todoClearHandler } from './tools/todo';
+import { todoWriteDefinition, todoWriteHandler } from './tools/todo';
+import { rgDefinition, rgHandler } from './tools/rg';
+import { getProjectRootDefinition, getProjectRootHandler } from './tools/get_project_root';
+import { codeGraphIngestDefinition, codeGraphIngestHandler } from './tools/code_graph_ingest';
+import { codeGraphSearchDefinition, codeGraphSearchHandler } from './tools/code_graph_search';
+import { codeGraphSymbolDefinition, codeGraphSymbolHandler } from './tools/code_graph_symbol';
+import { codeGraphCallersDefinition, codeGraphCallersHandler } from './tools/code_graph_callers';
+import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from './tools/code_graph_callees';
+import { codeGraphListDefinition, codeGraphListHandler } from './tools/code_graph_list';
+import { codeGraphClearDefinition, codeGraphClearHandler } from './tools/code_graph_clear';
 const SERVER_NAME = 'warpmcp';
 let httpServer: Server | null = null;
 let currentPort: number | null = null;
@@ -25,15 +36,26 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 	const tools = [
 		{ def: fileReadDefinition, handler: (a: any) => fileReadHandler(deps, a) },
 		{ def: fileWriteDefinition, handler: (a: any) => fileWriteHandler(deps, a) },
+		{ def: filePatchDefinition, handler: (a: any) => filePatchHandler(deps, a) },
 		{ def: dirListDefinition, handler: (a: any) => dirListHandler(deps, a) },
 		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a) },
 		{ def: fetchDefinition, handler: (a: any) => fetchHandler(a) },
 		{ def: embeddingSearchDefinition, handler: (a: any) => embeddingSearchHandler(deps, a) },
-		{ def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
-		{ def: todoAddDefinition, handler: (a: any) => todoAddHandler(deps, a) },
-		{ def: todoRemoveDefinition, handler: (a: any) => todoRemoveHandler(deps, a) },
-		{ def: todoUpdateDefinition, handler: (a: any) => todoUpdateHandler(deps, a) },
-		{ def: todoClearDefinition, handler: (a: any) => todoClearHandler(deps, a) },
+		// { def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
+		// { def: todoAddDefinition, handler: (a: any) => todoAddHandler(deps, a) },
+		// { def: todoRemoveDefinition, handler: (a: any) => todoRemoveHandler(deps, a) },
+		// { def: todoUpdateDefinition, handler: (a: any) => todoUpdateHandler(deps, a) },
+		// { def: todoClearDefinition, handler: (a: any) => todoClearHandler(deps, a) },
+		{ def: todoWriteDefinition, handler: (a: any) => todoWriteHandler(deps, a) },
+		{ def: rgDefinition, handler: (a: any) => rgHandler(deps, a) },
+		{ def: getProjectRootDefinition, handler: (a: any) => getProjectRootHandler(deps, a) },
+		{ def: codeGraphIngestDefinition, handler: (a: any) => codeGraphIngestHandler(deps, a) },
+		{ def: codeGraphSearchDefinition, handler: (a: any) => codeGraphSearchHandler(deps, a) },
+		{ def: codeGraphSymbolDefinition, handler: (a: any) => codeGraphSymbolHandler(deps, a) },
+		{ def: codeGraphCallersDefinition, handler: (a: any) => codeGraphCallersHandler(deps, a) },
+		{ def: codeGraphCalleesDefinition, handler: (a: any) => codeGraphCalleesHandler(deps, a) },
+		{ def: codeGraphListDefinition, handler: (a: any) => codeGraphListHandler(deps, a) },
+		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
 	];
 	const server = new McpServer({ name: SERVER_NAME, version: '0.1.0' }, { capabilities: { tools: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
@@ -42,14 +64,20 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		const tool = tools.find(t => t.def.name === name);
 		if (!tool) throw new Error(`Unknown tool: ${name}`);
 		const result = await tool.handler(args as any);
-		//console.log('[warpmcp] Tool', name, 'result:', JSON.stringify(result).slice(0, 200));
-		return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+		const json = JSON.stringify(result);
+		const bytes = Buffer.byteLength(json, 'utf8');
+		const limit = (tool.def as any).resultLimit;
+		if (limit !== undefined && bytes > limit) {
+			throw new Error(`[tool:${name}] Result too large: ${bytes} bytes exceeds ${limit} byte limit.`);
+		}
+		//console.log('[warpmcp] Tool', name, 'result:', json.slice(0, 200));
+		return { content: [{ type: 'text', text: json }] };
 	});
 	return server;
 }
 export async function startServer(args: IStartArgs): Promise<IStartResult> {
 	const { port, exposeExternal } = args;
-	const deps: IWarpmcpDeps = { isRemote: args.isRemote, validateBearerToken: args.validateBearerToken, getFsAllowedRoots: args.getFsAllowedRoots, embeddingSearch: args.embeddingSearch, todoRead: args.todoRead, todoAdd: args.todoAdd, todoRemove: args.todoRemove, todoUpdate: args.todoUpdate, todoClear: args.todoClear };
+	const deps: IWarpmcpDeps = { isRemote: args.isRemote, validateBearerToken: args.validateBearerToken, getFsAllowedRoots: args.getFsAllowedRoots, embeddingSearch: args.embeddingSearch, todoRead: args.todoRead, todoAdd: args.todoAdd, todoRemove: args.todoRemove, todoUpdate: args.todoUpdate, todoClear: args.todoClear, todoWrite: args.todoWrite, getProjectRoot: args.getProjectRoot, onFileWritten: args.onFileWritten, codeGraphIngest: args.codeGraphIngest, codeGraphSearch: args.codeGraphSearch, codeGraphGetSymbol: args.codeGraphGetSymbol, codeGraphGetCallers: args.codeGraphGetCallers, codeGraphGetCallees: args.codeGraphGetCallees, codeGraphListFile: args.codeGraphListFile, codeGraphClear: args.codeGraphClear };
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? '0.0.0.0' : '127.0.0.1';
 	const app = express();

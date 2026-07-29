@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import { ChevronDown, ChevronRight, Check } from "lucide-react";
 import { EMcpServerStatus } from "@warpcore/bridge";
+import { IToolAttachment } from "@warpcore/shared";
 import { useStore } from "@/store";
 
 type SlashCmdToolSelectorProps = {
@@ -13,6 +14,7 @@ type SlashCmdToolSelectorProps = {
   onKeyDown: (e: React.KeyboardEvent) => void;
   onFocus: () => void;
   onBlur: (e: React.FocusEvent) => void;
+  showAllMessages?: boolean;
 };
 
 export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
@@ -21,6 +23,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
   onChange,
   onFocus,
   onBlur,
+  showAllMessages = true,
 }) => {
   const mcpServers = useStore((s) => s.mcpServers);
   const [isOpen, setIsOpen] = useState(false);
@@ -40,10 +43,27 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
     return entries as [string, { status: EMcpServerStatus; tools: Array<{ name: string; description: string }> }][];
   }, [mcpServers]);
 
+  const toolKey = (serverName: string, toolName: string) => `${serverName}:${toolName}`;
+
   const selectedTools = useMemo(() => {
     if (!value || !value.trim()) return new Set<string>();
-    return new Set(value.split(",").map((t) => t.trim()).filter(Boolean));
-  }, [value]);
+    const raw = value.split(",").map((t) => t.trim()).filter(Boolean);
+    const keys = new Set<string>();
+    for (const entry of raw) {
+      if (entry.includes(":")) {
+        keys.add(entry);
+      } else {
+        // Backward compat: resolve old tool-only format by finding first match
+        for (const [serverName, state] of connectedServers) {
+          if (state.tools.some((t) => t.name === entry)) {
+            keys.add(toolKey(serverName, entry));
+            break;
+          }
+        }
+      }
+    }
+    return keys;
+  }, [value, connectedServers]);
 
   const isAllMessages = !value || !value.trim();
 
@@ -58,12 +78,13 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
     onBlur({} as React.FocusEvent);
   };
 
-  const handleToolToggle = (toolName: string) => {
+  const handleToolToggle = (serverName: string, toolName: string) => {
+    const key = toolKey(serverName, toolName);
     const next = new Set(selectedTools);
-    if (next.has(toolName)) {
-      next.delete(toolName);
+    if (next.has(key)) {
+      next.delete(key);
     } else {
-      next.add(toolName);
+      next.add(key);
     }
     onChange(next.size ? [...next].join(",") : "");
   };
@@ -161,7 +182,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
   }, [isOpen]);
 
   const displayLabel = isAllMessages
-    ? "All messages"
+    ? (showAllMessages ? "All messages" : "Tools")
     : `${selectedTools.size} tool(s)`;
 
   return (
@@ -236,50 +257,54 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
               padding: "4px",
             }}
           >
-            {/* "All messages" option */}
-            <div
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleSelectAllMessages}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "0.75rem",
-                color: "var(--wc-text-primary)",
-                background: isAllMessages
-                  ? "var(--wc-bg-selected)"
-                  : "transparent",
-              }}
-              onMouseEnter={(e) => {
-                if (!isAllMessages) {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "var(--wc-bg-card)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isAllMessages) {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "transparent";
-                }
-              }}
-            >
-              {isAllMessages && (
-                <Check size={14} color="var(--wc-accent-green)" />
-              )}
-              <span style={{ flex: 1 }}>All messages</span>
-            </div>
+            {showAllMessages && (
+              <>
+                {/* "All messages" option */}
+                <div
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={handleSelectAllMessages}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    color: "var(--wc-text-primary)",
+                    background: isAllMessages
+                      ? "var(--wc-bg-selected)"
+                      : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isAllMessages) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "var(--wc-bg-card)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isAllMessages) {
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        "transparent";
+                    }
+                  }}
+                >
+                  {isAllMessages && (
+                    <Check size={14} color="var(--wc-accent-green)" />
+                  )}
+                  <span style={{ flex: 1 }}>All messages</span>
+                </div>
 
-            {/* Separator */}
-            <div
-              style={{
-                height: "1px",
-                background: "var(--wc-border-subtle)",
-                margin: "4px 0",
-              }}
-            />
+                {/* Separator */}
+                <div
+                  style={{
+                    height: "1px",
+                    background: "var(--wc-border-subtle)",
+                    margin: "4px 0",
+                  }}
+                />
+              </>
+            )}
 
             {totalCount === 0 ? (
               <div
@@ -295,7 +320,7 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
               connectedServers.map(([serverName, state]) => {
                 const isExpanded = expandedServers.has(serverName);
                 const activeCount = state.tools.filter(
-                  (t) => selectedTools.has(t.name)
+                  (t) => selectedTools.has(toolKey(serverName, t.name))
                 ).length;
 
                 return (
@@ -344,12 +369,12 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
                     {isExpanded && (
                       <div style={{ paddingLeft: "4px" }}>
                         {state.tools.map((tool) => {
-                          const isSelected = selectedTools.has(tool.name);
+                          const isSelected = selectedTools.has(toolKey(serverName, tool.name));
                           return (
                             <div
                               key={tool.name}
                               onMouseDown={(e) => e.stopPropagation()}
-                              onClick={() => handleToolToggle(tool.name)}
+                              onClick={() => handleToolToggle(serverName, tool.name)}
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -404,3 +429,27 @@ export const SlashCmdToolSelector: React.FC<SlashCmdToolSelectorProps> = ({
     </>
   );
 };
+
+export const SlashCmdMessageType: React.FC<SlashCmdToolSelectorProps> = (props) => (
+  <SlashCmdToolSelector {...props} showAllMessages={true} />
+);
+
+export const SlashCmdTools: React.FC<SlashCmdToolSelectorProps> = (props) => (
+  <SlashCmdToolSelector {...props} showAllMessages={false} />
+);
+
+export function parseToolValue(value: string): IToolAttachment[] {
+  if (!value || !value.trim()) return [];
+  const result: IToolAttachment[] = [];
+  for (const entry of value.split(",").map((t) => t.trim()).filter(Boolean)) {
+    const idx = entry.indexOf(":");
+    if (idx > 0) {
+      result.push({ serverName: entry.slice(0, idx), toolName: entry.slice(idx + 1) });
+    }
+  }
+  return result;
+}
+
+export function serializeToolValue(tools: IToolAttachment[]): string {
+  return tools.map((t) => `${t.serverName}:${t.toolName}`).join(",");
+}

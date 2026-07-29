@@ -129,6 +129,7 @@ export function decideMcpToolCall(
 	messages?: TOpenAIMessage[],
 	attachAllTools?: boolean,
 	attachedTools?: IToolAttachment[],
+	skipToolsSave?: boolean,
 ) {
 	return json<null>(`/api/chat/tool-calls/${toolCallId}/resume`, {
 		method: 'POST',
@@ -140,6 +141,7 @@ export function decideMcpToolCall(
 			inferenceParams,
 			attachAllTools,
 			attachedTools,
+			skipToolsSave,
 			...(messages ? { messages } : {}),
 		}),
 	});

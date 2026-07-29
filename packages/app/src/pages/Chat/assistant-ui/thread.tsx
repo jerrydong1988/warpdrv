@@ -102,6 +102,14 @@ export const ServerStatusContext = React.createContext<IServerStatusContext>({
 	supportsMultiModal: false,
 });
 
+const hexToRgba = (hex: string): string => {
+	const cleaned = hex.replace('#', '');
+	const r = parseInt(cleaned.slice(0, 2), 16);
+	const g = parseInt(cleaned.slice(2, 4), 16);
+	const b = parseInt(cleaned.slice(4, 6), 16);
+	return `rgba(${r},${g},${b}`;
+};
+
 export const Thread: FC<{
 	isLoading?: boolean,
 	currentServerId: TServerId | null
@@ -335,6 +343,14 @@ const Composer: FC = () => {
 	const composerText = useAuiState(s => s.composer.text);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const editorRef = useRef<IWarpComposerEditorRef>(null);
+	const modes = useStore(s => s.modes);
+	const modeId = useStore(s => {
+		const ts = s.getCurrentThreadState(s);
+		return ts?.modeId as string | undefined;
+	});
+	const modeColor = useMemo(() => {
+		return modeId ? modes[modeId]?.color : null;
+	}, [modeId, modes]);
 
 	const handleChangeText = useCallback((text: string) => {
 		aui.composer().setText(text);
@@ -403,11 +419,16 @@ const Composer: FC = () => {
 			<ComposerPrimitive.AttachmentDropzone asChild>
 				<div
 					data-slot="composer-shell"
-					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow focus-within:border-[var(--wc-border-default)] data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
-						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
-						borderColor: "var(--wc-border-default)",
+						boxShadow: modeColor
+							? `0 0 0 1px ${hexToRgba(modeColor)},0.15)}, 0px 10px 10px 10px rgba(0,0,0,0.15)`
+							: "0px 10px 10px 10px rgba(0,0,0,0.15)",
+						borderColor: modeColor
+							? `${hexToRgba(modeColor)},0.4)`
+							: "var(--wc-border-default)",
+						color: "var(--wc-text-primary)",
 					}}
 				>
 					<ComposerAttachments />
@@ -471,6 +492,14 @@ const ToolsSelector: FC = React.memo(() => {
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
+	const currentThreadId = useStore(s => s.currentThreadId);
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const threadState = useStore(s => s.getCurrentThreadState(s));
+
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
 
 	const connectedServers = useMemo(() => {
 		const entries = Object.entries(mcpServers).filter(([, state]) => state.status === EMcpServerStatus.CONNECTED);
@@ -479,20 +508,56 @@ const ToolsSelector: FC = React.memo(() => {
 
 	const totalCount = useMemo(() => connectedServers.reduce((sum, [, s]) => sum + s.tools.length, 0), [connectedServers]);
 
-	const color = (attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)';
-	const label = attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${String(attachedTools.length)} Tool(s)` : 'Off';
+	// Mode-active tools
+	const modeToolSet = useMemo(() => {
+		if (!isModeActive || !currentMode) return null;
+		const s = new Set<string>();
+		for (const t of currentMode.allowedTools) {
+			if (typeof t === 'string') continue;
+			s.add(`${t.serverName}:${t.toolName}`);
+		}
+		return s;
+	}, [isModeActive, currentMode]);
+
+	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
+	const effectiveTools = isModeActive ? modeToolSet : null;
+
+	const color = isModeActive
+		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
+		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
+	const label = isModeActive
+		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Off')
+		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tool(s)` : 'Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
+		if (isModeActive) return;
 		if (checked) {
 			setAttachedTools(true, []);
 		} else {
 			setAttachedTools(false, attachedTools);
 		}
-	}, [attachedTools]);
+	}, [attachedTools, isModeActive]);
 
-	const handleToolChange = useCallback((serverName: string, toolName: string, checked: boolean) => {
-		if (attachAllTools) return;
+	const handleToolChange = useCallback(async (serverName: string, toolName: string, checked: boolean) => {
 		const tool: IToolAttachment = { serverName, toolName };
+		if (isModeActive && currentMode) {
+			// Update mode's allowedTools
+			const currentTools = currentMode.allowedTools.filter((t: any) => typeof t !== 'string') as IToolAttachment[];
+			let next: IToolAttachment[];
+			if (checked) {
+				next = [...currentTools, tool];
+			} else {
+				next = currentTools.filter(t => !(t.serverName === serverName && t.toolName === toolName));
+			}
+			try {
+				const { updateMode } = await import('@/api/mode-services');
+				await updateMode(currentMode.id, { allowedTools: next });
+			} catch (e) {
+				console.error('[ToolsSelector] Failed to update mode:', e);
+			}
+			return;
+		}
+		if (attachAllTools) return;
 		let next: IToolAttachment[];
 		if (checked) {
 			next = [...attachedTools, tool];
@@ -502,7 +567,9 @@ const ToolsSelector: FC = React.memo(() => {
 		setAttachedTools(false, next);
 	}, [
 		attachAllTools,
-		attachedTools
+		attachedTools,
+		isModeActive,
+		currentMode,
 	]);
 
 	return (
@@ -541,24 +608,28 @@ const ToolsSelector: FC = React.memo(() => {
 							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">No tools available</Text>
 						) : (
 							<VStack gap="3" align="stretch">
-								<HStack gap="2">
-									<Switch.Root
-										label="All tools"
-										checked={attachAllTools}
-										onCheckedChange={(details) => handleAllToolsChange(details.checked)}
-									>
-										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
-										</Switch.Control>
-										<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
-											All tools
-										</Switch.Label>
-									</Switch.Root>
-								</HStack>
+								{!isModeActive && (
+									<HStack gap="2">
+										<Switch.Root
+											label="All tools"
+											checked={attachAllTools}
+											onCheckedChange={(details) => handleAllToolsChange(details.checked)}
+										>
+											<Switch.HiddenInput />
+											<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+												<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
+											</Switch.Control>
+											<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
+												All tools
+											</Switch.Label>
+										</Switch.Root>
+									</HStack>
+								)}
 								<AccordionRoot collapsible defaultValue={[]}>
 							{connectedServers.map(([serverName, state]) => {
-									const activeCount = attachedTools.filter(t => t.serverName === serverName).length;
+									const activeCount = isModeActive
+										? state.tools.filter(t => modeToolSet?.has(`${serverName}:${t.name}`)).length
+										: attachedTools.filter(t => t.serverName === serverName).length;
 									return (
 										<AccordionItemComp key={serverName} value={serverName} style={{ border: 'none' }}>
 											<AccordionItemTrigger
@@ -582,19 +653,21 @@ const ToolsSelector: FC = React.memo(() => {
 											<AccordionItemContent pt="1" pb="2" px="2" style={{ border: 'none' }}>
 												<VStack gap="1.5" align="stretch">
 													{state.tools.map(tool => {
-														const isSelected = attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name);
+														const isSelected = isModeActive
+															? !!modeToolSet?.has(`${serverName}:${tool.name}`)
+															: (attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name));
 														return (
-															<HStack key={tool.name} gap="2" opacity={attachAllTools ? 0.4 : 1}>
+															<HStack key={tool.name} gap="2" opacity={(isModeActive ? false : attachAllTools) ? 0.4 : 1}>
 																<Switch.Root
 																	label={tool.name}
 																	checked={isSelected}
-																	disabled={attachAllTools}
+																	disabled={!isModeActive && attachAllTools}
 																	onCheckedChange={(details) => {
-																		if (!attachAllTools) handleToolChange(serverName, tool.name, details.checked);
+																		handleToolChange(serverName, tool.name, details.checked);
 																	}}
 																>
 																	<Switch.HiddenInput />
-																	<Switch.Control css={{ bg: isSelected && !attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+																	<Switch.Control css={{ bg: isSelected ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
 <Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)'}} />
 								</Switch.Control>
 								<Switch.Label ml="0" fontSize="12px" color={isSelected ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} userSelect="none">
@@ -790,7 +863,7 @@ const EmbeddingStatus: FC = React.memo(() => {
 
 const ToolCallRenderer: FC = () => {
 	const part = useAuiState(s => s.part);
-	
+
 	return (
 		<ToolCallBlockWrapper
 			toolCallId={(part as any).toolCallId}
@@ -851,7 +924,7 @@ const AssistantMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px" }}>
+				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px 0 5px 15px", borderRadius: "15px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
@@ -882,7 +955,7 @@ const ReasoningBlock: FC = React.memo(() => {
 	if (!reasoning) return null;
 
 	return (
-		
+
 		<div className="mb-3 rounded-lg border" style={{ borderColor: 'var(--wc-border-subtle)', backgroundColor: 'var(--wc-bg-subtle)' }}>
 			<button
 				type="button"
@@ -1043,7 +1116,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>

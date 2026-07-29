@@ -1,5 +1,5 @@
 import type { ITodoItem } from '@warpcore/shared';
-import type { IWarpmcpDeps } from '../types';
+import type { IWarpmcpDeps, ITodoResult } from '../types';
 
 function guard(deps: IWarpmcpDeps, fn: keyof IWarpmcpDeps) {
 	if (!deps[fn]) throw new Error(`${String(fn)} not available`);
@@ -14,11 +14,11 @@ export const todoReadDefinition = {
 		properties: {},
 		required: [],
 	},
+	resultLimit: 40960,
 };
-export async function todoReadHandler(deps: IWarpmcpDeps, args: { threadId: string }): Promise<{ todos: ITodoItem[] }> {
+export async function todoReadHandler(deps: IWarpmcpDeps, args: { threadId: string }): Promise<ITodoResult> {
 	guard(deps, 'todoRead');
-	const todos = await deps.todoRead!(args.threadId);
-	return { todos };
+	return await deps.todoRead!(args.threadId);
 }
 
 // todo_add
@@ -33,6 +33,7 @@ export const todoAddDefinition = {
 		},
 		required: ['todo'],
 	},
+	resultLimit: 40960,
 };
 export async function todoAddHandler(deps: IWarpmcpDeps, args: { threadId: string; todo: ITodoItem; index?: number }): Promise<{ todos: ITodoItem[] }> {
 	guard(deps, 'todoAdd');
@@ -51,6 +52,7 @@ export const todoRemoveDefinition = {
 		},
 		required: ['index'],
 	},
+	resultLimit: 40960,
 };
 export async function todoRemoveHandler(deps: IWarpmcpDeps, args: { threadId: string; index: number }): Promise<{ todos: ITodoItem[] }> {
 	guard(deps, 'todoRemove');
@@ -70,6 +72,7 @@ export const todoUpdateDefinition = {
 		},
 		required: ['index', 'status'],
 	},
+	resultLimit: 40960,
 };
 export async function todoUpdateHandler(deps: IWarpmcpDeps, args: { threadId: string; index: number; status: ITodoItem['status'] }): Promise<{ todos: ITodoItem[] }> {
 	guard(deps, 'todoUpdate');
@@ -86,9 +89,29 @@ export const todoClearDefinition = {
 		properties: {},
 		required: [],
 	},
+	resultLimit: 40960,
 };
 export async function todoClearHandler(deps: IWarpmcpDeps, args: { threadId: string }): Promise<{ todos: ITodoItem[] }> {
 	guard(deps, 'todoClear');
 	const todos = await deps.todoClear!(args.threadId);
 	return { todos };
+}
+
+// todo_write
+export const todoWriteDefinition = {
+	name: 'todo_write',
+	description: 'Replace the entire todo list with a new array of items.',
+	inputSchema: {
+		type: 'object',
+		properties: {
+			todos: { type: 'array', items: { type: 'object', properties: { text: { type: 'string' }, status: { type: 'string', enum: ['pending', 'done'] } }, required: ['text'] } },
+			etag: { type: 'string', description: 'Current etag. Leave blank if list is currently empty, MUST provide the latest etag if todos is not currently empty - to prevent accidental overwrite.' },
+		},
+		required: ['todos'],
+	},
+	resultLimit: 40960,
+};
+export async function todoWriteHandler(deps: IWarpmcpDeps, args: { threadId: string; todos: ITodoItem[]; etag?: string }): Promise<ITodoResult> {
+	guard(deps, 'todoWrite');
+	return await deps.todoWrite!(args.threadId, args.todos, args.etag);
 }

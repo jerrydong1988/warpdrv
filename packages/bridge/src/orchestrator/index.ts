@@ -116,6 +116,15 @@ export class Orchestrator {
 			await this.persistence.updateMessageState(payload.messageId, payload.data);
 		});
 
+		this.eventNode.fn('bridge.listGuardrails', async () => {
+			return await this.persistence.listGuardrails();
+		});
+
+		this.eventNode.fn('bridge.getMode', async (api) => {
+			const id = api.payload as string;
+			return await this.persistence.getMode(id);
+		});
+
 		this.eventNode.fn('bridge.handlePureCompletion', async (api) => {
 			const payload = api.payload as {
 				inferenceRequestId: string;
@@ -248,6 +257,21 @@ export class Orchestrator {
 		}
 
 		return { threadId, folderId: null, topic: 'global', name: 'global' };
+	}
+
+	private async resolveThreadVars(threadId: TThreadId): Promise<Record<string, unknown> | null> {
+		const threadState = await this.persistence.getThreadState(threadId);
+		let result = threadState || {};
+		if (!result.projectRoot) {
+			const thread = await this.persistence.getThread(threadId);
+			if (thread?.folderId) {
+				const wsState = await this.persistence.getWorkspaceState(thread.folderId);
+				if (wsState?.projectRoot) {
+					result = { ...result, projectRoot: wsState.projectRoot };
+				}
+			}
+		}
+		return Object.keys(result).length > 0 ? result : null;
 	}
 
 	// V2: builds message chain from persistence instead of receiving it from frontend
@@ -426,7 +450,6 @@ export class Orchestrator {
 			threadId: request.threadId,
 			messageId: assistantMsg.id,
 		});
-
 		let result: IPassResult | null = null;
 		try {
 			result = await this.runPass(
@@ -439,9 +462,7 @@ export class Orchestrator {
 			);
 		} finally {
 			// Final checkpoint patch with full message state, then inference.ended
-			//console.log(new Date(), '[Orch] executePass finally, reading message from DB');
 			const finalMessage = await this.persistence.getMessage(assistantMsg.id);
-			//console.log(new Date(), '[Orch] message read from DB, emitting replaceParts');
 			if (finalMessage) {
 				this.broadcaster.emit({
 					type: 'message.patched',
@@ -453,7 +474,6 @@ export class Orchestrator {
 					},
 				});
 			}
-			//console.log(new Date(), '[Orch] emitting inference.ended');
 			this.broadcaster.emit({
 				type: 'inference.ended',
 				threadId: request.threadId,
@@ -540,9 +560,17 @@ export class Orchestrator {
 		}));
 		const hasTools = openAiTools.length > 0;
 
+		let finalMessages = [...messages];
+		finalMessages = await this.eventNode.pipe(
+			'bridge.preInference',
+			{ request, messages: finalMessages },
+			'.',
+			finalMessages,
+		) as Array<TOpenAIMessage>;
+
 		const body: Record<string, unknown> = {
 			model: 'model',
-			messages: messages,
+			messages: finalMessages,
 			stream: true,
 			...(hasTools ? { tools: openAiTools } : {}),
 			...this.buildInferenceParams(request.inferenceParams),
@@ -582,9 +610,14 @@ export class Orchestrator {
 		try {
 			while (true) {
 				const { done, value } = await reader.read();
-				if (done) break;
+				if (done) {
+					break;
+				}
 				buffer += decoder.decode(value, { stream: true });
-				const { chunks, remaining } = parseSSEBuffer(buffer);
+				const { chunks, remaining, done: sseDone } = parseSSEBuffer(buffer);
+				if (sseDone) {
+					// [DONE] marker received
+				}
 				buffer = remaining;
 
 				for (const chunk of chunks) {
@@ -619,6 +652,10 @@ export class Orchestrator {
 							});
 						}
 						turn.currentTextPart.text += delta.content;
+						// First chunk of text content
+						if (delta.content.length > 0 && turn.currentTextPart.text.length - delta.content.length === 0) {
+							// first chunk
+						}
 						this.broadcaster.emit({
 							type: 'message.chunk',
 							messageId: turn.assistantMessageId,
@@ -677,24 +714,21 @@ export class Orchestrator {
 						}
 					}
 
-					const fr = chunk.choices?.[0]?.finish_reason;
+		const fr = chunk.choices?.[0]?.finish_reason;
 					if (fr) {
-						//console.log(new Date(), '[Orch] finish_reason received');
 						finishReason = fr;
 					}
-					if (chunk.timings) timings = chunk.timings as Record<string, number>;
+		if (chunk.timings) timings = chunk.timings as Record<string, number>;
 					if (chunk.usage) usage = chunk.usage as Record<string, number>;
+				}
+				if (sseDone) {
+					break;
 				}
 			}
 		} finally {
-			//console.log(new Date(), '[Orch] stream ended, flushing parts');
 			await this.flushReasoningPart(turn);
 			await this.flushTextPart(turn);
-			//console.log(new Date(), '[Orch] parts flushed');
 		}
-
-		await this.flushReasoningPart(turn);
-		await this.flushTextPart(turn);
 
 		if (streamError) {
 			this.broadcaster.emit({
@@ -709,7 +743,6 @@ export class Orchestrator {
 		const finalToolCalls = finalizeToolCalls(toolCallAccumulators);
 
 		if (timings || usage) {
-			//console.log(new Date(), '[Orch] emitting stats patch');
 			const actualTokens = Math.ceil((fullText.length + reasoningText.length) / 4);
 			const stats: IChatMessageStats = {
 				promptTokens: (usage?.prompt_tokens ?? timings?.prompt_n ?? 0),
@@ -722,14 +755,12 @@ export class Orchestrator {
 				predictedMs: timings?.predicted_ms ?? 0,
 			};
 			await this.persistence.updateMessage(turn.assistantMessageId, { stats });
-			//console.log(new Date(), '[Orch] stats persisted, emitting patch');
 			this.broadcaster.emit({
 				type: 'message.patched',
 				messageId: turn.assistantMessageId,
 				threadId: request.threadId,
 				updates: { stats },
 			});
-			//console.log(new Date(), '[Orch] stats patch emitted');
 			await this.persistence.incrementThreadTokens(
 				request.threadId,
 				0,
@@ -880,8 +911,9 @@ export class Orchestrator {
 
 			try {
 				const wsVars = await this.resolveWsVars(request.threadId);
-				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars);
-				console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'finalArgs:', JSON.stringify(finalArgs));
+				const tsVars = await this.resolveThreadVars(request.threadId);
+				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars, tsVars);
+				console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
 				const mcpResult = await this.mcpClient.executeToolCall(serverName!, tc.name, finalArgs, request.threadId);
 				const resultStr = JSON.stringify(mcpResult.content);
 				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
@@ -985,8 +1017,9 @@ export class Orchestrator {
 			try {
 				const args = JSON.parse(tc.arguments);
 				const wsVars = await this.resolveWsVars(tc.threadId);
-				const finalArgs = this.mcpClient.prepareToolArgs(tc.serverName, tc.toolName, args, wsVars);
-				console.log('[orchestrator] resume tool call:', tc.serverName, tc.toolName, 'wsVars:', wsVars, 'finalArgs:', JSON.stringify(finalArgs));
+				const tsVars = await this.resolveThreadVars(tc.threadId);
+				const finalArgs = this.mcpClient.prepareToolArgs(tc.serverName, tc.toolName, args, wsVars, tsVars);
+				//console.log('[orchestrator] resume tool call:', tc.serverName, tc.toolName, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
 				const mcpResult = await this.mcpClient.executeToolCall(tc.serverName, tc.toolName, finalArgs, tc.threadId);
 				const resultStr = JSON.stringify(mcpResult.content);
 				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
@@ -1048,17 +1081,17 @@ export class Orchestrator {
 		if (stillBlocking) return;
 
 		// Convert resolved tool calls to OpenAI format and append to messages
-		const toolOpenAIMessages = allInChain
-			.filter((tc): tc is IToolCall => tc !== null)
-			.map(tc => ({
-				role: 'tool' as const,
-				content: tc.result ?? JSON.stringify({ error: tc.error }),
-				tool_call_id: tc.id,
-			}));
+		// const toolOpenAIMessages = allInChain
+		// 	.filter((tc): tc is IToolCall => tc !== null)
+		// 	.map(tc => ({
+		// 		role: 'tool' as const,
+		// 		content: tc.result ?? JSON.stringify({ error: tc.error }),
+		// 		tool_call_id: tc.id,
+		// 	}));
 
 		// All tool calls resolved — trigger next inference pass
 		const enabledTools = await this.resolveEnabledTools(request);
-		const baseMessages = await this.buildMessageChain(request, tc.messageId, toolOpenAIMessages);
+		const baseMessages = await this.buildMessageChain(request, tc.messageId);
 
 		await this.executePass(
 			inferenceUrl,
@@ -1118,7 +1151,7 @@ export class Orchestrator {
 
 	private async resolveEnabledTools(request: ICompletionRequest): Promise<IToolDefinition[]> {
 		// Save to DB — convenience for UI reload only, doesn't affect filtering
-		if (request.attachAllTools !== undefined || request.attachedTools !== undefined) {
+		if (!request.skipToolsSave && (request.attachAllTools !== undefined || request.attachedTools !== undefined)) {
 			await this.persistence.saveThreadAttachedTools(
 				request.threadId,
 				request.attachAllTools ?? false,
