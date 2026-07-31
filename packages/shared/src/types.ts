@@ -131,7 +131,7 @@ export interface IModel {
 // ============================================================
 export interface ISpecDecodeParams {
 	enabled: boolean;
-	mode?: 'draft' | 'ngram' | 'mtp'; // undefined → 'draft' (backward compat)
+	mode?: 'draft' | 'ngram' | 'mtp' | 'dflash'; // undefined → 'draft' (backward compat)
 	// Shared across modes
 	draftMax: number; // max tokens to draft per step
 	draftMin: number; // min tokens to draft per step
@@ -145,6 +145,8 @@ export interface ISpecDecodeParams {
 	specType?: ESpecType;
 	// MTP-specific: max draft tokens per step (maps to --spec-draft-n-max)
 	specDraftNMax?: number;
+	// DFlash-specific: floor below which drafting is skipped (maps to --spec-draft-n-min)
+	specDraftNMin?: number;
 	// Ngram-only (optional)
 	ngramSizeN?: number; // lookup n-gram length
 	ngramSizeM?: number; // draft m-gram length

@@ -70,7 +70,18 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 'bridge.getThreadState',
                 payload.request.threadId,
             ) as Record<string, unknown> | null;
-            
+
+            // Load workspace state for projectRoot fallback
+            let wsState: Record<string, unknown> | null = null;
+            const folderId = (payload.request as any).folderId as string | undefined;
+            if (folderId) {
+                wsState = await api.eventNode.invoke(
+                    '/warpcore',
+                    'bridge.getWorkspaceState',
+                    folderId,
+                ) as Record<string, unknown> | null;
+            }
+
             let content = '';
             let isToolsIncluded = false;
             let isTodosIncluded = false;
@@ -102,10 +113,17 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 isTodosIncluded = true;
             }
 
+            // --- Project Root ---
+
+            const projectRoot = (threadState?.projectRoot || wsState?.projectRoot) as string | undefined;
+            if (projectRoot) {
+                content += `\nProject Root\n${projectRoot}\n`;
+            }
+
             // ---
 
             if (
-                isToolsIncluded || isTodosIncluded
+                isToolsIncluded || isTodosIncluded || projectRoot
             ) {
                 let messages = eventApi.result as Array<{
                     role: string;

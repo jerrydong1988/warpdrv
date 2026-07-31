@@ -739,10 +739,12 @@ const GuardrailsPanel = React.memo(() => {
 const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 	const [expanded, setExpanded] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [draftName, setDraftName] = useDependantState(mode.name);
 	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || '');
 	const [draftScope, setDraftScope] = useDependantState(mode.scope);
 	const [draftColor, setDraftColor] = useDependantState(mode.color || '#a78bfa');
 	const [draftTools, setDraftTools] = useDependantState(mode.allowedTools);
+	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const threads = useStore(s => s.threads);
@@ -758,6 +760,15 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 		}
 	}, [mode.id]);
 
+	const handleNameBlur = useCallback(() => {
+		if (nameSaveTimerRef.current) clearTimeout(nameSaveTimerRef.current);
+		nameSaveTimerRef.current = setTimeout(() => {
+			if (draftName !== mode.name) {
+				updateMode({ name: draftName || '' });
+			}
+		}, 200);
+	}, [draftName, mode.name, updateMode]);
+
 	const handlePromptBlur = useCallback(() => {
 		if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
 		promptSaveTimerRef.current = setTimeout(() => {
@@ -769,6 +780,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 	useEffect(() => {
 		return () => {
+			if (nameSaveTimerRef.current) clearTimeout(nameSaveTimerRef.current);
 			if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
 		};
 	}, []);
@@ -797,9 +809,24 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 							flexShrink: 0,
 						}}
 					/>
-					<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" flex="1" minW="0" textOverflow="ellipsis" overflow="hidden">
-						{mode.name}
-					</Text>
+					<Input
+						size="xs"
+						fontSize="xs"
+						fontWeight="600"
+						color="var(--wc-text-primary)"
+						value={draftName}
+						onChange={(e) => setDraftName(e.target.value)}
+						onBlur={handleNameBlur}
+						onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); }}
+						onClick={(e) => e.stopPropagation()}
+						flex="1"
+						minW="0"
+						bg="transparent"
+						borderColor="var(--wc-border-subtle)"
+						borderWidth="1px"
+						borderRadius="sm"
+						_focus={{ borderColor: 'var(--wc-border-active)' }}
+					/>
 					{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
 				</Flex>
 
