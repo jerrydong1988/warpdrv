@@ -34,7 +34,7 @@ export const RgRenderer = React.memo((props: {
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">
 								<Text as="span" color="var(--wc-text-muted)">rg</Text> {String(pattern ?? '(no pattern)')}
 							</Text>
-																												{path && <Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono">{splitPath(String(path)).dir}<Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(String(path)).file}</Text></Text>}
+																												{path && <Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" style={{color: "var(--wc-text-muted)"}}>{splitPath(String(path)).dir}<Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(String(path)).file}</Text></Text>}
 							{bits.length > 0 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">{bits.join(' · ')}</Text>}
 			</HStack>
 			{matches && matches.length > 0 && (

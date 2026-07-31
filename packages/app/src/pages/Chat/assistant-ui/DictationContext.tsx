@@ -118,7 +118,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 					setIsTranscribing(true);
 					try {
 						const wavBlob = float32ToWavBlob(audio);
-						const text = await transcribeAudio(selectedWhisperServerId, wavBlob);
+						const text = (await transcribeAudio(selectedWhisperServerId, wavBlob))?.replace(/\n+/g, ' ');
 						if (text) {
 							console.log('[Dictation] transcribed:', JSON.stringify(text.slice(0, 80)));
 							if (src === 'global') {

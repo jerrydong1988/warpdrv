@@ -53,7 +53,7 @@ export const ReadFileRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-												<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-muted)">Contents ({lineCount} lines)</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-muted)">{resultText.length} bytes ({lineCount} lines)</Text>
 					</HStack>
 					{expanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">

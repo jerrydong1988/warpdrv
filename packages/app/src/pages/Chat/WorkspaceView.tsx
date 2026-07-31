@@ -329,6 +329,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
+				<h5>Workspace Defaults</h5><br/><br/>
 				<Box w="full">
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
 						Project Root
@@ -372,7 +373,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<HStack w="full" gap="2" mt="2" mb="2">
 					<Box flex="1" position="relative">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-							Default Server
+							Server
 						</Text>
 						<HStack
 							gap="2"
@@ -446,21 +447,21 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 						)}
 					</Box>
 					<SelectField
-						label="Default System Prompt"
+						label="System Prompt"
 						value={defaultPresetId ?? ''}
 						options={['', ...chatPresets.map(p => p.id)]}
 						optionLabels={{ '': 'None', ...Object.fromEntries(chatPresets.map(p => [p.id, p.name])) }}
 						onChange={handleDefaultPresetChange}
 					/>
 					<SelectField
-						label="Default Mode"
+						label="Mode"
 						value={defaultModeId ?? ''}
 						options={['', ...Object.values(modes).map(m => m.id)]}
 						optionLabels={{ '': 'None', ...Object.fromEntries(Object.values(modes).map(m => [m.id, m.name])) }}
 						onChange={handleDefaultModeChange}
 					/>
 					<SelectField
-						label="Default Reasoning"
+						label="Reasoning"
 						value={defaultReasoningEffort ?? EReasoningEffort.NONE}
 						options={Object.values(EReasoningEffort)}
 						optionLabels={{ none: 'None', low: 'Low', medium: 'Medium', high: 'High' }}

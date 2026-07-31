@@ -23,7 +23,7 @@ import { ChatSidebar } from './ChatSidebar';
 import { useDerivedMsgsForUI } from '@/hooks/useChatSelectors';
 import { useThreadConfig } from '@/hooks/useThreadConfig';
 import { useThreadAttachedTools } from '@/hooks/useThreadAttachedTools';
-import { useWorkspace } from '@/hooks/useWorkspace';
+
 import { useHotkey, HotkeyMode } from '@/hooks/useHotKey';
 import { useSlashCommandProcessor } from '@/hooks/useSlashCommandProcessor';
 
@@ -641,7 +641,7 @@ export const ChatPage = React.memo(() => {
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const [threadsListCollapsed, setThreadsListCollapsed] = useState(false);
 
-	useWorkspace();
+
 	const [searchOpen, setSearchOpen] = useState(false);
 	const openChatSidebarTab = useStore(s => s.openChatSidebarTab);
 	const chatSidebarOpen = useStore(s => s.chatSidebarOpen);
