@@ -135,54 +135,60 @@ const defaultComponents = memoizeMarkdownComponents({
   h1: ({ className, ...props }) => (
     <h1
       className={cn(
-        "aui-md-h1 mb-2 scroll-m-20 font-semibold text-base first:mt-0 last:mb-0",
+        "aui-md-h1 mb-2 scroll-m-20 font-semibold first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'calc(var(--chat-font-size) + 8px)', color: 'var(--wc-fg-absolute)'}}
       {...props}
     />
   ),
   h2: ({ className, ...props }) => (
     <h2
       className={cn(
-        "aui-md-h2 mt-3 mb-1.5 scroll-m-20 font-semibold text-sm first:mt-0 last:mb-0",
+        "aui-md-h2 mt-3 mb-1.5 scroll-m-20 font-semibold first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'calc(var(--chat-font-size) + 5px)', color: 'var(--wc-text-header-muted)', textDecoration: "underline" }}
       {...props}
     />
   ),
   h3: ({ className, ...props }) => (
     <h3
       className={cn(
-        "aui-md-h3 mt-2.5 mb-1 scroll-m-20 font-semibold text-sm first:mt-0 last:mb-0",
+        "aui-md-h3 mt-2.5 mb-1 scroll-m-20 font-semibold first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'calc(var(--chat-font-size) + 3px)', color: 'var(--wc-special-indigo)' }}
       {...props}
     />
   ),
   h4: ({ className, ...props }) => (
     <h4
       className={cn(
-        "aui-md-h4 mt-2 mb-1 scroll-m-20 font-medium text-sm first:mt-0 last:mb-0",
+        "aui-md-h4 mt-2 mb-1 scroll-m-20 font-medium first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'calc(var(--chat-font-size) + 1px)', color: 'var(--wc-text-muted)' }}
       {...props}
     />
   ),
   h5: ({ className, ...props }) => (
     <h5
       className={cn(
-        "aui-md-h5 mt-2 mb-1 font-medium text-sm first:mt-0 last:mb-0",
+        "aui-md-h5 mt-2 mb-1 font-medium first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'var(--chat-font-size)', color: 'var(--wc-text-muted)' }}
       {...props}
     />
   ),
   h6: ({ className, ...props }) => (
     <h6
       className={cn(
-        "aui-md-h6 mt-2 mb-1 font-medium text-sm first:mt-0 last:mb-0",
+        "aui-md-h6 mt-2 mb-1 font-medium first:mt-0 last:mb-0",
         className,
       )}
+      style={{ fontSize: 'calc(var(--chat-font-size) - 1px)', color: 'var(--wc-text-muted)' }}
       {...props}
     />
   ),

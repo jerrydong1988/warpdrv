@@ -2,7 +2,7 @@ import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
 import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
-import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
+import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT } from './prompts';
 import { store } from '../../util/store';
 import { getMode } from '../../services/modeStore';
 import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
@@ -97,8 +97,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             if (mode && mode.allowedTools.length > 0) {
                 const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
-                content += `\nTools\nAllowed tools: ${toolNames.join(', ')}\n`;
-                if (mode.prompt) content += `\nMode Prompt\n${mode.prompt}\n`;
+                content += `\${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
+                if (mode.prompt) content += `\nCURRENT MODE\n${mode.prompt}\n`;
                 isToolsIncluded = true;
             }
 
@@ -109,7 +109,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             if (todos && todos.length > 0) {
                 const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
-                content += `\nTodos\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
+                content += `\TO-DOs\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
                 isTodosIncluded = true;
             }
 
@@ -195,7 +195,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
             if (!commands?.some(c => c.name === 'compact')) return;
-            
+
 
             const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
             for (const part of userMsg.content) {
@@ -341,7 +341,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     const result = await api.eventNode.invoke('/warpcore', 'bridge.handlePureCompletion', {
                         inferenceRequestId: guardrail.name + '-' + messageId,
                         inferenceUrl: grInferenceUrl,
-                        
+
                         messages: [{
                             role: 'user',
                             content: prompt,

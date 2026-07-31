@@ -3,6 +3,7 @@ import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FileText } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { useStore } from '@/store';
+import { splitPath } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {
@@ -23,13 +24,13 @@ const diffViewerStyles = {
 		dark: {
 			diffViewerBackground: 'var(--wc-bg-surface)',
 			diffViewerColor: 'var(--wc-text-primary)',
-			addedBackground: 'var(--wc-accent-green-bg-15)',
+			addedBackground: 'var(--wc-accent-green-bg-8)',
 			addedColor: 'var(--wc-accent-green)',
 			removedBackground: 'var(--wc-accent-red-bg-12)',
 			removedColor: 'var(--wc-accent-red-alt)',
-			wordAddedBackground: 'var(--wc-accent-green-hover)',
+			wordAddedBackground: 'var(--wc-accent-green-bg-15)',
 			wordRemovedBackground: 'var(--wc-accent-red-hover)',
-			addedGutterBackground: 'var(--wc-accent-green-bg-15)',
+			addedGutterBackground: 'var(--wc-accent-green-bg-8)',
 			removedGutterBackground: 'var(--wc-accent-red-bg-12)',
 			gutterBackground: 'var(--wc-bg-surface)',
 			gutterBackgroundDark: 'var(--wc-bg-surface)',
@@ -48,13 +49,13 @@ const diffViewerStyles = {
 		light: {
 			diffViewerBackground: 'var(--wc-bg-surface)',
 			diffViewerColor: 'var(--wc-text-primary)',
-			addedBackground: 'var(--wc-accent-green-bg-15)',
+			addedBackground: 'var(--wc-accent-green-bg-8)',
 			addedColor: 'var(--wc-accent-green)',
 			removedBackground: 'var(--wc-accent-red-bg-12)',
 			removedColor: 'var(--wc-accent-red-alt)',
-			wordAddedBackground: 'var(--wc-accent-green-hover)',
+			wordAddedBackground: 'var(--wc-accent-green-bg-15)',
 			wordRemovedBackground: 'var(--wc-accent-red-hover)',
-			addedGutterBackground: 'var(--wc-accent-green-bg-15)',
+			addedGutterBackground: 'var(--wc-accent-green-bg-8)',
 			removedGutterBackground: 'var(--wc-accent-red-bg-12)',
 			gutterBackground: 'var(--wc-bg-surface)',
 			gutterBackgroundDark: 'var(--wc-bg-surface)',
@@ -94,8 +95,8 @@ export const DiffRenderer = React.memo((props: {
 		<Box px="3" py="2">
 			<HStack gap="2" align="center" mb="2">
 				<FileText size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
+						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
 				</Text>
 			</HStack>
 
@@ -129,7 +130,7 @@ export const DiffRenderer = React.memo((props: {
 
 			{strategy === EDiffStrategy.FULL_WRITE && (
 				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
-					<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 						{content ?? ''}
 					</Text>
 				</Box>

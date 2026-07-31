@@ -127,7 +127,7 @@ export const Thread: FC<{
 	const isValidServer = !!currentServerId && currentServer?.status === EServerStatus.RUNNING;
 	const supportsMultiModal = currentServer?.useMultiModal ?? false;
 	const chatFixedWidth = useStore(s => s.settings.chatFixedWidth ?? false);
-	const currentThreadId = useStore(s => s.currentThreadId);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
 		let resolveFn: (() => void) | null = null;
@@ -160,6 +160,7 @@ export const Thread: FC<{
 							["--thread-max-width" as string]: "44rem",
 							["--composer-radius" as string]: "24px",
 							["--composer-padding" as string]: "10px",
+							["--chat-font-size" as string]: `calc(${chatFontSize}px - 3px)`,
 						}}
 					>
 						<ThreadPrimitive.Viewport
@@ -960,15 +961,15 @@ const ReasoningBlock: FC = React.memo(() => {
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium transition-colors"
-					style={{ color: 'var(--wc-text-muted)' }}
+				className="flex w-full items-center gap-2 px-3 py-2 font-medium transition-colors"
+					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
 			>
 				<BrainCircuitIcon className="size-3.5" />
 				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tokens est.)` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
-			{open && (
-				<div className="px-3 pb-3 text-xs whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)' }}>
+				{open && (
+					<div className="px-3 pb-3 whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)', fontSize: 'var(--chat-font-size)' }}>
 					{reasoning}
 				</div>
 			)}

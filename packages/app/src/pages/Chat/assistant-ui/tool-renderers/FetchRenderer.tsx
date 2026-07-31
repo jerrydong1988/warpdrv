@@ -14,14 +14,14 @@ export const FetchRenderer = React.memo((props: {
 		<Box px="3" py="2">
 			<HStack gap="2" align="center">
 				<Globe size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
+								<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
 					<Text as="span" color="var(--wc-text-muted)">{(method as string) || "GET"}</Text> {url ?? '(no url)'}
 				</Text>
 			</HStack>
 			{/* {extras.length > 0 && (
 				<HStack gap="3" mt="1" pl="5" flexWrap="wrap">
 					{extras.map(([k, v]) => (
-						<Text key={k} fontSize="10px" color="var(--wc-text-faint)">
+												<Text key={k} fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
 							{k}: <Text as="span" color="var(--wc-text-muted)">{String(v)}</Text>
 						</Text>
 					))}

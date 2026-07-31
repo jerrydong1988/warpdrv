@@ -93,7 +93,7 @@ export const TodoListRenderer = React.memo((props: {
       <Box px="3" py="2">
         <HStack gap="2" align="center">
           <SquareCheck size={13} color="var(--wc-text-secondary)" />
-          <Text fontSize="12px" color="var(--wc-text-muted)">No todos</Text>
+                    <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">No todos</Text>
         </HStack>
       </Box>
     );
@@ -103,9 +103,9 @@ export const TodoListRenderer = React.memo((props: {
     <Box px="3" py="2">
       <HStack gap="2" align="center" mb="2">
         <SquareCheck size={13} color="var(--wc-text-secondary)" />
-        <Text fontSize="12px" color="var(--wc-text-muted)">
-          {doneCount}/{items.length} done
-        </Text>
+                <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">
+                  {doneCount}/{items.length} done
+                </Text>
       </HStack>
       <VStack gap="1" align="stretch">
         {items.map((item, i) => {
@@ -116,10 +116,10 @@ export const TodoListRenderer = React.memo((props: {
                 ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
                 : <Square size={12} color="var(--wc-text-faint)" />
               }
-              <Text fontSize="10px" color="var(--wc-text-faint)" minW="14px">{i + 1}.</Text>
-              <Text
-                fontSize="12px"
-                fontFamily="mono"
+                            <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="14px">{i + 1}.</Text>
+                            <Text
+                              fontSize="calc(var(--chat-font-size) - 2px)"
+                              fontFamily="mono"
                 color={isDone ? 'var(--wc-text-muted)' : 'var(--wc-text-primary)'}
                 textDecoration={isDone ? 'line-through' : 'none'}
                 wordBreak="break-word"
@@ -177,10 +177,10 @@ export const TodoItemRenderer = React.memo((props: {
               ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
               : <Square size={12} color="var(--wc-text-faint)" />
             }
-            {props.index !== undefined && <Text fontSize="10px" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
-            <Text
-              fontSize="12px"
-              fontFamily="mono"
+                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
+                        <Text
+                          fontSize="calc(var(--chat-font-size) - 2px)"
+                          fontFamily="mono"
               color={isDone ? 'var(--wc-text-muted)' : 'var(--wc-text-primary)'}
               textDecoration={isDone ? 'line-through' : 'none'}
               wordBreak="break-word"
@@ -195,16 +195,16 @@ export const TodoItemRenderer = React.memo((props: {
   if (props.index !== undefined) {
     return (
       <Box px="3" py="2">
-        <Text fontSize="12px" color="var(--wc-text-muted)" fontStyle="italic">
-          Removed item #{props.index}
-        </Text>
+                <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)" fontStyle="italic">
+                  Removed item #{props.index}
+                </Text>
       </Box>
     );
   }
 
   return (
     <Box px="3" py="2">
-      <Text fontSize="12px" color="var(--wc-text-muted)">Todo item</Text>
+            <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">Todo item</Text>
     </Box>
   );
 });

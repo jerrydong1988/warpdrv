@@ -39,23 +39,23 @@ export const BashRenderer = React.memo((props: {
 		<Box px="3" py="2">
 			<HStack gap="2" align="center" mb="2">
 				<Terminal size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="11px" color="var(--wc-text-faint)">
-					{shell ?? 'shell'}
-					{cwd && <Text as="span" color="var(--wc-text-muted)"> · {cwd}</Text>}
-				</Text>
+				<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-faint)">
+								{shell ?? 'shell'}
+								{cwd && <Text as="span" color="var(--wc-text-muted)"> · {cwd}</Text>}
+							</Text>
 			</HStack>
 
 			<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="2" overflow="auto">
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" whiteSpace="pre-wrap" wordBreak="break-all">
-					{command ?? '(no command)'}
-				</Text>
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)" whiteSpace="pre-wrap" wordBreak="break-all">
+								{command ?? '(no command)'}
+							</Text>
 			</Box>
 			
 			<VStack gap="1" align="stretch">
 				{subCommands.map((sub, i) => (
 					<HStack key={i} gap="2" align="flex-start">
-						<Text fontSize="10px" color="var(--wc-text-faint)" minW="20px">{i + 1}.</Text>
-						<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all">
+						<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="20px">{i + 1}.</Text>
+										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all">
 							{sub}
 						</Text>
 					</HStack>
@@ -65,11 +65,11 @@ export const BashRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Output</Text>
+												<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">Output</Text>
 					</HStack>
 					{resultExpanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-							<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+														<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 								{resultText}
 							</Text>
 						</Box>

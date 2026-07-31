@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
-import { extractResultText } from './utils';
+import { extractResultText, splitPath } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export const ReadFileRenderer = React.memo((props: {
@@ -15,7 +15,17 @@ export const ReadFileRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, head, tail, offset, length, lineStart, lineEnd, result } = props;
-	const resultText = extractResultText(result);
+	const resultText = (() => {
+		const extracted = extractResultText(result);
+		if (!extracted) return typeof result === 'string' ? result : JSON.stringify(result);
+		try {
+			const parsed = JSON.parse(extracted);
+			if (typeof parsed === 'object' && parsed !== null && typeof (parsed as any).content === 'string') {
+				return (parsed as any).content;
+			}
+		} catch { /* not JSON */ }
+		return extracted;
+	})();
 	const [expanded, setExpanded] = useState(false);
 	const rangeBits: string[] = [];
 	if (head !== undefined) rangeBits.push(`head ${head}`);
@@ -30,11 +40,11 @@ export const ReadFileRenderer = React.memo((props: {
 		<Box px="3" py="2">
 			<HStack gap="2" align="center">
 				<FileText size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
+						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
 				</Text>
-				{rangeBits.length > 0 && (
-					<Text fontSize="10px" color="var(--wc-text-faint)">
+							{rangeBits.length > 0 && (
+								<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
 						{rangeBits.join(' · ')}
 					</Text>
 				)}
@@ -43,11 +53,11 @@ export const ReadFileRenderer = React.memo((props: {
 				<Box mt="2">
 					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">Contents ({lineCount} lines)</Text>
+												<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-muted)">Contents ({lineCount} lines)</Text>
 					</HStack>
 					{expanded && (
 						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
-							<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+														<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 								{resultText}
 							</Text>
 						</Box>
