@@ -971,16 +971,19 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 	const totalWarnings = doneEntries.reduce((acc, [, items]) => acc + (items as IGuardrailIssue[]).filter(i => i.type === EGuardrailIssueType.WARNING).length, 0);
 	const allClear = doneEntries.length === entries.length && totalViolations === 0 && totalWarnings === 0;
 
-	// Collect all issues with guardrail name, violations first then warnings, sorted by name within each group
-	const allIssues: Array<{ guardrailName: string; issue: IGuardrailIssue }> = [];
+	// Collect all common issues (without toolCallId) for the accordion
+	// Issues with toolCallId are shown inline on tool call blocks
+	const commonIssues: Array<{ guardrailName: string; issue: IGuardrailIssue }> = [];
 	for (const [name, result] of doneEntries) {
 		for (const item of result as IGuardrailIssue[]) {
-			allIssues.push({ guardrailName: name, issue: item });
+			if (!item.toolCallId) {
+				commonIssues.push({ guardrailName: name, issue: item });
+			}
 		}
 	}
-	const violations = allIssues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-	const warnings = allIssues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-	const sortedIssues = [...violations, ...warnings];
+	const commonViolations = commonIssues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+	const commonWarnings = commonIssues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+	const sortedCommonIssues = [...commonViolations, ...commonWarnings];
 
 	// Processing entries
 	const processingEntries = entries.filter(([, v]) => v === false);
@@ -1035,7 +1038,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 												<Text fontSize="sm" color="var(--wc-text-muted)">Processing {name}...</Text>
 											</HStack>
 										))}
-										{sortedIssues.map(({ guardrailName, issue }, i) => (
+															{sortedCommonIssues.map(({ guardrailName, issue }, i) => (
 											<GuardrailIssueItem key={i} guardrailName={guardrailName} item={issue} />
 										))}
 									</VStack>
@@ -1046,6 +1049,82 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 				</AccordionRoot>
 			</Box>
 		</>
+	);
+});
+
+const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
+	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+
+	// Collect all issues for this toolCallId across all guardrails
+	const issues: Array<{ guardrailName: string; issue: IGuardrailIssue }> = [];
+	if (results) {
+		for (const [name, result] of Object.entries(results)) {
+			if (Array.isArray(result)) {
+				for (const item of result) {
+					if (item.toolCallId === toolCallId) {
+						issues.push({ guardrailName: name, issue: item });
+					}
+				}
+			}
+		}
+	}
+
+	if (issues.length === 0) return children;
+
+	return (
+		<>
+			{children}
+			<Box p="2" pt="0" pl="6">
+				<VStack gap="1" align="stretch">
+					{issues.map(({ guardrailName, issue }, i) => (
+						<ToolCallGuardrailIssueItem key={i} guardrailName={guardrailName} item={issue} />
+					))}
+				</VStack>
+			</Box>
+		</>
+	);
+});
+
+const ToolCallGuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
+	const addAnnotation = useStore(s => s.addAnnotation);
+	const isViolation = item.type === EGuardrailIssueType.VIOLATION;
+
+	return (
+		<Box
+			p="1.5"
+			borderRadius="md"
+			bg={isViolation ? 'var(--wc-accent-red-bg-8)' : 'var(--wc-accent-yellow-bg-8)'}
+			borderWidth="1px"
+			borderColor={isViolation ? 'var(--wc-accent-red-border)' : 'var(--wc-accent-yellow-border)'}
+		>
+			<Flex justifyContent="space-between" align="flex-start">
+				<HStack gap="1.5" flex="1" minW="0">
+					{isViolation
+						? <XCircle size={14} color="var(--wc-accent-red)" />
+						: <AlertTriangle size={14} color="var(--wc-accent-yellow)" />}
+					<Badge px="1" py="0.25" fontSize="9px" color="var(--wc-text-secondary)" bg="var(--wc-bg-active)">
+						{guardrailName}
+					</Badge>
+					<Text fontSize="xs" color="var(--wc-text-primary)" noOfLines={2}>{item.issue}</Text>
+				</HStack>
+				<Box
+					as="button"
+					onClick={() => addAnnotation(item.quote, item.issue)}
+					title="Add to annotations"
+					flexShrink={0}
+					ml="1"
+					p="0.5"
+					borderRadius="3px"
+					border="none"
+					bg="transparent"
+					cursor="pointer"
+					color="var(--wc-text-muted)"
+					_hover={{ bg: 'var(--wc-bg-subtle)', color: 'var(--wc-text-primary)' }}
+				>
+					<TbMessage2Plus size={14} />
+				</Box>
+			</Flex>
+		</Box>
 	);
 });
 
@@ -1235,6 +1314,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
 		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, { label: 'Modes', icon: TiFlowSwitch });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
+		api.registerUiSpaceComponent(EUISpaceLoc.TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
+		api.registerUiSpaceComponent(EUISpaceLoc.PENDING_TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });

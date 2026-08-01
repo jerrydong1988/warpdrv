@@ -10,6 +10,7 @@ import { autoResolveRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
+import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 
 interface IToolCallBlockWrapperProps {
 	toolCallId: string;
@@ -18,6 +19,7 @@ interface IToolCallBlockWrapperProps {
 	args: Record<string, unknown>;
 	result?: unknown;
 	status: 'complete' | 'running' | 'requires-action' | 'error';
+	messageId: string;
 }
 
 const statusColors: Record<EToolCallStatus, string> = {
@@ -36,7 +38,7 @@ const statusLabels: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.ERROR]: 'Error',
 };
 
-export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverName, args, result, status }: IToolCallBlockWrapperProps) => {
+export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverName, args, result, status, messageId }: IToolCallBlockWrapperProps) => {
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const { currentServerId } = useContext(ServerStatusContext);
 	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
@@ -216,7 +218,9 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 				</Box>
 			)}
 
-			{body}
-			</Box>
-	);
-});
+					<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
+						{body}
+					</ToolCallUiSpace>
+					</Box>
+				);
+			});

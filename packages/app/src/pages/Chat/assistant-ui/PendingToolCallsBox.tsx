@@ -9,6 +9,7 @@ import type { IToolAttachment } from '@warpcore/shared';
 import { ServerStatusContext } from './thread';
 import { autoResolveRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
+import { PendingToolCallUiSpace } from '../ui-space/PendingToolCallUiSpace';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 
@@ -279,7 +280,9 @@ export const PendingToolCallsBox = React.memo(() => {
 			</HStack>
 
 			{/* Tool call body */}
-			{body}
+			<PendingToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
+				{body}
+			</PendingToolCallUiSpace>
 
 			{/* Action buttons */}
 			<HStack gap="2" px="3" py="2.5" borderTopWidth={1} borderTopColor="var(--wc-border-subtle)">

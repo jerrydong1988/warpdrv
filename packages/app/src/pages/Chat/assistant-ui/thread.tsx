@@ -76,6 +76,7 @@ import { ComposerEditor, IWarpComposerEditorRef } from './ComposerEditor';
 import { insertComposerText, clearComposerEditor } from './composerEditorRegistry';
 import { ComposerUiSpace } from '../ui-space/ComposerUiSpace';
 import { MessageUiSpace } from '../ui-space/MessageUiSpace';
+import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 import type { IExtractedSlashCommand } from './docToString';
 
 const tokenEncoder = encodingForModel('gpt-4o');
@@ -866,6 +867,7 @@ const EmbeddingStatus: FC = React.memo(() => {
 
 const ToolCallRenderer: FC = () => {
 	const part = useAuiState(s => s.part);
+	const messageId = useAuiState(s => s.message.id);
 
 	return (
 		<ToolCallBlockWrapper
@@ -875,6 +877,7 @@ const ToolCallRenderer: FC = () => {
 			args={(part as any).args}
 			result={(part as any).result}
 			status={mapStatusFromPart((part as any).status)}
+			messageId={messageId}
 		/>
 	);
 };

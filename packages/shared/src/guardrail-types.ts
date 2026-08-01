@@ -9,6 +9,7 @@ export interface IGuardrailIssue {
 	quote: string;
 	issue: string;
 	type: EGuardrailIssueType;
+	toolCallId?: string;
 }
 
 export interface IGuardrailDefinition {
