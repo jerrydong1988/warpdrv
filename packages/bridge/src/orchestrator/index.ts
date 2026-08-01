@@ -809,8 +809,8 @@ export class Orchestrator {
 				}
 			}
 
-			// Pre-generate IDs so writes happen in the correct event order
-			const toolCallId = crypto.randomUUID();
+			// Use model's raw tool call ID for correlation with guardrails
+			const toolCallId = tc.id;
 			const toolMessageId = crypto.randomUUID();
 
 			const toolCallRecord: IToolCall = {

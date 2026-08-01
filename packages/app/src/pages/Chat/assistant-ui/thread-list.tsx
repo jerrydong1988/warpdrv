@@ -495,7 +495,7 @@ function FolderSection({
 				</Menu.Root>
 			</HStack>
 			{open && (
-				<Box pl="4" my="1">
+				<Box pl="4" my="1" maxH="600px" overflowY="auto" css={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' } }}>
 					{children}
 					{threads.length === 0 && (
 						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">Drop threads here</Text>

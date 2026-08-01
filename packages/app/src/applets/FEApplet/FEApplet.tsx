@@ -1055,21 +1055,41 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
 
+	if (!results) return children;
+
+	const entries = Object.entries(results);
+	const processingCount = useMemo(() => entries.filter(([, v]) => v === false).length, [entries]);
+	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+	const allClear = processingCount === 0 && doneEntries.length > 0;
+
 	// Collect all issues for this toolCallId across all guardrails
-	const issues: Array<{ guardrailName: string; issue: IGuardrailIssue }> = [];
-	if (results) {
-		for (const [name, result] of Object.entries(results)) {
-			if (Array.isArray(result)) {
-				for (const item of result) {
-					if (item.toolCallId === toolCallId) {
-						issues.push({ guardrailName: name, issue: item });
-					}
+	const issues = useMemo(() => {
+		const collected: Array<{ guardrailName: string; issue: IGuardrailIssue }> = [];
+		for (const [name, result] of doneEntries) {
+			for (const item of result as IGuardrailIssue[]) {
+				if (item.toolCallId === toolCallId) {
+					collected.push({ guardrailName: name, issue: item });
 				}
 			}
 		}
-	}
+		return collected;
+	}, [doneEntries, toolCallId]);
 
-	if (issues.length === 0) return children;
+	if (!allClear && issues.length === 0) return children;
+
+	if (allClear && issues.length === 0) {
+		return (
+			<>
+				{children}
+				<Box p="2" pt="0" pl="6">
+					<HStack gap="1">
+						<CheckCircle size={12} color="var(--wc-accent-green)" />
+						<Text fontSize="xs" color="var(--wc-accent-green)">All clear</Text>
+					</HStack>
+				</Box>
+			</>
+		);
+	}
 
 	return (
 		<>
