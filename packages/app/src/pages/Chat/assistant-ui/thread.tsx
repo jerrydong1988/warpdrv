@@ -5,7 +5,7 @@ import {
 } from "./attachment";
 import { MarkdownText } from "./markdown-text";
 import { ToolFallback } from "./tool-fallback";
-import { ToolCallBlockWrapper } from "./ToolCallBlockWrapper";
+import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import { KokoroTTSButton } from "./KokoroTTS";
 import { EmbeddingToggle } from "./EmbeddingToggle";
@@ -869,7 +869,7 @@ const ToolCallRenderer: FC = () => {
 	const messageId = useAuiState(s => s.message.id);
 
 	return (
-		<ToolCallBlockWrapper
+		<ToolCallBlockCollapsible
 			toolCallId={(part as any).toolCallId}
 			toolName={(part as any).toolName}
 			serverName={(part as any).serverName ?? 'unknown'}
@@ -1121,7 +1121,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>

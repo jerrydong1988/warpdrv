@@ -174,4 +174,15 @@ export const DiffRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
+	renderMini: React.memo(({ args }) => {
+		const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
+		if (typeof path !== 'string') return '';
+		const oldStr = args.old_string ?? args.oldText ?? args.old_str ?? args.old ?? args.search;
+		const newStr = args.new_string ?? args.newText ?? args.new_str ?? args.new ?? args.replace;
+		if (typeof oldStr === 'string' && typeof newStr === 'string') return `Edit ${path} (find_replace)`;
+		if (Array.isArray(args.edits)) return `Edit ${path} (${args.edits.length} edits)`;
+		const content = args.content ?? args.text ?? args.body;
+		if (typeof content === 'string') return `Write ${path}`;
+		return `Edit ${path}`;
+	}),
 };

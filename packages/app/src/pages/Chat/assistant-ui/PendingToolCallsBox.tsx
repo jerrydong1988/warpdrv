@@ -286,9 +286,11 @@ export const PendingToolCallsBox = React.memo(() => {
 			</HStack>
 
 			{/* Tool call body */}
-			<PendingToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
-				{body}
-			</PendingToolCallUiSpace>
+			<Box maxH="500px" overflowY="auto" overflowX="hidden" maxW="100%">
+				<PendingToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
+					{body}
+				</PendingToolCallUiSpace>
+			</Box>
 
 			{/* Action buttons */}
 			<HStack gap="2" px="3" py="2.5" borderTopWidth={1} borderTopColor="var(--wc-border-subtle)">

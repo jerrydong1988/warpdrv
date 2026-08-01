@@ -87,4 +87,18 @@ export const ReadFileRendererMeta: IToolCallRenderer = {
 		const lineEnd = typeof args.line_end === 'number' ? args.line_end : undefined;
 		return { path, head, tail, offset, length, lineStart, lineEnd };
 	},
+	renderMini: React.memo(({ args }) => {
+		const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
+		if (typeof path !== 'string') return '';
+		const parts: string[] = [];
+		if (typeof args.line_start === 'number') {
+			const end = typeof args.line_end === 'number' ? args.line_end : '+';
+			parts.push(`lines ${args.line_start}-${end}`);
+		} else if (typeof args.head === 'number') {
+			parts.push(`head ${args.head}`);
+		} else if (typeof args.tail === 'number') {
+			parts.push(`tail ${args.tail}`);
+		}
+		return parts.length ? `Read ${path} (${parts.join(', ')})` : `Read ${path}`;
+	}),
 };

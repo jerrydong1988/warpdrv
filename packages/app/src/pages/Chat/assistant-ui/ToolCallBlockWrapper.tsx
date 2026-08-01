@@ -196,6 +196,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 										<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-muted)">Processing...</Text>
 									</>
 								)}
+								/* Approval buttons moved to ToolCallBlockCollapsible header
 								{isPending && !deciding && (
 									<HStack gap="2">
 										<Box as="button" px="3" py="1" fontSize="calc(var(--chat-font-size) - 2px)" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" _hover={{ bg: 'var(--wc-accent-green-hover)' }} onClick={() => handleDecision('approve')}>
@@ -207,8 +208,9 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 										<Box as="button" px="3" py="1" fontSize="calc(var(--chat-font-size) - 2px)" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" _hover={{ bg: 'var(--wc-accent-red-hover)' }} onClick={() => handleDecision('deny')}>
 											<HStack gap="1"><X size={12} /><Text fontSize="calc(var(--chat-font-size) - 2px)">Deny</Text></HStack>
 										</Box>
-								</HStack>
-							)}
+									</HStack>
+								)}
+								*/
 					</HStack>
 			</HStack>
 

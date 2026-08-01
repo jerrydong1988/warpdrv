@@ -78,4 +78,10 @@ export const RgRendererMeta: IToolCallRenderer = {
 		const contextLines = typeof args.contextLines === 'number' ? args.contextLines : undefined;
 		return { pattern, path, type, caseSensitive, maxResults, contextLines };
 	},
+	renderMini: React.memo(({ args }) => {
+		const pattern = typeof args.pattern === 'string' ? args.pattern : '';
+		const path = typeof args.path === 'string' ? args.path : undefined;
+		const truncated = pattern.length > 60 ? pattern.slice(0, 57) + '...' : pattern;
+		return path ? `rg "${truncated}" in ${path}` : `rg "${truncated}"`;
+	}),
 };

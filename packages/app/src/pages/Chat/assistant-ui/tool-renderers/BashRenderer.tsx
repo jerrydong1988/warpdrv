@@ -94,4 +94,10 @@ export const BashRendererMeta: IToolCallRenderer = {
 			shell: typeof shell === 'string' ? shell : undefined,
 		};
 	},
+	renderMini: React.memo(({ args }) => {
+		const command = args.command ?? args.cmd ?? args.script ?? args.bash;
+		if (typeof command !== 'string') return '';
+		const truncated = command.length > 80 ? command.slice(0, 77) + '...' : command;
+		return truncated;
+	}),
 };

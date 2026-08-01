@@ -62,4 +62,11 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
 		if (!symbolId && !symbol) return false;
 		return { symbolId, symbol };
 	},
+	renderMini: React.memo(({ args }) => {
+		const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
+		const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
+		const label = symbolId ?? symbol ?? '';
+		const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
+		return `Symbol: ${truncated}`;
+	}),
 };

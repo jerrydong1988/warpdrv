@@ -25,4 +25,5 @@ export const CodeGraphClearRendererMeta: IToolCallRenderer = {
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		return {};
 	},
+	renderMini: React.memo(() => 'Graph cleared'),
 };

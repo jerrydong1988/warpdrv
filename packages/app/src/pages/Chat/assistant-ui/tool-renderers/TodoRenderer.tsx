@@ -150,6 +150,14 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     // List operation (read/clear)
     return {};
   },
+  renderMini: React.memo(({ args, result }) => {
+    const items = extractTodoArray(result ?? args);
+    if (items) {
+      const done = items.filter(i => i.status === 'done').length;
+      return `${done}/${items.length} todos`;
+    }
+    return 'Todos';
+  }),
 };
 
 /* -- TodoItemRenderer -- */
@@ -232,4 +240,17 @@ export const TodoItemRendererMeta: IToolCallRenderer = {
 
     return false;
   },
+  renderMini: React.memo(({ args }) => {
+    const itemKey = args.todo ?? args.task ?? args.item ?? args.entry;
+    if (itemKey && typeof itemKey === 'object') {
+      const text = extractText(itemKey as Record<string, unknown>);
+      if (text) {
+        const truncated = text.length > 60 ? text.slice(0, 57) + '...' : text;
+        return `Todo: ${truncated}`;
+      }
+    }
+    const idx = extractIndex(args);
+    if (idx !== undefined) return `Item #${idx}`;
+    return 'Todo item';
+  }),
 };

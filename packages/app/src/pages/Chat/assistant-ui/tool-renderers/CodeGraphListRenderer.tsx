@@ -60,4 +60,12 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
 		if (path === undefined) return false;
 		return { path };
 	},
+	renderMini: React.memo(({ args, result }) => {
+		const path = typeof args.path === 'string' ? args.path : '(project root)';
+		const text = typeof result === 'string' ? result : JSON.stringify(result);
+		let count = 0;
+		try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
+		const truncated = path.length > 50 ? path.slice(0, 47) + '...' : path;
+		return count > 0 ? `List ${truncated}: ${count} symbols` : `List ${truncated}`;
+	}),
 };

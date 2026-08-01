@@ -66,4 +66,14 @@ export const CodeGraphCallersRendererMeta: IToolCallRenderer = {
 		const depth = typeof args.depth === 'number' ? args.depth : undefined;
 		return { symbolId, symbol, depth };
 	},
+	renderMini: React.memo(({ args, result }) => {
+		const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
+		const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
+		const target = symbolId ?? symbol ?? '';
+		const text = typeof result === 'string' ? result : JSON.stringify(result);
+		let count = 0;
+		try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
+		const truncated = target.length > 50 ? target.slice(0, 47) + '...' : target;
+		return count > 0 ? `Callers of ${truncated}: ${count}` : `Callers of ${truncated}`;
+	}),
 };

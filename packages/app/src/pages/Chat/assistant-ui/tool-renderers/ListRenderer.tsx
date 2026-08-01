@@ -172,4 +172,9 @@ export const ListRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
+	renderMini: React.memo(({ args }) => {
+		const path = args.path ?? args.dir ?? args.directory ?? args.folder ?? args.file_path;
+		if (typeof path === 'string' && path.length > 0) return `List ${path}`;
+		return 'List (project root)';
+	}),
 };

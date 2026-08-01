@@ -55,4 +55,8 @@ export const CodeGraphIngestRendererMeta: IToolCallRenderer = {
 		const force = typeof args.force === 'boolean' ? args.force : undefined;
 		return { force };
 	},
+	renderMini: React.memo(({ args }) => {
+		const force = typeof args.force === 'boolean' ? args.force : false;
+		return force ? 'Force re-index' : 'Incremental index';
+	}),
 };

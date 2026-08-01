@@ -67,4 +67,12 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
 		const limit = typeof args.limit === 'number' ? args.limit : undefined;
 		return { query, kind, filePath, limit };
 	},
+	renderMini: React.memo(({ args, result }) => {
+		const query = typeof args.query === 'string' ? args.query : '';
+		const text = typeof result === 'string' ? result : JSON.stringify(result);
+		let count = 0;
+		try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
+		const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
+		return count > 0 ? `Search "${truncated}" — ${count} results` : `Search "${truncated}"`;
+	}),
 };

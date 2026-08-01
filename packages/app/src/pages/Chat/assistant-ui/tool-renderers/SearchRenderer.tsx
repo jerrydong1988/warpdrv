@@ -81,4 +81,10 @@ export const SearchRendererMeta: IToolCallRenderer = {
 		if (typeof query !== 'string' || query.length === 0) return false;
 		return { query };
 	},
+	renderMini: React.memo(({ args }) => {
+		const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
+		if (typeof query !== 'string') return '';
+		const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
+		return `Search "${truncated}"`;
+	}),
 };

@@ -42,4 +42,11 @@ export const FetchRendererMeta: IToolCallRenderer = {
 		const { url: _u, uri: _i, link: _l, endpoint: _e, address: _a, ...rest } = args;
 		return { url, ...rest };
 	},
+	renderMini: React.memo(({ args }) => {
+		const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
+		const method = (args.method as string) || 'GET';
+		if (typeof url !== 'string') return '';
+		const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
+		return `${method} ${truncated}`;
+	}),
 };
