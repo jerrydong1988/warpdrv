@@ -47,13 +47,15 @@ export const useTauriWindow = () => {
 				if (e.button !== 0) return;
 				const target = e.target as HTMLElement;
 
-				if (target.closest('.no-drag')) {
+				if (target.classList.contains('drag')) {
+					// Element itself opts in to drag
+				} else if (target.classList.contains('no-drag')) {
 					return;
-				};
-				
-				if (!target.closest('.drag')) {
+				} else if (target.closest('.no-drag')) {
 					return;
-				};
+				} else if (!target.closest('.drag')) {
+					return;
+				}
 
 				dragOrigin.current = { x: e.clientX, y: e.clientY };
 				isDragging.current = false;
@@ -95,7 +97,13 @@ export const useTauriWindow = () => {
 	const handleDoubleClick = useCallback(async (e: React.MouseEvent) => {
 		if (!isTauri) return;
 		const target = e.target as HTMLElement;
-		if (target.closest('.no-drag')) return;
+		if (target.classList.contains('drag')) {
+			// Element itself opts in
+		} else if (target.classList.contains('no-drag')) {
+			return;
+		} else if (target.closest('.no-drag')) {
+			return;
+		}
 
 		const { getCurrentWindow } = await import('@tauri-apps/api/window');
 		getCurrentWindow().toggleMaximize();

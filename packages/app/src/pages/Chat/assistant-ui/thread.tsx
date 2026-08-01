@@ -721,7 +721,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 			aui.composer().setText("<continue>");
 		}
 		aui.composer().send({ startRun: true });
-		clearComposerEditor();
 	}, [isSendDisabled, annotations, composerText, clearAnnotations, pendingSlashCommands.length]);
 
 	return (

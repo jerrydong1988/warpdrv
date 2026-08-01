@@ -103,6 +103,7 @@ export const SelectionPopover = () => {
 				if (dictationSource === 'popover' && dictationActive) {
 					stopDictation();
 				}
+				setInputText('');
 				setVisible(false);
 			}
 		};
