@@ -860,7 +860,7 @@ export const ChatPage = React.memo(() => {
 							<Plus size={15} />
 							New Chat
 						</Button>
-						<span style={{
+						<span className='drag' style={{
 							fontSize: "13px",
 							color: "var(--wc-text-muted)",
 							position: "fixed",

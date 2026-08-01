@@ -12,6 +12,7 @@ import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { PendingToolCallUiSpace } from '../ui-space/PendingToolCallUiSpace';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
+import { useDependantState } from '@/hooks/useDependantState';
 
 const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
@@ -96,6 +97,10 @@ export const PendingToolCallsBox = React.memo(() => {
 			.map(p => toolCallsById[p.toolCallId])
 			.filter((tc): tc is IToolCall => !!tc);
 	}, [currentThreadId, anchorMessageId, messagesByThread, toolCallsById]);
+
+	// Dismiss state - resets when anchor message changes
+	const [dismissedAnchorKey, setDismissedAnchorKey] = useDependantState(anchorMessageId ?? null);
+	const isDismissed = useMemo(() => dismissedAnchorKey === null, [dismissedAnchorKey]);
 
 	// Get pending tool calls (sorted by creation time)
 	const pendingCalls = useMemo(() => {
@@ -215,7 +220,7 @@ export const PendingToolCallsBox = React.memo(() => {
 	}, [serverState, toolName, toolCallRenderers, args, currentCall?.arguments, currentCall?.result]);
 
 	// Nothing to show - early return AFTER all hooks
-	if (hasDenied || pendingCalls.length === 0 || !currentThreadId || !anchorMessageId) return null;
+	if (hasDenied || pendingCalls.length === 0 || !currentThreadId || !anchorMessageId || isDismissed) return null;
 
 	return (
 		<Box
@@ -242,8 +247,8 @@ export const PendingToolCallsBox = React.memo(() => {
 					borderRadius="sm"
 					color="var(--wc-text-muted)"
 					_hover={{ bg: 'var(--wc-bg-hover)', color: 'var(--wc-accent-red)' }}
-					onClick={() => handleDecision('deny')}
-					title="Deny and dismiss all"
+					onClick={() => setDismissedAnchorKey(null)}
+					title="Dismiss"
 				>
 					<X size={12} />
 				</Box>

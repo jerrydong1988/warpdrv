@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FileText } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { useStore } from '@/store';
-import { splitPath } from './utils';
+import { extractResultText, splitPath } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {
@@ -86,10 +86,18 @@ export const DiffRenderer = React.memo((props: {
 	edits?: IEdit[],
 	content?: string,
 	strategy?: EDiffStrategy,
+	result?: unknown,
 }) => {
-	const { path, old, new: newVal, edits, content, strategy } = props;
+	const { path, old, new: newVal, edits, content, strategy, result } = props;
 	const theme = useStore(s => s.settings.theme);
 	const isDark = DARK_THEMES.has(theme ?? 'dark');
+
+	const matchLine = useMemo(() => {
+		if (!result) return;
+		const text = extractResultText(result);
+		if (!text) return;
+		try { return JSON.parse(text)?.matchLine; } catch { /* not json */ }
+	}, [result]);
 
 	return (
 		<Box px="3" py="2">
@@ -98,6 +106,11 @@ export const DiffRenderer = React.memo((props: {
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
 						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
 				</Text>
+				{typeof matchLine === 'number' && (
+					<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
+						line {matchLine}
+					</Text>
+				)}
 			</HStack>
 
 			{strategy === EDiffStrategy.FIND_REPLACE && (

@@ -15,8 +15,9 @@ export const ReadFileRenderer = React.memo((props: {
 	result?: unknown,
 }) => {
 	const { path, head, tail, offset, length, lineStart, lineEnd, result } = props;
-	const resultText = (() => {
-		const extracted = extractResultText(result);
+  const resultText = (() => {
+    if (result == null) return;
+    const extracted = extractResultText(result);
 		if (!extracted) return typeof result === 'string' ? result : JSON.stringify(result);
 		try {
 			const parsed = JSON.parse(extracted);
