@@ -67,6 +67,7 @@ import { encodingForModel } from 'js-tiktoken';
 import { IconButton } from '@chakra-ui/react';
 import { Elicitation } from './Elicitation';
 import { AnnotationsBox } from './AnnotationsBox';
+import { PendingToolCallsBox } from './PendingToolCallsBox';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { SelectionPopover } from './SelectionPopover';
 import { DictationProvider, useDictation } from './DictationContext';
@@ -194,6 +195,7 @@ export const Thread: FC<{
 										<ThreadScrollToBottom />
 										<Elicitation />
 										<AnnotationsBox />
+										<PendingToolCallsBox />
 										<Composer />
 									</ThreadPrimitive.ViewportFooter>
 								</div>

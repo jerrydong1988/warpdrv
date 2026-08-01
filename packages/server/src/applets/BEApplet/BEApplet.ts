@@ -296,7 +296,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                                 : '';
                         let result = `[${m.role}]: ${content}`;
                         if (m.tool_calls?.length) {
-                            result += '\n' + m.tool_calls.map(tc => `[${tc.function.name}]: ${tc.function.arguments}`).join('\n');
+                            result += '\n' + m.tool_calls.map(tc => `(toolCallId:${tc.id}) [toolName:${tc.function.name}] {body:${tc.function.arguments}}`).join('\n');
                         }
                         return result;
                     };

@@ -210,7 +210,7 @@ export const GuardrailBadge = memo(() => {
 			>
 				<FaShieldAlt size={14} color={totalActive > 0 ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'} />
 				<Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
-					{totalActive > 0 ? `${totalActive} guardrail${totalActive > 1 ? 's' : ''}` : 'Guardrails'}
+					{totalActive > 0 ? `${totalActive} Guardrail${totalActive > 1 ? 's' : ''}` : 'Guardrails'}
 				</Box>
 				<ChevronDown size={12} color="var(--wc-text-muted)" />
 			</Box>
