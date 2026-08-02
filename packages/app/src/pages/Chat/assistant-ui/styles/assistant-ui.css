@@ -137,8 +137,9 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    padding: 1px;
+    padding: 2px;
     background: linear-gradient(to bottom, var(--composer-border-color) 0%, transparent 75%);
+    opacity: 0.5;
     -webkit-mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);

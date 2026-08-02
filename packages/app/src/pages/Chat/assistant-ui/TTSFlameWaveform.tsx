@@ -102,7 +102,7 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 				right: 0,
 				height,
 				pointerEvents: 'none',
-				zIndex: 0,
+				zIndex: 1,
 				overflow: 'hidden',
 				borderTopLeftRadius: 'var(--composer-radius, 24px)',
 				borderTopRightRadius: 'var(--composer-radius, 24px)',

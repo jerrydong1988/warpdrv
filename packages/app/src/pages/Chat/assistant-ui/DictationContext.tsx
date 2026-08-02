@@ -48,6 +48,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 	const isStartingRef = useRef(false);
 	const shouldStopRef = useRef(false);
 	const isStoppingRef = useRef(false);
+	const runIdRef = useRef(0);
 	const vadActiveRef = useRef(false);
 
 	const whisperServers = useStore(s => s.whisperServers);
@@ -79,12 +80,13 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 		setIsActive(false);
 		setSource(null);
 		isStoppingRef.current = true;
+		runIdRef.current++;
 		if (isStartingRef.current) {
 			shouldStopRef.current = true;
 			return;
 		}
-		vadSessionRef.current?.stop();
-		vadSessionRef.current?.destroy();
+		try { vadSessionRef.current?.stop(); } catch (e) { console.error('[Dictation] vad.stop failed:', e); }
+		try { vadSessionRef.current?.destroy(); } catch (e) { console.error('[Dictation] vad.destroy failed:', e); }
 		vadSessionRef.current = null;
 		audioStreamRef.current?.getTracks().forEach(t => t.stop());
 		audioStreamRef.current = null;
@@ -97,6 +99,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 		if (!selectedWhisperServerId || !activeWhisperServer) { console.log('[Dictation] start skipped: no server'); return; }
 		if (activeWhisperServer.status !== EWhisperServerStatus.RUNNING) { console.log('[Dictation] start skipped: server not running'); return; }
 
+		const myRun = ++runIdRef.current;
 		isStartingRef.current = true;
 		shouldStopRef.current = false;
 		isStoppingRef.current = false;
@@ -111,7 +114,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 				(audioConstraints as any).deviceId = { exact: micDeviceId };
 			}
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-			if (shouldStopRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+			if (shouldStopRef.current || runIdRef.current !== myRun) { stream.getTracks().forEach(t => t.stop()); return; }
 			audioStreamRef.current = stream;
 			setWaveformStream(stream);
 
@@ -119,7 +122,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 			const vad = await MicVAD.new({
 				onSpeechStart: () => { console.log('[Dictation] speech started'); },
 				onSpeechEnd: async (audio: Float32Array) => {
-					if (isStoppingRef.current) return;
+					if (isStoppingRef.current || runIdRef.current !== myRun) return;
 					console.log('[Dictation] speech ended: isTranscribing:', isTranscribing);
 					setIsTranscribing(true);
 					try {
@@ -155,34 +158,37 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 				startOnLoad: false,
 				submitUserSpeechOnPause: true,
 			});
-			if (shouldStopRef.current) { stream.getTracks().forEach(t => t.stop()); audioStreamRef.current = null; setWaveformStream(null); return; }
-
+			if (shouldStopRef.current || runIdRef.current !== myRun) { stream.getTracks().forEach(t => t.stop()); if (runIdRef.current === myRun) { audioStreamRef.current = null; setWaveformStream(null); } return; }
 			vadSessionRef.current = {
 				start: async () => vad.start(),
 				stop: () => vad.stop(),
 				destroy: () => vad.destroy(),
 			};
 			await vad.start();
-			if (shouldStopRef.current) {
+			if (shouldStopRef.current || runIdRef.current !== myRun) {
 				console.log('[Dictation] stop requested during start, cleaning up');
-				vad.stop();
-				vadSessionRef.current?.destroy();
-				vadSessionRef.current = null;
+				const superseded = runIdRef.current !== myRun;
+				try { vad.stop(); } catch (e) { console.error('[Dictation] vad.stop failed:', e); }
+				try { vad.destroy(); } catch (e) { console.error('[Dictation] vad.destroy failed:', e); }
 				stream.getTracks().forEach(t => t.stop());
-				audioStreamRef.current = null;
-				setWaveformStream(null);
-				setIsActive(false);
-				setSource(null);
+				if (!superseded) {
+					vadSessionRef.current = null;
+					audioStreamRef.current = null;
+					setWaveformStream(null);
+					setIsActive(false);
+					setSource(null);
+				}
 				return;
 			}
 			console.log('[Dictation] vad started successfully');
 		} catch (err) {
 			console.error('[Dictation] start error:', err);
-		} finally {
-			isStartingRef.current = false;
-			if (!shouldStopRef.current) isStoppingRef.current = false;
-		}
-	}, [selectedWhisperServerId, activeWhisperServer, micDeviceId, stop]);
+			} finally {
+				isStartingRef.current = false;
+				if (!shouldStopRef.current) isStoppingRef.current = false;
+			}
+				if (shouldStopRef.current && runIdRef.current === myRun) stop();
+		}, [selectedWhisperServerId, activeWhisperServer, micDeviceId, stop]);
 
 	const subscribeTranscript = useCallback((fn: (text: string) => void) => {
 		callbacksRef.current.add(fn);

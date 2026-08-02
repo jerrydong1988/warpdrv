@@ -16,7 +16,7 @@ export const ComposerUiSpace = React.memo(() => {
             flexDir="row"
 				justify="space-between"
 				alignItems="center"
-            w="calc(100% + var(--chakra-spacing-1\.5) * 3)"
+            w="calc(100% + var(--chakra-spacing-1\.5) * 2.5)"
             overflowX="auto"
             minWidth="0"
             bg="linear-gradient(to bottom, var(--wc-bg-absolute), transparent)"
