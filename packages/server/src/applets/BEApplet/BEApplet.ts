@@ -97,21 +97,21 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             if (mode && mode.allowedTools.length > 0) {
                 const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
-                content += `\${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
+                content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
                 if (mode.prompt) content += `\nCURRENT MODE\n${mode.prompt}\n`;
                 isToolsIncluded = true;
             }
 
             // ---
 
-            const todos = threadState?.todos as ITodoItem[] | undefined;
-            const todoEtag = threadState?.todoEtag as string | undefined;
+            // const todos = threadState?.todos as ITodoItem[] | undefined;
+            // const todoEtag = threadState?.todoEtag as string | undefined;
 
-            if (todos && todos.length > 0) {
-                const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
-                content += `\TO-DOs\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
-                isTodosIncluded = true;
-            }
+            // if (todos && todos.length > 0) {
+            //     const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
+            //     content += `\nT-DOs\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
+            //     isTodosIncluded = true;
+            // }
 
             // --- Project Root ---
 
@@ -340,7 +340,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     });
                     const contextTexts = context.map(toText);
 
-                    const prompt = GUARDRAIL_PROMPT + GUARDRAIL_RULESET_GENERIC_PROMPT + '\n' + (guardrail.prompt || '')
+                    const prompt = GUARDRAIL_PROMPT + '\n' + (guardrail.prompt || GUARDRAIL_RULESET_GENERIC_PROMPT)
                         + 'Conversation/Message is below -\n'
                         + contextTexts.join('\n');
 

@@ -11,6 +11,7 @@ import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
+import { computeModeUnionTools } from '@/lib/toolUtils';
 
 interface IToolCallBlockWrapperProps {
 	toolCallId: string;
@@ -55,24 +56,10 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const currentMode = modeId ? modes[modeId] : null;
 	const isModeActive = !!currentMode;
 
-	const modeUnionTools = useMemo(() => {
-		if (!isModeActive) return null;
-		const result: IToolAttachment[] = [];
-		const seen = new Set<string>();
-		const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-		const scope = folderId || 'global';
-		for (const m of Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope)) {
-			for (const t of m.allowedTools) {
-				if (typeof t === 'string') continue;
-				const key = `${t.serverName}:${t.toolName}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					result.push(t);
-				}
-			}
-		}
-		return result;
-	}, [isModeActive, modes, currentThreadId, threads]);
+	const modeUnionTools = useMemo(
+		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
+		[isModeActive, modes, currentThreadId, threads]
+	);
 
 	const [deciding, setDeciding] = useState(false);
 	const toast = useToast();

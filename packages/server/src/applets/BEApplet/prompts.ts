@@ -36,7 +36,7 @@ Array<{
 Where -
 "quote": Verbatim extract of the AI message containing the violating text or tool call, include up to 150 chars.
 "issue": Your interpretation of why its a violation or warning - use 50-150 chars.
-"type": Must be either "violation" or "warning". All issues that are in direct contradiction with user's rules are to be flagged as "violation". Destructive actions are also to be flagged as a "violation". Other issues which are not explicitely checked by the user's rules, but can be potentially problematic - such as bad coding practices, anti-patterns are to be categorized as a "warning".
+"type": Must be either "violation" or "warning". Follow the user's instruction of categorizing issues as either of those. If no special isntructions are included then, all issues that are in direct contradiction with user's rules are to be flagged as "violation", and other issues which are not explicitely checked by the user's rules, but can be potentially problematic - such as bad coding practices, anti-patterns are to be categorized as a "warning".
 "toolCallId": Optional - if the issue is in a tool-call, provide the id of the tool-call. Make sure the ID is EXACT and not hallucinated. Leave undefined for issues not part of tool-call.
 
 An example of your response is -
@@ -58,6 +58,6 @@ export const GUARDRAIL_RULESET_GENERIC_PROMPT = `
 export const ALLOWED_TOOLS_PROMPT = `Only use tools that are listed in the ALLOWED TOOLS LIST. Do not call any tools that are not in this list, even they are defined.
 `;
 
-export const TRAILING_SYSTEM_PROMPT = `This message part is appended to provide the current state. You can use the data in this part to keep track. This message part will always contain the latest state and variables, such as todos and etags, if any.`;
+export const TRAILING_SYSTEM_PROMPT = `This message part is appended to provide the current state & mode of operation.`;
 
 export const CORE_INSTRUCTION_PROMPT = `Core instructions - 1. Only use tools that are listed in the ALLOWED TOOLS LIST in the system-reminder.`;

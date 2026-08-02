@@ -14,6 +14,7 @@ import { MiniToolCallUiSpace } from '../ui-space/MiniToolCallUiSpace';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 import { useDependantState } from '@/hooks/useDependantState';
+import { computeModeUnionTools } from '@/lib/toolUtils';
 
 const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
@@ -56,24 +57,10 @@ export const PendingToolCallsBox = React.memo(() => {
 	const isModeActive = !!currentMode;
 	const headMessageId = currentThreadId ? headMessageIdByThread[currentThreadId] : null;
 
-	const modeUnionTools = useMemo(() => {
-		if (!isModeActive) return null;
-		const result: IToolAttachment[] = [];
-		const seen = new Set<string>();
-		const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-		const scope = folderId || 'global';
-		for (const m of Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope)) {
-			for (const t of m.allowedTools) {
-				if (typeof t === 'string') continue;
-				const key = `${t.serverName}:${t.toolName}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					result.push(t);
-				}
-			}
-		}
-		return result;
-	}, [isModeActive, modes, currentThreadId, threads]);
+	const modeUnionTools = useMemo(
+		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
+		[isModeActive, modes, currentThreadId, threads]
+	);
 
 	// Filter tool calls for the head message of the current thread
 	const anchorMessageId = useMemo(() => {
@@ -116,8 +103,6 @@ export const PendingToolCallsBox = React.memo(() => {
 
 	// Safe to access currentCall for hooks - use first pending or a dummy
 	const currentCall = pendingCalls[0] ?? null;
-	const totalPending = headMessageToolCalls.length;
-	const currentIndex = totalPending - pendingCalls.length + 1;
 	const serverName = currentCall?.serverName ?? '';
 	const toolName = currentCall?.toolName ?? '';
 
@@ -244,7 +229,7 @@ export const PendingToolCallsBox = React.memo(() => {
 			<HStack gap="2" px="3" py="2" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
 				<Wrench size={13} color="var(--wc-text-tertiary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 3px)" fontWeight="600" color="var(--wc-text-primary)">
-					Tool Calls (1/{totalPending})
+						Tool Calls ({pendingCalls.length} Pending)
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -291,9 +276,11 @@ export const PendingToolCallsBox = React.memo(() => {
 			</HStack>
 
 			{/* Tool call body */}
-			<Box maxH="500px" overflowY="auto" overflowX="hidden" maxW="100%">
+			<Box maxH="700px" overflowY="auto" overflowX="hidden" maxW="100%">
 				<PendingToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
-					{body}
+						<Box maxH={"500px"} overflowY="auto" overflowX="auto" maxW="100%">
+							{body}
+						</Box>
 				</PendingToolCallUiSpace>
 			</Box>
 

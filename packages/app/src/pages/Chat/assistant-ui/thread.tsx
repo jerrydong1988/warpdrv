@@ -76,6 +76,7 @@ import { ComposerEditor, IWarpComposerEditorRef } from './ComposerEditor';
 import { insertComposerText, clearComposerEditor } from './composerEditorRegistry';
 import { ComposerUiSpace } from '../ui-space/ComposerUiSpace';
 import { MessageUiSpace } from '../ui-space/MessageUiSpace';
+import { MessageFooterUiSpace } from '../ui-space/MessageFooterUiSpace';
 import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 import type { IExtractedSlashCommand } from './docToString';
 
@@ -967,7 +968,7 @@ const ReasoningBlock: FC = React.memo(() => {
 					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
 			>
 				{/*<BrainCircuitIcon className="size-3.5" />*/}
-				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tokens est.)` : ''}</span>
+				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tks)` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
 				{open && (
@@ -1055,6 +1056,7 @@ const AssistantActionBar: FC = () => {
 		>
 			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1119,7 +1121,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "5px 15px 5px 15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
@@ -1149,6 +1151,7 @@ const ToolActionBar: FC = () => {
 			style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: "visible" }}
 		>
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1254,35 +1257,36 @@ const UserActionBar: FC = () => {
 			className="aui-user-action-bar-root"
 			style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: "visible" }}
 		>
-			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
-			<EmbeddingStatus />
+					{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
+					<EmbeddingStatus />
+					<MessageFooterUiSpace />
 
-			<Menu.Root positioning={{ getAnchorRect }}>
-				<Menu.Trigger asChild>
-					<ActionBarIcon>
-						<MoreVertical size={14} ref={ref}/>
-					</ActionBarIcon>
-				</Menu.Trigger>
-				<Menu.Positioner>
-					<Menu.Content>
-						<ActionBarPrimitive.Edit asChild>
-							<Menu.Item value="edit">
-								<HStack gap="2">
-									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
-								</HStack>
-							</Menu.Item>
-						</ActionBarPrimitive.Edit>
-						<Menu.Separator />
-						<Menu.Item value="delete">
-							<DeleteMessageButton messageId={messageId} />
-						</Menu.Item>
-					</Menu.Content>
-				</Menu.Positioner>
-			</Menu.Root>
-		</ActionBarPrimitive.Root>
-	);
-};
+					<Menu.Root positioning={{ getAnchorRect }}>
+						<Menu.Trigger asChild>
+							<ActionBarIcon>
+								<MoreVertical size={14} ref={ref}/>
+							</ActionBarIcon>
+						</Menu.Trigger>
+						<Menu.Positioner>
+							<Menu.Content>
+								<ActionBarPrimitive.Edit asChild>
+									<Menu.Item value="edit">
+										<HStack gap="2">
+											<PencilIcon size={14} />
+											<Text fontSize="12px">Edit</Text>
+										</HStack>
+									</Menu.Item>
+								</ActionBarPrimitive.Edit>
+								<Menu.Separator />
+								<Menu.Item value="delete">
+									<DeleteMessageButton messageId={messageId} />
+								</Menu.Item>
+							</Menu.Content>
+						</Menu.Positioner>
+					</Menu.Root>
+				</ActionBarPrimitive.Root>
+			);
+			};
 
 const EditComposer: FC = () => {
 	return (

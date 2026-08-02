@@ -23,6 +23,7 @@ export enum EUISpaceLoc {
     COMPOSER = "composer",
     RIGHT_PANEL = "right_panel",
     MESSAGE = "message",
+    MESSAGE_FOOTER = "message_footer",
     TOOL_CALL = "tool_call",
     PENDING_TOOL_CALL = "pending_tool_call",
     MINI_TOOL_CALL = "mini_tool_call",

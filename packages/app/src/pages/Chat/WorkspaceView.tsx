@@ -329,7 +329,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
-				<h5>Workspace Defaults</h5><br/><br/>
+				<h5>Workspace Defaults</h5>
 				<Box w="full">
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
 						Project Root

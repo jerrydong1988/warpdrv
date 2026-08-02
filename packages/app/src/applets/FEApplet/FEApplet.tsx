@@ -32,6 +32,8 @@ import { GuardrailBadge, ModeGuardrailPicker } from '../ui/GuardrailBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
+const EMPTY_ARRAY: Array<any> = [];
+const EMPTY_OBJ: Record<any, any> = {};
 
 const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
 	const mcpServers = useStore(s => s.mcpServers);
@@ -742,16 +744,10 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [draftName, setDraftName] = useDependantState(mode.name);
 	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || '');
-	const [draftScope, setDraftScope] = useDependantState(mode.scope);
 	const [draftColor, setDraftColor] = useDependantState(mode.color || '#a78bfa');
 	const [draftTools, setDraftTools] = useDependantState(mode.allowedTools);
 	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	const threads = useStore(s => s.threads);
-	const currentThreadId = useStore(s => s.currentThreadId);
-	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-	const scope = folderId || 'global';
 
 	const updateMode = useCallback(async (patch: Partial<IMode>) => {
 		try {
@@ -931,7 +927,6 @@ const ModesPanel = React.memo(() => {
 	const modes = useStore(s => s.modes);
 	const threads = useStore(s => s.threads);
 	const currentThreadId = useStore(s => s.currentThreadId);
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
 	const scope = folderId || 'global';
@@ -976,7 +971,7 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 	return (
 		<>
 			{children}
-			<Box mx="10px" mt="-1" mb="2">
+			<Box mx="15px" mt="1" mb="2">
 				<AccordionRoot collapsible>
 					<AccordionItemComp value="guardrails" borderRadius="10px" borderWidth="1px" borderColor="var(--wc-border-subtle)">
 						<AccordionItemTrigger
@@ -1046,7 +1041,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
-	const entries = results ? Object.entries(results) : [];
+	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
 	const processingNames = useMemo(() => entries.filter(([, v]) => v === false).map(([name]) => name), [entries]);
 	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
 	const isProcessing = processingNames.length > 0;
@@ -1064,6 +1059,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 	}, [doneEntries]);
 
 	if (role !== 'assistant' || !results) return children;
+	else if (allIssues.length === 0) return children;
 
 	return <GuardrailAccordion issues={allIssues} isProcessing={isProcessing} processingNames={processingNames}>{children}</GuardrailAccordion>;
 });
@@ -1071,7 +1067,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
 
-	const entries = results ? Object.entries(results) : [];
+	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
 	const processingNames = useMemo(() => entries.filter(([, v]) => v === false).map(([name]) => name), [entries]);
 	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
 	const isProcessing = processingNames.length > 0;
@@ -1099,7 +1095,7 @@ const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messa
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
-	const entries = results ? Object.entries(results) : [];
+	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
 	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
 	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
 
@@ -1153,10 +1149,10 @@ const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName:
 					{isViolation
 						? <XCircle size={18} color="var(--wc-accent-red)" style={{ marginTop: "3px" }}/>
 						: <AlertTriangle size={18} color="var(--wc-accent-yellow)" style={{ marginTop: "3px" }} />}
-					<Badge px="1.5" py="0.5" mt="0.5" fontSize="10px" color="var(--wc-text-secondary)" bg="var(--wc-bg-active)">
+					<Badge px="1.5" py="0.5" mt="0.5" fontSize="sm" color="var(--wc-text-secondary)" bg="var(--wc-bg-active)">
 						{guardrailName}
 					</Badge>
-					<Text fontSize="sm" color="var(--wc-text-primary)" textOverflow="ellipsis">{item.issue}</Text>
+					<Text fontSize="md" color="var(--wc-text-primary)" textOverflow="ellipsis">{item.issue}</Text>
 				</HStack>
 				<Box
 					as="button"
@@ -1175,14 +1171,45 @@ const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName:
 					<TbMessage2Plus size={18} />
 				</Box>
 			</Flex>
-			<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily="mono" fontStyle="italic" textOverflow="ellipsis" overflow="hidden" pl="6">
+			<Text color="var(--wc-text-muted)" fontFamily="mono" fontStyle="italic" textOverflow="ellipsis" overflow="hidden" pl="6">
 				{item.quote}
 			</Text>
 		</Box>
 	);
 });
 
+const GuardrailShieldCheck = React.memo(() => {
+	const messageId = useAuiState(s => s.message.id);
+	const role = useAuiState(s => s.message.role);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+
+	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+
+	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
+	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
+	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+
+	const totalIssues = useMemo(() => {
+		let count = 0;
+		for (const [, result] of doneEntries) {
+			for (const item of result as IGuardrailIssue[]) {
+				if (item.type === EGuardrailIssueType.VIOLATION || item.type === EGuardrailIssueType.WARNING) count++;
+			}
+		}
+		return count;
+
+	}, [doneEntries]);
+
+	const allClear = !isProcessing && doneEntries.length > 0 && totalIssues === 0;
+
+	if (role !== 'assistant' || !results || !allClear) return null;
+	return <GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />;
+
+});
+
+
 const toggleActiveGuardrail = (guardrailName: string, activate: boolean) => {
+
 	const state = useStore.getState();
 	const threadId = state.currentThreadId;
 	const ts = state.getCurrentThreadState(state);
@@ -1200,6 +1227,7 @@ const toggleActiveGuardrail = (guardrailName: string, activate: boolean) => {
 	} else {
 		state.setThreadState(threadId, { activeGuardrails: newNames });
 	}
+
 };
 
 const fn: IAppletFn<IAppletAPIFE> = async (api) => {
@@ -1331,6 +1359,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.PENDING_TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MINI_TOOL_CALL, MiniToolCallGuardrailIndicator, { label: 'MiniToolCallGuardrailIndicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, { label: 'GuardrailShieldCheck' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
 
