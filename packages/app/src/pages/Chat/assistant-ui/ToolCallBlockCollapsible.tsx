@@ -11,6 +11,7 @@ import type { IToolCallRenderer } from '@/store/types';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 import { ToolCallBlockBody } from './ToolCallBlockBody';
+import { MiniToolCallUiSpace } from '../ui-space/MiniToolCallUiSpace';
 
 const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
@@ -139,7 +140,11 @@ export const ToolCallBlockCollapsible = React.memo(({
 
 	return (
 		<Box w="full" overflow="hidden">
-			<Collapsible open={isOpen} onOpenChange={setIsOpen}>
+			<Collapsible open={isOpen} onOpenChange={setIsOpen} style={{
+				borderRadius: "10px",
+				borderColor: "var(--wc-border-subtle)",
+				borderWidth: isOpen ? 1 : 0,
+			}}>
 			<CollapsibleTrigger asChild>
 				<HStack
 					gap="2"
@@ -148,7 +153,8 @@ export const ToolCallBlockCollapsible = React.memo(({
 					overflow="hidden"
 					py="1"
 					cursor="pointer"
-					_hover={{ opacity: 0.8 }}
+						_hover={{ opacity: 0.8 }}
+					px="2"
 				>
 					{/* Chevron */}
 					<Box flexShrink={0}>
@@ -156,18 +162,20 @@ export const ToolCallBlockCollapsible = React.memo(({
 					</Box>
 
 					{/* Mini renderer component — memoized */}
-					<Box minW="0" overflow="hidden" textDecoration={displayStatus === EToolCallStatus.DENIED ? 'line-through' : 'none'}>
-						{MiniComponent ? (
-							<MiniComponent args={args} result={result} />
-						) : (
-							<HStack gap="1" align="center">
-								<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-								<Text whiteSpace="nowrap">
-									{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
-									<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
-								</Text>
-							</HStack>
-						)}
+					<Box minW="0" overflow="hidden" textDecoration={(displayStatus === EToolCallStatus.DENIED || displayStatus === EToolCallStatus.ERROR) ? 'line-through' : 'none'}>
+						<MiniToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
+							{MiniComponent ? (
+								<MiniComponent args={args} result={result} />
+							) : (
+								<HStack gap="1" align="center">
+									<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+									<Text whiteSpace="nowrap">
+										{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
+										<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
+									</Text>
+								</HStack>
+							)}
+						</MiniToolCallUiSpace>
 					</Box>
 
 					{/* Spacer */}

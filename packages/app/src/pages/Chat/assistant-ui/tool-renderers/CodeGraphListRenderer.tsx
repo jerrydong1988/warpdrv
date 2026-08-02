@@ -73,14 +73,11 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
     try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
     const { dir, file } = splitPath(relativePath(path, projectRoot));
     return (
-      <HStack gap="1" align="center">
-        <List size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">
-          Code List{' '}
-          <PathDisplay dir={dir} file={file} />
-          {count > 0 && <Text as="span" color="var(--wc-text-faint)"> ({count} symbol{count > 1 ? 's' : ''})</Text>}
-        </Text>
-      </HStack>
+      <Text whiteSpace="nowrap">
+        Code List{' '}
+        <PathDisplay dir={dir} file={file} />
+        {count > 0 && <Text as="span" color="var(--wc-text-faint)"> ({count} symbol{count > 1 ? 's' : ''})</Text>}
+      </Text>
     );
   }),
 };

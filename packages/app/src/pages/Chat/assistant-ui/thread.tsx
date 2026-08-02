@@ -966,7 +966,7 @@ const ReasoningBlock: FC = React.memo(() => {
 				className="flex w-full items-center gap-2 px-3 py-2 font-medium transition-colors"
 					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
 			>
-				<BrainCircuitIcon className="size-3.5" />
+				{/*<BrainCircuitIcon className="size-3.5" />*/}
 				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tokens est.)` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>

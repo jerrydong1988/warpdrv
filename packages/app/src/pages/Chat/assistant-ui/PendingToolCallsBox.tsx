@@ -10,6 +10,7 @@ import { ServerStatusContext } from './thread';
 import { autoResolveRenderer, autoResolveMiniRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { PendingToolCallUiSpace } from '../ui-space/PendingToolCallUiSpace';
+import { MiniToolCallUiSpace } from '../ui-space/MiniToolCallUiSpace';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 import { useDependantState } from '@/hooks/useDependantState';
@@ -264,17 +265,19 @@ export const PendingToolCallsBox = React.memo(() => {
 
 			{/* Tool call row — mini renderer */}
 			<HStack gap="3" px="3" py="2.5" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
-				{MiniComponent ? (
-					<MiniComponent args={args} result={currentCall?.result} />
-				) : (
-					<HStack gap="1" align="center">
-						<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-						<Text whiteSpace="nowrap">
-							{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
-							<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
-						</Text>
-					</HStack>
-				)}
+				<MiniToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
+					{MiniComponent ? (
+						<MiniComponent args={args} result={currentCall?.result} />
+					) : (
+						<HStack gap="1" align="center">
+							<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+							<Text whiteSpace="nowrap">
+								{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
+								<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
+							</Text>
+						</HStack>
+					)}
+				</MiniToolCallUiSpace>
 				<Box flex="1" />
 				<HStack gap="1">
 					{deciding && (

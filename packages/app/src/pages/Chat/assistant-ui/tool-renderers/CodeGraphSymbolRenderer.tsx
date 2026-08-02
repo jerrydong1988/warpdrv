@@ -69,10 +69,7 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
     const label = symbolId ?? symbol ?? '';
     const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
     return (
-      <HStack gap="1" align="center">
-        <FileCode size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>
     );
   }),
 };

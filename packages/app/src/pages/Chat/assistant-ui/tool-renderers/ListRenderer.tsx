@@ -184,20 +184,14 @@ export const ListRendererMeta: IToolCallRenderer = {
     if (typeof path === 'string' && path.length > 0) {
       const { dir, file } = splitPath(relativePath(path, projectRoot));
       return (
-        <HStack gap="1" align="center">
-          <FolderOpen size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-          <Text whiteSpace="nowrap">
-            List{' '}
-            <PathDisplay dir={dir} file={file} />
-          </Text>
-        </HStack>
+        <Text whiteSpace="nowrap">
+          List{' '}
+          <PathDisplay dir={dir} file={file} />
+        </Text>
       );
     }
     return (
-      <HStack gap="1" align="center">
-        <FolderOpen size={12} color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">List (project root)</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">List (project root)</Text>
     );
   }),
 };

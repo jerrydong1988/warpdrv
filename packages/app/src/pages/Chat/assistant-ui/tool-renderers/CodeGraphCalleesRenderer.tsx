@@ -75,13 +75,10 @@ export const CodeGraphCalleesRendererMeta: IToolCallRenderer = {
     try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
     const truncated = target.length > 50 ? target.slice(0, 47) + '...' : target;
     return (
-      <HStack gap="1" align="center">
-        <GitMerge size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">
-          Code Callees of {truncated}
-          {count > 0 && <Text as="span" color="var(--wc-text-faint)"> ({count})</Text>}
-        </Text>
-      </HStack>
+      <Text whiteSpace="nowrap">
+        Code Callees of {truncated}
+        {count > 0 && <Text as="span" color="var(--wc-text-faint)"> ({count})</Text>}
+      </Text>
     );
   }),
 };

@@ -59,10 +59,7 @@ export const CodeGraphIngestRendererMeta: IToolCallRenderer = {
   renderMini: React.memo(({ args }) => {
     const force = typeof args.force === 'boolean' ? args.force : false;
     return (
-      <HStack gap="1" align="center">
-        <Database size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">{force ? 'Code Force re-index' : 'Code Incremental index'}</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">{force ? 'Code Force re-index' : 'Code Incremental index'}</Text>
     );
   }),
 };

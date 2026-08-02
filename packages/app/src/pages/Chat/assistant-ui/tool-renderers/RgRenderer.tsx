@@ -53,10 +53,10 @@ export const RgRenderer = React.memo((props: {
 							{matches.map((m, i) => (
 								<Box key={i}>
 									<HStack gap="2" align="center">
-										<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)" minW="30px">{String(m.line)}</Text>
-															<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-muted)">{String(m.file)}</Text>
+										<Text fontSize="calc(var(--chat-font-size))" fontFamily="mono" color="var(--wc-text-faint)" minW="30px">{String(m.line)}</Text>
+															<Text fontSize="calc(var(--chat-font-size))" fontFamily="mono" color="var(--wc-text-muted)">{String(m.file)}</Text>
 									</HStack>
-																			<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all" pl="5">{String(m.text)}</Text>
+																			<Text fontSize="calc(var(--chat-font-size))" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all" pl="5">{String(m.text)}</Text>
 								</Box>
 							))}
 						</VStack>
@@ -91,20 +91,14 @@ export const RgRendererMeta: IToolCallRenderer = {
     if (path) {
       const { dir, file } = splitPath(relativePath(path, projectRoot));
       return (
-        <HStack gap="1" align="center">
-          <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-          <Text whiteSpace="nowrap">
-            grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> in{' '}
-            <PathDisplay dir={dir} file={file} />
-          </Text>
-        </HStack>
+        <Text whiteSpace="nowrap">
+          grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> in{' '}
+          <PathDisplay dir={dir} file={file} />
+        </Text>
       );
     }
     return (
-      <HStack gap="1" align="center">
-        <Search size={12} color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text></Text>
-      </HStack>
+      <Text whiteSpace="nowrap">grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text></Text>
     );
   }),
 };

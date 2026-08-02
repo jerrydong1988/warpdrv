@@ -74,13 +74,10 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
     try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
     const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
     return (
-      <HStack gap="1" align="center">
-        <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">
-          Code Search "{truncated}"
-          {count > 0 && <Text as="span" color="var(--wc-text-faint)"> — {count} results</Text>}
-        </Text>
-      </HStack>
+      <Text whiteSpace="nowrap">
+        Code Search "{truncated}"
+        {count > 0 && <Text as="span" color="var(--wc-text-faint)"> — {count} results</Text>}
+      </Text>
     );
   }),
 };

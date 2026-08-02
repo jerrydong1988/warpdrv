@@ -99,10 +99,7 @@ export const BashRendererMeta: IToolCallRenderer = {
     if (typeof command !== 'string') return '';
     const truncated = command.length > 80 ? command.slice(0, 77) + '...' : command;
     return (
-      <HStack gap="1" align="center">
-        <Terminal size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">{truncated}</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">{truncated}</Text>
     );
   }),
 };

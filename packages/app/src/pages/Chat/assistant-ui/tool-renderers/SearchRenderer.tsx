@@ -87,10 +87,7 @@ export const SearchRendererMeta: IToolCallRenderer = {
     if (typeof query !== 'string') return '';
     const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
     return (
-      <HStack gap="1" align="center">
-        <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">Search "{truncated}"</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">Search "{truncated}"</Text>
     );
   }),
 };

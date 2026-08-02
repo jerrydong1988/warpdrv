@@ -27,9 +27,6 @@ export const CodeGraphClearRendererMeta: IToolCallRenderer = {
 		return {};
 	},
   renderMini: React.memo(() => (
-    <HStack gap="1" align="center">
-      <Trash2 size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-      <Text whiteSpace="nowrap">Code Graph cleared</Text>
-    </HStack>
+    <Text whiteSpace="nowrap">Code Graph cleared</Text>
   )),
 };

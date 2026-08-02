@@ -185,13 +185,10 @@ export const DiffRendererMeta: IToolCallRenderer = {
     if (typeof path !== 'string') return '';
     const { dir, file } = splitPath(relativePath(path, projectRoot));
     return (
-      <HStack gap="1" align="center">
-        <Pencil size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">
-          Edit{' '}
-          <PathDisplay dir={dir} file={file} />
-        </Text>
-      </HStack>
+      <Text whiteSpace="nowrap">
+        Edit{' '}
+        <PathDisplay dir={dir} file={file} />
+      </Text>
     );
   }),
 };

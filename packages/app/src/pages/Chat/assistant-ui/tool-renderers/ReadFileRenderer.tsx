@@ -61,7 +61,7 @@ export const ReadFileRenderer = React.memo((props: {
 						<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-muted)">{resultText.length} bytes ({lineCount} lines)</Text>
 					</HStack> */}
 					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
-														<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+														<Text fontSize="calc(var(--chat-font-size))" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 								{resultText}
 							</Text>
 					</Box>
@@ -107,14 +107,11 @@ export const ReadFileRendererMeta: IToolCallRenderer = {
       parts.push(`tail ${args.tail}`);
     }
     return (
-      <HStack gap="1" align="center">
-        <FileText size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">
-          Read{' '}
-          <PathDisplay dir={dir} file={file} />
-          {parts.length > 0 && <Text as="span" color="var(--wc-text-faint)"> ({parts.join(', ')})</Text>}
-        </Text>
-      </HStack>
+      <Text whiteSpace="nowrap">
+        Read{' '}
+        <PathDisplay dir={dir} file={file} />
+        {parts.length > 0 && <Text as="span" color="var(--wc-text-faint)"> ({parts.join(', ')})</Text>}
+      </Text>
     );
   }),
 };

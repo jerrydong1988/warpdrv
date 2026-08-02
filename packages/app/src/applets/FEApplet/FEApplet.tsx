@@ -8,6 +8,7 @@ import { ChevronDown, CheckCircle, AlertTriangle, XCircle, ChevronRight, Edit2, 
 import { FaShieldAlt } from 'react-icons/fa';
 import { LuListTodo } from 'react-icons/lu';
 import { MdDragHandle } from 'react-icons/md';
+import { GoShield, GoShieldCheck } from 'react-icons/go';
 import { nanoid } from 'nanoid';
 import { useAuiState } from '@assistant-ui/react';
 import { useStore } from '@/store';
@@ -993,18 +994,20 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 							css={{ '&[data-state=open] .chevron': { transform: 'rotate(180deg)' } }}
 						>
 							<HStack gap="2">
-								<FaShieldAlt size={16} color="var(--wc-text-muted)" />
-								{/*<Text fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
-									Guardrails
-								</Text>*/}
+								{totalViolations > 0 && (
+									<GoShield size="var(--chat-font-size)" color="var(--wc-accent-red)" />
+								)}
+								{!totalViolations && totalWarnings > 0 && (
+									<GoShield size="var(--chat-font-size)" color="var(--wc-accent-yellow)" />
+								)}
+								{isProcessing && <Spinner size="xs" color="var(--wc-text-muted)" />}
+								{allClear && <GoShieldCheck size="var(--chat-font-size)" color="var(--wc-accent-green-icon)" opacity={0.8} />}
 								{totalViolations > 0 && (
 									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalViolations} Violations</Badge>
 								)}
 								{totalWarnings > 0 && (
 									<Badge color="var(--wc-accent-yellow)" bg="var(--wc-accent-yellow-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalWarnings} Warnings</Badge>
 								)}
-								{isProcessing && <Spinner size="xs" color="var(--wc-text-muted)" />}
-								{allClear && <CheckCircle size={16} color="var(--wc-accent-green)" />}
 							</HStack>
 							<HStack gap="2" align="center">
 								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" css={{ transition: 'transform 0.15s ease' }} />
@@ -1087,6 +1090,51 @@ const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }:
 	if (!results) return children;
 
 	return <GuardrailAccordion issues={issues} isProcessing={isProcessing} processingNames={processingNames}>{children}</GuardrailAccordion>;
+});
+
+const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
+	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+
+	const entries = results ? Object.entries(results) : [];
+	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
+	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+
+	const violationCount = useMemo(() => {
+		let count = 0;
+		for (const [, result] of doneEntries) {
+			for (const item of result as IGuardrailIssue[]) {
+				if (item.toolCallId === toolCallId && item.type === EGuardrailIssueType.VIOLATION) count++;
+			}
+		}
+		return count;
+	}, [doneEntries, toolCallId]);
+
+	const warningCount = useMemo(() => {
+		let count = 0;
+		for (const [, result] of doneEntries) {
+			for (const item of result as IGuardrailIssue[]) {
+				if (item.toolCallId === toolCallId && item.type === EGuardrailIssueType.WARNING) count++;
+			}
+		}
+		return count;
+	}, [doneEntries, toolCallId]);
+
+	if (!results) return children;
+
+	return (
+		<HStack gap="1" align="center" whiteSpace="nowrap">
+			{children}
+			{violationCount > 0 && (
+				<GoShield size="var(--chat-font-size)" color="var(--wc-accent-red)" />
+			)}
+			{!violationCount && warningCount > 0 && (
+				<GoShield size="var(--chat-font-size)" color="var(--wc-accent-yellow)" />
+			)}
+			{!isProcessing && !violationCount && !warningCount && (
+				<GoShieldCheck size="var(--chat-font-size)" color="var(--wc-accent-green-icon)" opacity={0.8} />
+			)}
+		</HStack>
+	);
 });
 
 const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
@@ -1277,6 +1325,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
 		api.registerUiSpaceComponent(EUISpaceLoc.PENDING_TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
+		api.registerUiSpaceComponent(EUISpaceLoc.MINI_TOOL_CALL, MiniToolCallGuardrailIndicator, { label: 'MiniToolCallGuardrailIndicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });

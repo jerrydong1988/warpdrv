@@ -49,10 +49,7 @@ export const FetchRendererMeta: IToolCallRenderer = {
     if (typeof url !== 'string') return '';
     const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
     return (
-      <HStack gap="1" align="center">
-        <Globe size="var(--chat-font-size)" color="var(--wc-text-muted)" />
-        <Text whiteSpace="nowrap">{method} {truncated}</Text>
-      </HStack>
+      <Text whiteSpace="nowrap">{method} {truncated}</Text>
     );
   }),
 };
