@@ -324,13 +324,14 @@ const ContextUsageBar: FC = () => {
 	const ctxLabel = contextSize > 0 ? (contextSize > 1000 ? `${(contextSize / 1000).toFixed(0)}k` : String(contextSize)) : '?';
 	const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
 	const color = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : 'var(--wc-text-muted)';
+	const textColor = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : undefined;
 
 	return (
 		<div className="flex items-center gap-2 px-1 pt-1" title={`Context: ${total.toLocaleString()} / ${contextSize > 0 ? contextSize.toLocaleString() : '?'} tokens`}>
-			<div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
+			<div className="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden">
 				<div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
 			</div>
-			<span className="text-[10px] font-mono text-muted-foreground/40 shrink-0">
+			<span className="text-[12px] font-mono text-muted-foreground/60 shrink-0" style={textColor ? { color: textColor } : undefined}>
 				{total > 1000 ? `${(total / 1000).toFixed(1)}k` : total} / {ctxLabel}
 			</span>
 		</div>

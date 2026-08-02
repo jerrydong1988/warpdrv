@@ -1,5 +1,5 @@
 {
-	"version": "0.5.4",
+	"version": "0.5.6",
 	"updateCheckUrl": "https://raw.githubusercontent.com/mikjee/warpdrv/master/release.json",
 	"downloadUrl": "https://github.com/mikjee/warpdrv/releases/latest",
 	"notes": ""

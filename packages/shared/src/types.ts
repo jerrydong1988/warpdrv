@@ -193,9 +193,10 @@ export interface ILaunchParams {
 	multiGpu?: boolean; // enables multi-GPU tensor split
 	splitMode?: ESplitMode; // layer | row | tensor
 	gpuSplitValues?: number[]; // per-GPU proportions, zeros exclude devices
-	mainGpu?: number; // -1 = default, >=0 = explicit GPU index
-	useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
-}
+		mainGpu?: number; // -1 = default, >=0 = explicit GPU index
+		useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
+		preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
+	}
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	gpuLayers: 999,
@@ -219,8 +220,9 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	extraArgs: '',
 	parallelSlots: 4,
 	specDecode: { ...DEFAULT_SPEC_DECODE_PARAMS },
-	useEmbedding: false,
-};
+		useEmbedding: false,
+		preserveThinking: false,
+	};
 // ============================================================
 // Running Servers
 // ============================================================

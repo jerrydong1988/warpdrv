@@ -1167,12 +1167,12 @@ export class Orchestrator {
 		let result: IToolDefinition[];
 
 		if (attachAllTools) {
-			result = this.permissions.getEnabledTools(request.threadId, allTools);
+			result = await this.permissions.getEnabledTools(request.threadId, allTools);
 		} else if (attachedTools && attachedTools.length > 0) {
 			const filtered = allTools.filter(t =>
 				attachedTools.some(a => a.serverName === t.serverName && a.toolName === t.name)
 			);
-			result = this.permissions.getEnabledTools(request.threadId, filtered);
+			result = await this.permissions.getEnabledTools(request.threadId, filtered);
 		} else {
 			result = [];
 		}
