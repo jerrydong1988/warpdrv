@@ -266,6 +266,10 @@ cp "$SERVER_DIR/dist/warpcore-server${SIDECAR_EXT}" "$DESKTOP_DIR/binaries/warpc
 cp "$SERVER_DIR/dist/better_sqlite3.node" "$DESKTOP_DIR/binaries/better_sqlite3.node"
 mkdir -p "$DESKTOP_DIR/binaries/node_modules"
 cp -r "$SERVER_DIR/dist/node_modules/." "$DESKTOP_DIR/binaries/node_modules/"
+find "$DESKTOP_DIR/binaries/node_modules" -maxdepth 3 -type d -name "*musl*" -exec rm -r {} +
+for d in "$DESKTOP_DIR"/binaries/node_modules/@img/*musl*; do
+	[ -d "$d" ] && rm -r "$d"
+done
 if [ "$PLATFORM" != "windows" ]; then
 	chmod +x "$DESKTOP_DIR/binaries/warpcore-server-${TARGET_TRIPLE}${SIDECAR_EXT}"
 fi
@@ -279,6 +283,8 @@ echo "Frontend: $DESKTOP_DIR/app-dist/"
 echo ""
 echo "=== Step 4/4: Building Tauri app ==="
 cd "$DESKTOP_DIR"
+[ -d "$DESKTOP_DIR/target/release/bundle/appimage_deb" ] && rm -r "$DESKTOP_DIR/target/release/bundle/appimage_deb"
+[ -d "$DESKTOP_DIR/target/release/bundle/appimage/warpdrv.AppDir" ] && rm -r "$DESKTOP_DIR/target/release/bundle/appimage/warpdrv.AppDir"
 
 # Build only the requested bundle formats
 BUNDLE_ARGS=""
