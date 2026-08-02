@@ -53,6 +53,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 	const modes = useStore(s => s.modes);
 	const threads = useStore(s => s.threads);
 	const threadState = useStore(s => s.getCurrentThreadState(s));
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const modeId = threadState?.modeId as string | undefined;
 	const currentMode = modeId ? modes[modeId] : null;
 	const isModeActive = !!currentMode;
@@ -147,12 +148,13 @@ export const ToolCallBlockCollapsible = React.memo(({
 			}}>
 			<CollapsibleTrigger asChild>
 				<HStack
-					gap="2"
-					align="center"
-					whiteSpace="nowrap"
-					overflow="hidden"
-					py="1"
-					cursor="pointer"
+						gap="2"
+						align="center"
+						whiteSpace="nowrap"
+						overflow="hidden"
+						py="1"
+						cursor="pointer"
+						title={displayStatus === EToolCallStatus.ERROR ? toolCall?.error : undefined}
 						_hover={{ opacity: 0.8 }}
 					px="2"
 				>
@@ -168,7 +170,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 								<MiniComponent args={args} result={result} />
 							) : (
 								<HStack gap="1" align="center">
-									<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+																	<Wrench size={chatFontSize} color="var(--wc-text-muted)" />
 									<Text whiteSpace="nowrap">
 										{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
 										<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
@@ -197,8 +199,8 @@ export const ToolCallBlockCollapsible = React.memo(({
 							</HStack>
 						)}
 						{displayStatus === EToolCallStatus.ERROR && (
-							<HStack gap="1">
-								<AlertCircle size={11} color={statusColor} />
+						<HStack gap="1">
+											<AlertCircle size={11} color={statusColor} />
 								<Text fontSize="var(--chat-font-size)" color={statusColor}>{statusLabels[displayStatus]}</Text>
 							</HStack>
 						)}

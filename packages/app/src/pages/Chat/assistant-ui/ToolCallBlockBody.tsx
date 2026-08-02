@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
+import { Box, Text } from '@chakra-ui/react';
 import { ToolCallBlock } from '@/pages/Chat/assistant-ui/ToolCallBlock';
 import { useStore } from '@/store';
+import { EToolCallStatus } from '@warpcore/bridge';
 import { autoResolveRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
@@ -19,6 +21,8 @@ export const ToolCallBlockBody = React.memo(({
 }: IToolCallBlockBodyProps) => {
 	const serverState = useStore(s => serverName ? s.mcpServers[serverName] : undefined);
 	const toolCallRenderers = useStore(s => s.toolCallRenderers);
+	const toolCall = useStore(s => s.toolCallsById[toolCallId]);
+	const displayStatus: EToolCallStatus = toolCall?.status ?? EToolCallStatus.COMPLETED;
 
 	const body = useMemo(() => {
 		const fallback = <ToolCallBlock args={JSON.stringify(args)} result={result ? JSON.stringify(result) : undefined} />;
@@ -53,6 +57,11 @@ export const ToolCallBlockBody = React.memo(({
 
 	return (
 		<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
+			{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
+								<Box px="3" py="2">
+					<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
+				</Box>
+			)}
 			{body}
 		</ToolCallUiSpace>
 	);

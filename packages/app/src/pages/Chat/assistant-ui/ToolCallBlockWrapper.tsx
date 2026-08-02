@@ -185,8 +185,8 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 									</>
 								)}
 								{displayStatus === EToolCallStatus.ERROR && (
-									<>
-										<AlertCircle size={11} color={statusColor} />
+								<>
+									<AlertCircle size={11} color={statusColor} title={toolCall?.error} />
 										<Text fontSize="calc(var(--chat-font-size) - 4px)" color={statusColor}>{statusLabels[displayStatus]}</Text>
 									</>
 								)}
@@ -214,15 +214,14 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 					</HStack>
 			</HStack>
 
-			{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
-				<Box px="3" py="2" borderTopWidth="1px" borderColor="var(--wc-border-subtle)">
-					<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
-				</Box>
-			)}
-
-					<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
-						{body}
-					</ToolCallUiSpace>
+			<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
+				{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
+					<Box px="3" py="2" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)">
+						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
+					</Box>
+				)}
+				{body}
+			</ToolCallUiSpace>
 					</Box>
 				);
 			});

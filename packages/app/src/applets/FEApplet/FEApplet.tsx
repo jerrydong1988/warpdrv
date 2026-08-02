@@ -931,6 +931,7 @@ const ModesPanel = React.memo(() => {
 	const modes = useStore(s => s.modes);
 	const threads = useStore(s => s.threads);
 	const currentThreadId = useStore(s => s.currentThreadId);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
 	const scope = folderId || 'global';
@@ -967,6 +968,7 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 	isProcessing: boolean;
 	processingNames: string[];
 }) => {
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const totalViolations = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).length, [issues]);
 	const totalWarnings = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).length, [issues]);
 	const allClear = !isProcessing && issues.length === 0;
@@ -995,13 +997,13 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 						>
 							<HStack gap="2">
 								{totalViolations > 0 && (
-									<GoShield size="var(--chat-font-size)" color="var(--wc-accent-red)" />
+									<GoShield size={chatFontSize} color="var(--wc-accent-red)" />
 								)}
 								{!totalViolations && totalWarnings > 0 && (
-									<GoShield size="var(--chat-font-size)" color="var(--wc-accent-yellow)" />
+									<GoShield size={chatFontSize} color="var(--wc-accent-yellow)" />
 								)}
 								{isProcessing && <Spinner size="xs" color="var(--wc-text-muted)" />}
-								{allClear && <GoShieldCheck size="var(--chat-font-size)" color="var(--wc-accent-green-icon)" opacity={0.8} />}
+								{allClear && <GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />}
 								{totalViolations > 0 && (
 									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalViolations} Violations</Badge>
 								)}
@@ -1042,6 +1044,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 	const messageId = useAuiState(s => s.message.id);
 	const role = useAuiState(s => s.message.role);
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const entries = results ? Object.entries(results) : [];
 	const processingNames = useMemo(() => entries.filter(([, v]) => v === false).map(([name]) => name), [entries]);
@@ -1094,6 +1097,7 @@ const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }:
 
 const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
 	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const entries = results ? Object.entries(results) : [];
 	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
@@ -1125,13 +1129,13 @@ const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messa
 		<HStack gap="1" align="center" whiteSpace="nowrap">
 			{children}
 			{violationCount > 0 && (
-				<GoShield size="var(--chat-font-size)" color="var(--wc-accent-red)" />
+				<GoShield size={chatFontSize} color="var(--wc-accent-red)" />
 			)}
 			{!violationCount && warningCount > 0 && (
-				<GoShield size="var(--chat-font-size)" color="var(--wc-accent-yellow)" />
+				<GoShield size={chatFontSize} color="var(--wc-accent-yellow)" />
 			)}
 			{!isProcessing && !violationCount && !warningCount && (
-				<GoShieldCheck size="var(--chat-font-size)" color="var(--wc-accent-green-icon)" opacity={0.8} />
+				<GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />
 			)}
 		</HStack>
 	);

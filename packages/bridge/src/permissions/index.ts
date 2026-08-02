@@ -21,21 +21,23 @@ export class PermissionManager implements IPermissions {
 	}
 
 	async getToolApprovalMode(threadId: TThreadId | undefined, serverName: string, toolName: string): Promise<EToolApprovalMode> {
-		console.log('[Perm] getToolApprovalMode:', { threadId, serverName, toolName });
+		//console.log('[Perm] getToolApprovalMode:', { threadId, serverName, toolName });
 		// 1. Thread-level override
 		if (threadId) {
 			const threadPerm = await this.persistence.getThreadToolPermission(threadId, serverName, toolName);
-			console.log('[Perm] thread override result:', threadPerm);
+			//console.log('[Perm] thread override result:', threadPerm);
 			const allThreadPerms = await this.persistence.getAllThreadToolPermissions(threadId);
-			console.log('[Perm] ALL thread perms for this thread:', JSON.stringify(allThreadPerms));
-			if (threadPerm) { console.log('[Perm] using thread override:', threadPerm.approvalMode); return threadPerm.approvalMode; }
+			//console.log('[Perm] ALL thread perms for this thread:', JSON.stringify(allThreadPerms));
+			if (threadPerm) {
+				//console.log('[Perm] using thread override:', threadPerm.approvalMode); return threadPerm.approvalMode;
+			}
 		}
 		// 2. Global
 		const perm = await this.persistence.getToolPermission(serverName, toolName);
-		console.log('[Perm] global result:', perm);
+		//console.log('[Perm] global result:', perm);
 		if (perm) return perm.approvalMode;
 		// 3. Default
-		console.log('[Perm] fallback: ASK');
+		//console.log('[Perm] fallback: ASK');
 		return EToolApprovalMode.ASK;
 	}
 

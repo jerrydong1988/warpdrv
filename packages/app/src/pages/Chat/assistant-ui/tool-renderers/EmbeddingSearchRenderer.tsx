@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText } from './utils';
@@ -68,14 +68,21 @@ export const EmbeddingSearchRendererMeta: IToolCallRenderer = {
 	},
   renderMini: React.memo(({ args, result }) => {
     const query = typeof args.query === 'string' ? args.query : '';
-    const text = typeof result === 'string' ? result : JSON.stringify(result);
-    let count = 0;
-    try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
     const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
+    const countLabel = useMemo(() => {
+      try {
+        const text = extractResultText(result);
+        if (!text) return '';
+        const parsed = JSON.parse(text);
+        const c = parsed?.results?.length;
+        if (typeof c === 'number' && c > 0) return ` — ${c} result${c === 1 ? '' : 's'}`;
+      } catch {}
+      return '';
+    }, [result]);
     return (
       <Text whiteSpace="nowrap">
         Embed "{truncated}"
-        {count > 0 && <Text as="span" color="var(--wc-text-faint)"> — {count} results</Text>}
+        {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
       </Text>
     );
   }),

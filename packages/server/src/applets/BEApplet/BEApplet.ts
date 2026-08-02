@@ -132,6 +132,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
                 // Inject core instruction as first system message (only if mode is set)
                 if (isToolsIncluded) {
+                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — injecting into first message');
                     const firstMsg = messages[0];
                     if (firstMsg?.role === 'system') {
                         if (typeof firstMsg.content === 'string') {
@@ -150,6 +151,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     } else {
                         messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
                     }
+                } else {
+                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — skipped (no mode/allowedTools active)');
                 }
 
                 const lastIndex = messages.length - 1;
@@ -159,6 +162,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     return;
                 }
 
+                console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — injecting into last message');
                 const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
                     + "\n" + content
                     + "\n</system-reminder>";
@@ -179,30 +183,32 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     else {
                         const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
                         newLastMsg = { ...lastMsg, content: newContent };
-                    }
-                }
-                const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
-                return newMessages;
+                                }
+                            }
+                            const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
+                            return newMessages;
 
-            }
+                        } else {
+                            console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — skipped (no tools/todos/projectRoot to inject)');
+                        }
 
-        });
+                    });
 
-        api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
-            const payload = eventApi.payload as {
-                request: { messageState?: Record<string, unknown> };
-            };
+                    api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
+                        const payload = eventApi.payload as {
+                            request: { messageState?: Record<string, unknown> };
+                        };
 
-            const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
-            if (!commands?.some(c => c.name === 'compact')) return;
+                        const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
+                        if (!commands?.some(c => c.name === 'compact')) return;
 
 
-            const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
-            for (const part of userMsg.content) {
-                if (part.type === 'text') {
-                    part.text = COMPACTION_PROMPT + part.text;
-                    break;
-                }
+                        const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
+                        for (const part of userMsg.content) {
+                            if (part.type === 'text') {
+                                part.text = COMPACTION_PROMPT + part.text;
+                                break;
+                            }
             }
 
             return { ...(eventApi.result as any) };

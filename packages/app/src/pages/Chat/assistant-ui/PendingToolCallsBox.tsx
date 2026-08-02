@@ -47,6 +47,7 @@ export const PendingToolCallsBox = React.memo(() => {
 	const threads = useStore(s => s.threads);
 	const threadState = useStore(s => s.getCurrentThreadState(s));
 	const mcpServers = useStore(s => s.mcpServers);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const toast = useToast();
 	const [deciding, setDeciding] = useState(false);
 
@@ -270,7 +271,7 @@ export const PendingToolCallsBox = React.memo(() => {
 						<MiniComponent args={args} result={currentCall?.result} />
 					) : (
 						<HStack gap="1" align="center">
-							<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+													<Wrench size={chatFontSize} color="var(--wc-text-muted)" />
 							<Text whiteSpace="nowrap">
 								{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
 								<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>

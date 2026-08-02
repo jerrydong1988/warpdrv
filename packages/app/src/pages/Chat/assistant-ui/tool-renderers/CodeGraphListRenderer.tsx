@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { List, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText, splitPath, relativePath } from './utils';
@@ -68,15 +68,22 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
       return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
     });
     const path = typeof args.path === 'string' ? args.path : '(project root)';
-    const text = typeof result === 'string' ? result : JSON.stringify(result);
-    let count = 0;
-    try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
     const { dir, file } = splitPath(relativePath(path, projectRoot));
+    const countLabel = useMemo(() => {
+      try {
+        const text = extractResultText(result);
+        if (!text) return '';
+        const parsed = JSON.parse(text);
+        const c = parsed?.results?.length;
+        if (typeof c === 'number' && c > 0) return ` (${c} symbol${c === 1 ? '' : 's'})`;
+      } catch {}
+      return '';
+    }, [result]);
     return (
       <Text whiteSpace="nowrap">
         Code List{' '}
         <PathDisplay dir={dir} file={file} />
-        {count > 0 && <Text as="span" color="var(--wc-text-faint)"> ({count} symbol{count > 1 ? 's' : ''})</Text>}
+        {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
       </Text>
     );
   }),

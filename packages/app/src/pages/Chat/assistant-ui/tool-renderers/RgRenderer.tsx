@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText, splitPath, relativePath } from './utils';
@@ -80,7 +80,7 @@ export const RgRendererMeta: IToolCallRenderer = {
 		const contextLines = typeof args.contextLines === 'number' ? args.contextLines : undefined;
 		return { pattern, path, type, caseSensitive, maxResults, contextLines };
 	},
-  renderMini: React.memo(({ args }) => {
+  renderMini: React.memo(({ args, result }) => {
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState(s);
       return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
@@ -88,17 +88,31 @@ export const RgRendererMeta: IToolCallRenderer = {
     const pattern = typeof args.pattern === 'string' ? args.pattern : '';
     const path = typeof args.path === 'string' ? args.path : undefined;
     const truncated = pattern.length > 60 ? pattern.slice(0, 57) + '...' : pattern;
+    const countLabel = useMemo(() => {
+      try {
+        const text = extractResultText(result);
+        if (!text) return '';
+        const parsed = JSON.parse(text);
+        const c = parsed?.matches?.length;
+        if (typeof c === 'number') return ` (${c} match${c === 1 ? '' : 'es'})`;
+      } catch {}
+      return '';
+    }, [result]);
     if (path) {
       const { dir, file } = splitPath(relativePath(path, projectRoot));
       return (
         <Text whiteSpace="nowrap">
           grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> in{' '}
           <PathDisplay dir={dir} file={file} />
+          {countLabel && <Text as="span" color="var(--wc-text-muted)">{countLabel}</Text>}
         </Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text></Text>
+      <Text whiteSpace="nowrap">
+        grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text>
+        {countLabel && <Text as="span" color="var(--wc-text-muted)">{countLabel}</Text>}
+      </Text>
     );
   }),
 };
