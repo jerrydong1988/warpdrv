@@ -131,7 +131,7 @@ export interface IModel {
 // ============================================================
 export interface ISpecDecodeParams {
 	enabled: boolean;
-	mode?: 'draft' | 'ngram' | 'mtp'; // undefined → 'draft' (backward compat)
+	mode?: 'draft' | 'ngram' | 'mtp' | 'dflash'; // undefined → 'draft' (backward compat)
 	// Shared across modes
 	draftMax: number; // max tokens to draft per step
 	draftMin: number; // min tokens to draft per step
@@ -145,6 +145,8 @@ export interface ISpecDecodeParams {
 	specType?: ESpecType;
 	// MTP-specific: max draft tokens per step (maps to --spec-draft-n-max)
 	specDraftNMax?: number;
+	// DFlash-specific: floor below which drafting is skipped (maps to --spec-draft-n-min)
+	specDraftNMin?: number;
 	// Ngram-only (optional)
 	ngramSizeN?: number; // lookup n-gram length
 	ngramSizeM?: number; // draft m-gram length
@@ -191,9 +193,10 @@ export interface ILaunchParams {
 	multiGpu?: boolean; // enables multi-GPU tensor split
 	splitMode?: ESplitMode; // layer | row | tensor
 	gpuSplitValues?: number[]; // per-GPU proportions, zeros exclude devices
-	mainGpu?: number; // -1 = default, >=0 = explicit GPU index
-	useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
-}
+		mainGpu?: number; // -1 = default, >=0 = explicit GPU index
+		useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
+		preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
+	}
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	gpuLayers: 999,
@@ -217,8 +220,9 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	extraArgs: '',
 	parallelSlots: 4,
 	specDecode: { ...DEFAULT_SPEC_DECODE_PARAMS },
-	useEmbedding: false,
-};
+		useEmbedding: false,
+		preserveThinking: false,
+	};
 // ============================================================
 // Running Servers
 // ============================================================

@@ -102,22 +102,32 @@ function buildSpecDecodeArgsPre9100(sd: ISpecDecodeParams): string[] {
 		if (sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
 		if (sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
 	}
-	// Draft model mode
-	if (!isNgram && !isMtp && sd.draftModelPath) {
-		args.push('--model-draft', sd.draftModelPath);
-		if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-		if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
-		if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		// DFlash mode
+		if (sd.mode === 'dflash') {
+			args.push('--spec-type', sd.specType ?? 'draft-dflash');
+			if (sd.draftModelPath) args.push('--spec-draft-model', sd.draftModelPath);
+			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+			if (sd.draftGpuLayers > 0) args.push('--n-gpu-layers-draft', String(sd.draftGpuLayers));
+			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+			if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
+			if (sd.specDraftNMin) args.push('--spec-draft-n-min', String(sd.specDraftNMin));
+		}
+		// Draft model mode
+		if (!isNgram && !isMtp && sd.mode !== 'dflash' && sd.draftModelPath) {
+			args.push('--model-draft', sd.draftModelPath);
+			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+			if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
+			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		}
+		// Shared across modes
+		if (sd.draftMax > 0 && sd.mode !== 'dflash') args.push('--draft-max', String(sd.draftMax));
+		if (!isMtp && sd.mode !== 'dflash' && sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
+		// Draft-model-only
+		if (!isMtp && !isNgram && sd.mode !== 'dflash' && sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
+		return args;
 	}
-	// Shared across modes
-	if (sd.draftMax > 0) args.push('--draft-max', String(sd.draftMax));
-	if (!isMtp && sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
-	// Draft-model-only
-	if (!isMtp && !isNgram && sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
-	return args;
-}
 
-// Build speculative decoding args for post-9100 llama.cpp builds
+	// Build speculative decoding args for post-9100 llama.cpp builds
 function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 	const args: string[] = [];
 	const isNgram = sd.mode === 'ngram';
@@ -139,19 +149,29 @@ function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 		if (sd.draftMin > 0) args.push('--spec-draft-n-min', String(sd.draftMin));
 		if (sd.draftPMin > 0) args.push('--spec-draft-p-min', String(sd.draftPMin));
 	}
-	// Draft model mode
-	if (!isNgram && !isMtp && sd.draftModelPath) {
-		args.push('--model-draft', sd.draftModelPath);
-		if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-		if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
-		if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		// DFlash mode
+		if (sd.mode === 'dflash') {
+			args.push('--spec-type', sd.specType ?? 'draft-dflash');
+			if (sd.draftModelPath) args.push('--spec-draft-model', sd.draftModelPath);
+			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+			if (sd.draftGpuLayers > 0) args.push('--n-gpu-layers-draft', String(sd.draftGpuLayers));
+			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+			if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
+			if (sd.specDraftNMin) args.push('--spec-draft-n-min', String(sd.specDraftNMin));
+		}
+		// Draft model mode
+		if (!isNgram && !isMtp && sd.mode !== 'dflash' && sd.draftModelPath) {
+			args.push('--model-draft', sd.draftModelPath);
+			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+			if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
+			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		}
+		// Shared new args
+		if (!isMtp && sd.mode !== 'dflash' && sd.draftMax > 0) args.push('--spec-draft-n-max', String(sd.draftMax));
+		if (!isMtp && sd.mode !== 'dflash' && sd.draftMin > 0) args.push('--spec-draft-n-min', String(sd.draftMin));
+		if (!isMtp && !isNgram && sd.mode !== 'dflash' && sd.draftPMin > 0) args.push('--spec-draft-p-min', String(sd.draftPMin));
+		return args;
 	}
-	// Shared new args
-	if (!isMtp && sd.draftMax > 0) args.push('--spec-draft-n-max', String(sd.draftMax));
-	if (!isMtp && sd.draftMin > 0) args.push('--spec-draft-n-min', String(sd.draftMin));
-	if (!isMtp && !isNgram && sd.draftPMin > 0) args.push('--spec-draft-p-min', String(sd.draftPMin));
-	return args;
-}
 
 // Build the llama-server command line args from params
 export function buildArgs(
@@ -200,6 +220,7 @@ export function buildArgs(
 	if (params.kvQuantK !== EKvQuantType.F16) args.push('--cache-type-k', params.kvQuantK);
 	if (params.kvQuantV !== EKvQuantType.F16) args.push('--cache-type-v', params.kvQuantV);
 	if (params.chatTemplate) args.push('--chat-template', params.chatTemplate);
+	if (params.preserveThinking) args.push('--chat-template-kwargs', JSON.stringify({ preserve_thinking: true }));
 	if (params.device && !params.multiGpu) args.push('--device', params.device);
 	// Multi-GPU tensor split — preserve zeros to maintain device index alignment
 	if (params.multiGpu && params.gpuSplitValues && params.gpuSplitValues.length > 1) {
@@ -225,6 +246,10 @@ export function buildArgs(
 			? buildSpecDecodeArgsPost9100(sd)
 			: buildSpecDecodeArgsPre9100(sd);
 		args.push(...specArgs);
+		// DFlash requires flash attention
+		if (sd.mode === 'dflash' && !argsSet.has('-fa')) {
+			args.push('-fa', 'on');
+		}
 	}
 	args.push('--host', '0.0.0.0');
 	args.push('--port', String(params.port));
@@ -585,6 +610,24 @@ export function parseCliFlags(flags: string): Map<string, string | true> {
 				// Check if next token is a value (not another flag)
 				const nextToken = tokens[i + 1];
 				if (nextToken && typeof nextToken === 'string' && !nextToken.startsWith('--')) {
+					result.set(token, nextToken);
+					i++; // Skip the value token
+				} else {
+					// Boolean flag
+					result.set(token, true);
+				}
+			}
+		} else if (token.startsWith('-')) {
+			// Single-dash flags (e.g., -cram, -c 262144)
+			const equalsIndex = token.indexOf('=');
+			if (equalsIndex !== -1) {
+				const key = token.substring(0, equalsIndex);
+				const value = token.substring(equalsIndex + 1);
+				result.set(key, value);
+			} else {
+				// Check if next token is a value (not another flag starting with -)
+				const nextToken = tokens[i + 1];
+				if (nextToken && typeof nextToken === 'string' && !nextToken.startsWith('-')) {
 					result.set(token, nextToken);
 					i++; // Skip the value token
 				} else {

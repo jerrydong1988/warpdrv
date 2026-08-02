@@ -29,24 +29,25 @@ export const CodeGraphSymbolRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
 				<FileCode size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)">{String(label)}</Text>
-			</HStack>
+								<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">{String(label)}</Text>
+			</HStack> */}
 			{nodes && nodes.length > 0 && (
 				<VStack gap="2" align="stretch">
 					{nodes.map((n, i) => (
 						<Box key={i} bg="var(--wc-overlay-dim)" borderRadius="sm" p="2">
 							<HStack gap="2" align="center" mb={n.signature ? '1' : '0'}>
-								<Badge fontSize="9px" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0">{String(n.kind)}</Badge>
-								<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
-								<Text fontSize="10px" fontFamily="mono" color="var(--wc-text-faint)">{String(n.language)}</Text>
+								<Badge fontSize="calc(var(--chat-font-size) - 5px)" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0">{String(n.kind)}</Badge>
+												<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
+												<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.language)}</Text>
 							</HStack>
-							{n.signature && <Text fontSize="10px" fontFamily="mono" color="var(--wc-text-muted)" whiteSpace="pre-wrap" wordBreak="break-all" mb="1">{String(n.signature)}</Text>}
-							<Text fontSize="10px" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}-{String(n.endLine)}</Text>
+							{n.signature && <Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-muted)" whiteSpace="pre-wrap" wordBreak="break-all" mb="1">{String(n.signature)}</Text>}
+											<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}-{String(n.endLine)}</Text>
 						</Box>
 					))}
-					{nodes.length > 1 && <Text fontSize="10px" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length} matches — ambiguous symbol name</Text>}
+										{nodes.length > 1 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length} matches — ambiguous symbol name</Text>}
 				</VStack>
 			)}
 		</Box>
@@ -62,4 +63,13 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
 		if (!symbolId && !symbol) return false;
 		return { symbolId, symbol };
 	},
+  renderMini: React.memo(({ args }) => {
+    const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
+    const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
+    const label = symbolId ?? symbol ?? '';
+    const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
+    return (
+      <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>
+    );
+  }),
 };

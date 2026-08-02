@@ -40,7 +40,7 @@ export const EmbeddingToggle: React.FC = () => {
 			<Popover.Trigger unstyled asChild>
 				<IconButton
 					variant="outline"
-					size="md"
+					size="sm"
 					px="3"
 					ml="1"
 					borderRadius="lg"

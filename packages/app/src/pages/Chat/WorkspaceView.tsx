@@ -6,9 +6,10 @@ import type { IFolder as IChatFolder, IChatThread as IBridgeChatThread } from '@
 import { useStore } from '@/store';
 import { updateFolder, updateWorkspace, fetchWorkspace, updateFolderTopic } from '@/api/services';
 import { useDependantState } from '@/hooks/useDependantState';
-import { EServerStatus } from '@warpcore/shared';
+import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
 import type { IMode, TModeId } from '@warpcore/shared';
 import { ServerDot } from '@/components/ServerPicker';
+import { SelectField } from '@/pages/Servers/LaunchServer/Helpers';
 
 interface IChatThread extends IBridgeChatThread {
 	messageCount?: number;
@@ -106,6 +107,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	const defaultServerId = workspaceState?.defaultServerId as string | undefined;
 	const defaultPresetId = workspaceState?.defaultPresetId as string | undefined;
 	const defaultModeId = workspaceState?.defaultModeId as TModeId | undefined;
+	const defaultReasoningEffort = workspaceState?.defaultReasoningEffort as EReasoningEffort | undefined;
 	const modes = useStore(s => s.modes);
 	const threads = useStore(useShallow(s => {
 		const threadsArray = Object.values(s.threads) as IChatThread[];
@@ -225,6 +227,13 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 		setWorkspaceState(folderId, { defaultModeId: modeId || null });
 	};
 
+	const handleDefaultReasoningEffortChange = (effort: string) => {
+		setWorkspaceState(folderId, {
+			defaultReasoningEffort: effort,
+			defaultEnableThinking: effort !== EReasoningEffort.NONE,
+		});
+	};
+
 	const servers = useMemo(() => Object.values(serversMap).sort((a, b) => {
 		const isARunning = a.status === EServerStatus.RUNNING;
 		const isBRunning = b.status === EServerStatus.RUNNING;
@@ -320,6 +329,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
+				<h5>Workspace Defaults</h5>
 				<Box w="full">
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
 						Project Root
@@ -363,7 +373,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<HStack w="full" gap="2" mt="2" mb="2">
 					<Box flex="1" position="relative">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-							Default Server
+							Server
 						</Text>
 						<HStack
 							gap="2"
@@ -436,60 +446,33 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 							</Box>
 						)}
 					</Box>
-					<Box flex="1">
-						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-							Default System Prompt
-						</Text>
-						<select
-							value={defaultPresetId ?? ''}
-							onChange={(e) => handleDefaultPresetChange(e.target.value)}
-							style={{
-								width: '100%',
-								background: 'var(--wc-bg-card)',
-								border: '1px solid var(--wc-border-default)',
-								borderRadius: '6px',
-								color: 'var(--wc-text-primary)',
-								fontSize: '12px',
-								padding: '4px 8px',
-								height: '28px',
-							}}
-						>
-							<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None</option>
-							{chatPresets.map((p) => (
-								<option key={p.id} value={p.id} style={{ background: 'var(--wc-bg-elevated)' }}>{p.name}</option>
-							))}
-						</select>
-					</Box>
-					<Box flex="1">
-						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-							Default Mode
-						</Text>
-						<select
-							value={defaultModeId ?? ''}
-							onChange={(e) => handleDefaultModeChange(e.target.value)}
-							style={{
-								width: '100%',
-								background: 'var(--wc-bg-card)',
-								border: '1px solid var(--wc-border-default)',
-								borderRadius: '6px',
-								color: 'var(--wc-text-primary)',
-								fontSize: '12px',
-								padding: '4px 8px',
-								height: '28px',
-							}}
-						>
-							<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None</option>
-							{Object.values(modes).map((m: IMode) => (
-								<option key={m.id} value={m.id} style={{ background: 'var(--wc-bg-elevated)' }}>{m.name}</option>
-							))}
-						</select>
-					</Box>
+					<SelectField
+						label="System Prompt"
+						value={defaultPresetId ?? ''}
+						options={['', ...chatPresets.map(p => p.id)]}
+						optionLabels={{ '': 'None', ...Object.fromEntries(chatPresets.map(p => [p.id, p.name])) }}
+						onChange={handleDefaultPresetChange}
+					/>
+					<SelectField
+						label="Mode"
+						value={defaultModeId ?? ''}
+						options={['', ...Object.values(modes).map(m => m.id)]}
+						optionLabels={{ '': 'None', ...Object.fromEntries(Object.values(modes).map(m => [m.id, m.name])) }}
+						onChange={handleDefaultModeChange}
+					/>
+					<SelectField
+						label="Reasoning"
+						value={defaultReasoningEffort ?? EReasoningEffort.NONE}
+						options={Object.values(EReasoningEffort)}
+						optionLabels={{ none: 'None', low: 'Low', medium: 'Medium', high: 'High' }}
+						onChange={handleDefaultReasoningEffortChange}
+					/>
 				</HStack>
 
 				<Separator w="full" my="2" borderColor="var(--wc-border-subtle)" />
 
 				{/* Thread list */}
-				<Box w="full" mt="2">
+				<Box w="full" mt="2" maxHeight='calc(100vh - 700px)' minHeight="200px" overflowY="auto">
 					<HStack justify="space-between" px="3" py="2">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
 							Threads

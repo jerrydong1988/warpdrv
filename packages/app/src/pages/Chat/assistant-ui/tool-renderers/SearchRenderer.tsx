@@ -33,12 +33,13 @@ export const SearchRenderer = React.memo((props: {
 	const results = resultText ? parseSearchResults(resultText) : null;
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={results ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={results ? '2' : '0'}>
 				<Search size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" color="var(--wc-text-primary)" wordBreak="break-word">
-					{query ?? '(no query)'}
-				</Text>
-			</HStack>
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-primary)" wordBreak="break-word">
+								{query ?? '(no query)'}
+							</Text>
+			</HStack> */}
 			{results && results.length > 0 && (
 				<VStack gap="2" align="stretch" bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
 					{results.map((r, i) => (
@@ -46,15 +47,15 @@ export const SearchRenderer = React.memo((props: {
 							<HStack gap="1" align="center" mb="0">
 								{r.url && <ExternalLink size={10} color="var(--wc-text-faint)" />}
 								{r.url ? (
-									<Link href={r.url} target="_blank" fontSize="11px" color="var(--wc-accent-blue)" wordBreak="break-all">
+																		<Link href={r.url} target="_blank" fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-blue)" wordBreak="break-all">
 										{r.title ?? r.url}
 									</Link>
 								) : (
-									<Text fontSize="11px" color="var(--wc-text-primary)">{r.title}</Text>
+																		<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-primary)">{r.title}</Text>
 								)}
 							</HStack>
 							{(r.snippet ?? r.description) && (
-								<Text fontSize="10px" color="var(--wc-text-muted)" mt="0">
+																<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-muted)" mt="0">
 									{r.snippet ?? r.description}
 								</Text>
 							)}
@@ -64,7 +65,7 @@ export const SearchRenderer = React.memo((props: {
 			)}
 			{resultText && !results && (
 				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-					<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 						{resultText}
 					</Text>
 		</Box>
@@ -81,4 +82,12 @@ export const SearchRendererMeta: IToolCallRenderer = {
 		if (typeof query !== 'string' || query.length === 0) return false;
 		return { query };
 	},
+  renderMini: React.memo(({ args }) => {
+    const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
+    if (typeof query !== 'string') return '';
+    const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
+    return (
+      <Text whiteSpace="nowrap">Search "{truncated}"</Text>
+    );
+  }),
 };

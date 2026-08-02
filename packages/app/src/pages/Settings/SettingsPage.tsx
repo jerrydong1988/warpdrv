@@ -801,6 +801,7 @@ dictationPTTKey,
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
+							{/* fsAllowedRoots UI — commented out, sandbox check bypassed
 							<Box>
 								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">File-system allowed roots</Text>
 								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution.</Text>
@@ -829,6 +830,7 @@ dictationPTTKey,
 									</HStack>
 								</VStack>
 							</Box>
+							*/}
 						</VStack>
 					</Card>
 

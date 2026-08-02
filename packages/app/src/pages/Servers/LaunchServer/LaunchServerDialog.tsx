@@ -223,6 +223,7 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 								specDecode={params.specDecode} onSpecParamChange={updateSpecParam}
 								targetArchitecture={targetArchitecture} draftModelEntries={draftModelEntries} selectedDraftEntry={selectedDraftEntry ?? null}
 								deviceOptions={deviceOptions} deviceIdToName={deviceIdToName}
+								flashAttn={params.flashAttn} ubatchSize={params.ubatchSize}
 							/>
 						</VStack>
 

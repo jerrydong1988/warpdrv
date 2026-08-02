@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
-import { FileText } from 'lucide-react';
+import { FileText, Pencil } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { useStore } from '@/store';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {
@@ -23,13 +25,13 @@ const diffViewerStyles = {
 		dark: {
 			diffViewerBackground: 'var(--wc-bg-surface)',
 			diffViewerColor: 'var(--wc-text-primary)',
-			addedBackground: 'var(--wc-accent-green-bg-15)',
+			addedBackground: 'var(--wc-accent-green-bg-8)',
 			addedColor: 'var(--wc-accent-green)',
 			removedBackground: 'var(--wc-accent-red-bg-12)',
 			removedColor: 'var(--wc-accent-red-alt)',
-			wordAddedBackground: 'var(--wc-accent-green-hover)',
+			wordAddedBackground: 'var(--wc-accent-green-bg-15)',
 			wordRemovedBackground: 'var(--wc-accent-red-hover)',
-			addedGutterBackground: 'var(--wc-accent-green-bg-15)',
+			addedGutterBackground: 'var(--wc-accent-green-bg-8)',
 			removedGutterBackground: 'var(--wc-accent-red-bg-12)',
 			gutterBackground: 'var(--wc-bg-surface)',
 			gutterBackgroundDark: 'var(--wc-bg-surface)',
@@ -48,13 +50,13 @@ const diffViewerStyles = {
 		light: {
 			diffViewerBackground: 'var(--wc-bg-surface)',
 			diffViewerColor: 'var(--wc-text-primary)',
-			addedBackground: 'var(--wc-accent-green-bg-15)',
+			addedBackground: 'var(--wc-accent-green-bg-8)',
 			addedColor: 'var(--wc-accent-green)',
 			removedBackground: 'var(--wc-accent-red-bg-12)',
 			removedColor: 'var(--wc-accent-red-alt)',
-			wordAddedBackground: 'var(--wc-accent-green-hover)',
+			wordAddedBackground: 'var(--wc-accent-green-bg-15)',
 			wordRemovedBackground: 'var(--wc-accent-red-hover)',
-			addedGutterBackground: 'var(--wc-accent-green-bg-15)',
+			addedGutterBackground: 'var(--wc-accent-green-bg-8)',
 			removedGutterBackground: 'var(--wc-accent-red-bg-12)',
 			gutterBackground: 'var(--wc-bg-surface)',
 			gutterBackgroundDark: 'var(--wc-bg-surface)',
@@ -85,19 +87,33 @@ export const DiffRenderer = React.memo((props: {
 	edits?: IEdit[],
 	content?: string,
 	strategy?: EDiffStrategy,
+	result?: unknown,
 }) => {
-	const { path, old, new: newVal, edits, content, strategy } = props;
+	const { path, old, new: newVal, edits, content, strategy, result } = props;
 	const theme = useStore(s => s.settings.theme);
 	const isDark = DARK_THEMES.has(theme ?? 'dark');
 
+	const matchLine = useMemo(() => {
+		if (!result) return;
+		const text = extractResultText(result);
+		if (!text) return;
+		try { return JSON.parse(text)?.matchLine; } catch { /* not json */ }
+	}, [result]);
+
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb="2">
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb="2">
 				<FileText size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{path ?? '(no path)'}
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
+						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
 				</Text>
-			</HStack>
+				{typeof matchLine === 'number' && (
+					<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
+						line {matchLine}
+					</Text>
+				)}
+			</HStack> */}
 
 			{strategy === EDiffStrategy.FIND_REPLACE && (
 				<ReactDiffViewer
@@ -129,7 +145,7 @@ export const DiffRenderer = React.memo((props: {
 
 			{strategy === EDiffStrategy.FULL_WRITE && (
 				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
-					<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 						{content ?? ''}
 					</Text>
 				</Box>
@@ -160,4 +176,19 @@ export const DiffRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
+    if (typeof path !== 'string') return '';
+    const { dir, file } = splitPath(relativePath(path, projectRoot));
+    return (
+      <Text whiteSpace="nowrap">
+        Edit{' '}
+        <PathDisplay dir={dir} file={file} />
+      </Text>
+    );
+  }),
 };

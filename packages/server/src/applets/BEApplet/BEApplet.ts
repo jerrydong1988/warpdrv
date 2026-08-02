@@ -2,7 +2,7 @@ import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
 import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
-import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT } from './prompts';
+import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT } from './prompts';
 import { store } from '../../util/store';
 import { getMode } from '../../services/modeStore';
 import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
@@ -70,7 +70,18 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 'bridge.getThreadState',
                 payload.request.threadId,
             ) as Record<string, unknown> | null;
-            
+
+            // Load workspace state for projectRoot fallback
+            let wsState: Record<string, unknown> | null = null;
+            const folderId = (payload.request as any).folderId as string | undefined;
+            if (folderId) {
+                wsState = await api.eventNode.invoke(
+                    '/warpcore',
+                    'bridge.getWorkspaceState',
+                    folderId,
+                ) as Record<string, unknown> | null;
+            }
+
             let content = '';
             let isToolsIncluded = false;
             let isTodosIncluded = false;
@@ -86,26 +97,33 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             if (mode && mode.allowedTools.length > 0) {
                 const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
-                content += `\nTools\nAllowed tools: ${toolNames.join(', ')}\n`;
-                if (mode.prompt) content += `\nMode Prompt\n${mode.prompt}\n`;
+                content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
+                if (mode.prompt) content += `\nCURRENT MODE\n${mode.prompt}\n`;
                 isToolsIncluded = true;
             }
 
             // ---
 
-            const todos = threadState?.todos as ITodoItem[] | undefined;
-            const todoEtag = threadState?.todoEtag as string | undefined;
+            // const todos = threadState?.todos as ITodoItem[] | undefined;
+            // const todoEtag = threadState?.todoEtag as string | undefined;
 
-            if (todos && todos.length > 0) {
-                const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
-                content += `\nTodos\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
-                isTodosIncluded = true;
+            // if (todos && todos.length > 0) {
+            //     const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
+            //     content += `\nT-DOs\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
+            //     isTodosIncluded = true;
+            // }
+
+            // --- Project Root ---
+
+            const projectRoot = (threadState?.projectRoot || wsState?.projectRoot) as string | undefined;
+            if (projectRoot) {
+                content += `\nProject Root\n${projectRoot}\n`;
             }
 
             // ---
 
             if (
-                isToolsIncluded || isTodosIncluded
+                isToolsIncluded || isTodosIncluded || projectRoot
             ) {
                 let messages = eventApi.result as Array<{
                     role: string;
@@ -114,6 +132,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
                 // Inject core instruction as first system message (only if mode is set)
                 if (isToolsIncluded) {
+                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — injecting into first message');
                     const firstMsg = messages[0];
                     if (firstMsg?.role === 'system') {
                         if (typeof firstMsg.content === 'string') {
@@ -132,6 +151,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     } else {
                         messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
                     }
+                } else {
+                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — skipped (no mode/allowedTools active)');
                 }
 
                 const lastIndex = messages.length - 1;
@@ -141,6 +162,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     return;
                 }
 
+                console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — injecting into last message');
                 const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
                     + "\n" + content
                     + "\n</system-reminder>";
@@ -161,30 +183,32 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     else {
                         const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
                         newLastMsg = { ...lastMsg, content: newContent };
-                    }
-                }
-                const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
-                return newMessages;
+                                }
+                            }
+                            const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
+                            return newMessages;
 
-            }
+                        } else {
+                            console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — skipped (no tools/todos/projectRoot to inject)');
+                        }
 
-        });
+                    });
 
-        api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
-            const payload = eventApi.payload as {
-                request: { messageState?: Record<string, unknown> };
-            };
+                    api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
+                        const payload = eventApi.payload as {
+                            request: { messageState?: Record<string, unknown> };
+                        };
 
-            const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
-            if (!commands?.some(c => c.name === 'compact')) return;
-            
+                        const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
+                        if (!commands?.some(c => c.name === 'compact')) return;
 
-            const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
-            for (const part of userMsg.content) {
-                if (part.type === 'text') {
-                    part.text = COMPACTION_PROMPT + part.text;
-                    break;
-                }
+
+                        const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
+                        for (const part of userMsg.content) {
+                            if (part.type === 'text') {
+                                part.text = COMPACTION_PROMPT + part.text;
+                                break;
+                            }
             }
 
             return { ...(eventApi.result as any) };
@@ -278,7 +302,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                                 : '';
                         let result = `[${m.role}]: ${content}`;
                         if (m.tool_calls?.length) {
-                            result += '\n' + m.tool_calls.map(tc => `[${tc.function.name}]: ${tc.function.arguments}`).join('\n');
+                            result += '\n' + m.tool_calls.map(tc => `toolCallId=${tc.id}\ntoolName=${tc.function.name}\nbody=${tc.function.arguments}`).join('\n');
                         }
                         return result;
                     };
@@ -316,14 +340,14 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     });
                     const contextTexts = context.map(toText);
 
-                    const prompt = GUARDRAIL_PROMPT + GUARDRAIL_RULESET_GENERIC_PROMPT + '\n' + (guardrail.prompt || '')
+                    const prompt = GUARDRAIL_PROMPT + '\n' + (guardrail.prompt || GUARDRAIL_RULESET_GENERIC_PROMPT)
                         + 'Conversation/Message is below -\n'
                         + contextTexts.join('\n');
 
                     const result = await api.eventNode.invoke('/warpcore', 'bridge.handlePureCompletion', {
                         inferenceRequestId: guardrail.name + '-' + messageId,
                         inferenceUrl: grInferenceUrl,
-                        
+
                         messages: [{
                             role: 'user',
                             content: prompt,

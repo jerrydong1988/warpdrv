@@ -23,7 +23,7 @@ import { ChatSidebar } from './ChatSidebar';
 import { useDerivedMsgsForUI } from '@/hooks/useChatSelectors';
 import { useThreadConfig } from '@/hooks/useThreadConfig';
 import { useThreadAttachedTools } from '@/hooks/useThreadAttachedTools';
-import { useWorkspace } from '@/hooks/useWorkspace';
+
 import { useHotkey, HotkeyMode } from '@/hooks/useHotKey';
 import { useSlashCommandProcessor } from '@/hooks/useSlashCommandProcessor';
 
@@ -31,6 +31,7 @@ import { extractTextFromFile } from '@/hooks/useFileReader';
 import { useToast } from '@/components/ToastProvider';
 import { updateSettings } from '@/api/services';
 import { parseThreadMeta } from '@/pages/Chat/assistant-ui/ServerSelector';
+import { computeModeUnionTools } from '@/lib/toolUtils';
 // COMMENTED OUT: per-thread whisper server selection no longer used
 // import { parseWhisperThreadMeta } from '@/pages/Chat/assistant-ui/WhisperServerSelector';
 import { VscLayoutSidebarLeft, VscLayoutSidebarLeftOff, VscLayoutSidebarRight, VscLayoutSidebarRightOff } from 'react-icons/vsc';
@@ -207,25 +208,10 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 	const currentMode = modeId ? modes[modeId] : null;
 	const isModeActive = !!currentMode;
 
-	// Compute union of all relevant modes' tools when mode is active (global + current workspace only)
-	const modeUnionTools = useMemo(() => {
-		if (!isModeActive) return null;
-		const result: IToolAttachment[] = [];
-		const seen = new Set<string>();
-		const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-		const scope = folderId || 'global';
-		for (const m of Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope)) {
-			for (const t of m.allowedTools) {
-				if (typeof t === 'string') continue;
-				const key = `${t.serverName}:${t.toolName}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					result.push(t);
-				}
-			}
-		}
-		return result;
-	}, [isModeActive, modes, currentThreadId, threads]);
+	const modeUnionTools = useMemo(
+		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
+		[isModeActive, modes, currentThreadId, threads]
+	);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const clearPendingSlashCommands = useStore(s => s.clearPendingSlashCommands);
 	const executeCommands = useSlashCommandProcessor();
@@ -641,7 +627,7 @@ export const ChatPage = React.memo(() => {
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const [threadsListCollapsed, setThreadsListCollapsed] = useState(false);
 
-	useWorkspace();
+
 	const [searchOpen, setSearchOpen] = useState(false);
 	const openChatSidebarTab = useStore(s => s.openChatSidebarTab);
 	const chatSidebarOpen = useStore(s => s.chatSidebarOpen);
@@ -860,7 +846,7 @@ export const ChatPage = React.memo(() => {
 							<Plus size={15} />
 							New Chat
 						</Button>
-						<span style={{
+						<span className='drag' style={{
 							fontSize: "13px",
 							color: "var(--wc-text-muted)",
 							position: "fixed",

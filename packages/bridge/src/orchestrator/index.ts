@@ -809,8 +809,8 @@ export class Orchestrator {
 				}
 			}
 
-			// Pre-generate IDs so writes happen in the correct event order
-			const toolCallId = crypto.randomUUID();
+			// Use model's raw tool call ID for correlation with guardrails
+			const toolCallId = tc.id;
 			const toolMessageId = crypto.randomUUID();
 
 			const toolCallRecord: IToolCall = {
@@ -1164,18 +1164,27 @@ export class Orchestrator {
 		const attachedTools = request.attachedTools;
 		const allTools = this.mcpClient.getAllTools();
 
-		if (attachAllTools) {
-			return this.permissions.getEnabledTools(request.threadId, allTools);
-		}
+		let result: IToolDefinition[];
 
-		if (attachedTools && attachedTools.length > 0) {
+		if (attachAllTools) {
+			result = await this.permissions.getEnabledTools(request.threadId, allTools);
+		} else if (attachedTools && attachedTools.length > 0) {
 			const filtered = allTools.filter(t =>
 				attachedTools.some(a => a.serverName === t.serverName && a.toolName === t.name)
 			);
-			return this.permissions.getEnabledTools(request.threadId, filtered);
+			result = await this.permissions.getEnabledTools(request.threadId, filtered);
+		} else {
+			result = [];
 		}
 
-		return [];
+		// Stabilize order: sort by serverName, then tool name
+		result.sort((a, b) =>
+			a.serverName === b.serverName
+				? a.name.localeCompare(b.name)
+				: a.serverName.localeCompare(b.serverName)
+		);
+
+		return result;
 	}
 
 	private generateTitle(inferenceUrl: string, userContent: string): Promise<string> {

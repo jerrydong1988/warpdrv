@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { List, ChevronDown, ChevronRight } from 'lucide-react';
-import { extractResultText } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
+import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 interface INode { symbol: string; kind: string; filePath: string; startLine: number; }
@@ -22,30 +24,30 @@ export const CodeGraphListRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
 				<List size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)">{path ? String(path) : '(project root)'}</Text>
-			</HStack>
+																																				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono">{splitPath(path ? String(path) : '(project root)').dir}<Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ? String(path) : '(project root)').file}</Text></Text>
+			</HStack> */}
 			{nodes && nodes.length > 0 && (
 				<Box>
-					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
+					{/* Toggle removed — results shown directly */}
+					{/* <HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">{String(nodes.length)} symbol{nodes.length > 1 ? 's' : ''}</Text>
-					</HStack>
-					{expanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-							<VStack gap="1" align="stretch">
-								{nodes.map((n, i) => (
-									<HStack key={i} gap="2" align="center">
-										<Badge fontSize="9px" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0" minW="50px" textAlign="center">{String(n.kind)}</Badge>
-										<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
-										<Box flex="1" />
-										<Text fontSize="10px" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
-									</HStack>
-								))}
-							</VStack>
-						</Box>
-					)}
+												<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{String(nodes.length)} symbol{nodes.length > 1 ? 's' : ''}</Text>
+					</HStack> */}
+					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
+						<VStack gap="1" align="stretch">
+							{nodes.map((n, i) => (
+								<HStack key={i} gap="2" align="center">
+									<Badge fontSize="calc(var(--chat-font-size) - 5px)" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0" minW="50px" textAlign="center">{String(n.kind)}</Badge>
+													<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
+													<Box flex="1" />
+													<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
+								</HStack>
+							))}
+						</VStack>
+					</Box>
 				</Box>
 			)}
 		</Box>
@@ -60,4 +62,29 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
 		if (path === undefined) return false;
 		return { path };
 	},
+  renderMini: React.memo(({ args, result }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = typeof args.path === 'string' ? args.path : '(project root)';
+    const { dir, file } = splitPath(relativePath(path, projectRoot));
+    const countLabel = useMemo(() => {
+      try {
+        const text = extractResultText(result);
+        if (!text) return '';
+        const parsed = JSON.parse(text);
+        const c = parsed?.results?.length;
+        if (typeof c === 'number' && c > 0) return ` (${c} symbol${c === 1 ? '' : 's'})`;
+      } catch {}
+      return '';
+    }, [result]);
+    return (
+      <Text whiteSpace="nowrap">
+        Code List{' '}
+        <PathDisplay dir={dir} file={file} />
+        {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
+      </Text>
+    );
+  }),
 };

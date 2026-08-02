@@ -22,8 +22,9 @@ export const OptionsCard = React.memo(({
 					<ToggleChip label="Direct I/O" active={params.directIo} onClick={() => onParamChange('directIo', !params.directIo)} />
 					<ToggleChip label="No Warmup" active={params.noWarmup} onClick={() => onParamChange('noWarmup', !params.noWarmup)} />
 					<ToggleChip label="Jinja" active={params.jinja} onClick={() => onParamChange('jinja', !params.jinja)} />
-					<ToggleChip label="SWA Full" active={params.swaFull} onClick={() => onParamChange('swaFull', !params.swaFull)} />
-				</HStack>
+						<ToggleChip label="SWA Full" active={params.swaFull} onClick={() => onParamChange('swaFull', !params.swaFull)} />
+						<ToggleChip label="Preserve Thinking" active={params.preserveThinking ?? false} onClick={() => onParamChange('preserveThinking', !(params.preserveThinking ?? false))} />
+					</HStack>
 				<Flex gap="4">
 					<NumberField label="Batch Size" value={params.batchSize} onChange={v => onParamChange('batchSize', v)} min={1} step={256} />
 					<NumberField label="Micro Batch" value={params.ubatchSize} onChange={v => onParamChange('ubatchSize', v)} min={1} step={64} />

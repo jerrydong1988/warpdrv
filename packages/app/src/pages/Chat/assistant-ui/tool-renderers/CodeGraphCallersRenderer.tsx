@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { GitPullRequest, ChevronDown, ChevronRight, Check, AlertTriangle } from 'lucide-react';
 import { extractResultText } from './utils';
@@ -23,33 +23,33 @@ export const CodeGraphCallersRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
 				<GitPullRequest size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)">{String(target)}</Text>
-				<Text fontSize="10px" color="var(--wc-text-faint)">callers</Text>
-				{depth && depth > 1 && <Text fontSize="10px" color="var(--wc-text-faint)">depth: {depth}</Text>}
-			</HStack>
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">{String(target)}</Text>
+							<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">callers</Text>
+							{depth && depth > 1 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">depth: {depth}</Text>}
+			</HStack> */}
 			{nodes && nodes.length > 0 && (
 				<Box>
-					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
+					{/* Toggle removed — results shown directly */}
+					{/* <HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">{String(nodes.length)} caller{nodes.length > 1 ? 's' : ''}</Text>
-					</HStack>
-					{expanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-							<VStack gap="1" align="stretch">
-								{nodes.map((n, i) => (
-									<HStack key={i} gap="2" align="center">
-										{n.resolved !== false ? <Check size={10} color="var(--wc-accent-green-icon)" /> : <AlertTriangle size={10} color="var(--wc-accent-yellow-strong)" />}
-										<Badge fontSize="9px" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0" minW="40px" textAlign="center">{String(n.kind)}</Badge>
-										<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
-										<Box flex="1" />
-										<Text fontSize="10px" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
-									</HStack>
-								))}
-							</VStack>
-						</Box>
-					)}
+												<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{String(nodes.length)} caller{nodes.length > 1 ? 's' : ''}</Text>
+					</HStack> */}
+					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
+						<VStack gap="1" align="stretch">
+							{nodes.map((n, i) => (
+								<HStack key={i} gap="2" align="center">
+									{n.resolved !== false ? <Check size={10} color="var(--wc-accent-green-icon)" /> : <AlertTriangle size={10} color="var(--wc-accent-yellow-strong)" />}
+									<Badge fontSize="calc(var(--chat-font-size) - 5px)" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0" minW="40px" textAlign="center">{String(n.kind)}</Badge>
+													<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
+													<Box flex="1" />
+													<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
+								</HStack>
+							))}
+						</VStack>
+					</Box>
 				</Box>
 			)}
 		</Box>
@@ -66,4 +66,26 @@ export const CodeGraphCallersRendererMeta: IToolCallRenderer = {
 		const depth = typeof args.depth === 'number' ? args.depth : undefined;
 		return { symbolId, symbol, depth };
 	},
+  renderMini: React.memo(({ args, result }) => {
+    const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
+    const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
+    const target = symbolId ?? symbol ?? '';
+    const truncated = target.length > 50 ? target.slice(0, 47) + '...' : target;
+    const countLabel = useMemo(() => {
+      try {
+        const text = extractResultText(result);
+        if (!text) return '';
+        const parsed = JSON.parse(text);
+        const c = parsed?.results?.length;
+        if (typeof c === 'number' && c > 0) return ` (${c})`;
+      } catch {}
+      return '';
+    }, [result]);
+    return (
+      <Text whiteSpace="nowrap">
+        Code Callers of {truncated}
+        {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
+      </Text>
+    );
+  }),
 };

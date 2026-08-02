@@ -91,22 +91,24 @@ export const TodoListRenderer = React.memo((props: {
   if (items.length === 0) {
     return (
       <Box px="3" py="2">
-        <HStack gap="2" align="center">
+        {/* Header removed — info shown in mini renderer */}
+        {/* <HStack gap="2" align="center">
           <SquareCheck size={13} color="var(--wc-text-secondary)" />
-          <Text fontSize="12px" color="var(--wc-text-muted)">No todos</Text>
-        </HStack>
+                    <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">No todos</Text>
+        </HStack> */}
       </Box>
     );
   }
 
   return (
     <Box px="3" py="2">
-      <HStack gap="2" align="center" mb="2">
+      {/* Header removed — info shown in mini renderer */}
+      {/* <HStack gap="2" align="center" mb="2">
         <SquareCheck size={13} color="var(--wc-text-secondary)" />
-        <Text fontSize="12px" color="var(--wc-text-muted)">
-          {doneCount}/{items.length} done
-        </Text>
-      </HStack>
+                <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">
+                  {doneCount}/{items.length} done
+                </Text>
+      </HStack> */}
       <VStack gap="1" align="stretch">
         {items.map((item, i) => {
           const isDone = item.status === 'done';
@@ -116,10 +118,10 @@ export const TodoListRenderer = React.memo((props: {
                 ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
                 : <Square size={12} color="var(--wc-text-faint)" />
               }
-              <Text fontSize="10px" color="var(--wc-text-faint)" minW="14px">{i + 1}.</Text>
-              <Text
-                fontSize="12px"
-                fontFamily="mono"
+                            <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)" minW="14px">{i + 1}.</Text>
+                            <Text
+                              fontSize="calc(var(--chat-font-size))"
+                              fontFamily="mono"
                 color={isDone ? 'var(--wc-text-muted)' : 'var(--wc-text-primary)'}
                 textDecoration={isDone ? 'line-through' : 'none'}
                 wordBreak="break-word"
@@ -150,6 +152,18 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     // List operation (read/clear)
     return {};
   },
+  renderMini: React.memo(({ args, result }) => {
+    const items = extractTodoArray(result ?? args);
+    if (items) {
+      const done = items.filter(i => i.status === 'done').length;
+      return (
+        <Text whiteSpace="nowrap">ToDo {done}/{items.length}</Text>
+      );
+    }
+    return (
+      <Text whiteSpace="nowrap">Todos</Text>
+    );
+  }),
 };
 
 /* -- TodoItemRenderer -- */
@@ -177,10 +191,10 @@ export const TodoItemRenderer = React.memo((props: {
               ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
               : <Square size={12} color="var(--wc-text-faint)" />
             }
-            {props.index !== undefined && <Text fontSize="10px" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
-            <Text
-              fontSize="12px"
-              fontFamily="mono"
+                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
+                        <Text
+                          fontSize="calc(var(--chat-font-size) - 2px)"
+                          fontFamily="mono"
               color={isDone ? 'var(--wc-text-muted)' : 'var(--wc-text-primary)'}
               textDecoration={isDone ? 'line-through' : 'none'}
               wordBreak="break-word"
@@ -195,16 +209,16 @@ export const TodoItemRenderer = React.memo((props: {
   if (props.index !== undefined) {
     return (
       <Box px="3" py="2">
-        <Text fontSize="12px" color="var(--wc-text-muted)" fontStyle="italic">
-          Removed item #{props.index}
-        </Text>
+                <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)" fontStyle="italic">
+                  Removed item #{props.index}
+                </Text>
       </Box>
     );
   }
 
   return (
     <Box px="3" py="2">
-      <Text fontSize="12px" color="var(--wc-text-muted)">Todo item</Text>
+            <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">Todo item</Text>
     </Box>
   );
 });
@@ -232,4 +246,25 @@ export const TodoItemRendererMeta: IToolCallRenderer = {
 
     return false;
   },
+  renderMini: React.memo(({ args }) => {
+    const itemKey = args.todo ?? args.task ?? args.item ?? args.entry;
+    if (itemKey && typeof itemKey === 'object') {
+      const text = extractText(itemKey as Record<string, unknown>);
+      if (text) {
+        const truncated = text.length > 60 ? text.slice(0, 57) + '...' : text;
+        return (
+          <Text whiteSpace="nowrap">Todo: {truncated}</Text>
+        );
+      }
+    }
+    const idx = extractIndex(args);
+    if (idx !== undefined) {
+      return (
+        <Text whiteSpace="nowrap">Item #{idx}</Text>
+      );
+    }
+    return (
+      <Text whiteSpace="nowrap">Todo item</Text>
+    );
+  }),
 };

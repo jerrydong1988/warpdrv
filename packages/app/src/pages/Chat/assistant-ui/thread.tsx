@@ -5,7 +5,7 @@ import {
 } from "./attachment";
 import { MarkdownText } from "./markdown-text";
 import { ToolFallback } from "./tool-fallback";
-import { ToolCallBlockWrapper } from "./ToolCallBlockWrapper";
+import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import { KokoroTTSButton } from "./KokoroTTS";
 import { EmbeddingToggle } from "./EmbeddingToggle";
@@ -67,6 +67,7 @@ import { encodingForModel } from 'js-tiktoken';
 import { IconButton } from '@chakra-ui/react';
 import { Elicitation } from './Elicitation';
 import { AnnotationsBox } from './AnnotationsBox';
+import { PendingToolCallsBox } from './PendingToolCallsBox';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { SelectionPopover } from './SelectionPopover';
 import { DictationProvider, useDictation } from './DictationContext';
@@ -75,6 +76,8 @@ import { ComposerEditor, IWarpComposerEditorRef } from './ComposerEditor';
 import { insertComposerText, clearComposerEditor } from './composerEditorRegistry';
 import { ComposerUiSpace } from '../ui-space/ComposerUiSpace';
 import { MessageUiSpace } from '../ui-space/MessageUiSpace';
+import { MessageFooterUiSpace } from '../ui-space/MessageFooterUiSpace';
+import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 import type { IExtractedSlashCommand } from './docToString';
 
 const tokenEncoder = encodingForModel('gpt-4o');
@@ -127,7 +130,7 @@ export const Thread: FC<{
 	const isValidServer = !!currentServerId && currentServer?.status === EServerStatus.RUNNING;
 	const supportsMultiModal = currentServer?.useMultiModal ?? false;
 	const chatFixedWidth = useStore(s => s.settings.chatFixedWidth ?? false);
-	const currentThreadId = useStore(s => s.currentThreadId);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
 		let resolveFn: (() => void) | null = null;
@@ -160,6 +163,7 @@ export const Thread: FC<{
 							["--thread-max-width" as string]: "44rem",
 							["--composer-radius" as string]: "24px",
 							["--composer-padding" as string]: "10px",
+							["--chat-font-size" as string]: `calc(${chatFontSize}px - 3px)`,
 						}}
 					>
 						<ThreadPrimitive.Viewport
@@ -193,6 +197,7 @@ export const Thread: FC<{
 										<ThreadScrollToBottom />
 										<Elicitation />
 										<AnnotationsBox />
+										<PendingToolCallsBox />
 										<Composer />
 									</ThreadPrimitive.ViewportFooter>
 								</div>
@@ -319,13 +324,14 @@ const ContextUsageBar: FC = () => {
 	const ctxLabel = contextSize > 0 ? (contextSize > 1000 ? `${(contextSize / 1000).toFixed(0)}k` : String(contextSize)) : '?';
 	const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
 	const color = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : 'var(--wc-text-muted)';
+	const textColor = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : undefined;
 
 	return (
 		<div className="flex items-center gap-2 px-1 pt-1" title={`Context: ${total.toLocaleString()} / ${contextSize > 0 ? contextSize.toLocaleString() : '?'} tokens`}>
-			<div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
+			<div className="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden">
 				<div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
 			</div>
-			<span className="text-[10px] font-mono text-muted-foreground/40 shrink-0">
+			<span className="text-[12px] font-mono text-muted-foreground/60 shrink-0" style={textColor ? { color: textColor } : undefined}>
 				{total > 1000 ? `${(total / 1000).toFixed(1)}k` : total} / {ctxLabel}
 			</span>
 		</div>
@@ -419,15 +425,11 @@ const Composer: FC = () => {
 			<ComposerPrimitive.AttachmentDropzone asChild>
 				<div
 					data-slot="composer-shell"
-					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+					className="flex w-full flex-col gap-2 rounded-xl border composer-gradient-border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
-						boxShadow: modeColor
-							? `0 0 0 1px ${hexToRgba(modeColor)},0.15)}, 0px 10px 10px 10px rgba(0,0,0,0.15)`
-							: "0px 10px 10px 10px rgba(0,0,0,0.15)",
-						borderColor: modeColor
-							? `${hexToRgba(modeColor)},0.4)`
-							: "var(--wc-border-default)",
+						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
+						"--composer-border-color": modeColor ?? "var(--wc-border-default)",
 						color: "var(--wc-text-primary)",
 					}}
 				>
@@ -469,7 +471,7 @@ const ReasoningEffortToggle: FC = () => {
 	return (
 		<IconButton
 			variant="outline"
-			size="md"
+			size="sm"
 			px="3"
 			ml="1"
 			borderRadius={"lg"}
@@ -478,11 +480,12 @@ const ReasoningEffortToggle: FC = () => {
 			_hover={{ bg: 'var(--wc-bg-hover)' }}
 			color={color}
 			onClick={next}
+			fontSize="12px"
+			textTransform={"capitalize"}
 			className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent`}
 			title={`Reasoning effort: ${label} (click to cycle)`}
 		>
-			<BrainCircuit className={`${isOn ? '' : 'opacity-40'}`} />
-			<span style={{ textTransform: "capitalize", fontSize: "12px" }}>{label}</span>
+			Effort {label}
 		</IconButton>
 	);
 };
@@ -492,9 +495,7 @@ const ToolsSelector: FC = React.memo(() => {
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
-	const currentThreadId = useStore(s => s.currentThreadId);
 	const modes = useStore(s => s.modes);
-	const threads = useStore(s => s.threads);
 	const threadState = useStore(s => s.getCurrentThreadState(s));
 
 	const modeId = threadState?.modeId as string | undefined;
@@ -520,14 +521,13 @@ const ToolsSelector: FC = React.memo(() => {
 	}, [isModeActive, currentMode]);
 
 	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
-	const effectiveTools = isModeActive ? modeToolSet : null;
 
 	const color = isModeActive
 		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
 		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
 	const label = isModeActive
-		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Off')
-		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tool(s)` : 'Off');
+		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Tools Off')
+		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tools` : 'Tools Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
 		if (isModeActive) return;
@@ -577,18 +577,17 @@ const ToolsSelector: FC = React.memo(() => {
 			<Popover.Trigger unstyled asChild>
 				<IconButton
 					variant="outline"
-					size="md"
+					size="sm"
 					px="3"
 					ml="1"
 					borderRadius={"lg"}
 					borderWidth="1px"
-					borderColor={(attachAllTools || attachedTools.length > 0) ? color : "var(--wc-border-default)"}
+					borderColor={"var(--wc-border-default)"}
 					_hover={{ bg: 'var(--wc-bg-hover)' }}
 					color={color}
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
-					title={`Tools: ${label}`}
+					title={`Tools ${label}`}
 				>
-					<VscTools className={`${(attachAllTools || attachedTools.length > 0) ? '' : 'opacity-40'}`} />
 					<span style={{ fontSize: "12px" }}>{label}</span>
 				</IconButton>
 			</Popover.Trigger>
@@ -717,7 +716,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 			aui.composer().setText("<continue>");
 		}
 		aui.composer().send({ startRun: true });
-		clearComposerEditor();
 	}, [isSendDisabled, annotations, composerText, clearAnnotations, pendingSlashCommands.length]);
 
 	return (
@@ -863,15 +861,17 @@ const EmbeddingStatus: FC = React.memo(() => {
 
 const ToolCallRenderer: FC = () => {
 	const part = useAuiState(s => s.part);
+	const messageId = useAuiState(s => s.message.id);
 
 	return (
-		<ToolCallBlockWrapper
+		<ToolCallBlockCollapsible
 			toolCallId={(part as any).toolCallId}
 			toolName={(part as any).toolName}
 			serverName={(part as any).serverName ?? 'unknown'}
 			args={(part as any).args}
 			result={(part as any).result}
 			status={mapStatusFromPart((part as any).status)}
+			messageId={messageId}
 		/>
 	);
 };
@@ -960,15 +960,15 @@ const ReasoningBlock: FC = React.memo(() => {
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium transition-colors"
-					style={{ color: 'var(--wc-text-muted)' }}
+				className="flex w-full items-center gap-2 px-3 py-2 font-medium transition-colors"
+					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
 			>
-				<BrainCircuitIcon className="size-3.5" />
-				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tokens est.)` : ''}</span>
+				{/*<BrainCircuitIcon className="size-3.5" />*/}
+				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tks)` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
-			{open && (
-				<div className="px-3 pb-3 text-xs whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)' }}>
+				{open && (
+					<div className="px-3 pb-3 whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)', fontSize: 'var(--chat-font-size)' }}>
 					{reasoning}
 				</div>
 			)}
@@ -1052,6 +1052,7 @@ const AssistantActionBar: FC = () => {
 		>
 			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1116,7 +1117,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "5px 15px 5px 15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
@@ -1124,7 +1125,7 @@ const ToolMessage: FC = React.memo(() => {
 				</div>
 			</MessageUiSpace>
 
-			<div className="aui-tool-message-footer mt-1 ml-2 flex min-h-6 items-center gap-1">
+			<div className="aui-tool-message-footer ml-2 flex min-h-6 items-center gap-1">
 				<StatsTooltip />
 				<BranchPicker />
 				<ToolActionBar />
@@ -1146,6 +1147,7 @@ const ToolActionBar: FC = () => {
 			style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: "visible" }}
 		>
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1251,35 +1253,36 @@ const UserActionBar: FC = () => {
 			className="aui-user-action-bar-root"
 			style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: "visible" }}
 		>
-			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
-			<EmbeddingStatus />
+					{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
+					<EmbeddingStatus />
+					<MessageFooterUiSpace />
 
-			<Menu.Root positioning={{ getAnchorRect }}>
-				<Menu.Trigger asChild>
-					<ActionBarIcon>
-						<MoreVertical size={14} ref={ref}/>
-					</ActionBarIcon>
-				</Menu.Trigger>
-				<Menu.Positioner>
-					<Menu.Content>
-						<ActionBarPrimitive.Edit asChild>
-							<Menu.Item value="edit">
-								<HStack gap="2">
-									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
-								</HStack>
-							</Menu.Item>
-						</ActionBarPrimitive.Edit>
-						<Menu.Separator />
-						<Menu.Item value="delete">
-							<DeleteMessageButton messageId={messageId} />
-						</Menu.Item>
-					</Menu.Content>
-				</Menu.Positioner>
-			</Menu.Root>
-		</ActionBarPrimitive.Root>
-	);
-};
+					<Menu.Root positioning={{ getAnchorRect }}>
+						<Menu.Trigger asChild>
+							<ActionBarIcon>
+								<MoreVertical size={14} ref={ref}/>
+							</ActionBarIcon>
+						</Menu.Trigger>
+						<Menu.Positioner>
+							<Menu.Content>
+								<ActionBarPrimitive.Edit asChild>
+									<Menu.Item value="edit">
+										<HStack gap="2">
+											<PencilIcon size={14} />
+											<Text fontSize="12px">Edit</Text>
+										</HStack>
+									</Menu.Item>
+								</ActionBarPrimitive.Edit>
+								<Menu.Separator />
+								<Menu.Item value="delete">
+									<DeleteMessageButton messageId={messageId} />
+								</Menu.Item>
+							</Menu.Content>
+						</Menu.Positioner>
+					</Menu.Root>
+				</ActionBarPrimitive.Root>
+			);
+			};
 
 const EditComposer: FC = () => {
 	return (

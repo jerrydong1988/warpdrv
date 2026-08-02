@@ -11,10 +11,17 @@ function applyDefaults(wsState: Record<string, unknown>) {
 			const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
 			if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
 		}
-		if (wsState.defaultModeId) {
-			store.setThreadState(null, { modeId: wsState.defaultModeId as string });
+			if (wsState.defaultModeId) {
+				store.setThreadState(null, { modeId: wsState.defaultModeId as string });
+			}
+			if (wsState.defaultReasoningEffort) {
+				const effort = wsState.defaultReasoningEffort as string;
+				store.setCurrentInferenceParams({
+					reasoningEffort: effort,
+					enableThinking: effort !== 'none',
+				} as unknown as Record<string, unknown>);
+			}
 		}
-}
 
 export function useWorkspace() {
   const activeWorkspaceId = useStore(s => s.activeWorkspaceId);

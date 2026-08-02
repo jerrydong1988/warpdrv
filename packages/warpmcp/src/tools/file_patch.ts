@@ -303,7 +303,7 @@ function buildNotFoundError(content: string, oldText: string): string {
 	return msg;
 }
 
-export async function filePatchHandler(deps: IWarpmcpDeps, args: { path: string; oldText: string; newText: string; encoding?: string }): Promise<{ success: boolean; fileSize: number; strategy: string }> {
+export async function filePatchHandler(deps: IWarpmcpDeps, args: { path: string; oldText: string; newText: string; encoding?: string }): Promise<{ success: boolean; fileSize: number; strategy: string; matchLine: number }> {
 	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
 	const encoding = (args.encoding ?? 'utf8') as BufferEncoding;
 	if (!args.oldText) {
@@ -317,14 +317,15 @@ export async function filePatchHandler(deps: IWarpmcpDeps, args: { path: string;
 	const content = crlf ? normalizeEol(raw) : raw;
 	const oldText = normalizeEol(args.oldText);
 	const newText = normalizeEol(args.newText);
-	const match = findMatch(content, oldText);
-	const replacement = reindent(newText, match.indent);
-	let next = content.substring(0, match.start) + replacement + content.substring(match.end);
-	if (crlf) {
-		next = next.replace(/\n/g, '\r\n');
-	}
-	await fs.writeFile(safePath, next, { encoding });
-	await deps.onFileWritten?.(safePath);
-	const stat = await fs.stat(safePath);
-	return { success: true, fileSize: stat.size, strategy: 'matched' };
+  const match = findMatch(content, oldText);
+  const matchLine = content.slice(0, match.start).split('\n').length + 1;
+  const replacement = reindent(newText, match.indent);
+  let next = content.substring(0, match.start) + replacement + content.substring(match.end);
+  if (crlf) {
+    next = next.replace(/\n/g, '\r\n');
+  }
+  await fs.writeFile(safePath, next, { encoding });
+  await deps.onFileWritten?.(safePath);
+  const stat = await fs.stat(safePath);
+  return { success: true, fileSize: stat.size, strategy: 'matched', matchLine };
 }

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FolderOpen, ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
-import { extractResultText } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
+import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 interface ITreeEntry {
@@ -95,7 +97,7 @@ const TreeNode = React.memo(({ entry, depth }: { entry: ITreeEntry, depth: numbe
 			<HStack gap="1" pl={`${depth * 12}px`} py="0" align="center" cursor={hasChildren ? 'pointer' : 'default'} onClick={() => hasChildren && setOpen(!open)}>
 				{hasChildren ? (open ? <ChevronDown size={10} /> : <ChevronRight size={10} />) : <Box w="10px" />}
 				{isDir ? <Folder size={11} color="var(--wc-text-secondary)" /> : <File size={11} color="var(--wc-text-faint)" />}
-				<Text fontSize="11px" fontFamily="mono" color={isDir ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}>
+								<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color={isDir ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}>
 					{entry.name}
 				</Text>
 			</HStack>
@@ -121,27 +123,28 @@ export const ListRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={entries ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={entries ? '2' : '0'}>
 				<FolderOpen size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{displayPath}
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
+						<Text color="var(--wc-text-muted)">{splitPath(displayPath).dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(displayPath).file}</Text>
 				</Text>
-				{meta?.pattern && (
-					<Text fontSize="10px" color="var(--wc-text-faint)">
-						pattern: {meta.pattern}
-					</Text>
-				)}
-				{meta?.depth !== undefined && meta.depth > 0 && (
-					<Text fontSize="10px" color="var(--wc-text-faint)">
-						depth: {meta.depth}
-					</Text>
-				)}
-				{excludePatterns && excludePatterns.length > 0 && (
-					<Text fontSize="10px" color="var(--wc-text-faint)">
-						excl: {excludePatterns.join(', ')}
-					</Text>
-				)}
-			</HStack>
+							{meta?.pattern && (
+								<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
+									pattern: {meta.pattern}
+								</Text>
+							)}
+							{meta?.depth !== undefined && meta.depth > 0 && (
+								<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
+									depth: {meta.depth}
+								</Text>
+							)}
+							{excludePatterns && excludePatterns.length > 0 && (
+								<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
+									excl: {excludePatterns.join(', ')}
+								</Text>
+							)}
+			</HStack> */}
 			{entries && entries.length > 0 && (
 				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
 					<VStack gap="0" align="stretch">
@@ -172,4 +175,23 @@ export const ListRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = args.path ?? args.dir ?? args.directory ?? args.folder ?? args.file_path;
+    if (typeof path === 'string' && path.length > 0) {
+      const { dir, file } = splitPath(relativePath(path, projectRoot));
+      return (
+        <Text whiteSpace="nowrap">
+          List{' '}
+          <PathDisplay dir={dir} file={file} />
+        </Text>
+      );
+    }
+    return (
+      <Text whiteSpace="nowrap">List (project root)</Text>
+    );
+  }),
 };

@@ -28,17 +28,18 @@ export const CodeGraphIngestRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={statEntries.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={statEntries.length ? '2' : '0'}>
 				<Database size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" color="var(--wc-text-primary)">{force ? 'Force re-index' : 'Incremental index'}</Text>
-			</HStack>
+								<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-primary)">{force ? 'Force re-index' : 'Incremental index'}</Text>
+			</HStack> */}
 			{statEntries.length > 0 && (
 				<HStack gap="2" flexWrap="wrap">
 					{statEntries.map(([key, value]) => (
 						<Box key={key} bg="var(--wc-overlay-dim)" borderRadius="sm" px="2" py="1">
 							<HStack gap="1">
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">{value}</Text>
-								<Text fontSize="9px" color="var(--wc-text-faint)" textTransform="uppercase">{statLabels[key]}</Text>
+								<Text fontSize="var(--chat-font-size)" fontWeight="600" color="var(--wc-text-primary)">{value}</Text>
+												<Text fontSize="calc(var(--chat-font-size) - 5px)" color="var(--wc-text-faint)" textTransform="uppercase">{statLabels[key]}</Text>
 							</HStack>
 						</Box>
 					))}
@@ -55,4 +56,10 @@ export const CodeGraphIngestRendererMeta: IToolCallRenderer = {
 		const force = typeof args.force === 'boolean' ? args.force : undefined;
 		return { force };
 	},
+  renderMini: React.memo(({ args }) => {
+    const force = typeof args.force === 'boolean' ? args.force : false;
+    return (
+      <Text whiteSpace="nowrap">{force ? 'Code Force re-index' : 'Code Incremental index'}</Text>
+    );
+  }),
 };

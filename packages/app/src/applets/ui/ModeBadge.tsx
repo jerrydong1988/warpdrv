@@ -78,7 +78,7 @@ export const ModeBadge = memo(() => {
     }, [isOpen]);
 
     const isActive = !!currentMode;
-    const label = currentMode?.name ?? 'No mode';
+    const label = currentMode?.name ?? 'Default';
     const modeColor = currentMode?.color || '#a78bfa';
     const modeColorRgba = hexToRgba(modeColor);
 
@@ -154,7 +154,7 @@ export const ModeBadge = memo(() => {
                         }}
                     >
                         {!isActive && <Check size={14} color="var(--wc-accent-purple)" />}
-                        <span style={{ flex: 1 }}>No mode</span>
+                        <span style={{ flex: 1 }}>Default</span>
                     </div>
 
                     <div style={{ height: '1px', background: 'var(--wc-border-subtle)', margin: '4px 0' }} />
