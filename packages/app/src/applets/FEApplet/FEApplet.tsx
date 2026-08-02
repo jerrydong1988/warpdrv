@@ -27,7 +27,7 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { ServerPicker } from '@/components/ServerPicker';
 import { TbMessage2Plus } from 'react-icons/tb';
 import { TiFlowSwitch } from 'react-icons/ti';
-import { ModeBadge } from '../ui/ModeBadge';
+import { ModeTabs } from '../ui/ModeTabs';
 import { GuardrailBadge, ModeGuardrailPicker } from '../ui/GuardrailBadge';
 
 const EMPTY_TODOS: ITodoItem[] = [];
@@ -1360,7 +1360,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.MINI_TOOL_CALL, MiniToolCallGuardrailIndicator, { label: 'MiniToolCallGuardrailIndicator' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, { label: 'GuardrailShieldCheck' });
-		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeBadge, { label: 'Mode' });
+				api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, { label: 'Mode' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
 
 		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode'];

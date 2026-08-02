@@ -127,3 +127,26 @@
     80% { transform: translateX(3px) rotate(0.5deg); }
 }
 
+.composer-gradient-border {
+    position: relative;
+    border: none;
+}
+
+.composer-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(to bottom, var(--composer-border-color) 0%, transparent 75%);
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+}
+

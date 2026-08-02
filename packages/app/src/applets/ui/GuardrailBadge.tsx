@@ -198,17 +198,17 @@ export const GuardrailBadge = memo(() => {
 				alignItems="center"
 				gap="1.5"
 				px="2"
-				py="1"
+				py="2"
 				borderRadius="md"
 				cursor="pointer"
 				userSelect="none"
 				bg={totalActive > 0 ? 'var(--wc-bg-selected)' : 'var(--wc-bg-subtle)'}
 				borderWidth="1px"
-				borderColor={totalActive > 0 ? 'var(--wc-accent-purple)' : 'var(--wc-border-subtle)'}
+				borderColor={totalActive > 0 ? 'var(--wc-border-subtle)' : 'var(--wc-border-subtle)'}
 				opacity={totalActive > 0 ? 1 : 0.6}
 				onClick={handleToggleDropdown}
 			>
-				<FaShieldAlt size={14} color={totalActive > 0 ? 'var(--wc-accent-purple)' : 'var(--wc-text-muted)'} />
+				<FaShieldAlt size={14} color={totalActive > 0 ? 'var(--wc-text-tertiary)' : 'var(--wc-text-muted)'} />
 				<Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
 					{totalActive > 0 ? `${totalActive} Guardrail${totalActive > 1 ? 's' : ''}` : 'Guardrails'}
 				</Box>

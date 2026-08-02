@@ -66,7 +66,7 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 			attributes: {
 				class: "aui-composer-input",
 				"aria-label": "Message input",
-				style: `outline: none; font-size: ${chatFontSize}px;${chatFontFamily ? ` font-family: ${chatFontFamily};` : ''}`,
+				style: `outline: none; min-height: 50px; font-size: ${chatFontSize}px;${chatFontFamily ? ` font-family: ${chatFontFamily};` : ''}`,
 			},
 		},
 		onUpdate: ({ editor }) => {

@@ -73,7 +73,7 @@ async function walk(
 
 		const entryRel = relPrefix ? `${relPrefix}/${item.name}` : item.name;
 
-		if (ig.test(entryRel)) continue;
+		if (ig.ignores(entryRel)) continue;
 		if (pattern && !minimatch(entryRel, pattern)) continue;
 
 		let type: IDirEntry['type'] = 'other';

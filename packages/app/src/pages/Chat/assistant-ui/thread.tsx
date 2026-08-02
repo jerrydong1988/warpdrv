@@ -425,13 +425,11 @@ const Composer: FC = () => {
 			<ComposerPrimitive.AttachmentDropzone asChild>
 				<div
 					data-slot="composer-shell"
-					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+					className="flex w-full flex-col gap-2 rounded-xl border composer-gradient-border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
 						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
-						borderColor: modeColor
-							? `${hexToRgba(modeColor, 0.4)}`
-							: "var(--wc-border-default)",
+						"--composer-border-color": modeColor ?? "var(--wc-border-default)",
 						color: "var(--wc-text-primary)",
 					}}
 				>
@@ -473,7 +471,7 @@ const ReasoningEffortToggle: FC = () => {
 	return (
 		<IconButton
 			variant="outline"
-			size="md"
+			size="sm"
 			px="3"
 			ml="1"
 			borderRadius={"lg"}
@@ -482,11 +480,12 @@ const ReasoningEffortToggle: FC = () => {
 			_hover={{ bg: 'var(--wc-bg-hover)' }}
 			color={color}
 			onClick={next}
+			fontSize="12px"
+			textTransform={"capitalize"}
 			className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent`}
 			title={`Reasoning effort: ${label} (click to cycle)`}
 		>
-			<BrainCircuit className={`${isOn ? '' : 'opacity-40'}`} />
-			<span style={{ textTransform: "capitalize", fontSize: "12px" }}>{label}</span>
+			Effort {label}
 		</IconButton>
 	);
 };
@@ -496,9 +495,7 @@ const ToolsSelector: FC = React.memo(() => {
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
-	const currentThreadId = useStore(s => s.currentThreadId);
 	const modes = useStore(s => s.modes);
-	const threads = useStore(s => s.threads);
 	const threadState = useStore(s => s.getCurrentThreadState(s));
 
 	const modeId = threadState?.modeId as string | undefined;
@@ -524,14 +521,13 @@ const ToolsSelector: FC = React.memo(() => {
 	}, [isModeActive, currentMode]);
 
 	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
-	const effectiveTools = isModeActive ? modeToolSet : null;
 
 	const color = isModeActive
 		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
 		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
 	const label = isModeActive
-		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Off')
-		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tool(s)` : 'Off');
+		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Tools Off')
+		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tools` : 'Tools Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
 		if (isModeActive) return;
@@ -581,18 +577,17 @@ const ToolsSelector: FC = React.memo(() => {
 			<Popover.Trigger unstyled asChild>
 				<IconButton
 					variant="outline"
-					size="md"
+					size="sm"
 					px="3"
 					ml="1"
 					borderRadius={"lg"}
 					borderWidth="1px"
-					borderColor={(attachAllTools || attachedTools.length > 0) ? color : "var(--wc-border-default)"}
+					borderColor={"var(--wc-border-default)"}
 					_hover={{ bg: 'var(--wc-bg-hover)' }}
 					color={color}
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
-					title={`Tools: ${label}`}
+					title={`Tools ${label}`}
 				>
-					<VscTools className={`${(attachAllTools || attachedTools.length > 0) ? '' : 'opacity-40'}`} />
 					<span style={{ fontSize: "12px" }}>{label}</span>
 				</IconButton>
 			</Popover.Trigger>

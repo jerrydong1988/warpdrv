@@ -10,6 +10,7 @@ type DictationSource = 'composer' | 'popover' | 'global' | null;
 
 interface IVADSession {
 	start: () => Promise<void>;
+	stop: () => void;
 	destroy: () => void;
 }
 
@@ -46,6 +47,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 	const callbacksRef = useRef<Set<(text: string) => void>>(new Set());
 	const isStartingRef = useRef(false);
 	const shouldStopRef = useRef(false);
+	const isStoppingRef = useRef(false);
 	const vadActiveRef = useRef(false);
 
 	const whisperServers = useStore(s => s.whisperServers);
@@ -76,10 +78,12 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 		//console.log('[Dictation] stopping: isActive→false, destroying session, stopping tracks');
 		setIsActive(false);
 		setSource(null);
+		isStoppingRef.current = true;
 		if (isStartingRef.current) {
 			shouldStopRef.current = true;
 			return;
 		}
+		vadSessionRef.current?.stop();
 		vadSessionRef.current?.destroy();
 		vadSessionRef.current = null;
 		audioStreamRef.current?.getTracks().forEach(t => t.stop());
@@ -95,6 +99,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 		isStartingRef.current = true;
 		shouldStopRef.current = false;
+		isStoppingRef.current = false;
 
 		try {
 			const audioConstraints: MediaTrackConstraints = {
@@ -114,6 +119,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 			const vad = await MicVAD.new({
 				onSpeechStart: () => { console.log('[Dictation] speech started'); },
 				onSpeechEnd: async (audio: Float32Array) => {
+					if (isStoppingRef.current) return;
 					console.log('[Dictation] speech ended: isTranscribing:', isTranscribing);
 					setIsTranscribing(true);
 					try {
@@ -153,11 +159,13 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 			vadSessionRef.current = {
 				start: async () => vad.start(),
+				stop: () => vad.stop(),
 				destroy: () => vad.destroy(),
 			};
 			await vad.start();
 			if (shouldStopRef.current) {
 				console.log('[Dictation] stop requested during start, cleaning up');
+				vad.stop();
 				vadSessionRef.current?.destroy();
 				vadSessionRef.current = null;
 				stream.getTracks().forEach(t => t.stop());
@@ -172,6 +180,7 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 			console.error('[Dictation] start error:', err);
 		} finally {
 			isStartingRef.current = false;
+			if (!shouldStopRef.current) isStoppingRef.current = false;
 		}
 	}, [selectedWhisperServerId, activeWhisperServer, micDeviceId, stop]);
 

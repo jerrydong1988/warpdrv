@@ -14,20 +14,27 @@ export const ComposerUiSpace = React.memo(() => {
         <Box
             display="flex"
             flexDir="row"
-            gap="2"
+				justify="space-between"
+				alignItems="center"
+            w="calc(100% + var(--chakra-spacing-1\.5) * 3)"
             overflowX="auto"
             minWidth="0"
-            bg="var(--wc-bg-absolute)"
+            bg="linear-gradient(to bottom, var(--wc-bg-absolute), transparent)"
             color="var(--wc-fg-absolute)"
-            borderRadius="10px 10px 0 0"
+				borderRadius="10px 10px 0 0"
+				borderBottom="1px solid var(--wc-border-subtle)"
             mb="1"
 						m="-2"
 						p="1.5"
         >
-            {Object.keys(componentIds).map(id => {
+            {Object.keys(componentIds).map((id, index) => {
                 const entry = entriesById[id];
                 if (!entry) return null;
-                return <UiSpaceWrapper key={id} componentId={id} />;
+                return (
+                    <Box key={id} flex="0 0 auto" ml={index > 0 ? "auto" : 0}>
+                        <UiSpaceWrapper componentId={id} />
+                    </Box>
+                );
             })}
         </Box>
     );

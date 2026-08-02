@@ -472,7 +472,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<Separator w="full" my="2" borderColor="var(--wc-border-subtle)" />
 
 				{/* Thread list */}
-				<Box w="full" mt="2" maxHeight='calc(100% - 800px)' overflowY="auto">
+				<Box w="full" mt="2" maxHeight='calc(100vh - 700px)' minHeight="200px" overflowY="auto">
 					<HStack justify="space-between" px="3" py="2">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
 							Threads
