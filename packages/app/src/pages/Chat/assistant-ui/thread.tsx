@@ -426,11 +426,9 @@ const Composer: FC = () => {
 					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
-						boxShadow: modeColor
-							? `0 0 0 1px ${hexToRgba(modeColor)},0.15)}, 0px 10px 10px 10px rgba(0,0,0,0.15)`
-							: "0px 10px 10px 10px rgba(0,0,0,0.15)",
+						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
 						borderColor: modeColor
-							? `${hexToRgba(modeColor)},0.4)`
+							? `${hexToRgba(modeColor, 0.4)}`
 							: "var(--wc-border-default)",
 						color: "var(--wc-text-primary)",
 					}}
@@ -1129,7 +1127,7 @@ const ToolMessage: FC = React.memo(() => {
 				</div>
 			</MessageUiSpace>
 
-			<div className="aui-tool-message-footer mt-1 ml-2 flex min-h-6 items-center gap-1">
+			<div className="aui-tool-message-footer ml-2 flex min-h-6 items-center gap-1">
 				<StatsTooltip />
 				<BranchPicker />
 				<ToolActionBar />

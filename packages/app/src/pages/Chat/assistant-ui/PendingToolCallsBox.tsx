@@ -7,7 +7,7 @@ import { EToolCallStatus, EToolApprovalMode, EChatRole, EMessagePartType } from 
 import type { IMessagePartToolCall, IToolCall, TMessageId } from '@warpcore/bridge';
 import type { IToolAttachment } from '@warpcore/shared';
 import { ServerStatusContext } from './thread';
-import { autoResolveRenderer } from './tool-renderers/resolver';
+import { autoResolveRenderer, autoResolveMiniRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { PendingToolCallUiSpace } from '../ui-space/PendingToolCallUiSpace';
 import { useToast } from '@/components/ToastProvider';
@@ -134,6 +134,10 @@ export const PendingToolCallsBox = React.memo(() => {
 		[serverName, mcpServers]
 	);
 
+	const MiniComponent = useMemo(() => {
+		return autoResolveMiniRenderer(toolName, args, currentCall?.result, toolCallRenderers);
+	}, [toolName, args, currentCall?.result, toolCallRenderers]);
+
 	const handleDecision = useCallback(async (decision: 'approve' | 'deny') => {
 		if (!currentCall || !currentThreadId || !currentServerId) return;
 		setDeciding(true);
@@ -222,9 +226,12 @@ export const PendingToolCallsBox = React.memo(() => {
 	// Nothing to show - early return AFTER all hooks
 	if (hasDenied || pendingCalls.length === 0 || !currentThreadId || !anchorMessageId || isDismissed) return null;
 
-	return (
+		return (
 		<Box
 			data-role="assistant"
+			minW="52rem"
+			mx="-4rem"
+			shadow="0 10px 10px 10px rgba(0,0,0,0.15)"
 			borderWidth="1px"
 			borderColor="var(--wc-border-default)"
 			borderRadius="lg"
@@ -255,32 +262,26 @@ export const PendingToolCallsBox = React.memo(() => {
 				</Box>
 			</HStack>
 
-			{/* Tool call row */}
+			{/* Tool call row — mini renderer */}
 			<HStack gap="3" px="3" py="2.5" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
-				<Wrench size={13} color="var(--wc-text-tertiary)" />
-				<Text fontSize="calc(var(--chat-font-size) - 1px)" fontWeight="700" color="var(--wc-text-secondary)">
-					{toolName}
-				</Text>
-				<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)">
-					{serverName}
-				</Text>
+				{MiniComponent ? (
+					<MiniComponent args={args} result={currentCall?.result} />
+				) : (
+					<HStack gap="1" align="center">
+						<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+						<Text whiteSpace="nowrap">
+							{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
+							<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
+						</Text>
+					</HStack>
+				)}
 				<Box flex="1" />
 				<HStack gap="1">
 					{deciding && (
-						<>
-							<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
-							<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-muted)">
-								Processing...
-							</Text>
-						</>
+						<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
 					)}
 					{!deciding && (
-						<>
-							<Loader size={11} color={statusColors[EToolCallStatus.PENDING]} className="animate-spin" />
-							<Text fontSize="calc(var(--chat-font-size) - 4px)" color={statusColors[EToolCallStatus.PENDING]}>
-								{statusLabels[EToolCallStatus.PENDING]}
-							</Text>
-						</>
+						<Loader size={11} color={statusColors[EToolCallStatus.PENDING]} className="animate-spin" />
 					)}
 				</HStack>
 			</HStack>

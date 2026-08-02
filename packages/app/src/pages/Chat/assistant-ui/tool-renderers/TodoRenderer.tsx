@@ -91,22 +91,24 @@ export const TodoListRenderer = React.memo((props: {
   if (items.length === 0) {
     return (
       <Box px="3" py="2">
-        <HStack gap="2" align="center">
+        {/* Header removed — info shown in mini renderer */}
+        {/* <HStack gap="2" align="center">
           <SquareCheck size={13} color="var(--wc-text-secondary)" />
                     <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">No todos</Text>
-        </HStack>
+        </HStack> */}
       </Box>
     );
   }
 
   return (
     <Box px="3" py="2">
-      <HStack gap="2" align="center" mb="2">
+      {/* Header removed — info shown in mini renderer */}
+      {/* <HStack gap="2" align="center" mb="2">
         <SquareCheck size={13} color="var(--wc-text-secondary)" />
                 <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">
                   {doneCount}/{items.length} done
                 </Text>
-      </HStack>
+      </HStack> */}
       <VStack gap="1" align="stretch">
         {items.map((item, i) => {
           const isDone = item.status === 'done';
@@ -154,9 +156,19 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     const items = extractTodoArray(result ?? args);
     if (items) {
       const done = items.filter(i => i.status === 'done').length;
-      return `${done}/${items.length} todos`;
+      return (
+        <HStack gap="1" align="center">
+          <SquareCheck size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+          <Text whiteSpace="nowrap">{done}/{items.length} todos</Text>
+        </HStack>
+      );
     }
-    return 'Todos';
+    return (
+      <HStack gap="1" align="center">
+        <SquareCheck size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">Todos</Text>
+      </HStack>
+    );
   }),
 };
 
@@ -246,11 +258,28 @@ export const TodoItemRendererMeta: IToolCallRenderer = {
       const text = extractText(itemKey as Record<string, unknown>);
       if (text) {
         const truncated = text.length > 60 ? text.slice(0, 57) + '...' : text;
-        return `Todo: ${truncated}`;
+        return (
+          <HStack gap="1" align="center">
+            <Square size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+            <Text whiteSpace="nowrap">Todo: {truncated}</Text>
+          </HStack>
+        );
       }
     }
     const idx = extractIndex(args);
-    if (idx !== undefined) return `Item #${idx}`;
-    return 'Todo item';
+    if (idx !== undefined) {
+      return (
+        <HStack gap="1" align="center">
+          <Square size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+          <Text whiteSpace="nowrap">Item #{idx}</Text>
+        </HStack>
+      );
+    }
+    return (
+      <HStack gap="1" align="center">
+        <Square size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">Todo item</Text>
+      </HStack>
+    );
   }),
 };

@@ -21,35 +21,35 @@ export const EmbeddingSearchRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={results?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={results?.length ? '2' : '0'}>
 				<Search size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-primary)">{String(query ?? '(no query)')}</Text>
 							{bits.length > 0 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">{bits.join(' · ')}</Text>}
-			</HStack>
+			</HStack> */}
 			{results && results.length > 0 && (
 				<Box>
-					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
+					{/* Toggle removed — results shown directly */}
+					{/* <HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
 												<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{String(results.length)} result{results.length > 1 ? 's' : ''}</Text>
-					</HStack>
-					{expanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
-							<VStack gap="2" align="stretch">
-								{results.map((r, i) => {
-									const similarity = Math.round((1 - r.distance) * 100);
-									return (
-										<Box key={i} pb={i < results.length - 1 ? '2' : '0'} borderBottomWidth={i < results.length - 1 ? '1px' : '0'} borderColor="var(--wc-border-subtle)">
-											<HStack gap="2" align="center" mb="1">
-												<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-accent-blue)" minW="45px">{similarity}%</Text>
-																<Text fontSize="calc(var(--chat-font-size) - 5px)" fontFamily="mono" color="var(--wc-text-faint)">{String(r.messageId).slice(0, 8)}</Text>
-											</HStack>
-																						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-word">{String(r.text)}</Text>
-										</Box>
-									);
-								})}
-							</VStack>
-						</Box>
-					)}
+					</HStack> */}
+					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
+						<VStack gap="2" align="stretch">
+							{results.map((r, i) => {
+								const similarity = Math.round((1 - r.distance) * 100);
+								return (
+									<Box key={i} pb={i < results.length - 1 ? '2' : '0'} borderBottomWidth={i < results.length - 1 ? '1px' : '0'} borderColor="var(--wc-border-subtle)">
+										<HStack gap="2" align="center" mb="1">
+											<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-accent-blue)" minW="45px">{similarity}%</Text>
+															<Text fontSize="calc(var(--chat-font-size) - 5px)" fontFamily="mono" color="var(--wc-text-faint)">{String(r.messageId).slice(0, 8)}</Text>
+										</HStack>
+																			<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-word">{String(r.text)}</Text>
+									</Box>
+								);
+							})}
+						</VStack>
+					</Box>
 				</Box>
 			)}
 		</Box>
@@ -66,12 +66,20 @@ export const EmbeddingSearchRendererMeta: IToolCallRenderer = {
 		const topic = typeof args.topic === 'string' ? args.topic : undefined;
 		return { query, topK, topic };
 	},
-	renderMini: React.memo(({ args, result }) => {
-		const query = typeof args.query === 'string' ? args.query : '';
-		const text = typeof result === 'string' ? result : JSON.stringify(result);
-		let count = 0;
-		try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
-		const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
-		return count > 0 ? `Embed "${truncated}" — ${count} results` : `Embed "${truncated}"`;
-	}),
+  renderMini: React.memo(({ args, result }) => {
+    const query = typeof args.query === 'string' ? args.query : '';
+    const text = typeof result === 'string' ? result : JSON.stringify(result);
+    let count = 0;
+    try { const d = JSON.parse(text); count = Array.isArray(d?.results) ? d.results.length : 0; } catch {}
+    const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
+    return (
+      <HStack gap="1" align="center">
+        <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">
+          Embed "{truncated}"
+          {count > 0 && <Text as="span" color="var(--wc-text-faint)"> — {count} results</Text>}
+        </Text>
+      </HStack>
+    );
+  }),
 };

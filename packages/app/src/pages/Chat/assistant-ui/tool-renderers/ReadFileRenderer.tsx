@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react';
-import { extractResultText, splitPath } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
+import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export const ReadFileRenderer = React.memo((props: {
@@ -39,7 +41,8 @@ export const ReadFileRenderer = React.memo((props: {
 	const lineCount = resultText ? resultText.split('\n').length : 0;
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center">
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center">
 				<FileText size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
 						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
@@ -49,20 +52,19 @@ export const ReadFileRenderer = React.memo((props: {
 						{rangeBits.join(' · ')}
 					</Text>
 				)}
-			</HStack>
+			</HStack> */}
 			{resultText && (
 				<Box mt="2">
-					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
+					{/* Toggle removed — results shown directly */}
+					{/* <HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
 						<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-muted)">{resultText.length} bytes ({lineCount} lines)</Text>
-					</HStack>
-					{expanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
+					</HStack> */}
+					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
 														<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 								{resultText}
 							</Text>
-						</Box>
-					)}
+					</Box>
 		</Box>
 		)}
 		</Box>
@@ -87,18 +89,32 @@ export const ReadFileRendererMeta: IToolCallRenderer = {
 		const lineEnd = typeof args.line_end === 'number' ? args.line_end : undefined;
 		return { path, head, tail, offset, length, lineStart, lineEnd };
 	},
-	renderMini: React.memo(({ args }) => {
-		const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
-		if (typeof path !== 'string') return '';
-		const parts: string[] = [];
-		if (typeof args.line_start === 'number') {
-			const end = typeof args.line_end === 'number' ? args.line_end : '+';
-			parts.push(`lines ${args.line_start}-${end}`);
-		} else if (typeof args.head === 'number') {
-			parts.push(`head ${args.head}`);
-		} else if (typeof args.tail === 'number') {
-			parts.push(`tail ${args.tail}`);
-		}
-		return parts.length ? `Read ${path} (${parts.join(', ')})` : `Read ${path}`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
+    if (typeof path !== 'string') return '';
+    const { dir, file } = splitPath(relativePath(path, projectRoot));
+    const parts: string[] = [];
+    if (typeof args.line_start === 'number') {
+      const end = typeof args.line_end === 'number' ? args.line_end : '+';
+      parts.push(`lines ${args.line_start}-${end}`);
+    } else if (typeof args.head === 'number') {
+      parts.push(`head ${args.head}`);
+    } else if (typeof args.tail === 'number') {
+      parts.push(`tail ${args.tail}`);
+    }
+    return (
+      <HStack gap="1" align="center">
+        <FileText size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">
+          Read{' '}
+          <PathDisplay dir={dir} file={file} />
+          {parts.length > 0 && <Text as="span" color="var(--wc-text-faint)"> ({parts.join(', ')})</Text>}
+        </Text>
+      </HStack>
+    );
+  }),
 };

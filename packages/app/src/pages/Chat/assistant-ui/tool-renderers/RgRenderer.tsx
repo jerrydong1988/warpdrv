@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
-import { extractResultText, splitPath } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
+import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 interface IRgMatch { file: string; line: number; text: string; }
@@ -29,36 +31,36 @@ export const RgRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={matches?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={matches?.length ? '2' : '0'}>
 				<Search size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">
 								<Text as="span" color="var(--wc-text-muted)">rg</Text> {String(pattern ?? '(no pattern)')}
 							</Text>
 																												{path && <Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" style={{color: "var(--wc-text-muted)"}}>{splitPath(String(path)).dir}<Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(String(path)).file}</Text></Text>}
 							{bits.length > 0 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">{bits.join(' · ')}</Text>}
-			</HStack>
+			</HStack> */}
 			{matches && matches.length > 0 && (
 				<Box>
-					<HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
+					{/* Toggle removed — results shown directly */}
+					{/* <HStack gap="1" cursor="pointer" onClick={() => setExpanded(!expanded)} py="1">
 						{expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
 						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{String(matches.length)} match{matches.length > 1 ? 'es' : ''}</Text>
 										{truncated && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-accent-yellow-strong)">truncated</Text>}
-					</HStack>
-					{expanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-							<VStack gap="1" align="stretch">
-								{matches.map((m, i) => (
-									<Box key={i}>
-										<HStack gap="2" align="center">
-											<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)" minW="30px">{String(m.line)}</Text>
-																<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-muted)">{String(m.file)}</Text>
-										</HStack>
-																				<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all" pl="5">{String(m.text)}</Text>
-									</Box>
-								))}
-							</VStack>
-						</Box>
-					)}
+					</HStack> */}
+					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
+						<VStack gap="1" align="stretch">
+							{matches.map((m, i) => (
+								<Box key={i}>
+									<HStack gap="2" align="center">
+										<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)" minW="30px">{String(m.line)}</Text>
+															<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-muted)">{String(m.file)}</Text>
+									</HStack>
+																			<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all" pl="5">{String(m.text)}</Text>
+								</Box>
+							))}
+						</VStack>
+					</Box>
 				</Box>
 			)}
 		</Box>
@@ -78,10 +80,31 @@ export const RgRendererMeta: IToolCallRenderer = {
 		const contextLines = typeof args.contextLines === 'number' ? args.contextLines : undefined;
 		return { pattern, path, type, caseSensitive, maxResults, contextLines };
 	},
-	renderMini: React.memo(({ args }) => {
-		const pattern = typeof args.pattern === 'string' ? args.pattern : '';
-		const path = typeof args.path === 'string' ? args.path : undefined;
-		const truncated = pattern.length > 60 ? pattern.slice(0, 57) + '...' : pattern;
-		return path ? `rg "${truncated}" in ${path}` : `rg "${truncated}"`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const pattern = typeof args.pattern === 'string' ? args.pattern : '';
+    const path = typeof args.path === 'string' ? args.path : undefined;
+    const truncated = pattern.length > 60 ? pattern.slice(0, 57) + '...' : pattern;
+    if (path) {
+      const { dir, file } = splitPath(relativePath(path, projectRoot));
+      return (
+        <HStack gap="1" align="center">
+          <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+          <Text whiteSpace="nowrap">
+            grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> in{' '}
+            <PathDisplay dir={dir} file={file} />
+          </Text>
+        </HStack>
+      );
+    }
+    return (
+      <HStack gap="1" align="center">
+        <Search size={12} color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text></Text>
+      </HStack>
+    );
+  }),
 };

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { FolderOpen, ChevronDown, ChevronRight, File, Folder } from 'lucide-react';
-import { extractResultText, splitPath } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
+import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 interface ITreeEntry {
@@ -121,7 +123,8 @@ export const ListRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={entries ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={entries ? '2' : '0'}>
 				<FolderOpen size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
 						<Text color="var(--wc-text-muted)">{splitPath(displayPath).dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(displayPath).file}</Text>
@@ -141,7 +144,7 @@ export const ListRenderer = React.memo((props: {
 									excl: {excludePatterns.join(', ')}
 								</Text>
 							)}
-			</HStack>
+			</HStack> */}
 			{entries && entries.length > 0 && (
 				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
 					<VStack gap="0" align="stretch">
@@ -172,9 +175,29 @@ export const ListRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
-	renderMini: React.memo(({ args }) => {
-		const path = args.path ?? args.dir ?? args.directory ?? args.folder ?? args.file_path;
-		if (typeof path === 'string' && path.length > 0) return `List ${path}`;
-		return 'List (project root)';
-	}),
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = args.path ?? args.dir ?? args.directory ?? args.folder ?? args.file_path;
+    if (typeof path === 'string' && path.length > 0) {
+      const { dir, file } = splitPath(relativePath(path, projectRoot));
+      return (
+        <HStack gap="1" align="center">
+          <FolderOpen size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+          <Text whiteSpace="nowrap">
+            List{' '}
+            <PathDisplay dir={dir} file={file} />
+          </Text>
+        </HStack>
+      );
+    }
+    return (
+      <HStack gap="1" align="center">
+        <FolderOpen size={12} color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">List (project root)</Text>
+      </HStack>
+    );
+  }),
 };

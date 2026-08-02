@@ -1,6 +1,6 @@
 import React, { useState, useContext, useCallback, useMemo } from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
-import { ChevronDown, ChevronRight, Check, Ban, Loader, AlertCircle, X, Lock } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, Ban, Loader, AlertCircle, X, Lock, Wrench } from 'lucide-react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useStore } from '@/store';
 import { EToolCallStatus, EToolApprovalMode } from '@warpcore/bridge';
@@ -155,9 +155,27 @@ export const ToolCallBlockCollapsible = React.memo(({
 						{isOpen ? <ChevronDown size={12} color="var(--wc-text-muted)" /> : <ChevronRight size={12} color="var(--wc-text-muted)" />}
 					</Box>
 
-					{/* Status */}
+					{/* Mini renderer component — memoized */}
+					<Box minW="0" overflow="hidden" textDecoration={displayStatus === EToolCallStatus.DENIED ? 'line-through' : 'none'}>
+						{MiniComponent ? (
+							<MiniComponent args={args} result={result} />
+						) : (
+							<HStack gap="1" align="center">
+								<Wrench size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+								<Text whiteSpace="nowrap">
+									{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
+									<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
+								</Text>
+							</HStack>
+						)}
+					</Box>
+
+					{/* Spacer */}
+					<Box flex="1" />
+
+					{/* Right side: status OR buttons (never both) */}
 					<Box flexShrink={0}>
-						{isExecuting && (
+						{!isPending && isExecuting && (
 							<HStack gap="1">
 								<Loader size={11} color={statusColor} className="animate-spin" />
 								<Text fontSize="var(--chat-font-size)" color={statusColor}>{statusLabels[displayStatus]}</Text>
@@ -182,65 +200,53 @@ export const ToolCallBlockCollapsible = React.memo(({
 								<Text fontSize="var(--chat-font-size)" color="var(--wc-text-muted)">Processing...</Text>
 							</HStack>
 						)}
+						{isPending && !deciding && (
+							<HStack gap="2">
+								<Box
+									as="button"
+									px="3"
+									py="1"
+									fontSize="var(--chat-font-size)"
+									borderRadius="sm"
+									bg="var(--wc-accent-green-bg-15)"
+									color="var(--wc-accent-green)"
+									_hover={{ bg: 'var(--wc-accent-green-hover)' }}
+									cursor="pointer"
+									onClick={(e) => { e.stopPropagation(); handleDecision('approve'); }}
+								>
+									<HStack gap="1"><Check size={12} /><Text fontSize="var(--chat-font-size)">Allow Once</Text></HStack>
+								</Box>
+								<Box
+									as="button"
+									px="3"
+									py="1"
+									fontSize="var(--chat-font-size)"
+									borderRadius="sm"
+									bg="var(--wc-accent-yellow-bg-8)"
+									color="var(--wc-accent-yellow-strong)"
+									_hover={{ bg: 'var(--wc-accent-yellow-hover-bg)' }}
+									cursor="pointer"
+									onClick={(e) => { e.stopPropagation(); handleAlwaysApprove(); }}
+								>
+									<HStack gap="1"><Lock size={12} /><Text fontSize="var(--chat-font-size)">Allow Always</Text></HStack>
+								</Box>
+								<Box
+									as="button"
+									px="3"
+									py="1"
+									fontSize="var(--chat-font-size)"
+									borderRadius="sm"
+									bg="var(--wc-accent-red-bg-12)"
+									color="var(--wc-accent-red-alt)"
+									_hover={{ bg: 'var(--wc-accent-red-hover)' }}
+									cursor="pointer"
+									onClick={(e) => { e.stopPropagation(); handleDecision('deny'); }}
+								>
+									<HStack gap="1"><X size={12} /><Text fontSize="var(--chat-font-size)">Deny</Text></HStack>
+								</Box>
+							</HStack>
+						)}
 					</Box>
-
-					{/* Tool name */}
-					{/*<Text fontSize="calc(var(--chat-font-size) - 1px)" fontWeight="700" color="var(--wc-text-secondary)" flexShrink={0}>
-						{toolName}
-					</Text>*/}
-
-					{/* Mini renderer component — memoized */}
-					{MiniComponent && (
-						<MiniComponent args={args} result={result} />
-					)}
-
-					{/* Approval buttons — right aligned, stopPropagation */}
-					{isPending && !deciding && (
-						<HStack gap="2" flexShrink={0}>
-							<Box
-								as="button"
-								px="3"
-								py="1"
-								fontSize="var(--chat-font-size)"
-								borderRadius="sm"
-								bg="var(--wc-accent-green-bg-15)"
-								color="var(--wc-accent-green)"
-								_hover={{ bg: 'var(--wc-accent-green-hover)' }}
-								cursor="pointer"
-								onClick={(e) => { e.stopPropagation(); handleDecision('approve'); }}
-							>
-								<HStack gap="1"><Check size={12} /><Text fontSize="var(--chat-font-size)">Allow Once</Text></HStack>
-							</Box>
-							<Box
-								as="button"
-								px="3"
-								py="1"
-								fontSize="var(--chat-font-size)"
-								borderRadius="sm"
-								bg="var(--wc-accent-yellow-bg-8)"
-								color="var(--wc-accent-yellow-strong)"
-								_hover={{ bg: 'var(--wc-accent-yellow-hover-bg)' }}
-								cursor="pointer"
-								onClick={(e) => { e.stopPropagation(); handleAlwaysApprove(); }}
-							>
-								<HStack gap="1"><Lock size={12} /><Text fontSize="var(--chat-font-size)">Allow Always</Text></HStack>
-							</Box>
-							<Box
-								as="button"
-								px="3"
-								py="1"
-								fontSize="var(--chat-font-size)"
-								borderRadius="sm"
-								bg="var(--wc-accent-red-bg-12)"
-								color="var(--wc-accent-red-alt)"
-								_hover={{ bg: 'var(--wc-accent-red-hover)' }}
-								cursor="pointer"
-								onClick={(e) => { e.stopPropagation(); handleDecision('deny'); }}
-							>
-								<HStack gap="1"><X size={12} /><Text fontSize="var(--chat-font-size)">Deny</Text></HStack>
-							</Box>
-						</HStack>
-					)}
 				</HStack>
 			</CollapsibleTrigger>
 

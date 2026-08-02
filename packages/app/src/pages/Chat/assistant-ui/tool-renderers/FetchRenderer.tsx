@@ -12,12 +12,13 @@ export const FetchRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center">
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center">
 				<Globe size={13} color="var(--wc-text-secondary)" />
 								<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
 					<Text as="span" color="var(--wc-text-muted)">{(method as string) || "GET"}</Text> {url ?? '(no url)'}
 				</Text>
-			</HStack>
+			</HStack> */}
 			{/* {extras.length > 0 && (
 				<HStack gap="3" mt="1" pl="5" flexWrap="wrap">
 					{extras.map(([k, v]) => (
@@ -42,11 +43,16 @@ export const FetchRendererMeta: IToolCallRenderer = {
 		const { url: _u, uri: _i, link: _l, endpoint: _e, address: _a, ...rest } = args;
 		return { url, ...rest };
 	},
-	renderMini: React.memo(({ args }) => {
-		const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
-		const method = (args.method as string) || 'GET';
-		if (typeof url !== 'string') return '';
-		const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
-		return `${method} ${truncated}`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
+    const method = (args.method as string) || 'GET';
+    if (typeof url !== 'string') return '';
+    const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
+    return (
+      <HStack gap="1" align="center">
+        <Globe size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">{method} {truncated}</Text>
+      </HStack>
+    );
+  }),
 };

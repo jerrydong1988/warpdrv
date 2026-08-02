@@ -29,10 +29,11 @@ export const CodeGraphSymbolRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={nodes?.length ? '2' : '0'}>
 				<FileCode size={13} color="var(--wc-text-secondary)" />
 								<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">{String(label)}</Text>
-			</HStack>
+			</HStack> */}
 			{nodes && nodes.length > 0 && (
 				<VStack gap="2" align="stretch">
 					{nodes.map((n, i) => (
@@ -62,11 +63,16 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
 		if (!symbolId && !symbol) return false;
 		return { symbolId, symbol };
 	},
-	renderMini: React.memo(({ args }) => {
-		const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
-		const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
-		const label = symbolId ?? symbol ?? '';
-		const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
-		return `Symbol: ${truncated}`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
+    const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
+    const label = symbolId ?? symbol ?? '';
+    const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
+    return (
+      <HStack gap="1" align="center">
+        <FileCode size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>
+      </HStack>
+    );
+  }),
 };

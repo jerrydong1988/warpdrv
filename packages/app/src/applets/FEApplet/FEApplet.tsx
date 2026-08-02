@@ -973,12 +973,12 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 	return (
 		<>
 			{children}
-			<Box mt="2">
-				<AccordionRoot collapsible defaultValue={totalViolations > 0 ? ['guardrails'] : []}>
-					<AccordionItemComp value="guardrails" borderRadius="6px" borderWidth="1px" borderColor="var(--wc-border-subtle)">
+			<Box mx="10px" mt="-1" mb="2">
+				<AccordionRoot collapsible>
+					<AccordionItemComp value="guardrails" borderRadius="10px" borderWidth="1px" borderColor="var(--wc-border-subtle)">
 						<AccordionItemTrigger
 							style={{
-								borderRadius: '6px 6px 0 0',
+								borderRadius: '10px 10px 0 0',
 								background: 'var(--wc-bg-card)',
 								border: 'none',
 								cursor: 'pointer',
@@ -987,15 +987,16 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 								alignItems: 'center',
 								width: '100%',
 							}}
-							p="2.5"
+							px="2.5"
+							py="1.5"
 							_hover={{ bg: 'var(--wc-bg-subtle)' }}
 							css={{ '&[data-state=open] .chevron': { transform: 'rotate(180deg)' } }}
 						>
 							<HStack gap="2">
 								<FaShieldAlt size={16} color="var(--wc-text-muted)" />
-								<Text fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
+								{/*<Text fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
 									Guardrails
-								</Text>
+								</Text>*/}
 								{totalViolations > 0 && (
 									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalViolations} Violations</Badge>
 								)}

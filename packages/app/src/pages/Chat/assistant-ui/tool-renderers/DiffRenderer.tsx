@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
-import { FileText } from 'lucide-react';
+import { FileText, Pencil } from 'lucide-react';
 import ReactDiffViewer from 'react-diff-viewer-continued';
 import { useStore } from '@/store';
-import { extractResultText, splitPath } from './utils';
+import { extractResultText, splitPath, relativePath } from './utils';
+import { PathDisplay } from './path-display';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
 export enum EDiffStrategy {
@@ -101,7 +102,8 @@ export const DiffRenderer = React.memo((props: {
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb="2">
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb="2">
 				<FileText size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" wordBreak="break-all">
 						<Text color="var(--wc-text-muted)">{splitPath(path ?? '(no path)').dir}</Text><Text color="var(--wc-text-primary)" fontWeight="bold">{splitPath(path ?? '(no path)').file}</Text>
@@ -111,7 +113,7 @@ export const DiffRenderer = React.memo((props: {
 						line {matchLine}
 					</Text>
 				)}
-			</HStack>
+			</HStack> */}
 
 			{strategy === EDiffStrategy.FIND_REPLACE && (
 				<ReactDiffViewer
@@ -174,15 +176,22 @@ export const DiffRendererMeta: IToolCallRenderer = {
 		}
 		return false;
 	},
-	renderMini: React.memo(({ args }) => {
-		const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
-		if (typeof path !== 'string') return '';
-		const oldStr = args.old_string ?? args.oldText ?? args.old_str ?? args.old ?? args.search;
-		const newStr = args.new_string ?? args.newText ?? args.new_str ?? args.new ?? args.replace;
-		if (typeof oldStr === 'string' && typeof newStr === 'string') return `Edit ${path} (find_replace)`;
-		if (Array.isArray(args.edits)) return `Edit ${path} (${args.edits.length} edits)`;
-		const content = args.content ?? args.text ?? args.body;
-		if (typeof content === 'string') return `Write ${path}`;
-		return `Edit ${path}`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const projectRoot = useStore(s => {
+      const ts = s.getCurrentThreadState(s);
+      return (ts?.projectRoot as string) || (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string);
+    });
+    const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
+    if (typeof path !== 'string') return '';
+    const { dir, file } = splitPath(relativePath(path, projectRoot));
+    return (
+      <HStack gap="1" align="center">
+        <Pencil size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">
+          Edit{' '}
+          <PathDisplay dir={dir} file={file} />
+        </Text>
+      </HStack>
+    );
+  }),
 };

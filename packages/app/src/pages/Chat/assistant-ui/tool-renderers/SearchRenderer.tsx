@@ -33,12 +33,13 @@ export const SearchRenderer = React.memo((props: {
 	const results = resultText ? parseSearchResults(resultText) : null;
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center" mb={results ? '2' : '0'}>
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center" mb={results ? '2' : '0'}>
 				<Search size={13} color="var(--wc-text-secondary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-primary)" wordBreak="break-word">
 								{query ?? '(no query)'}
 							</Text>
-			</HStack>
+			</HStack> */}
 			{results && results.length > 0 && (
 				<VStack gap="2" align="stretch" bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
 					{results.map((r, i) => (
@@ -81,10 +82,15 @@ export const SearchRendererMeta: IToolCallRenderer = {
 		if (typeof query !== 'string' || query.length === 0) return false;
 		return { query };
 	},
-	renderMini: React.memo(({ args }) => {
-		const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
-		if (typeof query !== 'string') return '';
-		const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
-		return `Search "${truncated}"`;
-	}),
+  renderMini: React.memo(({ args }) => {
+    const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
+    if (typeof query !== 'string') return '';
+    const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
+    return (
+      <HStack gap="1" align="center">
+        <Search size="var(--chat-font-size)" color="var(--wc-text-muted)" />
+        <Text whiteSpace="nowrap">Search "{truncated}"</Text>
+      </HStack>
+    );
+  }),
 };
