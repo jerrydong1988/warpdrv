@@ -1,13 +1,18 @@
 <div class="stack">
-
 	<div class="transcript">
-
-		<div class="codeblock"><span class="dim">        ↓</span>
-  For each guardrail:
-    <span class="dim">→</span> Call LLM via handlePureCompletion
-    <span class="dim">→</span> JSON.parse(text) <span class="dim">←</span> CAN THROW
-    <span class="dim">→</span> If success: guardrailResults[name] = parsed array
-    <span class="dim">→</span> If fail: console.error() <span class="dim">←</span> GUARDRAIL STUCK AS `false`</div>
+		<div class="codeblock">
+			<span class="dim"> ↓</span>
+			For each guardrail:
+			<span class="dim">→</span> Call LLM via handlePureCompletion
+			<span class="dim">→</span> JSON.parse(text) <span class="dim"
+				>←</span
+			> CAN THROW
+			<span class="dim">→</span> If success: guardrailResults[name] = parsed
+			array
+			<span class="dim">→</span> If fail: console.error() <span
+				class="dim">←</span
+			> GUARDRAIL STUCK AS `false`
+		</div>
 
 		<div class="h-fix">Plan to fix</div>
 
@@ -16,15 +21,26 @@
 				<li>
 					<strong>Add defensive JSON parsing</strong> in the guardrail runner:
 					<ul>
-						<li><span class="sel">Wrap the <code>JSON.parse</code> call in a try/catch</span></li>
-						<li>Extract the first <code>[...]</code> array from the text using regex</li>
+						<li>
+							<span class="sel"
+								>Wrap the <code>JSON.parse</code> call in a try/catch</span
+							>
+						</li>
+						<li>
+							Extract the first <code>[...]</code> array from the text
+							using regex
+						</li>
 						<li>Try parsing the extracted JSON</li>
 					</ul>
 				</li>
 				<li>
 					<strong>Update state on failure</strong> in the catch block:
 					<ul>
-						<li>Set the guardrail result to an empty array <code>[]</code> or a special error state</li>
+						<li>
+							Set the guardrail result to an empty array <code
+								>[]</code
+							> or a special error state
+						</li>
 					</ul>
 				</li>
 			</ol>
@@ -32,92 +48,186 @@
 
 		<div class="annotate-pop">
 			<button class="pop-btn" title="Read aloud">
-				<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+				<svg viewBox="0 0 24 24"
+					><path d="M11 5 6 9H3v6h3l5 4z"></path><path
+						d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg
+				>
 			</button>
 			<button class="pop-btn" title="Dictate note">
-				<svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+				<svg viewBox="0 0 24 24"
+					><rect x="9" y="2" width="6" height="11" rx="3"></rect><path
+						d="M5 11a7 7 0 0 0 14 0M12 18v4"></path></svg
+				>
 			</button>
-			<input class="pop-input" placeholder="Annotate…">
+			<input class="pop-input" placeholder="Annotate…" />
 		</div>
-
 	</div>
 
 	<div class="annotations">
 		<div class="ann-head">
 			<span class="label">Annotations (5)</span>
 			<button class="clear">
-				<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+				<svg viewBox="0 0 24 24"
+					><path d="M6 6l12 12M18 6 6 18"></path></svg
+				>
 				Clear all
 			</button>
 		</div>
 
 		<div class="ann-list">
-
 			<div class="ann">
-				<span class="quote"><span class="idx">1.</span> "Wrap the JSON.parse call in a try/catch"</span>
-				<div class="note">catch is fine but log the raw text too, we lose it otherwise</div>
-				<button class="dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+				<span class="quote"
+					><span class="idx">1.</span> "Wrap the JSON.parse call in a try/catch"</span
+				>
+				<div class="note">
+					catch is fine but log the raw text too, we lose it otherwise
+				</div>
+				<button class="dismiss"
+					><svg viewBox="0 0 24 24"
+						><path d="M6 6l12 12M18 6 6 18"></path></svg
+					></button
+				>
 			</div>
 
 			<div class="ann">
-				<span class="quote"><span class="idx">2.</span> "Extract the first [...] array from the text using regex"</span>
-				<div class="note">no regex, the model already returns fenced json — strip the fence</div>
-				<button class="dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+				<span class="quote"
+					><span class="idx">2.</span> "Extract the first [...] array from
+					the text using regex"</span
+				>
+				<div class="note">
+					no regex, the model already returns fenced json — strip the
+					fence
+				</div>
+				<button class="dismiss"
+					><svg viewBox="0 0 24 24"
+						><path d="M6 6l12 12M18 6 6 18"></path></svg
+					></button
+				>
 			</div>
 
 			<div class="ann">
-				<span class="quote"><span class="idx">3.</span> "Set the guardrail result to an empty array [] or a special error state"</span>
-				<div class="note">empty array reads as "passed", use the error state</div>
-				<button class="dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+				<span class="quote"
+					><span class="idx">3.</span> "Set the guardrail result to an empty
+					array [] or a special error state"</span
+				>
+				<div class="note">
+					empty array reads as "passed", use the error state
+				</div>
+				<button class="dismiss"
+					><svg viewBox="0 0 24 24"
+						><path d="M6 6l12 12M18 6 6 18"></path></svg
+					></button
+				>
 			</div>
 
 			<div class="ann">
-				<span class="quote"><span class="idx">4.</span> "GUARDRAIL STUCK AS `false`"</span>
-				<div class="note">this is the actual bug, surface it in the UI not just console</div>
-				<button class="dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+				<span class="quote"
+					><span class="idx">4.</span> "GUARDRAIL STUCK AS `false`"</span
+				>
+				<div class="note">
+					this is the actual bug, surface it in the UI not just
+					console
+				</div>
+				<button class="dismiss"
+					><svg viewBox="0 0 24 24"
+						><path d="M6 6l12 12M18 6 6 18"></path></svg
+					></button
+				>
 			</div>
 
 			<div class="ann">
-				<span class="quote"><span class="idx">5.</span> "Call LLM via handlePureCompletion"</span>
-				<div class="note">run these concurrently, they dont depend on each other</div>
-				<button class="dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+				<span class="quote"
+					><span class="idx">5.</span> "Call LLM via handlePureCompletion"</span
+				>
+				<div class="note">
+					run these concurrently, they dont depend on each other
+				</div>
+				<button class="dismiss"
+					><svg viewBox="0 0 24 24"
+						><path d="M6 6l12 12M18 6 6 18"></path></svg
+					></button
+				>
 			</div>
-
 		</div>
 	</div>
 
-	<div class="composer-shell composer-gradient-border" id="shell" style="--composer-border-color: var(--wc-mode-plan);">
+	<div
+		class="composer-shell composer-gradient-border"
+		id="shell"
+		style="--composer-border-color: var(--wc-mode-plan);"
+	>
 		<div class="row">
 			<div class="modes" role="tablist">
-				<button class="mode" data-mode="default" role="tab" aria-selected="false">
-					<svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+				<button
+					class="mode"
+					data-mode="default"
+					role="tab"
+					aria-selected="false"
+				>
+					<svg viewBox="0 0 24 24"
+						><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"
+						></path></svg
+					>
 					Default
 				</button>
-				<button class="mode" data-mode="plan" role="tab" aria-selected="true">
-					<svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+				<button
+					class="mode"
+					data-mode="plan"
+					role="tab"
+					aria-selected="true"
+				>
+					<svg viewBox="0 0 24 24"
+						><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"
+						></path></svg
+					>
 					Plan
 				</button>
-				<button class="mode" data-mode="build" role="tab" aria-selected="false">
-					<svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+				<button
+					class="mode"
+					data-mode="build"
+					role="tab"
+					aria-selected="false"
+				>
+					<svg viewBox="0 0 24 24"
+						><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"
+						></path></svg
+					>
 					Build
 				</button>
 			</div>
 			<div class="grow"></div>
 			<button class="pill">
-				<svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 8.9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1 1 0 0 1 1.5 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+				<svg viewBox="0 0 24 24"
+					><path
+						d="M20 13c0 5-3.5 7.5-7.7 8.9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1 1 0 0 1 1.5 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"
+					></path></svg
+				>
 				Guardrails
-				<svg viewBox="0 0 24 24" style="width:12px;height:12px;"><path d="m6 9 6 6 6-6"/></svg>
+				<svg viewBox="0 0 24 24" style="width:12px;height:12px;"
+					><path d="m6 9 6 6 6-6"></path></svg
+				>
 			</button>
 		</div>
 		<div class="editor-stub"></div>
 	</div>
-
 </div>
 
 <style>
-	svg { stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+	svg {
+		stroke: currentColor;
+		fill: none;
+		stroke-width: 1.7;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
 
-	.stack { width: 100%; max-width: 830px; }
+	.stack {
+		width: 750px;
+		max-width: 850px;
+		transform: scale(0.95) translate(0px, -140px);
+		transform-origin: top left;
+		background: var(--wc-bg-page);
+	}
 
 	/* ---------- chat backdrop ---------- */
 
@@ -139,7 +249,9 @@
 		overflow-x: auto;
 	}
 
-	.codeblock .dim { color: var(--wc-text-faint); }
+	.codeblock .dim {
+		color: var(--wc-text-faint);
+	}
 
 	.h-fix {
 		margin: 22px 0 14px;
@@ -148,14 +260,34 @@
 		color: var(--wc-accent-blue);
 	}
 
-	.prose { font-size: 14px; line-height: 1.7; color: var(--wc-text-primary); }
-	.prose strong { color: var(--wc-text-heading); font-weight: 600; }
-	.prose ol { margin: 0; padding-left: 26px; }
-	.prose ol > li { margin: 14px 0; padding-left: 4px; }
-	.prose ul { margin: 8px 0; padding-left: 22px; list-style: none; }
-	.prose ul > li { position: relative; margin: 7px 0; }
+	.prose {
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--wc-text-primary);
+	}
+	.prose strong {
+		color: var(--wc-text-heading);
+		font-weight: 600;
+	}
+	.prose ol {
+		margin: 0;
+		padding-left: 26px;
+	}
+	.prose ol > li {
+		margin: 14px 0;
+		padding-left: 4px;
+	}
+	.prose ul {
+		margin: 8px 0;
+		padding-left: 22px;
+		list-style: none;
+	}
+	.prose ul > li {
+		position: relative;
+		margin: 7px 0;
+	}
 	.prose ul > li::before {
-		content: '';
+		content: "";
 		position: absolute;
 		left: -14px;
 		top: 10px;
@@ -164,7 +296,9 @@
 		border-radius: 50%;
 		background: var(--wc-text-faint);
 	}
-	.prose li::marker { color: var(--wc-text-muted); }
+	.prose li::marker {
+		color: var(--wc-text-muted);
+	}
 
 	code {
 		padding: 2px 6px;
@@ -184,13 +318,17 @@
 		-webkit-box-decoration-break: clone;
 	}
 
-	.sel code { background: rgba(0,0,0,0.35); border-color: rgba(255,255,255,0.18); color: #efefef; }
+	.sel code {
+		background: rgba(0, 0, 0, 0.35);
+		border-color: rgba(255, 255, 255, 0.18);
+		color: #efefef;
+	}
 
 	/* ---------- selection popover ---------- */
 
 	.annotate-pop {
 		position: absolute;
-		top: 148px;
+		top: 190px;
 		left: 44px;
 		display: flex;
 		align-items: center;
@@ -199,7 +337,7 @@
 		border: 1px solid var(--wc-border-overlay);
 		border-radius: 11px;
 		background: var(--wc-bg-dialog);
-		box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+		box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
 		z-index: 5;
 	}
 
@@ -216,8 +354,14 @@
 		cursor: pointer;
 	}
 
-	.pop-btn:hover { background: var(--wc-bg-hover); color: var(--wc-text-heading); }
-	.pop-btn svg { width: 15px; height: 15px; }
+	.pop-btn:hover {
+		background: var(--wc-bg-hover);
+		color: var(--wc-text-heading);
+	}
+	.pop-btn svg {
+		width: 15px;
+		height: 15px;
+	}
 
 	.pop-input {
 		width: 200px;
@@ -232,8 +376,12 @@
 		outline: none;
 	}
 
-	.pop-input::placeholder { color: var(--wc-text-placeholder); }
-	.pop-input:focus { border-color: rgba(153,193,255,0.35); }
+	.pop-input::placeholder {
+		color: var(--wc-text-placeholder);
+	}
+	.pop-input:focus {
+		border-color: rgba(153, 193, 255, 0.35);
+	}
 
 	/* ---------- annotations panel ---------- */
 
@@ -244,11 +392,20 @@
 		border-radius: 12px;
 		background: var(--wc-bg-elevated);
 		padding: 12px 14px 14px;
-		box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+		margin-top: -20px;
 	}
 
-	.ann-head { display: flex; align-items: center; padding: 2px 4px 12px; }
-	.ann-head .label { font-size: 12px; font-weight: 500; color: var(--wc-text-secondary); }
+	.ann-head {
+		display: flex;
+		align-items: center;
+		padding: 2px 4px 12px;
+	}
+	.ann-head .label {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--wc-text-secondary);
+	}
 
 	.clear {
 		display: inline-flex;
@@ -263,8 +420,13 @@
 		cursor: pointer;
 	}
 
-	.clear:hover { color: var(--wc-text-secondary); }
-	.clear svg { width: 12px; height: 12px; }
+	.clear:hover {
+		color: var(--wc-text-secondary);
+	}
+	.clear svg {
+		width: 12px;
+		height: 12px;
+	}
 
 	.ann-list {
 		display: flex;
@@ -274,7 +436,7 @@
 		overflow-y: auto;
 		padding-right: 8px;
 		scrollbar-width: thin;
-		scrollbar-color: rgba(255,255,255,0.14) transparent;
+		scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 	}
 
 	.ann {
@@ -294,8 +456,17 @@
 		margin-bottom: 5px;
 	}
 
-	.ann .quote .idx { font-style: normal; font-weight: 600; color: var(--wc-accent-blue); margin-right: 3px; }
-	.ann .note { font-size: 13px; line-height: 1.5; color: var(--wc-text-primary); }
+	.ann .quote .idx {
+		font-style: normal;
+		font-weight: 600;
+		color: var(--wc-accent-blue);
+		margin-right: 3px;
+	}
+	.ann .note {
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--wc-text-primary);
+	}
 
 	.ann .dismiss {
 		position: absolute;
@@ -313,8 +484,14 @@
 		cursor: pointer;
 	}
 
-	.ann .dismiss:hover { background: var(--wc-bg-hover); color: var(--wc-text-secondary); }
-	.ann .dismiss svg { width: 12px; height: 12px; }
+	.ann .dismiss:hover {
+		background: var(--wc-bg-hover);
+		color: var(--wc-text-secondary);
+	}
+	.ann .dismiss svg {
+		width: 12px;
+		height: 12px;
+	}
 
 	/* ---------- composer stub ---------- */
 
@@ -326,13 +503,16 @@
 		border-radius: 12px;
 		padding: 8px;
 		background: var(--wc-bg-elevated);
-		box-shadow: 0px 10px 10px 10px rgba(0,0,0,0.15);
+		box-shadow: 0px 10px 10px 10px rgba(0, 0, 0, 0.15);
 	}
 
-	.composer-gradient-border { position: relative; border: none; }
+	.composer-gradient-border {
+		position: relative;
+		border: none;
+	}
 
 	.composer-gradient-border::before {
-		content: '';
+		content: "";
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
@@ -355,9 +535,19 @@
 		transition: background 200ms ease;
 	}
 
-	.row { display: flex; align-items: center; gap: 6px; }
-	.grow { flex: 1; }
-	.modes { display: flex; align-items: center; gap: 2px; }
+	.row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.grow {
+		flex: 1;
+	}
+	.modes {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+	}
 
 	.mode {
 		display: inline-flex;
@@ -372,15 +562,32 @@
 		font-size: 13px;
 		font-family: inherit;
 		cursor: pointer;
-		transition: background 140ms ease, color 140ms ease;
+		transition:
+			background 140ms ease,
+			color 140ms ease;
 	}
 
-	.mode:hover { background: var(--wc-bg-hover); color: var(--wc-text-secondary); }
-	.mode[aria-selected="true"] { background: color-mix(in srgb, var(--mode-color) 16%, transparent); color: var(--mode-color); }
-	.mode[data-mode="default"] { --mode-color: var(--wc-text-primary); }
-	.mode[data-mode="plan"] { --mode-color: var(--wc-mode-plan); }
-	.mode[data-mode="build"] { --mode-color: var(--wc-mode-build); }
-	.mode svg { width: 13px; height: 13px; }
+	.mode:hover {
+		background: var(--wc-bg-hover);
+		color: var(--wc-text-secondary);
+	}
+	.mode[aria-selected="true"] {
+		background: color-mix(in srgb, var(--mode-color) 16%, transparent);
+		color: var(--mode-color);
+	}
+	.mode[data-mode="default"] {
+		--mode-color: var(--wc-text-primary);
+	}
+	.mode[data-mode="plan"] {
+		--mode-color: var(--wc-mode-plan);
+	}
+	.mode[data-mode="build"] {
+		--mode-color: var(--wc-mode-build);
+	}
+	.mode svg {
+		width: 13px;
+		height: 13px;
+	}
 
 	.pill {
 		display: inline-flex;
@@ -397,21 +604,36 @@
 		cursor: pointer;
 	}
 
-	.pill:hover { background: var(--wc-bg-hover); border-color: var(--wc-border-default); }
-	.pill svg { width: 15px; height: 15px; }
+	.pill:hover {
+		background: var(--wc-bg-hover);
+		border-color: var(--wc-border-default);
+	}
+	.pill svg {
+		width: 15px;
+		height: 15px;
+	}
 
-	.editor-stub { min-height: 52px; }
+	.editor-stub {
+		min-height: 52px;
+	}
 
-	.stack ::-webkit-scrollbar { width: 7px; }
-	.stack ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 4px; }
-	.stack ::-webkit-scrollbar-track { background: transparent; }
+	.stack ::-webkit-scrollbar {
+		width: 7px;
+	}
+	.stack ::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.14);
+		border-radius: 4px;
+	}
+	.stack ::-webkit-scrollbar-track {
+		background: transparent;
+	}
 </style>
 
 <script>
 	const colors = {
-		"default": "var(--wc-mode-default)",
-		"plan": "var(--wc-mode-plan)",
-		"build": "var(--wc-mode-build)"
+		default: "var(--wc-mode-default)",
+		plan: "var(--wc-mode-plan)",
+		build: "var(--wc-mode-build)",
 	};
 
 	const shell = document.getElementById("shell");
@@ -419,8 +641,13 @@
 
 	tabs.forEach((tab) => {
 		tab.addEventListener("click", () => {
-			tabs.forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
-			shell.style.setProperty("--composer-border-color", colors[tab.dataset.mode]);
+			tabs.forEach((t) =>
+				t.setAttribute("aria-selected", String(t === tab)),
+			);
+			shell.style.setProperty(
+				"--composer-border-color",
+				colors[tab.dataset.mode],
+			);
 		});
 	});
 </script>
