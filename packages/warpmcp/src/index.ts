@@ -81,7 +81,29 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 }
 export async function startServer(args: IStartArgs): Promise<IStartResult> {
 	const { port, exposeExternal } = args;
-	const deps: IWarpmcpDeps = { isRemote: args.isRemote, validateBearerToken: args.validateBearerToken, getFsAllowedRoots: args.getFsAllowedRoots, embeddingSearch: args.embeddingSearch, todoRead: args.todoRead, todoAdd: args.todoAdd, todoRemove: args.todoRemove, todoUpdate: args.todoUpdate, todoClear: args.todoClear, todoWrite: args.todoWrite, getProjectRoot: args.getProjectRoot, onFileWritten: args.onFileWritten, codeGraphIngest: args.codeGraphIngest, codeGraphSearch: args.codeGraphSearch, codeGraphGetSymbol: args.codeGraphGetSymbol, codeGraphGetCallers: args.codeGraphGetCallers, codeGraphGetCallees: args.codeGraphGetCallees, codeGraphListFile: args.codeGraphListFile, codeGraphClear: args.codeGraphClear };
+	const deps: IWarpmcpDeps = {
+		isRemote: args.isRemote,
+		validateBearerToken: args.validateBearerToken,
+		getFsAllowedRoots: args.getFsAllowedRoots,
+		embeddingSearch: args.embeddingSearch,
+		todoRead: args.todoRead,
+		todoAdd: args.todoAdd,
+		todoRemove: args.todoRemove,
+		todoUpdate: args.todoUpdate,
+		todoClear: args.todoClear,
+		todoWrite: args.todoWrite,
+		getProjectRoot: args.getProjectRoot,
+		onFileWritten: args.onFileWritten,
+		codeGraphIngest: args.codeGraphIngest,
+		codeGraphSearch: args.codeGraphSearch,
+		codeGraphGetSymbol: args.codeGraphGetSymbol,
+		codeGraphGetCallers: args.codeGraphGetCallers,
+		codeGraphGetCallees: args.codeGraphGetCallees,
+		codeGraphListFile: args.codeGraphListFile,
+		codeGraphClear: args.codeGraphClear,
+		chatSearch: args.chatSearch,
+		chatGetMessage: args.chatGetMessage,
+	};
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? '0.0.0.0' : '127.0.0.1';
 	const app = express();

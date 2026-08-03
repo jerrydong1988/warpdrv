@@ -36,7 +36,7 @@ export const AnnotationsBox = React.memo(() => {
 					<Box key={annotation.id} borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" p="2" bg="var(--wc-bg-subtle)">
 						<HStack justify="space-between" align="center" gap="2">
 							<HStack flex="1" overflow="hidden" gap="1">
-								<Box as="span" fontSize="calc(var(--chat-font-size) - 4px)" fontWeight="600" color="var(--wc-accent-blue)" userSelect="none" flexShrink={0}>{index + 1}.</Box>
+								<Box as="span" fontSize="calc(var(--chat-font-size) - 3px)" fontWeight="600" color="var(--wc-accent-blue)" userSelect="none" flexShrink={0}>{index + 1}.</Box>
 								<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)" fontFamily="mono" fontStyle="italic" overflow="hidden" textOverflow="ellipsis" flex="1" flexShrink={1}>"{annotation.selectedText}"</Text>
 							</HStack>
 							<Box

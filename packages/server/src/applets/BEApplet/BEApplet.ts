@@ -132,7 +132,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
                 // Inject core instruction as first system message (only if mode is set)
                 if (isToolsIncluded) {
-                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — injecting into first message');
+                    //console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — injecting into first message');
                     const firstMsg = messages[0];
                     if (firstMsg?.role === 'system') {
                         if (typeof firstMsg.content === 'string') {
@@ -152,7 +152,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                         messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
                     }
                 } else {
-                    console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — skipped (no mode/allowedTools active)');
+                    //console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — skipped (no mode/allowedTools active)');
                 }
 
                 const lastIndex = messages.length - 1;
@@ -162,7 +162,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     return;
                 }
 
-                console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — injecting into last message');
+                //console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — injecting into last message');
                 const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
                     + "\n" + content
                     + "\n</system-reminder>";
@@ -189,7 +189,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                             return newMessages;
 
                         } else {
-                            console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — skipped (no tools/todos/projectRoot to inject)');
+                            //console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — skipped (no tools/todos/projectRoot to inject)');
                         }
 
                     });

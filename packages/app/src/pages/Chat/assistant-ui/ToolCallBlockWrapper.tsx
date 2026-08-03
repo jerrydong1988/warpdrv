@@ -180,7 +180,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 								{isPending && deciding && (
 									<>
 										<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
-										<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-muted)">Processing...</Text>
+										<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">Processing...</Text>
 									</>
 								)}
 								/* Approval buttons moved to ToolCallBlockCollapsible header

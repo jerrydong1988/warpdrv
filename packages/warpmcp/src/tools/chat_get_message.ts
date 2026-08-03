@@ -13,33 +13,16 @@ export const chatGetMessageDefinition = {
 	resultLimit: 40960,
 };
 
-export interface IChatGetMessageResult {
-	messageId: string;
-	role: string;
-	content: string;
-}
-
 export async function chatGetMessageHandler(
 	deps: IWarpmcpDeps,
 	args: { messageId: string },
-): Promise<IChatGetMessageResult> {
+) {
 	if (!deps.chatGetMessage) {
 		throw '[warpmcp] chatGetMessage function not found';
 	}
-	const message = await deps.chatGetMessage(args.messageId);
-	if (!message) {
+	const result = await deps.chatGetMessage(args.messageId);
+	if (!result) {
 		throw `[warpmcp] Message not found: ${args.messageId}`;
 	}
-
-	// Extract text content from message parts
-	const textParts = message.content
-		.filter((part: any) => part.type === 'text' || part.type === 'reasoning')
-		.map((part: any) => part.text)
-		.join('\n');
-
-	return {
-		messageId: message.id,
-		role: message.role,
-		content: textParts,
-	};
+	return result;
 }

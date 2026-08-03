@@ -41,13 +41,13 @@ export const CodeGraphSymbolRenderer = React.memo((props: {
 							<HStack gap="2" align="center" mb={n.signature ? '1' : '0'}>
 								<Badge fontSize="calc(var(--chat-font-size) - 5px)" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0">{String(n.kind)}</Badge>
 												<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
-												<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.language)}</Text>
+												<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.language)}</Text>
 							</HStack>
-							{n.signature && <Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-muted)" whiteSpace="pre-wrap" wordBreak="break-all" mb="1">{String(n.signature)}</Text>}
-											<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}-{String(n.endLine)}</Text>
+							{n.signature && <Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-muted)" whiteSpace="pre-wrap" wordBreak="break-all" mb="1">{String(n.signature)}</Text>}
+											<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}-{String(n.endLine)}</Text>
 						</Box>
 					))}
-										{nodes.length > 1 && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length} matches — ambiguous symbol name</Text>}
+										{nodes.length > 1 && <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length} matches — ambiguous symbol name</Text>}
 				</VStack>
 			)}
 		</Box>

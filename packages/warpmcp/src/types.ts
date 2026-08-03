@@ -1,5 +1,4 @@
 import type { IAccessToken, ITodoItem, ICodeGraphNode, ICodeGraphIngestResult, ICodeGraphSearchOptions } from '@warpcore/shared';
-import type { ISearchResult, IChatMessage } from '@warpcore/bridge';
 export interface IEmbeddingSearchResult {
 	messageId: string;
 	text: string;
@@ -28,10 +27,10 @@ export interface IWarpmcpDeps {
 		codeGraphGetCallers?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
 		codeGraphGetCallees?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
 		codeGraphListFile?: (projectRoot: string, filePath: string) => Promise<ICodeGraphNode[]>;
-		codeGraphClear?: (projectRoot: string) => Promise<void>;
-		chatSearch?: (query: string, options: { mode: 'everywhere' | 'thread'; threadId?: string; limit?: number; offset?: number }) => Promise<ISearchResult[]>;
-		chatGetMessage?: (messageId: string) => Promise<IChatMessage | null>;
-	}
+			codeGraphClear?: (projectRoot: string) => Promise<void>;
+			chatSearch?: (query: string, threadId: string, limit: number, page: number) => Promise<{ results: Array<{ messageId: string; snippet: string }>; page: number; limit: number; hasMore: boolean }>;
+			chatGetMessage?: (messageId: string) => Promise<{ messageId: string; role: string; content: string } | null>;
+		}
 export interface IStartArgs extends IWarpmcpDeps {
 	port: number;
 	exposeExternal: boolean;

@@ -55,7 +55,7 @@ export const SearchRenderer = React.memo((props: {
 								)}
 							</HStack>
 							{(r.snippet ?? r.description) && (
-																<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-muted)" mt="0">
+																<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-secondary)" mt="0">
 									{r.snippet ?? r.description}
 								</Text>
 							)}

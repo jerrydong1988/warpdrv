@@ -15,40 +15,14 @@ export const chatSearchDefinition = {
 	resultLimit: 40960,
 };
 
-export interface IChatSearchResult {
-	messageId: string;
-	snippet: string;
-}
-
 export async function chatSearchHandler(
 	deps: IWarpmcpDeps,
 	args: { query: string; limit?: number; page?: number; threadId?: string },
-): Promise<{ results: IChatSearchResult[]; page: number; limit: number; hasMore: boolean }> {
+) {
 	if (!deps.chatSearch) {
 		throw '[warpmcp] chatSearch function not found';
 	}
 	const limit = Math.min(args.limit ?? 10, 200);
 	const page = args.page ?? 1;
-	const offset = (page - 1) * limit;
-
-	const allResults = await deps.chatSearch(args.query, {
-		mode: 'everywhere',
-		limit,
-		offset,
-	});
-
-	// Filter out current thread results
-	const filtered = allResults.filter(
-		r => r.type === 'message' && r.threadId !== args.threadId
-	);
-
-	return {
-		results: filtered.map(r => ({
-			messageId: r.messageId as string,
-			snippet: r.snippet as string,
-		})),
-		page,
-		limit,
-		hasMore: allResults.length === limit,
-	};
+	return deps.chatSearch(args.query, args.threadId, limit, page);
 }

@@ -38,64 +38,64 @@ export async function bootWarpmcp(): Promise<void> {
 		codeGraphGetCallers: (projectRoot, symbolId, depth) => codeGraphService.getCallers(projectRoot, symbolId, depth),
 		codeGraphGetCallees: (projectRoot, symbolId, depth) => codeGraphService.getCallees(projectRoot, symbolId, depth),
 		codeGraphListFile: (projectRoot, filePath) => codeGraphService.listFile(projectRoot, filePath),
-		codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
-		chatSearch: (q, opts) => chatSearchToolService.searchMessages(q, opts),
-		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
-	});
-	await mcpClient.connect(WARPMCP_NAME, {
-		url: `http://127.0.0.1:${port}/mcp`,
-		warpdrv: { argDefaults: {
-			"embedding_search": { "topic": "{{ws.topic}}" },
-			"todo_read": { "threadId": "{{ws.threadId}}" },
-			// "todo_add": { "threadId": "{{ws.threadId}}" },
-			// "todo_remove": { "threadId": "{{ws.threadId}}" },
-			// "todo_update": { "threadId": "{{ws.threadId}}" },
-			// "todo_clear": { "threadId": "{{ws.threadId}}" },
-			"todo_write": { "threadId": "{{ws.threadId}}" },
-			"rg": { "path": "{{ts.projectRoot}}" },
-			"get_project_root": { "threadId": "{{ws.threadId}}" },
-			"code_graph_ingest": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_search": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_symbol": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_callers": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_callees": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_list": { "project_root": "{{ts.projectRoot}}" },
-			"code_graph_clear": { "project_root": "{{ts.projectRoot}}" },
-			"chat_search": { "threadId": "{{ws.threadId}}" },
-		} },
-	});
-}
-export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings): Promise<void> {
-	const portChanged = (prev.builtinMcpPort ?? 11437) !== (next.builtinMcpPort ?? 11437);
-	const exposeChanged = (prev.builtinMcpExposeExternal ?? false) !== (next.builtinMcpExposeExternal ?? false);
-	if (!portChanged && !exposeChanged) return;
-	await mcpClient.disconnect(WARPMCP_NAME);
-	await stopWarpmcp();
-	const { port } = await startWarpmcp({
-		port: next.builtinMcpPort ?? 11437,
-		exposeExternal: next.builtinMcpExposeExternal ?? false,
-		isRemote,
-		validateBearerToken,
-		getFsAllowedRoots: () => (currentSettings.fsAllowedRoots ?? []),
-		embeddingSearch: (query: string, topK: number, topic: string) => embeddingManager.search(query, topK, topic),
-		getProjectRoot: (tid) => getProjectRoot(tid),
-		todoRead: (tid) => todoManager.read(tid),
-		// todoAdd: (tid, todo, index) => todoManager.add(tid, todo, index),
-		// todoRemove: (tid, index) => todoManager.remove(tid, index),
-		// todoUpdate: (tid, index, status) => todoManager.update(tid, index, status),
-		// todoClear: (tid) => todoManager.clear(tid),
-		todoWrite: (tid, todos, etag) => todoManager.write(tid, todos, etag),
-		onFileWritten: (filePath) => codeGraphService.onFileWritten(filePath),
-		codeGraphIngest: (projectRoot, force) => codeGraphService.ingest(projectRoot, force),
-		codeGraphSearch: (projectRoot, query, options) => codeGraphService.search(projectRoot, query, options),
-		codeGraphGetSymbol: (projectRoot, symbolId) => codeGraphService.getSymbol(projectRoot, symbolId),
-		codeGraphGetCallers: (projectRoot, symbolId, depth) => codeGraphService.getCallers(projectRoot, symbolId, depth),
-		codeGraphGetCallees: (projectRoot, symbolId, depth) => codeGraphService.getCallees(projectRoot, symbolId, depth),
-		codeGraphListFile: (projectRoot, filePath) => codeGraphService.listFile(projectRoot, filePath),
-		codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
-		chatSearch: (q, opts) => chatSearchToolService.searchMessages(q, opts),
-		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
-	});
+				codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
+				chatSearch: (q, threadId, limit, page) => chatSearchToolService.searchMessages(q, threadId, limit, page),
+				chatGetMessage: (id) => chatSearchToolService.getMessage(id),
+			});
+			await mcpClient.connect(WARPMCP_NAME, {
+				url: `http://127.0.0.1:${port}/mcp`,
+				warpdrv: { argDefaults: {
+					"embedding_search": { "topic": "warpdrv" },
+					"todo_read": { "threadId": "1JYUcd" },
+					// "todo_add": { "threadId": "1JYUcd" },
+					// "todo_remove": { "threadId": "1JYUcd" },
+					// "todo_update": { "threadId": "1JYUcd" },
+					// "todo_clear": { "threadId": "1JYUcd" },
+					"todo_write": { "threadId": "1JYUcd" },
+					"rg": { "path": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"get_project_root": { "threadId": "1JYUcd" },
+					"code_graph_ingest": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_search": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_symbol": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_callers": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_callees": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_list": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"code_graph_clear": { "project_root": "/mnt/dev/inetpub/Default/fyrfly/realm/warpcore" },
+					"chat_search": { "threadId": "1JYUcd" },
+				} },
+			});
+		}
+		export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings): Promise<void> {
+			const portChanged = (prev.builtinMcpPort ?? 11437) !== (next.builtinMcpPort ?? 11437);
+			const exposeChanged = (prev.builtinMcpExposeExternal ?? false) !== (next.builtinMcpExposeExternal ?? false);
+			if (!portChanged && !exposeChanged) return;
+			await mcpClient.disconnect(WARPMCP_NAME);
+			await stopWarpmcp();
+			const { port } = await startWarpmcp({
+				port: next.builtinMcpPort ?? 11437,
+				exposeExternal: next.builtinMcpExposeExternal ?? false,
+				isRemote,
+				validateBearerToken,
+				getFsAllowedRoots: () => (currentSettings.fsAllowedRoots ?? []),
+				embeddingSearch: (query: string, topK: number, topic: string) => embeddingManager.search(query, topK, topic),
+				getProjectRoot: (tid) => getProjectRoot(tid),
+				todoRead: (tid) => todoManager.read(tid),
+				// todoAdd: (tid, todo, index) => todoManager.add(tid, todo, index),
+				// todoRemove: (tid, index) => todoManager.remove(tid, index),
+				// todoUpdate: (tid, index, status) => todoManager.update(tid, index, status),
+				// todoClear: (tid) => todoManager.clear(tid),
+				todoWrite: (tid, todos, etag) => todoManager.write(tid, todos, etag),
+				onFileWritten: (filePath) => codeGraphService.onFileWritten(filePath),
+				codeGraphIngest: (projectRoot, force) => codeGraphService.ingest(projectRoot, force),
+				codeGraphSearch: (projectRoot, query, options) => codeGraphService.search(projectRoot, query, options),
+				codeGraphGetSymbol: (projectRoot, symbolId) => codeGraphService.getSymbol(projectRoot, symbolId),
+				codeGraphGetCallers: (projectRoot, symbolId, depth) => codeGraphService.getCallers(projectRoot, symbolId, depth),
+				codeGraphGetCallees: (projectRoot, symbolId, depth) => codeGraphService.getCallees(projectRoot, symbolId, depth),
+				codeGraphListFile: (projectRoot, filePath) => codeGraphService.listFile(projectRoot, filePath),
+				codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
+				chatSearch: (q, threadId, limit, page) => chatSearchToolService.searchMessages(q, threadId, limit, page),
+				chatGetMessage: (id) => chatSearchToolService.getMessage(id),
+			});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
 		warpdrv: { argDefaults: {

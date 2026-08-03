@@ -191,7 +191,7 @@ export const TodoItemRenderer = React.memo((props: {
               ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
               : <Square size={12} color="var(--wc-text-faint)" />
             }
-                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
+                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
                         <Text
                           fontSize="calc(var(--chat-font-size) - 2px)"
                           fontFamily="mono"
