@@ -346,7 +346,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 													style={{ fontSize: '12px', color: 'var(--wc-text-primary)' }}
 												>
 													<HStack gap="2">
-														{metaFields.starred && <StarIcon size={12} />}
+														<StarIcon size={12} />
 														<Text>{metaFields.starred ? 'Unstar' : 'Star'}</Text>
 													</HStack>
 												</Menu.Item>
