@@ -48,6 +48,7 @@ import { EventNode } from '@warpcore/realmcore';
 import { bootWarpmcp } from './warpmcpRunner';
 import { TodoManager } from './services/todoManager';
 import { CodeGraphService } from './services/codeGraphService';
+import { ChatSearchToolService } from './services/chatSearchToolService';
 import { getProjectRoot } from './services/projectRoot';
 import { embeddingManager } from './services/embeddingManager';
 import { getDataDir } from './util/mcpConfig';
@@ -67,6 +68,7 @@ export let broadcaster: SseBroadcaster;
 export let todoManager: TodoManager;
 export { getProjectRoot } from './services/projectRoot';
 export let codeGraphService: CodeGraphService;
+export let chatSearchToolService: ChatSearchToolService;
 
 import { execSync } from 'child_process';
 import { launchAutoStartServers, reconcileServers } from './services/processManager';
@@ -116,6 +118,7 @@ async function main() {
 	await persistence.init();
 	todoManager = new TodoManager(persistence);
 	codeGraphService = new CodeGraphService(persistence);
+	chatSearchToolService = new ChatSearchToolService(persistence);
 
 	// Initialize MCP
 	mcpConfig = new McpConfig(path.join(dataDir, 'mcp.json'));

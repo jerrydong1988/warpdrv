@@ -164,7 +164,6 @@ export const useStore = create<AppState>()(
 						ReadFileRenderer: ReadFileRendererMeta,
 						CodeGraphSearchRenderer: CodeGraphSearchRendererMeta,
 						SearchRenderer: SearchRendererMeta,
-						TodoItemRenderer: TodoItemRendererMeta,
 						TodoListRenderer: TodoListRendererMeta,
 						CodeGraphIngestRenderer: CodeGraphIngestRendererMeta,
 						CodeGraphSymbolRenderer: CodeGraphSymbolRendererMeta,

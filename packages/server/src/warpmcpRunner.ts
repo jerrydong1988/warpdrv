@@ -4,7 +4,7 @@ import { validateBearerToken } from './routes/tokens';
 import { store } from './util/store';
 import type { ISettings } from '@warpcore/shared';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
-import { mcpClient, todoManager, getProjectRoot, codeGraphService } from './index';
+import { mcpClient, todoManager, getProjectRoot, codeGraphService, chatSearchToolService } from './index';
 import { embeddingManager } from './services/embeddingManager';
 const SETTINGS_KEY = 'settings:general';
 async function getSettings(): Promise<ISettings> {
@@ -39,6 +39,8 @@ export async function bootWarpmcp(): Promise<void> {
 		codeGraphGetCallees: (projectRoot, symbolId, depth) => codeGraphService.getCallees(projectRoot, symbolId, depth),
 		codeGraphListFile: (projectRoot, filePath) => codeGraphService.listFile(projectRoot, filePath),
 		codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
+		chatSearch: (q, opts) => chatSearchToolService.searchMessages(q, opts),
+		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -59,6 +61,7 @@ export async function bootWarpmcp(): Promise<void> {
 			"code_graph_callees": { "project_root": "{{ts.projectRoot}}" },
 			"code_graph_list": { "project_root": "{{ts.projectRoot}}" },
 			"code_graph_clear": { "project_root": "{{ts.projectRoot}}" },
+			"chat_search": { "threadId": "{{ws.threadId}}" },
 		} },
 	});
 }
@@ -90,6 +93,8 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 		codeGraphGetCallees: (projectRoot, symbolId, depth) => codeGraphService.getCallees(projectRoot, symbolId, depth),
 		codeGraphListFile: (projectRoot, filePath) => codeGraphService.listFile(projectRoot, filePath),
 		codeGraphClear: (projectRoot) => codeGraphService.clear(projectRoot),
+		chatSearch: (q, opts) => chatSearchToolService.searchMessages(q, opts),
+		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -110,6 +115,7 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 			"code_graph_callees": { "project_root": "{{ts.projectRoot}}" },
 			"code_graph_list": { "project_root": "{{ts.projectRoot}}" },
 			"code_graph_clear": { "project_root": "{{ts.projectRoot}}" },
+			"chat_search": { "threadId": "{{ws.threadId}}" },
 		} },
 	});
 }

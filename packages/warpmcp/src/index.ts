@@ -28,6 +28,8 @@ import { codeGraphCallersDefinition, codeGraphCallersHandler } from './tools/cod
 import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from './tools/code_graph_callees';
 import { codeGraphListDefinition, codeGraphListHandler } from './tools/code_graph_list';
 import { codeGraphClearDefinition, codeGraphClearHandler } from './tools/code_graph_clear';
+import { chatSearchDefinition, chatSearchHandler } from './tools/chat_search';
+import { chatGetMessageDefinition, chatGetMessageHandler } from './tools/chat_get_message';
 const SERVER_NAME = 'warpmcp';
 let httpServer: Server | null = null;
 let currentPort: number | null = null;
@@ -55,8 +57,10 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: codeGraphCallersDefinition, handler: (a: any) => codeGraphCallersHandler(deps, a) },
 		{ def: codeGraphCalleesDefinition, handler: (a: any) => codeGraphCalleesHandler(deps, a) },
 		{ def: codeGraphListDefinition, handler: (a: any) => codeGraphListHandler(deps, a) },
-		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
-	];
+			{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
+			{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
+			{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
+		];
 	const server = new McpServer({ name: SERVER_NAME, version: '0.1.0' }, { capabilities: { tools: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {

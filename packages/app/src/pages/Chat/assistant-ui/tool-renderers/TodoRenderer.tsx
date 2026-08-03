@@ -153,15 +153,15 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     return {};
   },
   renderMini: React.memo(({ args, result }) => {
-    const items = extractTodoArray(result ?? args);
+    const items = extractTodoArray(args ?? result);
     if (items) {
       const done = items.filter(i => i.status === 'done').length;
       return (
-        <Text whiteSpace="nowrap">ToDo {done}/{items.length}</Text>
+        <Text whiteSpace="nowrap">To-dos {done}/{items.length}</Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">Todos</Text>
+      <Text whiteSpace="nowrap">To-dos</Text>
     );
   }),
 };
