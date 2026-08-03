@@ -41,7 +41,7 @@ export const EmbeddingSearchRenderer = React.memo((props: {
 								return (
 									<Box key={i} pb={i < results.length - 1 ? '2' : '0'} borderBottomWidth={i < results.length - 1 ? '1px' : '0'} borderColor="var(--wc-border-subtle)">
 										<HStack gap="2" align="center" mb="1">
-											<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-accent-blue)" minW="45px">{similarity}%</Text>
+											<Text fontSize="calc(var(--chat-font-size) - 1px)" fontFamily="mono" color="var(--wc-accent-blue)" minW="45px">{similarity}%</Text>
 															<Text fontSize="calc(var(--chat-font-size) - 5px)" fontFamily="mono" color="var(--wc-text-faint)">{String(r.messageId).slice(0, 8)}</Text>
 										</HStack>
 																			<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-word">{String(r.text)}</Text>

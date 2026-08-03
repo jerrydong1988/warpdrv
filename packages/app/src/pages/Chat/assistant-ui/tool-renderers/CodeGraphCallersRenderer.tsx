@@ -45,7 +45,7 @@ export const CodeGraphCallersRenderer = React.memo((props: {
 									<Badge fontSize="calc(var(--chat-font-size) - 5px)" color={KIND_COLORS[n.kind] ?? 'var(--wc-text-muted)'} bg="var(--wc-bg-surface)" px="1" py="0" minW="40px" textAlign="center">{String(n.kind)}</Badge>
 													<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-primary)">{String(n.symbol)}</Text>
 													<Box flex="1" />
-													<Text fontSize="calc(var(--chat-font-size) - 4px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
+													<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}</Text>
 								</HStack>
 							))}
 						</VStack>

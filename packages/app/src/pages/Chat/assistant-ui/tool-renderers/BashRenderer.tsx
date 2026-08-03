@@ -51,11 +51,11 @@ export const BashRenderer = React.memo((props: {
 								{command ?? '(no command)'}
 							</Text>
 			</Box>
-			
+
 			<VStack gap="1" align="stretch">
 				{subCommands.map((sub, i) => (
 					<HStack key={i} gap="2" align="flex-start">
-						<Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="20px">{i + 1}.</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)" minW="20px">{i + 1}.</Text>
 										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap" wordBreak="break-all">
 							{sub}
 						</Text>

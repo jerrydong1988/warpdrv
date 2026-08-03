@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo, type FC, type ReactNode, type DragEvent } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, type FC, type ReactNode, type DragEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import {
 	Box, Flex, Text, HStack, VStack, Input, Portal, Menu,
@@ -12,10 +13,11 @@ import {
 } from '@assistant-ui/react';
 import {
 	PlusIcon, MoreHorizontalIcon, TrashIcon, PencilIcon, CheckIcon,
-	FolderIcon, FolderPlusIcon, SearchIcon, SortAscIcon, SortDescIcon,
-	ChevronRightIcon, ChevronDownIcon, XIcon,
-	FolderOpenIcon,
+				FolderIcon, FolderPlusIcon, SearchIcon, SortAscIcon, SortDescIcon,
+				ChevronRightIcon, ChevronDownIcon, XIcon,
+				FolderOpenIcon,
 } from 'lucide-react';
+import { IoStarSharp } from "react-icons/io5";
 import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from '@warpcore/bridge';
 import { useStore } from '@/store';
 import { fetchWorkspace } from '@/api/services';
@@ -219,12 +221,14 @@ function timeAgo(ts: number): string {
 // ============================================================
 // Manual Thread List Item - uses plain Chakra UI (no assistant-ui primitives)
 // ============================================================
-function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelete }: {
+function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelete, onSetStarred, containerId }: {
 	thread: IChatThread;
 	onRename: (id: string, title: string) => void;
 	onStartDrag: (threadId: string) => void;
 	onSelect: (threadId: string) => void;
 	onDelete: (id: string) => void;
+	onSetStarred: (id: string, starred: boolean) => void;
+	containerId: string;
 }) {
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
@@ -232,7 +236,30 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const selected = thread.id === currentThreadId;
 
-	return (
+	const metaFields = useMemo(() => {
+		try {
+			const m = JSON.parse(thread.meta);
+			return {
+				starred: !!m.starred,
+				serverId: m.serverId ?? null,
+				whisperServerId: m.whisperServerId ?? null,
+				tags: m.tags ?? [],
+				enableAutoEmbed: !!m.enableAutoEmbed,
+			};
+		} catch {
+			return { starred: false, serverId: null, whisperServerId: null, tags: [], enableAutoEmbed: false };
+		}
+	}, [thread.meta]);
+
+	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+	useLayoutEffect(() => {
+		setPortalTarget(document.getElementById(`${containerId}-${metaFields.starred ? 'starred' : 'default'}`));
+	}, [containerId, metaFields.starred]);
+
+	if (!portalTarget) return null;
+
+	return createPortal(
 		<Box
 			w="100%"
 			className={`group ${selected ? 'selected' : ''}`}
@@ -267,6 +294,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 				<>
 					<Box flex="1" display="flex" flexDirection="column" overflow="hidden">
 						<HStack>
+											{metaFields.starred && <IoStarSharp size={12} style={{ color: 'var(--wc-text-secondary)', flexShrink: 0 }} />}
 							<Text fontSize="13px" color="var(--wc-text-primary)" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
 								{thread.title ?? 'New Chat'}
 							</Text>
@@ -294,7 +322,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<MoreHorizontalIcon size={13} />
+										<MoreHorizontalIcon size={13} style={{ color: 'var(--wc-text-muted)' }} />
 						</Box>
 					</Menu.Trigger>
 						<Menu.Positioner>
@@ -303,35 +331,46 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 								borderRadius="md" py="1" minW="120px"
 								onClick={(e) => e.stopPropagation()}
 							>
-								<Menu.Item
-									value="rename"
-									onClick={() => setRenaming(true)}
-									style={{ fontSize: '12px', color: 'var(--wc-text-primary)' }}
-								>
-									<HStack gap="2">
-										<PencilIcon size={12} />
-										<Text>Rename</Text>
-									</HStack>
-								</Menu.Item>
-								<Menu.Item
-									value="delete"
-									onClick={() => onDelete(thread.id)}
-									style={{ fontSize: '12px', color: 'var(--wc-accent-red)' }}
-								>
-									<HStack gap="2">
-										<TrashIcon size={12} />
-										<Text>Delete</Text>
-									</HStack>
-								</Menu.Item>
-							</Menu.Content>
-						</Menu.Positioner>
-					</Menu.Root>
-				</Box>
-			</>
-			)}
-		</Box>
-	);
-}
+												<Menu.Item
+													value="rename"
+													onClick={() => setRenaming(true)}
+													style={{ fontSize: '12px', color: 'var(--wc-text-primary)' }}
+												>
+													<HStack gap="2">
+														<PencilIcon size={12} />
+														<Text>Rename</Text>
+													</HStack>
+												</Menu.Item>
+												<Menu.Item
+													value="star"
+													onClick={() => onSetStarred(thread.id, !metaFields.starred)}
+													style={{ fontSize: '12px', color: 'var(--wc-text-primary)' }}
+												>
+													<HStack gap="2">
+														<IoStarSharp size={12} style={{ color: 'var(--wc-text-primary)' }} />
+														<Text>{metaFields.starred ? 'Unstar' : 'Star'}</Text>
+													</HStack>
+												</Menu.Item>
+												<Menu.Item
+													value="delete"
+													onClick={() => onDelete(thread.id)}
+													style={{ fontSize: '12px', color: 'var(--wc-accent-red)' }}
+												>
+													<HStack gap="2">
+														<TrashIcon size={12} />
+														<Text>Delete</Text>
+													</HStack>
+												</Menu.Item>
+											</Menu.Content>
+											</Menu.Positioner>
+										</Menu.Root>
+														</Box>
+														</>
+														)}
+															</Box>,
+														portalTarget
+													);
+										}
 
 // ============================================================
 // Folder section
@@ -494,14 +533,14 @@ function FolderSection({
 					</Menu.Positioner>
 				</Menu.Root>
 			</HStack>
-			{open && (
-				<Box pl="4" my="1" maxH="600px" overflowY="auto" css={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' } }}>
-					{children}
-					{threads.length === 0 && (
-						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">Drop threads here</Text>
-					)}
-				</Box>
-			)}
+			<Box pl="4" my="1" maxH="600px" overflowY="auto" css={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' } }} style={{ display: open ? 'block' : 'none' }}>
+				<div id={`${folder.id}-starred`} />
+				<div id={`${folder.id}-default`} />
+				{children}
+				{threads.length === 0 && (
+					<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">Drop threads here</Text>
+				)}
+			</Box>
 		</Box>
 	);
 }
@@ -564,6 +603,10 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 	const handleDeleteThread = useCallback((id: string) => {
 		setConfirmDelete({ type: 'thread', id });
 	}, []);
+
+	const handleSetStarred = useCallback(async (id: string, starred: boolean) => {
+		await threadsAPI.patchThread(id, { starred });
+	}, [threadsAPI.patchThread]);
 
 	const handleConfirmDeleteThread = useCallback(async (id: string) => {
 		await threadsAPI.removeThread(id);
@@ -731,14 +774,15 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 					>
 						<VStack gap="1" align="start" w="full">
 							{(threadsByFolderMap[f.id] ?? []).map(thread => (
-								<ManualThreadListItem 
+								<ManualThreadListItem
 									key={thread.id}
 									thread={thread}
+									containerId={f.id}
 									onRename={handleRenameThread}
 									onStartDrag={setDraggingThread}
 									onSelect={handleSelectThread}
 									onDelete={handleDeleteThread}
-									w="full"
+									onSetStarred={handleSetStarred}
 								/>
 							))}
 						</VStack>
@@ -755,16 +799,19 @@ export const ThreadList: FC<{ onOpenSearch?: () => void }> = React.memo(({ onOpe
 					w="full"
 					py="1"
 				>
+					<div id="root-starred" />
+					<div id="root-default" />
 					<VStack gap="1" align="start" w="full">
 						{rootThreads.map(thread => (
-							<ManualThreadListItem 
+							<ManualThreadListItem
 								key={thread.id}
 								thread={thread}
+								containerId="root"
 								onRename={handleRenameThread}
 								onStartDrag={setDraggingThread}
 								onSelect={handleSelectThread}
 								onDelete={handleDeleteThread}
-								w="full"
+								onSetStarred={handleSetStarred}
 							/>
 						))}
 					</VStack>

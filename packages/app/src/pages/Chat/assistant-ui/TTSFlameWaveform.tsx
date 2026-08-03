@@ -41,18 +41,18 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		let phase = 0;
 		const drawPass = (pts: Array<{ x: number; y: number }>, hueShift: number, alpha: number, yScale: number) => {
 			ctx.beginPath();
-			ctx.moveTo(0, 0);
-			ctx.lineTo(pts[0].x, pts[0].y * yScale);
+			ctx.moveTo(0, height);
+			ctx.lineTo(pts[0].x, height - pts[0].y * yScale);
 			for (let i = 0; i < pts.length - 1; i++) {
 				const p0 = pts[i];
 				const p1 = pts[i + 1];
 				const mx = (p0.x + p1.x) / 2;
-				const my = ((p0.y + p1.y) / 2) * yScale;
-				ctx.quadraticCurveTo(p0.x, p0.y * yScale, mx, my);
+				const my = height - ((p0.y + p1.y) / 2) * yScale;
+				ctx.quadraticCurveTo(p0.x, height - p0.y * yScale, mx, my);
 			}
-			ctx.lineTo(width, 0);
+			ctx.lineTo(width, height);
 			ctx.closePath();
-			const grad = ctx.createLinearGradient(0, 0, width, height);
+			const grad = ctx.createLinearGradient(0, height, width, 0);
 			grad.addColorStop(0,    `hsla(${(190 + hueShift) % 360}, 90%, 65%, ${alpha})`);
 			grad.addColorStop(0.33, `hsla(${(270 + hueShift) % 360}, 85%, 65%, ${alpha})`);
 			grad.addColorStop(0.66, `hsla(${(320 + hueShift) % 360}, 90%, 65%, ${alpha})`);
@@ -97,15 +97,15 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 			ref={wrapRef}
 			style={{
 				position: 'absolute',
-				top: 0,
+				bottom: '100%',
 				left: 0,
 				right: 0,
 				height,
 				pointerEvents: 'none',
 				zIndex: 1,
 				overflow: 'hidden',
-				borderTopLeftRadius: 'var(--composer-radius, 24px)',
-				borderTopRightRadius: 'var(--composer-radius, 24px)',
+				borderBottomLeftRadius: 'var(--composer-radius, 24px)',
+				borderBottomRightRadius: 'var(--composer-radius, 24px)',
 			}}
 		>
 			<canvas ref={canvasRef} />

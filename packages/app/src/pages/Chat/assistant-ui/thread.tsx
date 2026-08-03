@@ -1226,7 +1226,7 @@ const UserMessage: FC = () => {
 			<UserMessageAttachments />
 			<MessageUiSpace>
 				<div className="flex justify-end">
-					<div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden max-w-[80%]" style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined }}>
+					<div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden max-w-[80%]" style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, background: "var(--wc-bg-active)", color: "var(--wc-text-primary)" }}>
 						<MessagePrimitive.Parts />
 						<MessageSlashCommands />
 					</div>

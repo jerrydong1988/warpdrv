@@ -92,7 +92,7 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 		getEditor: () => editor,
 	}), [editor]);
 
-	return <EditorContent editor={editor} className={props.className} />;
+	return <EditorContent editor={editor} className={props.className}/>;
 });
 
 ComposerEditor.displayName = "ComposerEditor";

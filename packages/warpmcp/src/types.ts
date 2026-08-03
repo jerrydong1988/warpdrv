@@ -21,14 +21,16 @@ export interface IWarpmcpDeps {
 	todoWrite?: (threadId: string, todos: ITodoItem[], etag?: string) => Promise<ITodoResult>;
 	getProjectRoot?: (threadId: string) => Promise<string | null>;
 	onFileWritten?: (path: string) => Promise<void>;
-	codeGraphIngest?: (projectRoot: string, force?: boolean) => Promise<ICodeGraphIngestResult>;
-	codeGraphSearch?: (projectRoot: string, query: string, options?: ICodeGraphSearchOptions) => Promise<ICodeGraphNode[]>;
-	codeGraphGetSymbol?: (projectRoot: string, symbolId: string) => Promise<ICodeGraphNode | null>;
-	codeGraphGetCallers?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
-	codeGraphGetCallees?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
-	codeGraphListFile?: (projectRoot: string, filePath: string) => Promise<ICodeGraphNode[]>;
-	codeGraphClear?: (projectRoot: string) => Promise<void>;
-}
+		codeGraphIngest?: (projectRoot: string, force?: boolean) => Promise<ICodeGraphIngestResult>;
+		codeGraphSearch?: (projectRoot: string, query: string, options?: ICodeGraphSearchOptions) => Promise<ICodeGraphNode[]>;
+		codeGraphGetSymbol?: (projectRoot: string, symbolId: string) => Promise<ICodeGraphNode | null>;
+		codeGraphGetCallers?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
+		codeGraphGetCallees?: (projectRoot: string, symbolId: string, depth?: number) => Promise<ICodeGraphNode[]>;
+		codeGraphListFile?: (projectRoot: string, filePath: string) => Promise<ICodeGraphNode[]>;
+			codeGraphClear?: (projectRoot: string) => Promise<void>;
+			chatSearch?: (query: string, threadId: string, limit: number, page: number) => Promise<{ results: Array<{ messageId: string; snippet: string }>; page: number; limit: number; hasMore: boolean }>;
+			chatGetMessage?: (messageId: string) => Promise<{ messageId: string; role: string; content: string } | null>;
+		}
 export interface IStartArgs extends IWarpmcpDeps {
 	port: number;
 	exposeExternal: boolean;

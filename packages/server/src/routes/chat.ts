@@ -131,6 +131,7 @@ chatRouter.put('/threads/:id', async (req, res) => {
 			whisperServerId: body.whisperServerId ?? meta.whisperServerId,
 			tags: body.tags ?? meta.tags,
 			enableAutoEmbed: body.enableAutoEmbed ?? meta.enableAutoEmbed,
+			starred: body.starred ?? meta.starred,
 		});
 
 		await persistence.updateThread(req.params.id, {

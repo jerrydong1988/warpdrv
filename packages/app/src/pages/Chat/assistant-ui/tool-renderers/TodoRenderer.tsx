@@ -153,15 +153,15 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     return {};
   },
   renderMini: React.memo(({ args, result }) => {
-    const items = extractTodoArray(result ?? args);
+    const items = extractTodoArray(args ?? result);
     if (items) {
       const done = items.filter(i => i.status === 'done').length;
       return (
-        <Text whiteSpace="nowrap">ToDo {done}/{items.length}</Text>
+        <Text whiteSpace="nowrap">To-dos {done}/{items.length}</Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">Todos</Text>
+      <Text whiteSpace="nowrap">To-dos</Text>
     );
   }),
 };
@@ -191,7 +191,7 @@ export const TodoItemRenderer = React.memo((props: {
               ? <CheckSquare size={12} color="var(--wc-accent-green-icon)" />
               : <Square size={12} color="var(--wc-text-faint)" />
             }
-                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
+                        {props.index !== undefined && <Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-faint)" minW="14px">{props.index + 1}.</Text>}
                         <Text
                           fontSize="calc(var(--chat-font-size) - 2px)"
                           fontFamily="mono"
