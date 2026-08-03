@@ -315,7 +315,7 @@ import Base from "../layouts/Base.astro";
 		z-index: 50;
 		height: var(--nav-h);
 		border-bottom: 1px solid var(--line);
-		background: rgba(0, 0, 0, 0.72);
+		background: rgba(0, 0, 0, 0.1);
 		backdrop-filter: blur(14px);
 		-webkit-backdrop-filter: blur(14px);
 	}
@@ -533,17 +533,15 @@ import Base from "../layouts/Base.astro";
 		border-radius: 16px 16px 0 0;
 	}
 
-	/* hero fade disabled
-	.hero-visual .mask::after {
-		content: '';
+	/*.hero-visual .mask::after {
+		content: "";
 		position: absolute;
 		inset: auto 0 0 0;
 		height: 200px;
-		background: linear-gradient(to bottom, transparent, var(--black));
+		background: linear-gradient(to bottom, transparent, var(--near));
 		pointer-events: none;
 		z-index: 2;
-	}
-	*/
+	}*/
 
 	/* ---------- feature sections ---------- */
 
@@ -553,6 +551,7 @@ import Base from "../layouts/Base.astro";
 		border-top: 1px solid var(--line);
 		padding: 96px 0;
 		overflow: hidden;
+		background: rgba(5, 5, 5, 0.5);
 	}
 
 	.feature .inner {
