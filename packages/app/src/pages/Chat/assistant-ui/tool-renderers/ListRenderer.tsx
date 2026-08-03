@@ -97,7 +97,7 @@ const TreeNode = React.memo(({ entry, depth }: { entry: ITreeEntry, depth: numbe
 			<HStack gap="1" pl={`${depth * 12}px`} py="0" align="center" cursor={hasChildren ? 'pointer' : 'default'} onClick={() => hasChildren && setOpen(!open)}>
 				{hasChildren ? (open ? <ChevronDown size={10} /> : <ChevronRight size={10} />) : <Box w="10px" />}
 				{isDir ? <Folder size={11} color="var(--wc-text-secondary)" /> : <File size={11} color="var(--wc-text-faint)" />}
-								<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color={isDir ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}>
+								<Text fontSize="var(--chat-font-size)" fontFamily="mono" color={isDir ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}>
 					{entry.name}
 				</Text>
 			</HStack>

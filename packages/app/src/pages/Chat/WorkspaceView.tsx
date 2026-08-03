@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { IoStarSharp } from 'react-icons/io5';
 import { useShallow } from 'zustand/react/shallow';
 import { Box, Text, HStack, VStack, Input, Textarea, Button, Separator } from '@chakra-ui/react';
 import { PencilIcon, CheckIcon, XIcon, FolderInput, ChevronDown, Eye } from 'lucide-react';
@@ -50,10 +52,30 @@ function WorkspaceRenameInput({ value, onSave, onCancel }: { value: string; onSa
 interface WorkspaceThreadRowProps {
 	thread: IChatThread;
 	onSelect: (threadId: string) => void;
+	onSetStarred: (id: string, starred: boolean) => void;
+	containerId: string;
 }
-function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
+function WorkspaceThreadRow({ thread, onSelect, onSetStarred, containerId }: WorkspaceThreadRowProps) {
 	const totalTokens = (thread.totalPromptTokens ?? 0) + (thread.totalCompletionTokens ?? 0);
-	return (
+
+	const metaFields = useMemo(() => {
+		try {
+			const m = JSON.parse(thread.meta);
+			return { starred: !!m.starred };
+		} catch {
+			return { starred: false };
+		}
+	}, [thread.meta]);
+
+	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+	useLayoutEffect(() => {
+		setPortalTarget(document.getElementById(`${containerId}-${metaFields.starred ? 'starred' : 'default'}`));
+	}, [containerId, metaFields.starred]);
+
+	if (!portalTarget) return null;
+
+	return createPortal(
 		<Box
 			w="full"
 			px="3"
@@ -64,16 +86,19 @@ function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
 			onClick={() => onSelect(thread.id)}
 		>
 			<HStack justify="space-between" w="full">
-				<Text
-					fontSize="13px"
-					color="var(--wc-text-primary)"
-					overflow="hidden"
-					textOverflow="ellipsis"
-					whiteSpace="nowrap"
-					flex="1"
-				>
-					{thread.title || 'New Chat'}
-				</Text>
+				<HStack flex="1" overflow="hidden">
+					{metaFields.starred && <IoStarSharp size={14} style={{ color: 'var(--wc-text-secondary)', flexShrink: 0 }} />}
+					<Text
+						fontSize="13px"
+						color="var(--wc-text-primary)"
+						overflow="hidden"
+						textOverflow="ellipsis"
+						whiteSpace="nowrap"
+						flex="1"
+					>
+						{thread.title || 'New Chat'}
+					</Text>
+				</HStack>
 				<HStack gap="2" flexShrink={0}>
 					{totalTokens > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
@@ -90,7 +115,8 @@ function WorkspaceThreadRow({ thread, onSelect }: WorkspaceThreadRowProps) {
 					</Text>
 				</HStack>
 			</HStack>
-		</Box>
+		</Box>,
+		portalTarget
 	);
 }
 
@@ -214,6 +240,14 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 		setCurrentThreadId(threadId);
 	};
 
+	const handleSetStarred = useCallback(async (id: string, starred: boolean) => {
+		await fetch(`/api/chat/threads/${id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ starred }),
+		});
+	}, []);
+
 	const handleDefaultServerChange = (serverId: string) => {
 		setServerPickerOpen(false);
 		setWorkspaceState(folderId, { defaultServerId: serverId || null });
@@ -329,7 +363,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
-				<h5>Workspace Defaults</h5>
+				<Text style={{ color: "var(--wc-text-secondary)", fontSize: "14px", textTransform: "uppercase" }}>Workspace Defaults</Text><br/>
 				<Box w="full">
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
 						Project Root
@@ -472,7 +506,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<Separator w="full" my="2" borderColor="var(--wc-border-subtle)" />
 
 				{/* Thread list */}
-				<Box w="full" mt="2" maxHeight='calc(100vh - 700px)' minHeight="200px" overflowY="auto">
+				<Box w="full" mt="2">
 					<HStack justify="space-between" px="3" py="2">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
 							Threads
@@ -481,17 +515,21 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 							{workspaceThreads.length}
 						</Text>
 					</HStack>
-					<VStack gap="0" align="stretch" w="full">
+					<VStack gap="0" align="stretch" w="full" maxHeight='calc(100vh - 800px)' minHeight="200px" overflowY="auto">
 						{workspaceThreads.length === 0 && (
 							<Text fontSize="12px" color="var(--wc-text-disabled)" px="3" py="4" textAlign="center">
 								No threads yet
 							</Text>
 						)}
+						<div id="workspace-starred" />
+						<div id="workspace-default" />
 						{workspaceThreads.map(thread => (
 							<WorkspaceThreadRow
 								key={thread.id}
 								thread={thread}
+								containerId="workspace"
 								onSelect={handleThreadSelect}
+								onSetStarred={handleSetStarred}
 							/>
 						))}
 					</VStack>

@@ -90,7 +90,7 @@ const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
   };
 
   return (
-    <div className="aui-code-header-root mt-2.5 flex items-center justify-between rounded-t-lg border border-border/50 border-b-0 bg-muted/50 px-3 py-1.5 text-xs" style={{backgroundColor: "var(--wc-bg-elevated)"}}>
+    <div className="aui-code-header-root mt-2.5 flex items-center justify-between rounded-t-lg border border-border/20 border-b-0 bg-muted/50 px-3 py-1.5 text-xs" style={{backgroundColor: "var(--wc-bg-surface)", color: "var(--wc-text-tertiary)" }}>
       <span className="aui-code-header-language font-medium text-muted-foreground lowercase">
         {language}
       </span>
@@ -255,7 +255,7 @@ const defaultComponents = memoizeMarkdownComponents({
   th: ({ className, ...props }) => (
     <th
       className={cn(
-        "aui-md-th bg-muted px-2 py-1 text-left font-medium first:rounded-tl-lg last:rounded-tr-lg [[align=center]]:text-center [[align=right]]:text-right",
+        "aui-md-th px-2 py-1 text-left font-medium first:rounded-tl-lg last:rounded-tr-lg [[align=center]]:text-center [[align=right]]:text-right border-muted-foreground/30 border-b border-l border-t border-r",
         className,
       )}
       {...props}
@@ -264,7 +264,7 @@ const defaultComponents = memoizeMarkdownComponents({
   td: ({ className, ...props }) => (
     <td
       className={cn(
-        "aui-md-td border-muted-foreground/20 border-b border-l px-2 py-1 text-left last:border-r [[align=center]]:text-center [[align=right]]:text-right",
+        "aui-md-td border-muted-foreground/30 border-b border-l px-2 py-1 text-left last:border-r [[align=center]]:text-center [[align=right]]:text-right",
         className,
       )}
       {...props}
@@ -291,11 +291,11 @@ const defaultComponents = memoizeMarkdownComponents({
   pre: ({ className, ...props }) => (
     <pre
       className={cn(
-        "aui-md-pre overflow-x-auto rounded-t-none rounded-b-lg border border-border/50 border-t-0 bg-muted/30 p-3 leading-relaxed",
+        "aui-md-pre overflow-x-auto rounded-t-none rounded-b-lg border border-border/20 border-t-0 bg-muted/10 p-3 leading-relaxed",
         className,
       )}
       {...props}
-           style={{ ...props.style, fontSize: 'var(--chat-font-size)' }}
+           style={{ ...props.style, fontSize: 'var(--chat-font-size)', background: "var(--wc-bg-surface)", marginTop: "2px" }}
          />
        ),
   code: function Code({ className, ...props }) {
@@ -304,11 +304,20 @@ const defaultComponents = memoizeMarkdownComponents({
       <code
         className={cn(
           !isCodeBlock &&
-            "aui-md-inline-code rounded-md border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[1em]",
+            "aui-md-inline-code rounded-md border border-border/50 bg-muted/20 px-1.5 py-0.5 font-mono",
           className,
         )}
         {...props}
-               style={isCodeBlock ? { ...props.style, fontSize: 'var(--chat-font-size)' } : props.style}
+				style={isCodeBlock ?
+					{
+						...props.style,
+						fontSize: 'calc(var(--chat-font-size) + 1px)',
+						background: "transparent",
+					} : {
+						...props.style,
+						fontSize: 'var(--chat-font-size)',
+						background: "var(--wc-bg-active)",
+					}}
              />
     );
   },

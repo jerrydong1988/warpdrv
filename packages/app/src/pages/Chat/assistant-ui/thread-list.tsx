@@ -15,8 +15,9 @@ import {
 	PlusIcon, MoreHorizontalIcon, TrashIcon, PencilIcon, CheckIcon,
 				FolderIcon, FolderPlusIcon, SearchIcon, SortAscIcon, SortDescIcon,
 				ChevronRightIcon, ChevronDownIcon, XIcon,
-				FolderOpenIcon, StarIcon,
-			} from 'lucide-react';
+				FolderOpenIcon,
+} from 'lucide-react';
+import { IoStarSharp } from "react-icons/io5";
 import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from '@warpcore/bridge';
 import { useStore } from '@/store';
 import { fetchWorkspace } from '@/api/services';
@@ -293,7 +294,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 				<>
 					<Box flex="1" display="flex" flexDirection="column" overflow="hidden">
 						<HStack>
-							{metaFields.starred && <StarIcon size={12} style={{ color: '#FBBF24', flexShrink: 0 }} />}
+											{metaFields.starred && <IoStarSharp size={12} style={{ color: 'var(--wc-text-secondary)', flexShrink: 0 }} />}
 							<Text fontSize="13px" color="var(--wc-text-primary)" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
 								{thread.title ?? 'New Chat'}
 							</Text>
@@ -321,7 +322,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<MoreHorizontalIcon size={13} />
+										<MoreHorizontalIcon size={13} style={{ color: 'var(--wc-text-muted)' }} />
 						</Box>
 					</Menu.Trigger>
 						<Menu.Positioner>
@@ -346,7 +347,7 @@ function ManualThreadListItem({ thread, onRename, onStartDrag, onSelect, onDelet
 													style={{ fontSize: '12px', color: 'var(--wc-text-primary)' }}
 												>
 													<HStack gap="2">
-														<StarIcon size={12} />
+														<IoStarSharp size={12} style={{ color: 'var(--wc-text-primary)' }} />
 														<Text>{metaFields.starred ? 'Unstar' : 'Star'}</Text>
 													</HStack>
 												</Menu.Item>
