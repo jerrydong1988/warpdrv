@@ -1,24 +1,9 @@
 <div class="app">
 	<div class="titlebar">
 		<div class="titlebar-inner">
-			<div class="brand">
-				<svg viewBox="0 0 24 24" width="22" height="22">
-					<defs>
-						<linearGradient id="bg" x1="0" y1="1" x2="1" y2="0">
-							<stop offset="0" stop-color="#9d7de8"></stop>
-							<stop offset="1" stop-color="#ffc845"></stop>
-						</linearGradient>
-					</defs>
-					<path
-						d="M20.5 3.2 6.4 11.1l3.6 1.3 1.3 3.6z"
-						fill="url(#bg)"></path>
-					<path
-						d="M9.4 14.6 4.2 19.8"
-						stroke="#9d7de8"
-						stroke-width="1.6"
-						stroke-linecap="round"></path>
-				</svg>
-			</div>
+				<div class="brand">
+					<img src="/32x32.png" alt="warpdrv" width="22" height="22" />
+				</div>
 			<span class="title-label">Chat</span>
 			<button class="win-btn" title="Toggle sidebar">
 				<svg viewBox="0 0 24 24"
@@ -1392,6 +1377,13 @@
 	}
 	.app ::-webkit-scrollbar-track {
 		background: transparent;
+	}
+
+	@media (max-width: 900px) {
+		.app {
+			transform: scale(0.82);
+			transform-origin: top center;
+		}
 	}
 </style>
 

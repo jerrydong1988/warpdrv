@@ -29,7 +29,7 @@ echo "Target: $TARGET_TRIPLE"
 case "$TARGET_TRIPLE" in
 	*-windows-*)
 		PLATFORM="windows"
-		PKG_TARGET="node24-win-x64"
+		PKG_TARGET="node22-win-x64"
 		SIDECAR_EXT=".exe"
 		;;
 	*-linux-*)
