@@ -10,6 +10,7 @@ export * from './whisper-types';
 export * from './guardrail-types';
 export * from './mode-types';
 export * from './codegraph-types';
+export { parseMessyLLMOutput, parseMessyLLMArray } from './llm-json-parser';
 export type { IChatInferenceParams, IChatPreset, IChatPresetCreatePayload, IThreadConfig } from "./types";
 export { EResponseFormat, EReasoningFormat, EReasoningEffort } from "./enums";
 export type { IMcpServerEntry, IMcpConfigFile, IWarpdrvServerExt, IRendererConfig } from './mcp-types'

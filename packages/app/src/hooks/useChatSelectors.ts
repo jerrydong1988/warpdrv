@@ -272,10 +272,19 @@ export function useDerivedMsgsForUI(
 			branchTokenCount: (() => {
 				if (!headMessageId) return 0;
 
+				const messageStates = useStore.getState().messageStates;
+
 				let tokenCount = 0;
 				const branchMsgIds = new Set<string>();
 				let msg: IChatMessage | undefined = derivedMsgsRef.current[headMessageId];
 				while (msg) {
+					// Stop at compaction point — matches BEApplet compaction detection
+					const msgState = messageStates[msg.id];
+					const slashCommands = msgState?.slashCommands as Array<{ name: string }> | undefined;
+					if (slashCommands?.some(c => c.name === 'compact')) {
+						break;
+					}
+
 					branchMsgIds.add(msg.id);
 					tokenCount += msg.stats?.actualTokens || 0;
 					msg = msg.parentId ? derivedMsgsRef.current[msg.parentId] : undefined;

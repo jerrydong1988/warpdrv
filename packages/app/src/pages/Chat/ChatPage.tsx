@@ -493,6 +493,7 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			body: JSON.stringify({
 				threadId: currentThreadId,
 				parentId,
+				folderId: useStore.getState().activeWorkspaceId ?? null,
 				serverId: currentServerId,
 				whisperServerId: currentWhisperServerId,
 				enableAutoEmbed: currentAutoEmbed,

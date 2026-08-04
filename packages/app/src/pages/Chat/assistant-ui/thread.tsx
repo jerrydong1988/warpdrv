@@ -954,27 +954,35 @@ const ReasoningBlock: FC = React.memo(() => {
 		const part = s.part;
 		return part?.type === 'reasoning' ? (part as any).reasoning : '';
 	});
+	const running = useAuiState((s) => {
+		const part = s.part;
+		return part?.type === 'reasoning' ? (part as any).status?.type === 'running' : false;
+	});
 	const [open, setOpen] = useState(false);
 	if (!reasoning) return null;
-
 	return (
-
-		<div className="mb-3 rounded-lg border" style={{ borderColor: 'var(--wc-border-subtle)', backgroundColor: 'var(--wc-bg-subtle)' }}>
+		<div className={`wc-reasoning mb-3${open ? ' wc-reasoning--open' : ''}`}>
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="flex w-full items-center gap-2 px-3 py-2 font-medium transition-colors"
-					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
+				className="wc-reasoning__trigger"
+				style={{ fontSize: 'var(--chat-font-size)' }}
 			>
-				{/*<BrainCircuitIcon className="size-3.5" />*/}
-				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tks)` : ''}</span>
-				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
+				<ChevronDownIcon className="wc-reasoning__chevron size-3.5" />
+				<span className={running ? 'wc-reasoning__label--live' : undefined}>
+					{running ? 'Thinking' : `Thought`} {`${reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tks)` : ''}`}
+				</span>
+				{running && (
+					<span className="wc-reasoning__dots">
+						<span className="wc-reasoning__dot" />
+						<span className="wc-reasoning__dot" />
+						<span className="wc-reasoning__dot" />
+					</span>
+				)}
 			</button>
-				{open && (
-					<div className="px-3 pb-3 whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)', fontSize: 'var(--chat-font-size)' }}>
-					{reasoning}
-				</div>
-			)}
+			<div className="wc-reasoning__body" style={{ color: 'var(--wc-text-secondary)', fontSize: 'var(--chat-font-size)' }}>
+				{reasoning}
+			</div>
 		</div>
 	);
 });

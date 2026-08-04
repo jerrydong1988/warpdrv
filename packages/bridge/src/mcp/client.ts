@@ -242,7 +242,7 @@ export class McpClientManager implements IMcpClient {
 			throw new Error(`MCP server '${serverName}' is ${entry.state.status}`);
 		}
 
-		const timeout = entry.config.timeout ?? 30000;
+		const timeout = entry.config.timeout ?? 300000;
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), timeout);
 

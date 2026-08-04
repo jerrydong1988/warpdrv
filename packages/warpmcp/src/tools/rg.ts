@@ -72,7 +72,7 @@ export async function rgHandler(
 		const timer = setTimeout(() => {
 			timedOut = true;
 			child.kill('SIGKILL');
-		}, 30000);
+		}, 15000);
 
 		child.stdout.on('data', (d) => { stdout += d.toString(); });
 		child.stderr.on('data', (d) => { stderr += d.toString(); });

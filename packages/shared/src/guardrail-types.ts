@@ -31,3 +31,8 @@ export interface IGuardrailCreatePayload {
 	messagesCount?: number;
 	includeBaseMessage?: boolean;
 }
+
+export interface IGuardrailError {
+	message: string;
+	rawResponse?: string;
+}

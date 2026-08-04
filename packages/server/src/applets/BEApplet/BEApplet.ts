@@ -1,7 +1,8 @@
 import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
-import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import type { IGuardrailDefinition, IGuardrailIssue, IGuardrailError, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import { parseMessyLLMArray } from '@warpcore/shared';
 import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT } from './prompts';
 import { store } from '../../util/store';
 import { getMode } from '../../services/modeStore';
@@ -359,20 +360,40 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                         }
                     });
 
-                    const text = result.content?.filter((c: any) => c.type === "text")?.[0]?.text || 'Error';
-                    const parsed: IGuardrailIssue[] =JSON.parse(text);
+                        const text = result.content?.filter((c: any) => c.type === "text")?.[0]?.text || 'Error';
+                        const parsed = parseMessyLLMArray(text) as IGuardrailIssue[];
+                        if (!parsed) {
+                            throw new Error('Failed to parse guardrail JSON output');
+                        }
 
-                    // Read existing results, merge, save
-                    const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;
-                    const currentResults = (existing?.guardrailResults as Record<string, any>) || {};
+                        // Read existing results, merge, save
+                        const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;
+                        const currentResults = (existing?.guardrailResults as Record<string, any>) || {};
+                        const currentErrors = (existing?.guardrailErrors as Record<string, IGuardrailError>) || {};
 
-                    await api.eventNode.invoke('/warpcore', 'bridge.updateMessageState', {
-                        messageId,
-                        data: { guardrailResults: { ...currentResults, [guardrail.name]: parsed } },
-                    });
-                } catch (err) {
-                    console.error('[BEApplet] Guardrail error:', guardrail.name, err);
-                }
+                        await api.eventNode.invoke('/warpcore', 'bridge.updateMessageState', {
+                            messageId,
+                            data: {
+                                guardrailResults: { ...currentResults, [guardrail.name]: parsed },
+                                guardrailErrors: { ...currentErrors },
+                            },
+                        });
+                    } catch (err) {
+                        console.error('[BEApplet] Guardrail error:', guardrail.name, err);
+                        const errorMessage = err instanceof Error ? err.message : String(err);
+                        const text = result?.content?.filter((c: any) => c.type === "text")?.[0]?.text;
+                        const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;
+                        const currentResults = (existing?.guardrailResults as Record<string, any>) || {};
+                        const currentErrors = (existing?.guardrailErrors as Record<string, IGuardrailError>) || {};
+
+                        await api.eventNode.invoke('/warpcore', 'bridge.updateMessageState', {
+                            messageId,
+                            data: {
+                                guardrailResults: { ...currentResults, [guardrail.name]: [] },
+                                guardrailErrors: { ...currentErrors, [guardrail.name]: { message: errorMessage, rawResponse: text } },
+                            },
+                        });
+                    }
             }
         });
 

@@ -51,11 +51,11 @@ export function App() {
 	}, []);
 
 	// disable rightclick
-	useEffect(() => {
-		const handler = (e: MouseEvent) => e.preventDefault();
-		document.addEventListener('contextmenu', handler);
-		return () => document.removeEventListener('contextmenu', handler);
-	}, []);
+	// useEffect(() => {
+	// 	const handler = (e: MouseEvent) => e.preventDefault();
+	// 	document.addEventListener('contextmenu', handler);
+	// 	return () => document.removeEventListener('contextmenu', handler);
+	// }, []);
 
 	// Fetch kokoro status on mount
 	useEffect(() => { fetchKokoroStatus(); }, []);

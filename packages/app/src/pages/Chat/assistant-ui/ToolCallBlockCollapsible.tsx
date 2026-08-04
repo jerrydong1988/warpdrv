@@ -147,7 +147,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 				>
 					{/* Chevron */}
 					<Box flexShrink={0}>
-						{isOpen ? <ChevronDown size={12} color="var(--wc-text-muted)" /> : <ChevronRight size={12} color="var(--wc-text-muted)" />}
+						{isOpen ? <ChevronDown size={13} color="var(--wc-text-muted)" /> : <ChevronRight size={13} color="var(--wc-text-muted)" />}
 					</Box>
 
 					{/* Mini renderer component — memoized */}
