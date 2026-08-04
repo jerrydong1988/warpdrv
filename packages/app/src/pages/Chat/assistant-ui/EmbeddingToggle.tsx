@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { Popover, Text, VStack, Box, HStack, Switch } from '@chakra-ui/react';
 import { IconButton } from '@chakra-ui/react';
-import { LuDatabaseZap } from 'react-icons/lu';
+import { LuDatabase } from 'react-icons/lu';
 import { useStore } from '@/store';
 import { EServerStatus } from '@warpcore/shared';
 import { useThreadAutoEmbed } from '@/hooks/useThreadAutoEmbed';
@@ -51,7 +51,7 @@ export const EmbeddingToggle: React.FC = () => {
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
 					title={`Embedding: ${serverName}${enableAutoEmbed ? ' (auto)' : ''}`}
 				>
-					<LuDatabaseZap size={16} />
+					<LuDatabase size={16} />
 					{enableAutoEmbed && (
 						<Text fontSize="10px" fontWeight="600" ml="0.5" textTransform="uppercase">Auto</Text>
 					)}

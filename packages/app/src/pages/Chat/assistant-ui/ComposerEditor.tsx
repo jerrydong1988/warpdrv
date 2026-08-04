@@ -3,6 +3,7 @@ import { useEditor, EditorContent, Extension, type Editor } from "@tiptap/react"
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
+import { ComposerPlaceholder } from "./ComposerPlaceholder";
 import HardBreak from "@tiptap/extension-hard-break";
 import { SlashCommandNode } from "./slash-command/SlashCmdNode";
 import { docToString, extractCommands } from "./docToString";
@@ -47,6 +48,9 @@ const text = docToString(json).trim();
 
 export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props, ref) => {
 	const setPendingSlashCommands = useStore(s => s.setPendingSlashCommands);
+	const slashCommands = useStore(s => s.slashCommands);
+	const slashCommandsRef = useRef(slashCommands);
+	slashCommandsRef.current = slashCommands;
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const chatFontFamily = useStore(s => s.settings.chatFontFamily ?? '');
 	const onEnterRef = useRef(props.onEnter);
@@ -59,9 +63,17 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 			Paragraph,
 			Text,
 			HardBreak,
-			makeKeymap(() => onEnterRef.current, () => canSendRef.current),
-			SlashCommandNode,
-		],
+				makeKeymap(() => onEnterRef.current, () => canSendRef.current),
+				SlashCommandNode,
+				ComposerPlaceholder.configure({
+					placeholder: "Send a message, or type / to use slash-commands...",
+					resolveCommandPlaceholder: (name: string) => {
+						const cmd = slashCommandsRef.current[name];
+						if (!cmd || !cmd.consumesInput) return null;
+						return cmd.inputPlaceholder ?? null;
+					},
+				}),
+			],
 		editorProps: {
 			attributes: {
 				class: "aui-composer-input",

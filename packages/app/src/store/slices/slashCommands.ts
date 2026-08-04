@@ -13,6 +13,8 @@ export interface ISlashCommand {
 	description: string;
 	params: Record<string, ISlashCommandParam>;
 	tags?: string[];
+	consumesInput?: boolean;
+	inputPlaceholder?: string;
 	execute: (api: ISlashCommandApi, params: Record<string, string | number>, extraParams?: Record<string, string>) => Promise<void>;
 }
 

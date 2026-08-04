@@ -1240,6 +1240,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			name: 'compact',
 			description: 'Compact the conversation thread. Add a message in chat for custom instructions.',
 			params: {},
+			consumesInput: true,
+			inputPlaceholder: 'Compact instructions...',
 			execute: async (api, params) => { console.log('[FEApplet] /compact executed'); },
 		});
 
@@ -1251,6 +1253,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				tools: { type: 'message_type', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
 				server: { type: 'server', description: 'Server used for processing (empty = same as chat server)', index: 2 },
 			},
+			consumesInput: true,
+			inputPlaceholder: 'Guardrail prompt...',
 			execute: async (_api, params, extraParams) => {
 				await createGuardrailApi({
 					name: params.name!,
@@ -1282,6 +1286,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			name: 'todo',
 			description: 'Add a new todo item',
 			params: {},
+			consumesInput: true,
+			inputPlaceholder: 'Todo item text...',
 			execute: async (_api, _params, extraParams) => {
 				const text = extraParams?.prompt;
 				if (!text) return;
@@ -1316,6 +1322,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
 				guardrails: { type: 'guardrails', description: 'Active guardrails', index: 3 },
 			},
+			consumesInput: true,
+			inputPlaceholder: 'More instructions.',
 			execute: async (_api, params, extraParams) => {
 				await createModeApi({
 					id: nanoid(6),
@@ -1363,7 +1371,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, { label: 'Mode' });
 		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
 
-		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode'];
+		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode', 'set_project_root'];
 
 		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
 			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };

@@ -437,7 +437,7 @@ const Composer: FC = () => {
 					<ComposerUiSpace />
 <ComposerEditor
 					ref={editorRef}
-					placeholder="Send a message..."
+					placeholder="Send a message, or type / to use slash-commands..."
 					className="aui-composer-editor max-h-32 min-h-10 w-full overflow-y-auto bg-transparent px-1.75 py-1 text-sm"
 					onChangeText={handleChangeText}
 					onEnter={handleEnter}
@@ -525,6 +525,9 @@ const ToolsSelector: FC = React.memo(() => {
 	const color = isModeActive
 		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
 		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
+	const borderColor = isModeActive
+		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-border-default)')
+		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-border-default)');
 	const label = isModeActive
 		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Tools Off')
 		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tools` : 'Tools Off');
@@ -582,7 +585,7 @@ const ToolsSelector: FC = React.memo(() => {
 					ml="1"
 					borderRadius={"lg"}
 					borderWidth="1px"
-					borderColor={"var(--wc-border-default)"}
+					borderColor={borderColor}
 					_hover={{ bg: 'var(--wc-bg-hover)' }}
 					color={color}
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
