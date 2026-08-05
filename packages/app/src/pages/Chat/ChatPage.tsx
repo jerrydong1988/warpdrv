@@ -29,7 +29,7 @@ import { useSlashCommandProcessor } from '@/hooks/useSlashCommandProcessor';
 
 import { extractTextFromFile } from '@/hooks/useFileReader';
 import { useToast } from '@/components/ToastProvider';
-import { updateSettings } from '@/api/services';
+import { updateMessageState, updateSettings } from '@/api/services';
 import { parseThreadMeta } from '@/pages/Chat/assistant-ui/ServerSelector';
 import { computeModeUnionTools } from '@/lib/toolUtils';
 // COMMENTED OUT: per-thread whisper server selection no longer used
@@ -454,7 +454,10 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 				attachAllTools,
 				attachedTools: attachAllTools ? undefined : attachedTools,
 			}),
-			messageState: slashCommands.length > 0 ? { slashCommands } : {},
+			messageState: {
+				...(slashCommands.length > 0 ? { slashCommands } : {}),
+				...(isModeActive && currentMode ? { modeMarker: { id: currentMode.id, name: currentMode.name } } : {}),
+			},
 			threadState: (isNewThread && tempState) ? tempState : undefined,
 		};
 
@@ -481,11 +484,30 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body),
 		});
-	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents]);
+	}, [currentThreadId, headMessageId, currentSystemPrompt, currentInferenceParams, setCurrentThreadId, currentServerId, currentWhisperServerId, currentAutoEmbed, isValidServer, attachAllTools, attachedTools, isModeActive, modeUnionTools, pendingSlashCommands, clearPendingSlashCommands, executeCommands, realmEvents, currentMode]);
 
 	const onReloadV2 = useCallback(async (parentId: string | null) => {
 		if (!isValidServer || !parentId) return;
 		if (!currentThreadId) return;
+
+		// Update nearest user message's modeMarker so buildBranchChain picks it up
+		const st = useStore.getState();
+		const threadSt = st.getCurrentThreadState(st);
+		const modeId = threadSt?.modeId as string | undefined;
+		const currentM = modeId ? st.modes[modeId] : null;
+		if (currentM) {
+			const threadMsgs = st.messagesByThread[currentThreadId] || {};
+			let currId = parentId;
+			while (currId) {
+				const msg = threadMsgs[currId];
+				if (!msg) break;
+				if (msg.role === 'user') {
+					await updateMessageState(msg.id, { modeMarker: { id: currentM.id, name: currentM.name } });
+					break;
+				}
+				currId = msg.parentId ?? null;
+			}
+		}
 
 		await fetch('/api/chat/completions', {
 			method: 'POST',

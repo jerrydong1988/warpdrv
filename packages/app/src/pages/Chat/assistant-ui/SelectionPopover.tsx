@@ -68,7 +68,7 @@ export const SelectionPopover = () => {
 			while (element) {
 				if (element.nodeType === Node.ELEMENT_NODE) {
 					const role = (element as HTMLElement).getAttribute('data-role');
-					if (role === 'user' || role === 'assistant') {
+						if (role === 'user' || role === 'assistant' || role === 'tool') {
 						const rect = selection.getRangeAt(0).getBoundingClientRect();
 						if (rect.height > 0) {
 							if (visibleRef.current) stopTTS();

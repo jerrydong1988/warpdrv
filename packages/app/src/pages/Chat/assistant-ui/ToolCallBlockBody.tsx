@@ -58,11 +58,13 @@ export const ToolCallBlockBody = React.memo(({
 	return (
 		<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
 			{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
-								<Box px="3" py="2">
-					<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
-				</Box>
+					<Box px="3" py="2">
+				<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
+			</Box>
 			)}
-			{body}
+			<Box overflowX="auto" w="full">
+				{body}
+			</Box>
 		</ToolCallUiSpace>
 	);
 });

@@ -188,12 +188,12 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 								let toolMessage = "";
 								const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
 
-								if (toolNames.length) toolMessage += `ALLOWED TOOLS: ${toolNames.join(', ')}`;
+								if (toolNames.length) toolMessage += toolNames.join(', ');
 								else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!"
 
-								return `${i + 1}. ${mode.name}: ${mode.prompt}\nALLOWED TOOLS: ${toolMessage}`;
+								return `--- MODE ${mode.name} ---\n\n ${mode.prompt}\n\nALLOWED TOOLS: ${toolMessage}\n---`;
 							})
-							.join(`\n`)
+							.join(`\n\n`)
 					}\n`);
 
                     if (mode.prompt) {
@@ -242,21 +242,56 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
         api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
           const payload = eventApi.payload as {
-              request: { messageState?: Record<string, unknown> };
+              request: { messageState?: Record<string, unknown>; threadId: string };
           };
 
-          const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
-          if (!commands?.some(c => c.name === 'compact')) return;
+          let userMsg = eventApi.result as IChatMessage;
 
-          const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
-          for (const part of userMsg.content) {
-              if (part.type === 'text') {
-                  part.text = COMPACTION_PROMPT + part.text;
-                  break;
+          // ---- MODE INJECTION (same as buildBranchChain) ----
+
+          const threadState = await api.eventNode.invoke(
+              '/warpcore',
+              'bridge.getThreadState',
+              payload.request.threadId,
+          ) as Record<string, unknown> | null;
+
+          const modeId = threadState?.modeId as string | undefined;
+          let mode: IMode | null = null;
+          if (modeId) mode = await getMode(modeId);
+
+          if (
+              mode
+              && !USE_MODE_DEF_TAIL
+              && !USE_MODE_CURRENT_TAIL
+          ) {
+              const modeMarker = payload.request.messageState?.modeMarker as { id: string, name: string } | undefined;
+              if (modeMarker) {
+                  userMsg = {
+                      ...userMsg,
+                      content: [
+                          ...userMsg.content,
+                          {
+                              type: EMessagePartType.TEXT,
+                              text: `<system-reminder>ACTIVE MODE: ${modeMarker.name}</system-reminder>`
+                          } as IMessagePart
+                      ],
+                  };
               }
-            }
+          }
 
-            return { ...(eventApi.result as any) };
+          // ---- COMPACT ----
+
+          const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
+          if (commands?.some(c => c.name === 'compact')) {
+              for (const part of userMsg.content) {
+                  if (part.type === 'text') {
+                      part.text = COMPACTION_PROMPT + part.text;
+                      break;
+                  }
+                }
+          }
+
+          return userMsg;
         });
 
         api.eventNode.on('/warpcore', 'bridge.inference.finish', async (eventApi) => {
