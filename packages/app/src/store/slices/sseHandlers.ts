@@ -273,10 +273,10 @@ export const sseHandlersSlice = (
 			state.guardrails = data;
 		}),
 		'guardrails:update': (data: IGuardrailDefinition) => setState((state) => {
-			state.guardrails[data.name] = data;
+			state.guardrails[data.id] = data;
 		}),
-		'guardrails:delete': (data: { name: string }) => setState((state) => {
-			delete state.guardrails[data.name];
+		'guardrails:delete': (data: { id: string }) => setState((state) => {
+			delete state.guardrails[data.id];
 		}),
 	},
 });

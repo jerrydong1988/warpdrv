@@ -1,29 +1,30 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, Text } from '@chakra-ui/react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, AlertTriangle } from 'lucide-react';
 import { FaShieldAlt } from 'react-icons/fa';
 import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import type { IGuardrailDefinition, IMode, TModeId } from '@warpcore/shared';
 import { updateModeGuardrails as updateModeGuardrailsApi } from '@/api/mode-services';
+import { parseThreadMeta } from '@/pages/Chat/assistant-ui/ServerSelector';
 
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
 
 export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: string; value: string[]; onClick?: (e: React.MouseEvent) => void }) => {
 	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
-	const guardrailNames = useMemo(() => Object.keys(guardrails), [guardrails]);
+	const guardrailList = useMemo(() => Object.values(guardrails), [guardrails]);
 	const [isOpen, setIsOpen] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement | null>(null);
 	const triggerRef = useRef<HTMLDivElement | null>(null);
 
 	const selectedSet = useMemo(() => new Set(value), [value]);
 
-	const handleToggle = (e: React.MouseEvent, name: string) => {
+	const handleToggle = (e: React.MouseEvent, id: string) => {
 		e.stopPropagation();
-		const next = selectedSet.has(name)
-			? value.filter(n => n !== name)
-			: [...value, name];
+		const next = selectedSet.has(id)
+			? value.filter(n => n !== id)
+			: [...value, id];
 		updateModeGuardrailsApi(modeId, next);
 	};
 
@@ -84,16 +85,16 @@ export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: s
 						padding: '8px',
 					}}
 				>
-					{guardrailNames.length === 0 ? (
+					{guardrailList.length === 0 ? (
 						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>No guardrails</div>
 					) : (
-						guardrailNames.map(name => {
-							const isSelected = selectedSet.has(name);
+						guardrailList.map(g => {
+							const isSelected = selectedSet.has(g.id);
 							return (
 								<div
-									key={name}
+									key={g.id}
 									onMouseDown={(e) => e.stopPropagation()}
-									onClick={(e) => handleToggle(e, name)}
+									onClick={(e) => handleToggle(e, g.id)}
 									style={{
 										display: 'flex',
 										alignItems: 'center',
@@ -112,20 +113,20 @@ export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: s
 										if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
 									}}
 								>
-									{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
-									<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-								</div>
-							);
-						})
-					)}
-				</div>,
-				document.body,
-			)}
-		</Box>
-	);
-});
+																{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
+																<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+															</div>
+														);
+													})
+												)}
+											</div>,
+											document.body,
+											)}
+										</Box>
+									);
+									});
 
-export const GuardrailBadge = memo(() => {
+									export const GuardrailBadge = memo(() => {
 	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
 	const threadState = useStore(s => s.getCurrentThreadState(s));
 	const setThreadState = useStore(s => s.setThreadState);
@@ -138,13 +139,34 @@ export const GuardrailBadge = memo(() => {
 		return (threadState?.activeGuardrails as string[]) || [];
 	}, [currentMode, threadState?.activeGuardrails]);
 
-	const guardrailNames = useMemo(() => Object.keys(guardrails), [guardrails]);
+	const currentThreadId = useStore(s => s.currentThreadId);
+	const thread = useStore(s => currentThreadId ? s.threads[currentThreadId] : null);
+
+	const threadServerId = useMemo(() => {
+		return thread?.meta ? parseThreadMeta(thread.meta).serverId : null;
+	}, [thread?.meta]);
+
+	const guardrailReminders = useMemo(() => {
+		const reminders: Array<{ name: string; type: 'no-server' | 'same-server' }> = [];
+		for (const id of activeNames) {
+			const gr = guardrails[id];
+			if (!gr) continue;
+			if (!gr.serverId) {
+				reminders.push({ name: gr.name, type: 'no-server' });
+			} else if (gr.serverId === threadServerId) {
+				reminders.push({ name: gr.name, type: 'same-server' });
+			}
+		}
+		return reminders;
+	}, [activeNames, guardrails, threadServerId]);
+
+	const guardrailList = useMemo(() => Object.values(guardrails), [guardrails]);
 
 	const [isOpen, setIsOpen] = useState(false);
 	const triggerRef = useRef<HTMLDivElement | null>(null);
 	const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-	const handleToggle = useCallback((e: React.MouseEvent, name: string) => {
+	const handleToggle = useCallback((e: React.MouseEvent, id: string) => {
 		e.stopPropagation();
 		const state = useStore.getState();
 		const threadId = state.currentThreadId;
@@ -152,12 +174,12 @@ export const GuardrailBadge = memo(() => {
 		const m = state.modes;
 		const tsModeId = ts?.modeId as TModeId | undefined;
 		const active = tsModeId && m[tsModeId] ? m[tsModeId].activeGuardrails || [] : (ts?.activeGuardrails as string[]) || [];
-		const isActive = active.includes(name);
-		const newNames = isActive ? active.filter(n => n !== name) : [...active, name];
+		const isActive = active.includes(id);
+		const newIds = isActive ? active.filter(n => n !== id) : [...active, id];
 		if (tsModeId && m[tsModeId]) {
-			updateModeGuardrailsApi(tsModeId, newNames);
+			updateModeGuardrailsApi(tsModeId, newIds);
 		} else {
-			setThreadState(threadId, { activeGuardrails: newNames });
+			setThreadState(threadId, { activeGuardrails: newIds });
 		}
 	}, [setThreadState]);
 
@@ -208,7 +230,23 @@ export const GuardrailBadge = memo(() => {
 				opacity={totalActive > 0 ? 1 : 0.6}
 				onClick={handleToggleDropdown}
 			>
-				<FaShieldAlt size={14} color={totalActive > 0 ? 'var(--wc-text-tertiary)' : 'var(--wc-text-muted)'} />
+				{guardrailReminders.length > 0 && (
+					<Box
+						as="span"
+						display="inline-flex"
+						alignItems="center"
+						justifyContent="center"
+						title={guardrailReminders.map(w =>
+							w.type === 'no-server'
+								? `${w.name}: No inference server configured — guardrail will not execute`
+								: `${w.name}: Uses same server as chat — may cause KV cache eviction`
+						).join('\n')}
+						cursor="help"
+					>
+						<AlertTriangle size={12} color="var(--wc-accent-yellow-strong)" />
+					</Box>
+				)}
+				<FaShieldAlt size={14} color={(totalActive > 0) ? 'var(--wc-text-tertiary)' : 'var(--wc-text-muted)'} />
 				<Box fontSize="xs" fontWeight="500" color="var(--wc-text-primary)">
 					{totalActive > 0 ? `${totalActive} Guardrail${totalActive > 1 ? 's' : ''}` : 'Guardrails'}
 				</Box>
@@ -231,43 +269,43 @@ export const GuardrailBadge = memo(() => {
 						padding: '8px',
 					}}
 				>
-					{guardrailNames.length === 0 ? (
-						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>No guardrails</div>
-					) : (
-						guardrailNames.map(name => {
-							const isSelected = activeNames.includes(name);
-							return (
-								<div
-									key={name}
-									onMouseDown={(e) => e.stopPropagation()}
-									onClick={(e) => handleToggle(e, name)}
-									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '6px',
-										padding: '6px 8px',
-										borderRadius: '6px',
-										cursor: 'pointer',
-										fontSize: '0.75rem',
-										color: 'var(--wc-text-primary)',
-										background: isSelected ? 'var(--wc-bg-selected)' : 'transparent',
-									}}
-									onMouseEnter={(e) => {
-										if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'var(--wc-bg-card)';
-									}}
-									onMouseLeave={(e) => {
-										if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-									}}
-								>
-									{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
-									<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-								</div>
-							);
-						})
-					)}
-				</div>,
-				document.body,
-			)}
-		</Box>
-	);
-});
+								{guardrailList.length === 0 ? (
+									<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>No guardrails</div>
+								) : (
+									guardrailList.map(g => {
+										const isSelected = activeNames.includes(g.id);
+										return (
+											<div
+												key={g.id}
+												onMouseDown={(e) => e.stopPropagation()}
+												onClick={(e) => handleToggle(e, g.id)}
+												style={{
+													display: 'flex',
+													alignItems: 'center',
+													gap: '6px',
+													padding: '6px 8px',
+													borderRadius: '6px',
+													cursor: 'pointer',
+													fontSize: '0.75rem',
+													color: 'var(--wc-text-primary)',
+													background: isSelected ? 'var(--wc-bg-selected)' : 'transparent',
+												}}
+												onMouseEnter={(e) => {
+													if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'var(--wc-bg-card)';
+												}}
+												onMouseLeave={(e) => {
+													if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+												}}
+											>
+												{isSelected && <Check size={12} color="var(--wc-accent-purple)" />}
+												<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
+											</div>
+										);
+									})
+								)}
+							</div>,
+							document.body,
+							)}
+						</Box>
+					);
+					});

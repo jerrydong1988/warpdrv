@@ -13,6 +13,7 @@ export interface IGuardrailIssue {
 }
 
 export interface IGuardrailDefinition {
+	id: string;
 	name: string;
 	serverId: string;
 	prompt?: string;
@@ -23,6 +24,7 @@ export interface IGuardrailDefinition {
 }
 
 export interface IGuardrailCreatePayload {
+	id?: string;
 	name: string;
 	serverId: string;
 	prompt?: string;

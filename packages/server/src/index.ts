@@ -54,6 +54,7 @@ import { embeddingManager } from './services/embeddingManager';
 import { getDataDir } from './util/mcpConfig';
 import { serveStaticApp } from './middleware/serveStatic';
 import { initRealm } from './services/initRealm';
+import { seedDefaults } from './services/defaultModes';
 import path from 'path';
 import os from 'os';
 
@@ -116,6 +117,7 @@ async function main() {
 	broadcaster = new SseBroadcaster();
 	persistence = new SqlitePersistenceWithBroadcast(path.join(dataDir, 'chat.db'), {}, broadcaster);
 	await persistence.init();
+	await seedDefaults().catch(err => console.error('[seed] Failed to seed default modes/guardrails:', err));
 	todoManager = new TodoManager(persistence);
 	codeGraphService = new CodeGraphService(persistence);
 	chatSearchToolService = new ChatSearchToolService(persistence);
@@ -143,7 +145,7 @@ async function main() {
 		console.log(`[MCP] Initial connection phase complete`);
 	});
 	bootWarpmcp().catch(err => console.error('[warpmcp] Failed to start:', err)); 
-	initKokoroService().catch(() => {});
+	initKokoroService().catch(err => console.error('[kokoro] Failed to initialize Kokoro TTS service:', err));
 
 	// Pending approvals will be handled by the orchestrator on next completion
 
@@ -408,8 +410,8 @@ async function main() {
 	sseManager.onConnect('guardrails:init', async () => {
 		const guardrails = await persistence.listGuardrails();
 		const result: Record<string, typeof guardrails[string]> = {};
-		for (const [name, g] of Object.entries(guardrails)) {
-			result[name] = g;
+		for (const [id, g] of Object.entries(guardrails)) {
+			result[id] = g;
 		}
 		return result;
 	});

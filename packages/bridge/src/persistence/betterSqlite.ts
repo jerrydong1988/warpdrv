@@ -296,7 +296,8 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 		);
 
 		CREATE TABLE IF NOT EXISTS ${t.guardrails} (
-			name TEXT PRIMARY KEY,
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
 			serverId TEXT NOT NULL DEFAULT '',
 			prompt TEXT,
 			triggerOnTools TEXT NOT NULL DEFAULT '[]',
@@ -414,26 +415,62 @@ export class SqlitePersistence implements IPersistence {
 			console.error('[FTS5] Index build failed:', err);
 		}
 
-		// State tables
-		try {
-			this.db!.exec(`
-				CREATE TABLE IF NOT EXISTS ${this.t.workspaceStates} (
-					folderId TEXT PRIMARY KEY,
-					data TEXT NOT NULL DEFAULT '{}'
-				);
-				CREATE TABLE IF NOT EXISTS ${this.t.threadStates} (
-					threadId TEXT PRIMARY KEY,
-					data TEXT NOT NULL DEFAULT '{}'
-				);
-				CREATE TABLE IF NOT EXISTS ${this.t.messageStates} (
-					messageId TEXT PRIMARY KEY,
-					data TEXT NOT NULL DEFAULT '{}'
-				);
-			`);
-		} catch (err) {
-			console.error('[migration] State tables creation failed:', err);
+			// State tables
+			try {
+				this.db!.exec(`
+					CREATE TABLE IF NOT EXISTS ${this.t.workspaceStates} (
+						folderId TEXT PRIMARY KEY,
+						data TEXT NOT NULL DEFAULT '{}'
+					);
+					CREATE TABLE IF NOT EXISTS ${this.t.threadStates} (
+						threadId TEXT PRIMARY KEY,
+						data TEXT NOT NULL DEFAULT '{}'
+					);
+					CREATE TABLE IF NOT EXISTS ${this.t.messageStates} (
+						messageId TEXT PRIMARY KEY,
+						data TEXT NOT NULL DEFAULT '{}'
+					);
+				`);
+			} catch (err) {
+				console.error('[migration] State tables creation failed:', err);
+			}
+
+			// Migration: guardrails table gets id column (name was PK, now id is PK)
+			try {
+				const cols = this.db!.prepare(`PRAGMA table_info(${this.t.guardrails})`).all() as Array<{ name: string }>;
+				if (cols.some(c => c.name === 'id')) return; // Already migrated
+
+				const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
+				this.db!.exec(`DROP TABLE ${this.t.guardrails}`);
+				this.db!.exec(`
+					CREATE TABLE ${this.t.guardrails} (
+						id TEXT PRIMARY KEY,
+						name TEXT NOT NULL,
+						serverId TEXT NOT NULL DEFAULT '',
+						prompt TEXT,
+						triggerOnTools TEXT NOT NULL DEFAULT '[]',
+						inferenceParams TEXT NOT NULL DEFAULT '{}',
+						messagesCount INTEGER DEFAULT 0,
+						includeBaseMessage INTEGER DEFAULT 0
+					)
+				`);
+				for (const r of rows) {
+					this.db!.prepare(`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+						r.name as string,
+						r.name as string,
+						r.serverId as string,
+						r.prompt as string ?? null,
+						r.triggerOnTools as string,
+						r.inferenceParams as string,
+						r.messagesCount as number,
+						(r.includeBaseMessage as number) ?? 0
+					);
+				}
+				console.log(`[migration] guardrails: added id column, migrated ${rows.length} rows`);
+			} catch (err) {
+				console.error('[migration] guardrails id migration failed:', err);
+			}
 		}
-	}
 
 	// ============================================================
 	// Folders
@@ -1396,11 +1433,12 @@ export class SqlitePersistence implements IPersistence {
 	// Guardrails
 	// ============================================================
 
-	async listGuardrails(): Promise<Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>> {
+	async listGuardrails(): Promise<Record<string, { id: string; name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>> {
 		const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
-		const result: Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }> = {};
+		const result: Record<string, { id: string; name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }> = {};
 		for (const r of rows) {
-			result[r.name as string] = {
+			result[r.id as string] = {
+				id: r.id as string,
 				name: r.name as string,
 				serverId: r.serverId as string,
 				prompt: (r.prompt as string) || undefined,
@@ -1413,11 +1451,12 @@ export class SqlitePersistence implements IPersistence {
 		return result;
 	}
 
-	async upsertGuardrail(guardrail: { name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void> {
+	async upsertGuardrail(guardrail: { id: string; name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.guardrails} (name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT(name) DO UPDATE SET
+			`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			 ON CONFLICT(id) DO UPDATE SET
+				name = excluded.name,
 				serverId = excluded.serverId,
 				prompt = excluded.prompt,
 				triggerOnTools = excluded.triggerOnTools,
@@ -1425,6 +1464,7 @@ export class SqlitePersistence implements IPersistence {
 				messagesCount = excluded.messagesCount,
 				includeBaseMessage = excluded.includeBaseMessage`
 		).run(
+			guardrail.id,
 			guardrail.name,
 			guardrail.serverId,
 			guardrail.prompt ?? null,
@@ -1435,8 +1475,8 @@ export class SqlitePersistence implements IPersistence {
 		);
 	}
 
-	async deleteGuardrail(name: string): Promise<void> {
-		this.db!.prepare(`DELETE FROM ${this.t.guardrails} WHERE name = ?`).run(name);
+	async deleteGuardrail(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.guardrails} WHERE id = ?`).run(id);
 	}
 
 	// ============================================================

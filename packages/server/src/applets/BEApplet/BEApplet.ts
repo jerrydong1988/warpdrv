@@ -13,6 +13,27 @@ const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
     reasoningEffort: "none",
 };
 
+function injectSystemPrompt(messages: TOpenAIMessage[], text: string, position: 'prepend' | 'append' = 'prepend'): void {
+    const firstMsg = messages[0];
+    if (firstMsg?.role === 'system') {
+        if (typeof firstMsg.content === 'string') {
+            messages[0] = { ...firstMsg, content: position === 'prepend' ? text + '\n' + firstMsg.content : firstMsg.content + text };
+        } else {
+            const partIndex = firstMsg.content.findIndex(p => p.type === 'text');
+            if (partIndex >= 0) {
+                const newContent = firstMsg.content.map((p, i) =>
+                    i === partIndex ? { ...p, text: position === 'prepend' ? text + '\n' + (p.text ?? '') : (p.text ?? '') + text } : p
+                );
+                messages[0] = { ...firstMsg, content: newContent };
+            } else {
+                messages[0] = { ...firstMsg, content: position === 'prepend' ? [{ type: 'text', text }] : [...firstMsg.content, { type: 'text', text }] };
+            }
+        }
+    } else {
+        messages.unshift({ role: 'system', content: text });
+    }
+}
+
 const fn: IAppletFn<IAppletAPIBE> = async (api) => {
     console.log('[BEApplet] Started');
 
@@ -117,43 +138,21 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             // --- Project Root ---
 
             const projectRoot = (threadState?.projectRoot || wsState?.projectRoot) as string | undefined;
-            if (projectRoot) {
-                content += `\nProject Root\n${projectRoot}\n`;
-            }
 
             // ---
 
-            if (
-                isToolsIncluded || isTodosIncluded || projectRoot
-            ) {
-                let messages = eventApi.result as Array<{
-                    role: string;
-                    content: string | Array<{ type: string; text?: string }>;
-                }>;
+            let messages = eventApi.result as Array<TOpenAIMessage>;
 
+            // Inject project root into system prompt (independent of mode)
+            if (projectRoot) {
+                injectSystemPrompt(messages, `\nProject Root\n${projectRoot}\n`, 'append');
+            }
+
+            // Tail injection (only for tools/todos)
+            if (isToolsIncluded || isTodosIncluded) {
                 // Inject core instruction as first system message (only if mode is set)
                 if (isToolsIncluded) {
-                    //console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — injecting into first message');
-                    const firstMsg = messages[0];
-                    if (firstMsg?.role === 'system') {
-                        if (typeof firstMsg.content === 'string') {
-                            messages[0] = { ...firstMsg, content: CORE_INSTRUCTION_PROMPT + '\n' + firstMsg.content };
-                        } else {
-                            const partIndex = firstMsg.content.findIndex(p => p.type === 'text');
-                            if (partIndex >= 0) {
-                                const newContent = firstMsg.content.map((p, i) =>
-                                    i === partIndex ? { ...p, text: CORE_INSTRUCTION_PROMPT + '\n' + (p.text ?? '') } : p
-                                );
-                                messages[0] = { ...firstMsg, content: newContent };
-                            } else {
-                                messages[0] = { ...firstMsg, content: [{ type: 'text', text: CORE_INSTRUCTION_PROMPT }, ...firstMsg.content] };
-                            }
-                        }
-                    } else {
-                        messages = [{ role: 'system', content: CORE_INSTRUCTION_PROMPT }, ...messages];
-                    }
-                } else {
-                    //console.log('[BEApplet] System prompt (CORE_INSTRUCTION_PROMPT) — skipped (no mode/allowedTools active)');
+                    injectSystemPrompt(messages, CORE_INSTRUCTION_PROMPT);
                 }
 
                 const lastIndex = messages.length - 1;
@@ -174,42 +173,38 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                     newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
                 }
                 else {
-                    const partIndex = lastMsg.content.findIndex(p => p.type === "text");
-                    if (partIndex >= 0) {
-                        const newContent = lastMsg.content.map((p, i) =>
-                            i === partIndex ? { ...p, text: (p.text ?? "") + trailingContent } : p
-                        );
-                        newLastMsg = { ...lastMsg, content: newContent };
-                    }
-                    else {
-                        const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
-                        newLastMsg = { ...lastMsg, content: newContent };
-                                }
-                            }
-                            const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
-                            return newMessages;
+                  const partIndex = lastMsg.content.findIndex(p => p.type === "text");
+                  if (partIndex >= 0) {
+                      const newContent = lastMsg.content.map((p, i) =>
+                          i === partIndex ? { ...p, text: (p.text ?? "") + trailingContent } : p
+                      );
+                      newLastMsg = { ...lastMsg, content: newContent };
+                  }
+                  else {
+                      const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
+                      newLastMsg = { ...lastMsg, content: newContent };
+                  }
+                }
+                const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
+                return newMessages;
+            }
+        });
 
-                        } else {
-                            //console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — skipped (no tools/todos/projectRoot to inject)');
-                        }
+              api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
+          const payload = eventApi.payload as {
+              request: { messageState?: Record<string, unknown> };
+          };
 
-                    });
-
-                    api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
-                        const payload = eventApi.payload as {
-                            request: { messageState?: Record<string, unknown> };
-                        };
-
-                        const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
-                        if (!commands?.some(c => c.name === 'compact')) return;
+          const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
+          if (!commands?.some(c => c.name === 'compact')) return;
 
 
-                        const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
-                        for (const part of userMsg.content) {
-                            if (part.type === 'text') {
-                                part.text = COMPACTION_PROMPT + part.text;
-                                break;
-                            }
+          const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
+          for (const part of userMsg.content) {
+              if (part.type === 'text') {
+                  part.text = COMPACTION_PROMPT + part.text;
+                  break;
+              }
             }
 
             return { ...(eventApi.result as any) };
@@ -284,6 +279,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             // Process one by one, save each result
             for (const guardrail of applicableGuardrails) {
                 try {
+                    if (!guardrail.serverId) {
+                        throw '[BEApplet] Guardrail "' + guardrail.name + '" has no server configured';
+                    }
                     const grServer = await store.get<IServer>('servers:' + guardrail.serverId);
                     if (!grServer) throw '[BEApplet] Guardrail server not found:' + guardrail.serverId;
 

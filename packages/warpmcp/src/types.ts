@@ -19,7 +19,7 @@ export interface IWarpmcpDeps {
 	todoUpdate?: (threadId: string, index: number, status: ITodoItem['status']) => Promise<ITodoItem[]>;
 	todoClear?: (threadId: string) => Promise<ITodoItem[]>;
 	todoWrite?: (threadId: string, todos: ITodoItem[], etag?: string) => Promise<ITodoResult>;
-	getProjectRoot?: (threadId: string) => Promise<string | null>;
+	// getProjectRoot?: (threadId: string) => Promise<string | null>;
 	onFileWritten?: (path: string) => Promise<void>;
 		codeGraphIngest?: (projectRoot: string, force?: boolean) => Promise<ICodeGraphIngestResult>;
 		codeGraphSearch?: (projectRoot: string, query: string, options?: ICodeGraphSearchOptions) => Promise<ICodeGraphNode[]>;

@@ -147,9 +147,9 @@ export interface IPersistence {
 	codeGraphClearProject(projectId: string): Promise<void>;
 
 	// Guardrails
-	listGuardrails(): Promise<Record<string, { name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>>;
-	upsertGuardrail(guardrail: { name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void>;
-	deleteGuardrail(name: string): Promise<void>;
+	listGuardrails(): Promise<Record<string, { id: string; name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>>;
+	upsertGuardrail(guardrail: { id: string; name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void>;
+	deleteGuardrail(id: string): Promise<void>;
 
 	// Modes
 	listModes(): Promise<Array<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }>>;

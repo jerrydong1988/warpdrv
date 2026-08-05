@@ -20,7 +20,7 @@ import { todoUpdateDefinition, todoUpdateHandler } from './tools/todo';
 import { todoClearDefinition, todoClearHandler } from './tools/todo';
 import { todoWriteDefinition, todoWriteHandler } from './tools/todo';
 import { rgDefinition, rgHandler } from './tools/rg';
-import { getProjectRootDefinition, getProjectRootHandler } from './tools/get_project_root';
+	// import { getProjectRootDefinition, getProjectRootHandler } from './tools/get_project_root';
 import { codeGraphIngestDefinition, codeGraphIngestHandler } from './tools/code_graph_ingest';
 import { codeGraphSearchDefinition, codeGraphSearchHandler } from './tools/code_graph_search';
 import { codeGraphSymbolDefinition, codeGraphSymbolHandler } from './tools/code_graph_symbol';
@@ -50,7 +50,7 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		// { def: todoClearDefinition, handler: (a: any) => todoClearHandler(deps, a) },
 		{ def: todoWriteDefinition, handler: (a: any) => todoWriteHandler(deps, a) },
 		{ def: rgDefinition, handler: (a: any) => rgHandler(deps, a) },
-		{ def: getProjectRootDefinition, handler: (a: any) => getProjectRootHandler(deps, a) },
+		// { def: getProjectRootDefinition, handler: (a: any) => getProjectRootHandler(deps, a) },
 		{ def: codeGraphIngestDefinition, handler: (a: any) => codeGraphIngestHandler(deps, a) },
 		{ def: codeGraphSearchDefinition, handler: (a: any) => codeGraphSearchHandler(deps, a) },
 		{ def: codeGraphSymbolDefinition, handler: (a: any) => codeGraphSymbolHandler(deps, a) },
@@ -92,7 +92,7 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 		todoUpdate: args.todoUpdate,
 		todoClear: args.todoClear,
 		todoWrite: args.todoWrite,
-		getProjectRoot: args.getProjectRoot,
+		// getProjectRoot: args.getProjectRoot,
 		onFileWritten: args.onFileWritten,
 		codeGraphIngest: args.codeGraphIngest,
 		codeGraphSearch: args.codeGraphSearch,

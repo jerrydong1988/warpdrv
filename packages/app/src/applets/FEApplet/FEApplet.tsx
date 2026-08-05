@@ -182,7 +182,7 @@ const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: I
 
 function useGuardrailItems(): TDropdownItem[] {
   const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
-  return useMemo(() => Object.keys(guardrails).map(n => ({ label: n, value: n })), [guardrails]);
+  return useMemo(() => Object.values(guardrails).map(g => ({ label: g.name, value: g.id })), [guardrails]);
 }
 
 function useModeItems(): TDropdownItem[] {
@@ -503,7 +503,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 
 	const updateGuardrail = useCallback(async (patch: Partial<IGuardrailDefinition>) => {
 		try {
-			await updateGuardrailApi(guardrail.name, { ...guardrail, ...patch });
+			await updateGuardrailApi(guardrail.id, { ...guardrail, ...patch });
 		} catch (e) {
 			console.error('Failed to update guardrail:', e);
 		}
@@ -512,8 +512,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 	const flushName = useCallback(async () => {
 		if (draftName === guardrail.name) return;
 		try {
-			await createGuardrailApi({ ...guardrail, name: draftName });
-			await deleteGuardrailApi(guardrail.name);
+			await updateGuardrailApi(guardrail.id, { ...guardrail, name: draftName });
 		} catch (e) {
 			console.error('Failed to rename guardrail:', e);
 		}
@@ -543,7 +542,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 
 	const handleDelete = async () => {
 		try {
-			await deleteGuardrailApi(guardrail.name);
+			await deleteGuardrailApi(guardrail.id);
 		} catch (e) {
 			console.error('Failed to delete guardrail:', e);
 		}
@@ -986,12 +985,12 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 	issues: TGuardrailIssueEntry[];
 	isProcessing: boolean;
 	processingNames: string[];
-	errorEntries: Array<[string, IGuardrailError]>;
-}) => {
+		errorEntries?: Array<[string, IGuardrailError]>;
+	}) => {
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const totalViolations = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).length, [issues]);
 	const totalWarnings = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).length, [issues]);
-	const totalErrors = errorEntries.length;
+	const totalErrors = (errorEntries || []).length;
 	const allClear = !isProcessing && issues.length === 0 && totalErrors === 0;
 
 	return (
@@ -1049,7 +1048,7 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 												<Text fontSize="sm" color="var(--wc-text-muted)">Processing {name}...</Text>
 											</HStack>
 										))}
-										{errorEntries.map(([name, error], i) => (
+																{errorEntries?.map(([name, error], i) => (
 											<GuardrailErrorItem key={`error-${i}`} guardrailName={name} error={error} />
 										))}
 										{issues.map(({ guardrailName, issue }, i) => (
@@ -1296,13 +1295,13 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			consumesInput: true,
 			inputPlaceholder: 'Guardrail prompt...',
 			execute: async (_api, params, extraParams) => {
-				await createGuardrailApi({
+				const created = await createGuardrailApi({
 					name: params.name!,
 					serverId: params.server || '',
 					prompt: extraParams?.prompt,
 					triggerOnTools: parseToolValue(params.tools || ''),
 				});
-				toggleActiveGuardrail(params.name!, true);
+				toggleActiveGuardrail(created.id, true);
 			},
 		});
 
