@@ -75,4 +75,8 @@ export const ALLOWED_TOOLS_PROMPT = `Only use tools that are listed in the ALLOW
 
 export const TRAILING_SYSTEM_PROMPT = `This message part is appended to provide the current state & mode of operation.`;
 
-export const CORE_INSTRUCTION_PROMPT = `Core instructions - 1. Only use tools that are listed in the ALLOWED TOOLS LIST in the system-reminder.`;
+export const ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT = `Only use tools that are listed in the ALLOWED TOOLS LIST in the <system-reminder>.`;
+
+export const MODE_SYSTEM_PROMPT = `This conversation has an ACTIVE MODE. You MUST obey the instructions of the ACTIVE MODE, and you MUST only call tools listed in ACTIVE MODE's ALLOWED TOOLS. Every tool schema is present in the tool list regardless of MODE; but tools outside the ALLOWED TOOLS of the ACTIVE MODE are forbidden and MUST NOT be called. If a task requires a forbidden tool, state that plainly and stop rather than calling it.
+
+<system-reminder> contains the ACTIVE MODE. The most recent <system-reminder> in the conversation is authoritative; earlier ones are history. The available MODES are: \n`;

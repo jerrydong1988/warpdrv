@@ -3,15 +3,19 @@ import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
 import type { IGuardrailDefinition, IGuardrailIssue, IGuardrailError, IServer, ITodoItem, IMode } from '@warpcore/shared';
 import { parseMessyLLMArray } from '@warpcore/shared';
-import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT } from './prompts';
+import { COMPACTION_PROMPT, ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT, MODE_SYSTEM_PROMPT } from './prompts';
 import { store } from '../../util/store';
-import { getMode } from '../../services/modeStore';
-import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
+import { getMode, listModes } from '../../services/modeStore';
+import { EChatRole, EMessagePartType, IChatMessage, IMessagePart, TOpenAIMessage } from '@warpcore/bridge';
+import { text } from 'node:stream/consumers';
 
 const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
     enableThinking: false,
     reasoningEffort: "none",
 };
+
+const USE_MODE_DEF_TAIL = false;
+const USE_MODE_CURRENT_TAIL = false;
 
 function injectSystemPrompt(messages: TOpenAIMessage[], text: string, position: 'prepend' | 'append' = 'prepend'): void {
     const firstMsg = messages[0];
@@ -19,14 +23,14 @@ function injectSystemPrompt(messages: TOpenAIMessage[], text: string, position: 
         if (typeof firstMsg.content === 'string') {
             messages[0] = { ...firstMsg, content: position === 'prepend' ? text + '\n' + firstMsg.content : firstMsg.content + text };
         } else {
-            const partIndex = firstMsg.content.findIndex(p => p.type === 'text');
+            const partIndex = firstMsg.content?.findIndex(p => p.type === 'text') || -1;
             if (partIndex >= 0) {
-                const newContent = firstMsg.content.map((p, i) =>
+                const newContent = firstMsg.content!.map((p, i) =>
                     i === partIndex ? { ...p, text: position === 'prepend' ? text + '\n' + (p.text ?? '') : (p.text ?? '') + text } : p
                 );
                 messages[0] = { ...firstMsg, content: newContent };
             } else {
-                messages[0] = { ...firstMsg, content: position === 'prepend' ? [{ type: 'text', text }] : [...firstMsg.content, { type: 'text', text }] };
+                messages[0] = { ...firstMsg, content: position === 'prepend' ? [{ type: 'text', text }] : [...(firstMsg.content || []), { type: 'text', text }] };
             }
         }
     } else {
@@ -51,8 +55,6 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 payload.request.threadId,
             ) as Record<string, unknown> | null;
 
-            if (threadState?.ignoreCompactionBase === true) return;
-
             const messageStates = await api.eventNode.invoke(
                 '/warpcore',
                 'bridge.getAllMessageStatesByThread',
@@ -64,8 +66,45 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 stateById[ms.messageId] = ms.data;
             }
 
+			const modeId = threadState?.modeId as string | undefined;
+            let mode: IMode | null = null;
+            if (modeId) mode = await getMode(modeId);
+
+			let newResult = [...eventApi.result as Array<IChatMessage>];
+
+			// ---- MODE INJECTION ----
+
+            if (
+				mode
+				&& !USE_MODE_DEF_TAIL
+				&& !USE_MODE_CURRENT_TAIL
+			) {
+				newResult = newResult.map(msg => {
+					if (msg.role !== EChatRole.USER) return msg;
+					const msgMode = stateById[msg.id]?.modeMarker as { id: string, name: string } || undefined;
+					if (!msgMode) return msg;
+
+					const newMsg = { 
+						...msg,
+						content: [
+							...msg.content,
+							{
+								type: EMessagePartType.TEXT,
+								text: `<system-reminder>ACTIVE MODE: ${msgMode.name}</system-reminder>`
+							} as IMessagePart
+						],
+					}
+
+					return newMsg;
+				});
+			}
+
+			// ---- compaction base slice ----
+
+            if (threadState?.ignoreCompactionBase === true) return newResult;
+
             let compactionBaseIndex = -1;
-            const branch = eventApi.result as Array<{ id: string }>;
+            const branch = eventApi.result as Array<IChatMessage>;
             for (let i = branch.length - 1; i >= 0; i--) {
                 const msgState = stateById[branch[i]!.id];
                 const commands = msgState?.slashCommands as Array<{ name: string }> | undefined;
@@ -75,8 +114,12 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 }
             }
 
-            if (compactionBaseIndex === -1) return;
-            return (eventApi.result as any[]).slice(compactionBaseIndex);
+            if (compactionBaseIndex === -1) return newResult;
+            newResult = newResult.slice(compactionBaseIndex);
+
+			// ---- Done ----
+
+			return newResult;
         });
 
         api.eventNode.hook('/warpcore', 'bridge.preInference', async (eventApi) => {
@@ -105,99 +148,105 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             }
 
             let content = '';
-            let isToolsIncluded = false;
-            let isTodosIncluded = false;
-
-            // --- Mode tools section ---
-
-            const modeId = threadState?.modeId as string | undefined;
-            let mode: IMode | null = null;
-
-            if (modeId) {
-                mode = await getMode(modeId);
-            }
-
-            if (mode && mode.allowedTools.length > 0) {
-                const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
-                content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
-                if (mode.prompt) content += `\nCURRENT MODE\n${mode.prompt}\n`;
-                isToolsIncluded = true;
-            }
-
-            // ---
-
-            // const todos = threadState?.todos as ITodoItem[] | undefined;
-            // const todoEtag = threadState?.todoEtag as string | undefined;
-
-            // if (todos && todos.length > 0) {
-            //     const lines = todos.map((t, i) => `${i}. [${t.status}] ${t.text}`);
-            //     content += `\nT-DOs\nCurrent Etag: ${todoEtag || 'none'}\n${lines.join('\n')}\n`;
-            //     isTodosIncluded = true;
-            // }
+            let messages = [...eventApi.result as Array<TOpenAIMessage>];
 
             // --- Project Root ---
 
             const projectRoot = (threadState?.projectRoot || wsState?.projectRoot) as string | undefined;
-
-            // ---
-
-            let messages = eventApi.result as Array<TOpenAIMessage>;
 
             // Inject project root into system prompt (independent of mode)
             if (projectRoot) {
                 injectSystemPrompt(messages, `\nProject Root\n${projectRoot}\n`, 'append');
             }
 
-            // Tail injection (only for tools/todos)
-            if (isToolsIncluded || isTodosIncluded) {
-                // Inject core instruction as first system message (only if mode is set)
-                if (isToolsIncluded) {
-                    injectSystemPrompt(messages, CORE_INSTRUCTION_PROMPT);
+            // --- Mode section ---
+
+            const modeId = threadState?.modeId as string | undefined;
+            let mode: IMode | null = null;
+            if (modeId) mode = await getMode(modeId);
+
+            if (mode) {
+
+                if (USE_MODE_DEF_TAIL) {
+                    injectSystemPrompt(messages, ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT);
+
+                    if (mode.prompt) content += `\ACTIVE MODE: ${mode.name}\n${mode.prompt}\n`;
+
+					const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
+
+					if (toolNames.length) content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(', ')}\n`;
+                	else content += "ALLOWED TOOLS: CURRENTLY ALL TOOLS ARE STRICTLY NOT ALLOWED! DO NOT CALL ANY TOOLS!"
+                }
+                else {				
+					const modesArr = await listModes();
+
+					injectSystemPrompt(messages, `${MODE_SYSTEM_PROMPT}\n${
+						modesArr
+							.filter((mode) => mode.prompt?.length)
+							.map((mode, i) => {
+								
+								let toolMessage = "";
+								const toolNames = typeof mode.allowedTools[0] === 'string' ? mode.allowedTools : mode.allowedTools.map((t: any) => t.toolName);
+
+								if (toolNames.length) toolMessage += `ALLOWED TOOLS: ${toolNames.join(', ')}`;
+								else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!"
+
+								return `${i + 1}. ${mode.name}: ${mode.prompt}\nALLOWED TOOLS: ${toolMessage}`;
+							})
+							.join(`\n`)
+					}\n`);
+
+                    if (mode.prompt) {
+						if (USE_MODE_CURRENT_TAIL) content += `\ACTIVE MODE: ${mode.name}\n`;
+					}
                 }
 
-                const lastIndex = messages.length - 1;
+				if (content.length) {
+					console.log("[BEApplet: Appending Tail Prompt]")
+					const lastIndex = messages.length - 1;
 
-                if (lastIndex < 0) {
-                    console.warn("No message found to inject trailing message! Strange..");
-                    return;
-                }
+					if (lastIndex < 0) {
+						console.warn("No message found to inject trailing message! Strange..");
+						return messages;
+					}
 
-                //console.log('[BEApplet] Tail prompt (TRAILING_SYSTEM_PROMPT) — injecting into last message');
-                const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
-                    + "\n" + content
-                    + "\n</system-reminder>";
-                const lastMsg = messages[lastIndex]!;
+					const trailingContent = "\n<system-reminder>\n" + TRAILING_SYSTEM_PROMPT
+						+ "\n" + content
+						+ "\n</system-reminder>";
+					const lastMsg = messages[lastIndex]!;
 
-                let newLastMsg: typeof lastMsg;
-                if (typeof lastMsg.content === "string") {
-                    newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
-                }
-                else {
-                  const partIndex = lastMsg.content.findIndex(p => p.type === "text");
-                  if (partIndex >= 0) {
-                      const newContent = lastMsg.content.map((p, i) =>
-                          i === partIndex ? { ...p, text: (p.text ?? "") + trailingContent } : p
-                      );
-                      newLastMsg = { ...lastMsg, content: newContent };
-                  }
-                  else {
-                      const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
-                      newLastMsg = { ...lastMsg, content: newContent };
-                  }
-                }
-                const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
-                return newMessages;
-            }
+					let newLastMsg: typeof lastMsg;
+					if (typeof lastMsg.content === "string") {
+						newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
+					}
+					else {
+					const partIndex = lastMsg.content.findIndex(p => p.type === "text");
+					if (partIndex >= 0) {
+						const newContent = lastMsg.content.map((p, i) =>
+							i === partIndex ? { ...p, text: (p.text ?? "") + trailingContent } : p
+						);
+						newLastMsg = { ...lastMsg, content: newContent };
+					}
+					else {
+						const newContent = [...lastMsg.content, { type: "text", text: trailingContent }];
+						newLastMsg = { ...lastMsg, content: newContent };
+					}
+					}
+					const newMessages = messages.map((m, i) => i === lastIndex ? newLastMsg : m);
+					return newMessages;
+				}
+
+				else return messages;
+			}
         });
 
-              api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
+        api.eventNode.hook('/warpcore', 'bridge.preConvertNewMsg', async (eventApi) => {
           const payload = eventApi.payload as {
               request: { messageState?: Record<string, unknown> };
           };
 
           const commands = payload.request.messageState?.slashCommands as Array<{ name: string }> | undefined;
           if (!commands?.some(c => c.name === 'compact')) return;
-
 
           const userMsg = eventApi.result as { content: Array<{ type: string; text?: string }> };
           for (const part of userMsg.content) {
@@ -338,21 +387,26 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                         return true;
                     });
                     const contextTexts = context.map(toText);
-
-                    const prompt = GUARDRAIL_PROMPT + '\n' + (guardrail.prompt || GUARDRAIL_RULESET_GENERIC_PROMPT)
-                        + 'Conversation/Message is below -\n'
-                        + contextTexts.join('\n');
+                    const grSysPrompt = GUARDRAIL_PROMPT + '\n' + (guardrail.prompt || GUARDRAIL_RULESET_GENERIC_PROMPT)
+                        + 'Conversation/Message is below as given by the user.'
+                    const prompt = contextTexts.join('\n');
 
                     const result = await api.eventNode.invoke('/warpcore', 'bridge.handlePureCompletion', {
                         inferenceRequestId: guardrail.name + '-' + messageId,
                         inferenceUrl: grInferenceUrl,
 
-                        messages: [{
+											messages: [
+												{
+                            role: 'system',
+                            content: grSysPrompt,
+                        },
+												{
                             role: 'user',
                             content: prompt,
-                        }],
+                        }
+											],
 
-                        inferenceParams: {
+											inferenceParams: {
                             ...GUARDRAILS_DEFAULT_INFERENCE_PARAMS,
                             ...guardrail.inferenceParams,
                         }
