@@ -29,8 +29,27 @@ function shallowEqualExcluding<T extends object>(
 
 type TWrappedConvertedMessage = {
 	parentId: string | null;
-	message: any;
+	message: ConvertedMessage;
 };
+
+// Type for converted message UI shape (compatible with @assistant-ui/react)
+interface ConvertedMessage {
+	id: string;
+	role: 'user' | 'assistant' | 'system' | 'tool';
+	content: Array<
+		| { type: 'text'; text: string }
+		| { type: 'reasoning'; reasoning: string; text: string }
+		| { type: 'tool-call'; toolCallId: string; toolName: string; args: unknown; argsText: string; result?: unknown; serverName?: string }
+		| { type: 'image'; image: string; filename: string }
+	>;
+	createdAt: Date;
+	metadata: { unstable_state: Record<string, unknown>; custom: Record<string, unknown> };
+	attachments: Array<
+		| { id: string; type: 'image'; content: Array<{ type: 'image'; image: string; filename: string }>; name: string; file: File }
+		| { id: string; type: 'file'; content: never[]; name: string; contentType: string }
+	>;
+	status?: { type: 'running' | 'complete' | 'requires-action'; reason?: string };
+}
 
 export function useDerivedMsgsForUI(
 	msgs: Record<TMessageId, IChatMessage>,
@@ -52,13 +71,13 @@ export function useDerivedMsgsForUI(
 	const mapIdToIndexRef = useRef<Record<TMessageId, number>>({});
 	const headMessageIdRef = useRef<TMessageId | null>(null);
 
-	const convertMessage = useCallback((msg: any) => {
+	const convertMessage = useCallback((msg: any): ConvertedMessage => {
 		
 		// Use toolCallsById from closure (already reactive via useStore)
 		const threadToolCalls = Object.values(toolCallsById).filter((tc: any) => tc.threadId === currentThreadId);
 		const tcMap = new Map(threadToolCalls.map((tc: any) => [tc.id, tc]));
 		
-		const attachments: any[] = [];
+		const attachments: ConvertedMessage['attachments'] = [];
 		const content = (msg.content ?? []).map((part: any) => {
 			if (part.type === EMessagePartType.ATTACHMENT) {
 				if (part.mimeType.startsWith('image/') && part.data) {
@@ -121,10 +140,10 @@ export function useDerivedMsgsForUI(
 							tcMap.get(part.toolCallId)?.status === EToolCallStatus.PENDING
 		);
 
-		const result: any = {
+		const result: ConvertedMessage = {
 			id: msg.id,
 			role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
-			content: content as any,
+			content: content as ConvertedMessage['content'],
 			createdAt: new Date(msg.createdAt),
 			metadata: { unstable_state: {}, custom: msg.stats || {} },
 			attachments,
@@ -134,11 +153,11 @@ export function useDerivedMsgsForUI(
 		// Only the head (newest) assistant message gets "running" status; prior messages are "complete"
 		if (isAssistant) {
 			if (hasPendingToolCalls) {
-				(result as any).status = { type: 'requires-action' as const, reason: 'tool-calls' as const };
+				result.status = { type: 'requires-action' as const, reason: 'tool-calls' as const };
 			} else if (isRunning && msg.id === headMessageId) {
-				(result as any).status = { type: 'running' as const };
+				result.status = { type: 'running' as const };
 			} else {
-				(result as any).status = { type: 'complete' as const, reason: 'stop' as const };
+				result.status = { type: 'complete' as const, reason: 'stop' as const };
 			}
 		}
 
@@ -173,26 +192,13 @@ export function useDerivedMsgsForUI(
 		return true;
 	}, []);
 
-	// ---
-	
-	const sortedMsgs = useMemo(() => {
-
-		// reset all on thread change
-		if (
-			lastThreadIdRef.current !== currentThreadId 
-			// || headMessageIdRef.current !== headMessageId
-		) {
-			derivedMsgsRef.current = {};
-			convertedMsgsRef.current = {};
-			toolCallsByIdRef.current = null;
-			sortedMsgsRef.current = [];
-			mapIdToIndexRef.current = {};
-		}
-
-		// prep
-		const haveNewToolCalls = toolCallsById !== toolCallsByIdRef.current;
-		const hasIsRunningChanged = isRunning !== lastIsRunningRef.current;
-		let haveNewMsgs: boolean = false;
+	// Extract message update logic into a separate function for clarity
+	const updateMessagesInCache = useCallback((
+		msgs: Record<TMessageId, IChatMessage>,
+		haveNewToolCalls: boolean,
+		hasIsRunningChanged: boolean,
+	): boolean => {
+		let haveNewMsgs = false;
 
 		// remove msgs not in current object
 		for (const cachedId of Object.keys(derivedMsgsRef.current)) {
@@ -234,6 +240,28 @@ export function useDerivedMsgsForUI(
 			}
 		});
 
+		return haveNewMsgs;
+	}, [convertMessage, updateCachedMessage]);
+
+	// ---
+	
+	const sortedMsgs = useMemo(() => {
+		// reset all on thread change
+		if (lastThreadIdRef.current !== currentThreadId) {
+			derivedMsgsRef.current = {};
+			convertedMsgsRef.current = {};
+			toolCallsByIdRef.current = null;
+			sortedMsgsRef.current = [];
+			mapIdToIndexRef.current = {};
+		}
+
+		// prep
+		const haveNewToolCalls = toolCallsById !== toolCallsByIdRef.current;
+		const hasIsRunningChanged = isRunning !== lastIsRunningRef.current;
+
+		// Update cache and check if we have new messages
+		const haveNewMsgs = updateMessagesInCache(msgs, haveNewToolCalls, hasIsRunningChanged);
+
 		// early exit
 		toolCallsByIdRef.current = toolCallsById;
 		lastIsRunningRef.current = isRunning;
@@ -256,7 +284,7 @@ export function useDerivedMsgsForUI(
 		
 		// done
 		return sortedMessages;
-	}, [msgs, convertMessage, toolCallsById, currentThreadId, isRunning, headMessageId]);
+	}, [msgs, convertMessage, toolCallsById, currentThreadId, isRunning, headMessageId, updateMessagesInCache]);
 
 	// Update thread ref
 	lastThreadIdRef.current = currentThreadId;

@@ -119,20 +119,30 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 		// If the "Available devices:" section was found, use those results
 		// Otherwise fall back to parsing the verbose init output
 		if (devices.length > 0) {
+			// Build a name→device map for O(1) lookup instead of linear scan
+			const nameToDevice = new Map<string, IDevice>();
+			for (const d of devices) {
+				nameToDevice.set(d.name, d);
+			}
+
 			// Enrich with compute capability from verbose output
 			const cudaCapMatch = output.matchAll(/Device \d+: (.+?), compute capability (\S+)/g);
 			for (const match of cudaCapMatch) {
 				const deviceName = match[1]!;
 				const cap = match[2]!;
-				const dev = devices.find(d => d.backendType === EDeviceBackendType.CUDA && d.name.includes(deviceName));
-				if (dev) dev.computeCapability = cap;
+				const dev = nameToDevice.get(deviceName);
+				if (dev && dev.backendType === EDeviceBackendType.CUDA) {
+					dev.computeCapability = cap;
+				}
 			}
 			const rocmCapMatch = output.matchAll(/Device \d+: (.+?), (\w+) \(0x\w+\)/g);
 			for (const match of rocmCapMatch) {
 				const deviceName = match[1]!;
 				const cap = match[2]!;
-				const dev = devices.find(d => d.backendType === EDeviceBackendType.ROCM && d.name.includes(deviceName));
-				if (dev) dev.computeCapability = cap;
+				const dev = nameToDevice.get(deviceName);
+				if (dev && dev.backendType === EDeviceBackendType.ROCM) {
+					dev.computeCapability = cap;
+				}
 			}
 			return devices;
 		}
@@ -173,13 +183,19 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 		// Parse Vulkan devices
 		let vulkanIdx = 0;
 		const vulkanVerboseMatch = output.matchAll(/ggml_vulkan: (\d+) = (.+?) \|/g);
+		// Build a name→type map for O(1) lookup
+		const nameToBackendType = new Map<string, EDeviceBackendType>();
+		for (const d of devices) {
+			nameToBackendType.set(d.name, d.backendType);
+		}
 		for (const match of vulkanVerboseMatch) {
 			// Only add if not already covered
 			const idx = parseInt(match[1]!, 10);
 			const name = match[2]!.trim();
-			const exists = devices.some(d => d.backendType === EDeviceBackendType.VULKAN && d.name.includes(name.split('(')[0]!.trim()));
-			if (!exists) {
-				devices.push({
+			const baseName = name.split('(')[0]!.trim();
+			const existingType = nameToBackendType.get(baseName);
+			if (existingType !== EDeviceBackendType.VULKAN) {
+				const vulkanDevice: IDevice = {
 					id: `Vulkan${idx}`,
 					name,
 					backendType: EDeviceBackendType.VULKAN,
@@ -188,7 +204,9 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 					vramTotalMb: 0,
 					vramFreeMb: 0,
 					connection: '',
-				});
+				};
+				devices.push(vulkanDevice);
+				nameToBackendType.set(baseName, EDeviceBackendType.VULKAN);
 			}
 			vulkanIdx++;
 		}

@@ -325,18 +325,26 @@ export function spawnServer(
 			processes.delete(serverId);
 			if (code !== 0 && code !== null) {
 				onStatusChange(EServerStatus.ERROR, `Process exited with code ${code}`);
-				emitServerUpdate(serverId, EServerStatus.ERROR, `Process exited with code ${code}`, null).catch(() => {});
+				emitServerUpdate(serverId, EServerStatus.ERROR, `Process exited with code ${code}`, null).catch((err) => {
+					console.error(`[processManager] Failed to emit server update for ${serverId}:`, err);
+				});
 			} else {
 				onStatusChange(EServerStatus.STOPPED);
-				emitServerUpdate(serverId, EServerStatus.STOPPED, null, null).catch(() => {});
+				emitServerUpdate(serverId, EServerStatus.STOPPED, null, null).catch((err) => {
+					console.error(`[processManager] Failed to emit server update for ${serverId}:`, err);
+				});
 			}
 		});
 		onStatusChange(EServerStatus.LOADING);
-		emitServerUpdate(serverId, EServerStatus.LOADING, null, null, launchCommand).catch(() => {});
+		emitServerUpdate(serverId, EServerStatus.LOADING, null, null, launchCommand).catch((err) => {
+			console.error(`[processManager] Failed to emit server update for ${serverId}:`, err);
+		});
 		return child.pid ?? null;
 	} catch (err) {
 		onStatusChange(EServerStatus.ERROR, String(err));
-		emitServerUpdate(serverId, EServerStatus.ERROR, String(err), null).catch(() => {});
+		emitServerUpdate(serverId, EServerStatus.ERROR, String(err), null).catch((e) => {
+			console.error(`[processManager] Failed to emit server update for ${serverId}:`, e);
+		});
 		return null;
 	}
 }
@@ -389,7 +397,9 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
                     ? `Process exited with code ${code}` 
                     : null;
                 
-                emitServerUpdate(serverId, status, error, null).catch(() => {});
+                emitServerUpdate(serverId, status, error, null).catch((err) => {
+                    console.error(`[processManager] Failed to emit server update for ${serverId}:`, err);
+                });
                 
                 // Look up port from server config and wait for it to be free
                 const waitForPort = async () => {
@@ -439,7 +449,9 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
                 if (isProcessAlive(pidToUse!)) {
                     try {
                         killProcessTree(pidToUse!, 'SIGKILL');
-                    } catch {}
+                    } catch (err) {
+                        console.error(`[processManager] SIGKILL failed for ${pidToUse}:`, err);
+                    }
                     setTimeout(() => {
                         if (!resolved) {
                             finish(true);
@@ -490,7 +502,9 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
                 if (isProcessAlive(pid)) {
                     try {
                         killProcessTree(pid, 'SIGKILL');
-                    } catch {}
+                    } catch (err) {
+                        console.error(`[processManager] SIGKILL failed for orphan ${pid}:`, err);
+                    }
                     setTimeout(() => finish(true), 200);
                 }
             }, 5000);

@@ -37,6 +37,75 @@ async function persistDownload(dl: IDownload): Promise<void> {
 	await store.put(DOWNLOADS_PREFIX + dl.id, dl);
 }
 
+// Shared DownloaderHelper event handler setup
+function setupDownloaderEvents(
+	helper: DownloaderHelper,
+	dl: IDownload,
+	id: TDownloadId,
+): void {
+	helper.on('start', () => {
+		dl.status = EDownloadStatus.DOWNLOADING;
+		persistDownload(dl);
+	});
+
+	helper.on('progress', (stats) => {
+		dl.fileSizeBytes = stats.total ?? 0;
+		dl.downloadedBytes = stats.downloaded;
+		dl.progress = stats.progress;
+		dl.speedBps = stats.speed;
+		dl.status = EDownloadStatus.DOWNLOADING;
+		downloadState.set(dl.id, dl);
+	});
+
+	helper.on('end', async () => {
+		dl.progress = 100;
+		dl.speedBps = 0;
+		activeDownloaders.delete(id);
+		if (dl.postActions && dl.postActions.length > 0) {
+			dl.status = EDownloadStatus.INSTALLING;
+			await persistDownload(dl);
+			emitDownloadUpdate(dl);
+		}
+		try {
+			await runPostActions(dl, persistDownload, emitDownloadUpdate);
+			dl.status = EDownloadStatus.COMPLETED;
+			dl.completedAt = Date.now();
+		} catch (err) {
+			dl.status = EDownloadStatus.FAILED;
+			dl.error = String(err);
+			dl.completedAt = Date.now();
+		}
+		await persistDownload(dl);
+		emitDownloadUpdate(dl);
+	});
+
+	helper.on('error', async (err) => {
+		dl.status = EDownloadStatus.FAILED;
+		const errorMsg = err.message ?? String(err);
+		console.error(`[Download Error] ID: ${id}, URL: ${dl.sourceUrl ?? dl.destPath}, Filename: ${dl.filename}, DestDir: ${dl.destRoot}, Error: ${errorMsg}`);
+		dl.error = errorMsg;
+		dl.speedBps = 0;
+		activeDownloaders.delete(id);
+		await persistDownload(dl);
+		emitDownloadUpdate(dl);
+	});
+
+	helper.on('stop', async () => {
+		dl.status = EDownloadStatus.PAUSED;
+		dl.speedBps = 0;
+		const resumeState = helper.getResumeState();
+		dl.resumeState = {
+			downloaded: resumeState.downloaded,
+			filePath: resumeState.filePath,
+			fileName: resumeState.fileName,
+			total: resumeState.total,
+		} as IResumeState;
+		activeDownloaders.delete(id);
+		await persistDownload(dl);
+		emitDownloadUpdate(dl);
+	});
+}
+
 export async function startDownload(
 	author: string,
 	modelName: string,
@@ -105,68 +174,7 @@ resumeState: null,
 		resumeOnIncompleteMaxRetry: 3,
 	});
 
-	helper.on('start', () => {
-		dl.status = EDownloadStatus.DOWNLOADING;
-		persistDownload(dl);
-	});
-
-	helper.on('progress', (stats) => {
-		dl.fileSizeBytes = stats.total ?? 0;
-		dl.downloadedBytes = stats.downloaded;
-		dl.progress = stats.progress;
-		dl.speedBps = stats.speed;
-		dl.status = EDownloadStatus.DOWNLOADING;
-		// Don't persist on every progress tick — too many writes
-		downloadState.set(dl.id, dl);
-	});
-
-helper.on('end', async () => {
-		dl.progress = 100;
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		if (dl.postActions && dl.postActions.length > 0) {
-			dl.status = EDownloadStatus.INSTALLING;
-			await persistDownload(dl);
-			emitDownloadUpdate(dl);
-		}
-		try {
-			await runPostActions(dl, persistDownload, emitDownloadUpdate);
-			dl.status = EDownloadStatus.COMPLETED;
-			dl.completedAt = Date.now();
-		} catch (err) {
-			dl.status = EDownloadStatus.FAILED;
-			dl.error = String(err);
-			dl.completedAt = Date.now();
-		}
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-	helper.on('error', async (err) => {
-		dl.status = EDownloadStatus.FAILED;
-		const errorMsg = err.message ?? String(err);
-		console.error(`[Download Error] ID: ${id}, URL: ${url}, Filename: ${filename}, DestDir: ${destDir}, Error: ${errorMsg}`);
-		dl.error = errorMsg;
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-
-	helper.on('stop', async () => {
-		dl.status = EDownloadStatus.PAUSED;
-		dl.speedBps = 0;
-		// Capture resume state before discarding the helper
-		const resumeState = helper.getResumeState();
-		dl.resumeState = {
-			downloaded: resumeState.downloaded,
-			filePath: resumeState.filePath,
-			fileName: resumeState.fileName,
-			total: resumeState.total,
-		} as IResumeState;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
+	setupDownloaderEvents(helper, dl, id);
 
 	activeDownloaders.set(id, helper);
 	await persistDownload(dl);
@@ -238,59 +246,7 @@ export async function resumeDownload(id: TDownloadId): Promise<boolean> {
 		removeOnFail: false,
 	});
 
-	helper.on('progress', (stats) => {
-		dl.fileSizeBytes = stats.total ?? 0;
-		dl.downloadedBytes = stats.downloaded;
-		dl.progress = stats.progress;
-		dl.speedBps = stats.speed;
-		dl.status = EDownloadStatus.DOWNLOADING;
-		downloadState.set(dl.id, dl);
-	});
-
-helper.on('end', async () => {
-		dl.progress = 100;
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		if (dl.postActions && dl.postActions.length > 0) {
-			dl.status = EDownloadStatus.INSTALLING;
-			await persistDownload(dl);
-			emitDownloadUpdate(dl);
-		}
-		try {
-			await runPostActions(dl, persistDownload, emitDownloadUpdate);
-			dl.status = EDownloadStatus.COMPLETED;
-			dl.completedAt = Date.now();
-		} catch (err) {
-			dl.status = EDownloadStatus.FAILED;
-			dl.error = String(err);
-			dl.completedAt = Date.now();
-		}
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-	helper.on('error', async (err) => {
-		dl.status = EDownloadStatus.FAILED;
-		dl.error = err.message ?? String(err);
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-	helper.on('stop', async () => {
-		dl.status = EDownloadStatus.PAUSED;
-		dl.speedBps = 0;
-		// Capture resume state
-		const resumeState = helper.getResumeState();
-		dl.resumeState = {
-			downloaded: resumeState.downloaded,
-			filePath: resumeState.filePath,
-			fileName: resumeState.fileName,
-			total: resumeState.total,
-		} as IResumeState;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
+	setupDownloaderEvents(helper, dl, id);
 
 	activeDownloaders.set(id, helper);
 	dl.status = EDownloadStatus.DOWNLOADING;
@@ -423,61 +379,7 @@ export async function startGenericDownload(
 		resumeOnIncomplete: true,
 		resumeOnIncompleteMaxRetry: 3,
 	});
-	helper.on('start', () => {
-		dl.status = EDownloadStatus.DOWNLOADING;
-		persistDownload(dl);
-	});
-	helper.on('progress', (stats) => {
-		dl.fileSizeBytes = stats.total ?? 0;
-		dl.downloadedBytes = stats.downloaded;
-		dl.progress = stats.progress;
-		dl.speedBps = stats.speed;
-		dl.status = EDownloadStatus.DOWNLOADING;
-		downloadState.set(dl.id, dl);
-	});
-	helper.on('end', async () => {
-		dl.progress = 100;
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		if (dl.postActions && dl.postActions.length > 0) {
-			dl.status = EDownloadStatus.INSTALLING;
-			await persistDownload(dl);
-			emitDownloadUpdate(dl);
-		}
-		try {
-			await runPostActions(dl, persistDownload, emitDownloadUpdate);
-			dl.status = EDownloadStatus.COMPLETED;
-			dl.completedAt = Date.now();
-		} catch (err) {
-			dl.status = EDownloadStatus.FAILED;
-			dl.error = String(err);
-			dl.completedAt = Date.now();
-		}
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-	helper.on('error', async (err) => {
-		dl.status = EDownloadStatus.FAILED;
-		dl.error = err.message ?? String(err);
-		dl.speedBps = 0;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
-	helper.on('stop', async () => {
-		dl.status = EDownloadStatus.PAUSED;
-		dl.speedBps = 0;
-		const resumeState = helper.getResumeState();
-		dl.resumeState = {
-			downloaded: resumeState.downloaded,
-			filePath: resumeState.filePath,
-			fileName: resumeState.fileName,
-			total: resumeState.total,
-		} as IResumeState;
-		activeDownloaders.delete(id);
-		await persistDownload(dl);
-		emitDownloadUpdate(dl);
-	});
+	setupDownloaderEvents(helper, dl, id);
 	activeDownloaders.set(id, helper);
 	await persistDownload(dl);
 	helper.start().catch(async (err) => {

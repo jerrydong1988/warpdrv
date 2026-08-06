@@ -24,6 +24,208 @@ function expandHome(p: string | undefined): string | undefined {
 	return out;
 }
 
+// Validate recipe step body to prevent shell injection
+// Only allows safe shell commands: single command with optional flags/args
+const SAFE_COMMAND_PATTERN = /^[a-zA-Z0-9_./-]+(\s+[a-zA-Z0-9_./-]+)*$/;
+const DANGEROUS_PATTERNS = [
+	/;\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,
+	/\|\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,
+	/&&\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,
+	/>[\s/]/,
+	/>[\s/]*\.(env|bashrc|profile|zshrc|bash_profile)/i,
+	/\$\(/,
+	/`[^`]*`/,
+	/\$\{[^}]*\}/,
+	/\|\s*nc\b/i,
+	/\|\s*socat\b/i,
+	/>[\s/]*\/dev\//i,
+	/\breboot\b/i,
+	/\bshutdown\b/i,
+	/\bsudo\b/i,
+	/\bchmod\s+[^ ]*777\b/i,
+	/\bchown\b/i,
+	/\bexport\s/i,
+	/\bunset\s/i,
+	/\balias\s/i,
+	/\btrap\b/i,
+	/\beval\b/i,
+	/\bexec\b/i,
+	/\bsource\b/i,
+	/\bapt-get\s+(remove|purge|autoremove)\b/i,
+	/\bpacman\s+-[Rr]\b/i,
+	/\bdnf\s+(remove|erase)\b/i,
+	/\byum\s+remove\b/i,
+	/\bchoco\s+uninstall\b/i,
+	/\bbrew\s+uninstall\b/i,
+	/\bkill\s+-9\b/i,
+	/\bsystemctl\s+(stop|disable)\s/i,
+	/\biptables\b/i,
+	/\bmodprobe\b/i,
+	/\binsmod\b/i,
+	/\brmmod\b/i,
+	/\bgrub\b/i,
+	/\bflash\b/i,
+	/\bdd\s+if=/i,
+	/\bmkfs\b/i,
+	/\bformat\b/i,
+	/\bshred\b/i,
+	/\bwipe\b/i,
+	/\bnc\b/i,
+	/\bsocat\b/i,
+	/\bnetcat\b/i,
+	/\bncat\b/i,
+	/\bssh\b.*-[LRD]\b/i,
+	/\bpython\b.*-c\b/i,
+	/\bruby\b.*-e\b/i,
+	/\bperl\b.*-e\b/i,
+	/\bnode\b.*-e\b/i,
+	/\bphp\b.*-r\b/i,
+	/\bjulia\b.*-e\b/i,
+	/\blua\b/i,
+	/\bawk\b.*-f\b/i,
+	/\bsed\b.*-f\b/i,
+	/\bgrep\b.*-f\b/i,
+	/\bfind\b.*-exec\b/i,
+	/\bxargs\b/i,
+	/\bnohup\b/i,
+	/\bbg\b/i,
+	/\bfg\b/i,
+	/\bdisown\b/i,
+	/\bjobs\b/i,
+	/\bkill\b/i,
+	/\bkillall\b/i,
+	/\bpkill\b/i,
+	/\bpgrep\b/i,
+	/\btop\b/i,
+	/\bhtop\b/i,
+	/\bfree\b/i,
+	/\bdf\b/i,
+	/\bdu\b/i,
+	/\bmount\b/i,
+	/\bumount\b/i,
+	/\block\b/i,
+	/\bunlock\b/i,
+	/\bchroot\b/i,
+	/\bnsenter\b/i,
+	/\bping\b/i,
+	/\btraceroute\b/i,
+	/\btracepath\b/i,
+	/\bifconfig\b/i,
+	/\bip\s+addr\b/i,
+	/\bip\s+route\b/i,
+	/\bip\s+link\b/i,
+	/\bnetstat\b/i,
+	/\bsystemctl\b/i,
+	/\bjournalctl\b/i,
+	/\blogrotate\b/i,
+	/\bcron\b/i,
+	/\bat\b/i,
+	/\bcrontab\b/i,
+	/\buseradd\b/i,
+	/\buserdel\b/i,
+	/\busermod\b/i,
+	/\bgroupadd\b/i,
+	/\bgroupdel\b/i,
+	/\bpasswd\b/i,
+	/\bchpasswd\b/i,
+	/\bvisudo\b/i,
+	/\bsu\b/i,
+	/\blogin\b/i,
+	/\blogout\b/i,
+	/\bexit\b/i,
+	/\bhistory\b/i,
+	/\balias\b/i,
+	/\bunalias\b/i,
+	/\bset\b/i,
+	/\bunset\b/i,
+	/\bexport\b/i,
+	/\bdeclare\b/i,
+	/\btypeset\b/i,
+	/\breadonly\b/i,
+	/\blocal\b/i,
+	/\bfunction\b/i,
+	/\breturn\b/i,
+	/\bbreak\b/i,
+	/\bcontinue\b/i,
+	/\btrap\b/i,
+	/\beval\b/i,
+	/\bexec\b/i,
+	/\bsource\b/i,
+	/\b\.\s/i,
+	/\b\.\//i,
+	/\b\.\.\//i,
+	/\b\.\.\\\//i,
+	/\b%TEMP%\b/i,
+	/\b%TMP%\b/i,
+	/\b%APPDATA%\b/i,
+	/\b%LOCALAPPDATA%\b/i,
+	/\b%PROGRAMFILES%\b/i,
+	/\b%PROGRAMDATA%\b/i,
+	/\b%SYSTEMROOT%\b/i,
+	/\b%WINDIR%\b/i,
+	/\b%SYSTEMDRIVE%\b/i,
+	/\b%USERPROFILE%\b/i,
+	/\b%HOMEPATH%\b/i,
+	/\b%HOMEDRIVE%\b/i,
+	/\b%PATH%\b/i,
+	/\b%SYSTEM32%\b/i,
+	/\b%SYSDIR%\b/i,
+	/\b%INIFILE%\b/i,
+	/\b%COMPUTERNAME%\b/i,
+	/\b%USERNAME%\b/i,
+	/\b%USERDOMAIN%\b/i,
+	/\b%USERDOMAIN_ROAMINGPROFILE%\b/i,
+	/\b%PUBLIC%\b/i,
+	/\b%ALLUSERSPROFILE%\b/i,
+	/\b%COMMONPROGRAMFILES%\b/i,
+	/\b%COMMONPROGRAMFILES(X86)%\b/i,
+	/\b%COMMONPROGRAMW6432%\b/i,
+	/\b%PROGRAMW6432%\b/i,
+];
+
+export function validateRecipeBody(body: string): void {
+	if (!body || typeof body !== 'string') {
+		throw new Error('Recipe step body must be a non-empty string');
+	}
+
+	const trimmed = body.trim();
+	if (trimmed.length === 0) {
+		throw new Error('Recipe step body cannot be empty');
+	}
+
+	// Check for command chaining (pipes, semicolons, &&, ||)
+	if (/[|;&]/.test(trimmed)) {
+		throw new Error('Recipe steps cannot contain command chaining (pipes, semicolons, &&, ||)');
+	}
+
+	// Check for subshell execution
+	if (/\(/.test(trimmed) || /\)/.test(trimmed)) {
+		throw new Error('Recipe steps cannot contain subshell execution');
+	}
+
+	// Check for file redirection
+	if (/[<>]/.test(trimmed)) {
+		throw new Error('Recipe steps cannot contain file redirection');
+	}
+
+	// Check for variable expansion
+	if (/\$/.test(trimmed)) {
+		throw new Error('Recipe steps cannot contain variable expansion');
+	}
+
+	// Check for backticks
+	if (/\`/.test(trimmed)) {
+		throw new Error('Recipe steps cannot contain backtick command substitution');
+	}
+
+	// Check for dangerous patterns
+	for (const pattern of DANGEROUS_PATTERNS) {
+		if (pattern.test(trimmed)) {
+			throw new Error(`Recipe step contains dangerous pattern: ${pattern.source}`);
+		}
+	}
+}
+
 interface ISSEmitter {
 	emit(channel: string, data: unknown): void;
 }
@@ -134,6 +336,9 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 			stepId: stepDef.id,
 			startedAt,
 		});
+
+		// Validate step body before execution to prevent shell injection
+		validateRecipeBody(stepDef.body);
 
 		const result = await runStep(stepDef.body, stepDef.cwd, env, stepDef.id, activeRun.state.runId);
 
