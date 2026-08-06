@@ -267,7 +267,6 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 				px="3"
 				py="1"
 				_hover={{ bg: "var(--wc-bg-hover)" }}
-				overflow="hidden"
 			>
 				{node.children && node.children.length > 0 && (
 					<Box
