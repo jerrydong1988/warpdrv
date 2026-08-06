@@ -178,15 +178,15 @@ interface ThreadActions {
 }
 const ThreadActionsContext = React.createContext<ThreadActions | null>(null);
 
-function TreeNode({ node }: { node: TreeEntry }) {
+const TreeNode = React.memo(({ node }: { node: TreeEntry }) => {
 	return (
 		<Box w="full">
 			{node.type === "thread" ? <ThreadNode node={node} /> : <FolderNode node={node} />}
 		</Box>
 	);
-}
+});
 
-function ThreadNode({ node }: { node: TreeEntry }) {
+const ThreadNode = React.memo(({ node }: { node: TreeEntry }) => {
 	const thread = useStore((s) => s.threads[node.id]);
 	if (!thread) return null;
 
@@ -220,7 +220,7 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 
 	useLayoutEffect(() => {
 		setPortalTarget(
-			document.getElementById(`${containerId}-${metaFields.starred ? "starred" : "default"}`),
+			document.getElementById(`${containerId}-${metaFields.starred ? "starred" : null}`),
 		);
 	}, [containerId, metaFields.starred]);
 
@@ -242,9 +242,14 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 		return "empty";
 	}, [thread.totalPromptTokens, thread.totalCompletionTokens, thread.messageCount]);
 
-	if (!portalTarget) return null;
+	// if (!portalTarget) return null;
 
-	return createPortal(
+	const maybeCreatePortal = useCallback(
+		(html: any, ele?: any) => (portalTarget ? createPortal(html, ele) : html),
+		[portalTarget],
+	);
+
+	return maybeCreatePortal(
 		<Box w="100%">
 			<Box
 				w="100%"
@@ -437,7 +442,6 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 							<TreeNode key={child.id} node={child} />
 						))}
 					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
-					<div id={`${node.id}-default`} style={{ width: "100%" }} />
 					{node.children
 						.filter((c) => c.type === "thread")
 						.map((child) => (
@@ -448,9 +452,9 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 		</Box>,
 		portalTarget,
 	);
-}
+});
 
-function FolderNode({ node }: { node: TreeEntry }) {
+const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 	const folder = useStore((s) => s.folders.find((f) => f.id === node.id));
 	if (!folder) return null;
 
@@ -676,7 +680,7 @@ function FolderNode({ node }: { node: TreeEntry }) {
 			)}
 		</Box>
 	);
-}
+});
 
 export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => void }) => {
 	const api = useThreadsAndFolders();
@@ -694,40 +698,57 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 	const folders = useStore((s) => s.folders);
 
 	// Convert threads Record to array, filter + sort
-	const sortedThreads = useMemo(() => {
-		const arr = Object.values(threads) as IChatThread[];
-		if (search) {
-			arr.filter((t) => t.title.toLowerCase().includes(search.toLowerCase()));
+	// const sortedThreads = useMemo(() => {
+	// 	const arr = Object.values(threads) as IChatThread[];
+	// 	if (search) {
+	// 		arr.filter((t) => t.title.toLowerCase().includes(search.toLowerCase()));
+	// 	}
+	// 	return [...arr].sort((a, b) => {
+	// 		let cmp = 0;
+	// 		if (sortField === "updatedAt") cmp = a.updatedAt - b.updatedAt;
+	// 		else if (sortField === "createdAt") cmp = a.createdAt - b.createdAt;
+	// 		else if (sortField === "title") cmp = a.title.localeCompare(b.title);
+	// 		else if (sortField === "messageCount")
+	// 			cmp =
+	// 				(a.totalPromptTokens ?? 0) +
+	// 				(a.totalCompletionTokens ?? 0) -
+	// 				((b.totalPromptTokens ?? 0) + (b.totalCompletionTokens ?? 0));
+	// 		return sortDir === "desc" ? -cmp : cmp;
+	// 	});
+	// }, [threads, folders, search, sortField, sortDir]);
+
+	// Build flat tree entries — sorted by active sort field/direction BEFORE tree creation
+	const flatEntries = useMemo((): TreeEntry[] => {
+		const threadEntries: TreeEntry[] = [];
+		for (const [id, t] of Object.entries(threads)) {
+			const thread = t as IChatThread;
+			const parentId = thread.parentId ?? thread.folderId ?? "root";
+			threadEntries.push({ id, parentId, type: "thread" });
 		}
-		return [...arr].sort((a, b) => {
+		// Sort thread entries by active sort field/direction
+		threadEntries.sort((a, b) => {
+			const ta = threads[a.id] as IChatThread;
+			const tb = threads[b.id] as IChatThread;
 			let cmp = 0;
-			if (sortField === "updatedAt") cmp = a.updatedAt - b.updatedAt;
-			else if (sortField === "createdAt") cmp = a.createdAt - b.createdAt;
-			else if (sortField === "title") cmp = a.title.localeCompare(b.title);
+			if (sortField === "updatedAt") cmp = (ta?.updatedAt ?? 0) - (tb?.updatedAt ?? 0);
+			else if (sortField === "createdAt") cmp = (ta?.createdAt ?? 0) - (tb?.createdAt ?? 0);
+			else if (sortField === "title") cmp = (ta?.title ?? "").localeCompare(tb?.title ?? "");
 			else if (sortField === "messageCount")
 				cmp =
-					(a.totalPromptTokens ?? 0) +
-					(a.totalCompletionTokens ?? 0) -
-					((b.totalPromptTokens ?? 0) + (b.totalCompletionTokens ?? 0));
+					(ta?.totalPromptTokens ?? 0) +
+					(ta?.totalCompletionTokens ?? 0) -
+					((tb?.totalPromptTokens ?? 0) + (tb?.totalCompletionTokens ?? 0));
 			return sortDir === "desc" ? -cmp : cmp;
 		});
-	}, [threads, folders, search, sortField, sortDir]);
-
-	// Build flat tree entries from stable selectors
-	const flatEntries = useMemo((): TreeEntry[] => {
 		const entries: TreeEntry[] = [];
 		for (const folder of folders) {
 			entries.push({ id: folder.id, parentId: "root", type: "folder" });
 		}
-		for (const [id, t] of Object.entries(threads)) {
-			const thread = t as IChatThread;
-			const parentId = thread.parentId ?? thread.folderId ?? "root";
-			entries.push({ id, parentId, type: "thread" });
-		}
+		entries.push(...threadEntries);
 		return entries;
-	}, [threads, folders]);
+	}, [threads, folders, sortField, sortDir]);
 
-	// Build tree
+	// Build tree — only apply folder-before-thread ordering (threads already sorted)
 	const tree = useMemo(() => {
 		const result = arrayToTree(flatEntries, {
 			id: "id",
@@ -736,20 +757,7 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 			rootParentIds: { root: true },
 			dataField: null,
 		});
-		// Sort: folders before threads at every level
-		function sortChildren(nodes: TreeEntry[]) {
-			nodes.sort((a, b) => {
-				if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-				return 0;
-			});
-			for (const node of nodes) {
-				if (node.children?.length) {
-					sortChildren(node.children);
-				}
-			}
-		}
-		sortChildren(result);
-		return result;
+		return result as TreeEntry[];
 	}, [flatEntries]);
 
 	// Handlers — call API, SSE updates store
@@ -895,20 +903,20 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 		],
 	);
 
-	// When searching, render flat list
-	if (search) {
-		return (
-			<ThreadListPrimitive.Root className="aui-root aui-thread-list-root flex flex-col flex-1 min-h-0">
-				<Box px="3" flex="1" overflowY="auto">
-					<VStack gap="1" align="start" w="full">
-						{sortedThreads.map((thread) => (
-							<FlatSearchThreadItem key={thread.id} thread={thread} />
-						))}
-					</VStack>
-				</Box>
-			</ThreadListPrimitive.Root>
-		);
-	}
+	// // When searching, render flat list
+	// if (search) {
+	// 	return (
+	// 		<ThreadListPrimitive.Root className="aui-root aui-thread-list-root flex flex-col flex-1 min-h-0">
+	// 			<Box px="3" flex="1" overflowY="auto">
+	// 				<VStack gap="1" align="start" w="full">
+	// 					{sortedThreads.map((thread) => (
+	// 						<FlatSearchThreadItem key={thread.id} thread={thread} />
+	// 					))}
+	// 				</VStack>
+	// 			</Box>
+	// 		</ThreadListPrimitive.Root>
+	// 	);
+	// }
 
 	const sortLabels = useMemo(
 		() => ({
@@ -1036,14 +1044,13 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 				>
 					<VStack align="start" gap="0" w="full">
 						{tree
-							.filter((n) => n.type === "folder")
+							.filter((node) => node.type === "folder")
 							.map((node) => (
 								<TreeNode key={node.id} node={node} />
 							))}
 						<div id="root-starred" style={{ width: "100%" }} />
-						<div id="root-default" style={{ width: "100%" }} />
 						{tree
-							.filter((n) => n.type === "thread")
+							.filter((node) => node.type === "thread")
 							.map((node) => (
 								<TreeNode key={node.id} node={node} />
 							))}

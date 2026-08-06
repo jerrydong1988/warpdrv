@@ -7,6 +7,7 @@ import { useStore } from "@/store";
 interface IChatThread extends IBridgeChatThread {
 	messageCount?: number;
 	totalTokens?: number;
+	starred?: boolean;
 }
 
 // ============================================================
