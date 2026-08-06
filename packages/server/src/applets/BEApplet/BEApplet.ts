@@ -275,9 +275,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					if (typeof lastMsg.content === "string") {
 						newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
 					} else {
-						const partIndex = lastMsg.content.findIndex((p) => p.type === "text");
-						if (partIndex >= 0) {
-							const newContent = lastMsg.content.map((p, i) =>
+						const partIndex = lastMsg.content?.findIndex((p) => p.type === "text");
+						if (partIndex && partIndex >= 0) {
+							const newContent = lastMsg.content!.map((p, i) =>
 								i === partIndex
 									? { ...p, text: (p.text ?? "") + trailingContent }
 									: p,
@@ -285,7 +285,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							newLastMsg = { ...lastMsg, content: newContent };
 						} else {
 							const newContent = [
-								...lastMsg.content,
+								...(lastMsg.content || []),
 								{ type: "text", text: trailingContent },
 							];
 							newLastMsg = { ...lastMsg, content: newContent };
@@ -408,13 +408,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			// Filter guardrails by triggerOnTools
 			const applicableGuardrails = activeGuardrails.filter((g) => {
 				if (!g.triggerOnTools) return true;
-				const tools =
-					typeof g.triggerOnTools[0] === "string"
-						? g.triggerOnTools
-								.split(",")
-								.map((t: string) => t.trim().toLowerCase())
-								.filter(Boolean)
-						: g.triggerOnTools.map((t: any) => t.toolName.toLowerCase());
+				const tools = g.triggerOnTools.map((t: any) => t.toolName.toLowerCase());
 				if (!tools.length) return true;
 				return tools.some((t) => toolNames.includes(t));
 			});
@@ -432,6 +426,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
 			// Process one by one, save each result
 			for (const guardrail of applicableGuardrails) {
+				let inferenceResult: any;
 				try {
 					if (!guardrail.serverId) {
 						throw (
@@ -442,7 +437,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					if (!grServer)
 						throw "[BEApplet] Guardrail server not found:" + guardrail.serverId;
 
-					const grInferenceUrl = `http://127.0.0.1:${grServer.port}` || inferenceUrl;
+					const grInferenceUrl = `http://127.0.0.1:${grServer.port}`;
 
 					const toText = (m: TOpenAIMessage) => {
 						if (m.role === "system") {
@@ -510,7 +505,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						"Conversation/Message is below as given by the user.";
 					const prompt = contextTexts.join("\n");
 
-					const result = await api.eventNode.invoke(
+					inferenceResult = await api.eventNode.invoke(
 						"/warpcore",
 						"bridge.handlePureCompletion",
 						{
@@ -536,7 +531,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					);
 
 					const text =
-						result.content?.filter((c: any) => c.type === "text")?.[0]?.text || "Error";
+						inferenceResult.content?.filter((c: any) => c.type === "text")?.[0]?.text ||
+						"Error";
 					const parsed = parseMessyLLMArray(text) as IGuardrailIssue[];
 					if (!parsed) {
 						throw new Error("Failed to parse guardrail JSON output");
@@ -563,7 +559,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 				} catch (err) {
 					console.error("[BEApplet] Guardrail error:", guardrail.name, err);
 					const errorMessage = err instanceof Error ? err.message : String(err);
-					const text = result?.content?.filter((c: any) => c.type === "text")?.[0]?.text;
+					const rawResponse = inferenceResult?.content?.filter(
+						(c: any) => c.type === "text",
+					)?.[0]?.text;
 					const existing = (await api.eventNode.invoke(
 						"/warpcore",
 						"bridge.getMessageState",
@@ -580,7 +578,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							guardrailResults: { ...currentResults, [guardrail.name]: [] },
 							guardrailErrors: {
 								...currentErrors,
-								[guardrail.name]: { message: errorMessage, rawResponse: text },
+								[guardrail.name]: { message: errorMessage, rawResponse },
 							},
 						},
 					});

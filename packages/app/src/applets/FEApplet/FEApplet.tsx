@@ -64,6 +64,7 @@ import {
 } from "@/api/mode-services";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { ServerPicker } from "@/components/ServerPicker";
+import { WithErrorBoundary } from "@/components/WithErrorBoundary";
 import { useDependantState } from "@/hooks/useDependantState";
 import type { IExtractedSlashCommand } from "@/pages/Chat/assistant-ui/docToString";
 import type { TDropdownItem } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown";
@@ -1003,11 +1004,13 @@ const GuardrailsPanel = React.memo(() => {
 	}
 
 	return (
-		<VStack gap="2" p="3" align="stretch">
-			{items.map((g) => (
-				<GuardrailRow key={g.name} guardrail={g} />
-			))}
-		</VStack>
+		<WithErrorBoundary name="GuardrailsPanel">
+			<VStack gap="2" p="3" align="stretch">
+				{items.map((g) => (
+					<GuardrailRow key={g.name} guardrail={g} />
+				))}
+			</VStack>
+		</WithErrorBoundary>
 	);
 });
 
@@ -1509,7 +1512,6 @@ const GuardrailResults = React.memo(
 			string,
 			IGuardrailError
 		>;
-		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 
 		const entries = useMemo(() => (results ? Object.entries(results) : EMPTY_ARRAY), [results]);
 		const processingNames = useMemo(
