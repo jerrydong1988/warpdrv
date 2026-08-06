@@ -183,10 +183,11 @@ const ThreadActionsContext = React.createContext<ThreadActions | null>(null);
 // TreeNode — Pure dispatcher (no state)
 // ============================================================
 function TreeNode({ node }: { node: TreeEntry }) {
-	if (node.type === "thread") {
-		return <ThreadNode node={node} />;
-	}
-	return <FolderNode node={node} />;
+	return (
+		<Box w="full">
+			{node.type === "thread" ? <ThreadNode node={node} /> : <FolderNode node={node} />}
+		</Box>
+	);
 }
 
 // ============================================================
@@ -432,8 +433,8 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 						.map((child) => (
 							<TreeNode key={child.id} node={child} />
 						))}
-					<div id={`${node.id}-starred`} />
-					<div id={`${node.id}-default`} />
+					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
+					<div id={`${node.id}-default`} style={{ width: "100%" }} />
 					{node.children
 						.filter((c) => c.type === "thread")
 						.map((child) => (
@@ -620,8 +621,8 @@ function FolderNode({ node }: { node: TreeEntry }) {
 						.map((child) => (
 							<TreeNode key={child.id} node={child} />
 						))}
-					<div id={`${node.id}-starred`} />
-					<div id={`${node.id}-default`} />
+					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
+					<div id={`${node.id}-default`} style={{ width: "100%" }} />
 					{node.children
 						.filter((c) => c.type === "thread")
 						.map((child) => (
@@ -919,8 +920,8 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 							.map((node) => (
 								<TreeNode key={node.id} node={node} />
 							))}
-						<div id="root-starred" />
-						<div id="root-default" />
+						<div id="root-starred" style={{ width: "100%" }} />
+						<div id="root-default" style={{ width: "100%" }} />
 						{tree
 							.filter((n) => n.type === "thread")
 							.map((node) => (
