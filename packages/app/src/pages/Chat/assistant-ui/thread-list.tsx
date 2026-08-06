@@ -219,9 +219,8 @@ const ThreadNode = React.memo(({ node }: { node: TreeEntry }) => {
 	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
 	useLayoutEffect(() => {
-		setPortalTarget(
-			document.getElementById(`${containerId}-${metaFields.starred ? "starred" : null}`),
-		);
+		if (!metaFields.starred) return;
+		setPortalTarget(document.getElementById(`${containerId}-starred`));
 	}, [containerId, metaFields.starred]);
 
 	const handleSelect = useCallback(() => {
@@ -665,7 +664,6 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 					}}
 				>
 					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
-					<div id={`${node.id}-default`} style={{ width: "100%" }} />
 					{node.children
 						.filter((c) => c.type === "thread")
 						.map((child) => (
