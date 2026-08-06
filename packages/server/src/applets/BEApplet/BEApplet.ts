@@ -169,10 +169,10 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 				request: { messageState?: Record<string, unknown>; threadId: string };
 			};
 
-			const commands = payload.request.messageState?.slashCommands as
-				| Array<{ name: string }>
-				| undefined;
-			if (commands?.some((c) => c.name === "compact")) return;
+			// const commands = payload.request.messageState?.slashCommands as
+			// 	| Array<{ name: string }>
+			// 	| undefined;
+			// if (commands?.some((c) => c.name === "compact")) return;
 
 			const threadState = (await api.eventNode.invoke(
 				"/warpcore",

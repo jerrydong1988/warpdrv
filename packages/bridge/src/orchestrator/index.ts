@@ -889,7 +889,7 @@ export class Orchestrator {
 				threadId: request.threadId,
 				serverName: serverName ?? "",
 				toolName: tc.name,
-				arguments: JSON.stringify(args),
+				arguments: tc.arguments || "{}",
 				result: validationError ? JSON.stringify({ error: validationError }) : null,
 				status: validationError ? EToolCallStatus.ERROR : EToolCallStatus.PENDING,
 				error: validationError,
