@@ -17,16 +17,21 @@ import {
 	XIcon,
 } from "lucide-react";
 import { arrayToTree } from "performant-array-to-tree";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+	type DragEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { IoStarSharp } from "react-icons/io5";
-import { fetchWorkspace } from "@/api/services";
+import { fetchWorkspace, reorderFolders } from "@/api/services";
 import { useThreadsAndFolders } from "@/hooks/useThreadsAndFolders";
 import { useStore } from "@/store";
 
-// ============================================================
-// Types
-// ============================================================
 interface IChatThread extends IBridgeChatThread {
 	messageCount?: number;
 	totalTokens?: number;
@@ -42,9 +47,6 @@ interface TreeEntry {
 	children?: TreeEntry[];
 }
 
-// ============================================================
-// RenamePopover
-// ============================================================
 function RenamePopover({
 	value,
 	onSave,
@@ -94,9 +96,6 @@ function RenamePopover({
 	);
 }
 
-// ============================================================
-// ConfirmDialog
-// ============================================================
 function ConfirmDialog({
 	message,
 	onConfirm,
@@ -166,9 +165,6 @@ function ConfirmDialog({
 	);
 }
 
-// ============================================================
-// Context — Thread actions (avoids prop drilling through tree)
-// ============================================================
 interface ThreadActions {
 	onRenameThread: (id: string, title: string) => void;
 	onDeleteThread: (id: string) => void;
@@ -176,12 +172,12 @@ interface ThreadActions {
 	onSelectThread: (id: string) => void;
 	onRenameFolder: (id: string, name: string) => void;
 	onDeleteFolder: (id: string) => void;
+	onDropThread: (threadId: string, folderId: string | null) => void;
+	onReorderFolder: (fromFolderId: string, toFolderId: string) => void;
+	onSetParent: (threadId: string, parentId: string | null) => void;
 }
 const ThreadActionsContext = React.createContext<ThreadActions | null>(null);
 
-// ============================================================
-// TreeNode — Pure dispatcher (no state)
-// ============================================================
 function TreeNode({ node }: { node: TreeEntry }) {
 	return (
 		<Box w="full">
@@ -190,9 +186,6 @@ function TreeNode({ node }: { node: TreeEntry }) {
 	);
 }
 
-// ============================================================
-// ThreadNode
-// ============================================================
 function ThreadNode({ node }: { node: TreeEntry }) {
 	const thread = useStore((s) => s.threads[node.id]);
 	if (!thread) return null;
@@ -258,8 +251,19 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 				className={`group ${selected ? "selected" : ""}`}
 				bg={selected ? "var(--wc-bg-card)" : undefined}
 				border={selected ? "1px solid var(--wc-border-strong)" : undefined}
+				draggable
+				onDragStart={(e: DragEvent) => {
+					e.dataTransfer.setData("threadId", thread.id);
+				}}
+				onDrop={(e: DragEvent) => {
+					const draggedThreadId = e.dataTransfer.getData("threadId");
+					if (draggedThreadId && draggedThreadId !== thread.id) {
+						e.stopPropagation();
+						actions?.onSetParent(draggedThreadId, thread.id);
+					}
+				}}
 				onClick={handleSelect}
-				style={{ minHeight: "32px", cursor: "pointer" }}
+				style={{ minHeight: "32px", cursor: "grab" }}
 				display="flex"
 				alignItems="center"
 				gap="1"
@@ -446,15 +450,13 @@ function ThreadNode({ node }: { node: TreeEntry }) {
 	);
 }
 
-// ============================================================
-// FolderNode
-// ============================================================
 function FolderNode({ node }: { node: TreeEntry }) {
 	const folder = useStore((s) => s.folders.find((f) => f.id === node.id));
 	if (!folder) return null;
 
 	const [expanded, setExpanded] = useState(false);
 	const [renaming, setRenaming] = useState(false);
+	const [dragOver, setDragOver] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(
 		() => triggerRef.current?.getBoundingClientRect(),
@@ -481,24 +483,67 @@ function FolderNode({ node }: { node: TreeEntry }) {
 		return allThreads.filter((t) => t.folderId === folder.id).length;
 	}, [folder.id]);
 
+	// Thread drop target on folder container
+	function handleThreadDragOver(e: DragEvent) {
+		const threadId = e.dataTransfer.getData("threadId");
+		if (threadId) {
+			e.preventDefault();
+			setDragOver(true);
+		}
+	}
+	function handleThreadDragLeave() {
+		setDragOver(false);
+	}
+	function handleThreadDrop(e: DragEvent) {
+		e.preventDefault();
+		setDragOver(false);
+		const threadId = e.dataTransfer.getData("threadId");
+		if (threadId) actions?.onDropThread(threadId, folder.id);
+	}
+
+	// Folder reordering via drag-and-drop on folder header
+	function handleFolderDragStart(e: DragEvent) {
+		e.dataTransfer.setData("folderId", folder.id);
+		e.dataTransfer.effectAllowed = "move";
+	}
+	function handleFolderDragOver(e: DragEvent) {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+	}
+	function handleFolderDrop(e: DragEvent) {
+		e.preventDefault();
+		const fromFolderId = e.dataTransfer.getData("folderId");
+		if (fromFolderId && fromFolderId !== folder.id) {
+			actions?.onReorderFolder(fromFolderId, folder.id);
+		}
+	}
+
 	return (
 		<Box
 			w="full"
 			my="1"
 			borderRadius="lg"
 			border="1px solid var(--wc-border-default)"
-			bg="var(--wc-bg-subtle)"
+			bg={dragOver ? "var(--wc-accent-blue-bg-10)" : "var(--wc-bg-subtle)"}
 			transition="background 0.15s"
+			onDragOver={handleThreadDragOver}
+			onDragLeave={handleThreadDragLeave}
+			onDrop={handleThreadDrop}
 		>
 			<HStack
 				gap="1"
 				px="2"
 				py="1.5"
-				cursor="pointer"
+				cursor="grab"
 				borderRadius="md"
 				position="relative"
 				_hover={{ bg: "var(--wc-bg-card)" }}
 				onClick={handleToggle}
+				draggable
+				onDragStart={handleFolderDragStart}
+				onDragOver={handleFolderDragOver}
+				onDrop={handleFolderDrop}
+				data-foldertype="folder"
 			>
 				{expanded ? (
 					<ChevronDownIcon
@@ -601,7 +646,7 @@ function FolderNode({ node }: { node: TreeEntry }) {
 				</Menu.Root>
 			</HStack>
 
-			{expanded && node.children && node.children.length > 0 && (
+			{expanded && (
 				<Box
 					pl="4"
 					mb="2"
@@ -615,11 +660,6 @@ function FolderNode({ node }: { node: TreeEntry }) {
 						},
 					}}
 				>
-					{node.children
-						.filter((c) => c.type === "folder")
-						.map((child) => (
-							<TreeNode key={child.id} node={child} />
-						))}
 					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
 					<div id={`${node.id}-default`} style={{ width: "100%" }} />
 					{node.children
@@ -627,15 +667,17 @@ function FolderNode({ node }: { node: TreeEntry }) {
 						.map((child) => (
 							<TreeNode key={child.id} node={child} />
 						))}
+					{(node.children ?? []).filter((c) => c.type === "thread").length === 0 && (
+						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">
+							Drop threads here
+						</Text>
+					)}
 				</Box>
 			)}
 		</Box>
 	);
 }
 
-// ============================================================
-// ThreadList — Main component
-// ============================================================
 export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => void }) => {
 	const api = useThreadsAndFolders();
 	const [search, setSearch] = useState("");
@@ -645,6 +687,7 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 		type: "folder" | "thread";
 		id: string;
 	} | null>(null);
+	const [rootDragOver, setRootDragOver] = useState(false);
 
 	// Stable selectors — Record and array references only change when data changes
 	const threads = useStore((s) => s.threads);
@@ -760,6 +803,72 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 		setConfirmDelete(null);
 	}, [confirmDelete, api.removeThread, api.removeFolder]);
 
+	// Drag-and-drop handlers
+	const handleDropThread = useCallback(
+		async (threadId: string, folderId: string | null) => {
+			await api.patchThread(threadId, { folderId });
+		},
+		[api.patchThread],
+	);
+
+	const handleReorderFolder = useCallback(
+		async (fromFolderId: string, toFolderId: string) => {
+			if (fromFolderId === toFolderId) return;
+			const foldersArr = useStore.getState().folders;
+			const fromIdx = foldersArr.findIndex((f) => f.id === fromFolderId);
+			const toIdx = foldersArr.findIndex((f) => f.id === toFolderId);
+			if (fromIdx === -1 || toIdx === -1) return;
+			const updates: Array<{ id: string; sortOrder: number }> = [];
+			if (fromIdx < toIdx) {
+				for (let i = fromIdx + 1; i <= toIdx; i++) {
+					const f = foldersArr[i];
+					if (f) updates.push({ id: f.id, sortOrder: f.sortOrder - 1 });
+				}
+				const toFolder = foldersArr[toIdx];
+				if (toFolder) updates.push({ id: fromFolderId, sortOrder: toFolder.sortOrder });
+			} else {
+				for (let i = toIdx; i < fromIdx; i++) {
+					const f = foldersArr[i];
+					if (f) updates.push({ id: f.id, sortOrder: f.sortOrder + 1 });
+				}
+				const toFolder = foldersArr[toIdx];
+				if (toFolder) updates.push({ id: fromFolderId, sortOrder: toFolder.sortOrder });
+			}
+			await reorderFolders(updates);
+			await api.refreshFolders();
+		},
+		[api.refreshFolders],
+	);
+
+	const handleRootDragOver = useCallback((e: DragEvent) => {
+		const threadId = (e as DragEvent).dataTransfer.getData("threadId");
+		if (threadId) {
+			e.preventDefault();
+			setRootDragOver(true);
+		}
+	}, []);
+
+	const handleRootDragLeave = useCallback(() => {
+		setRootDragOver(false);
+	}, []);
+
+	const handleRootDrop = useCallback(
+		(e: DragEvent) => {
+			e.preventDefault();
+			setRootDragOver(false);
+			const threadId = e.dataTransfer.getData("threadId");
+			if (threadId) handleDropThread(threadId, null);
+		},
+		[handleDropThread],
+	);
+
+	const handleSetParent = useCallback(
+		async (threadId: string, parentId: string | null) => {
+			await api.patchThread(threadId, { parentId });
+		},
+		[api.patchThread],
+	);
+
 	// Context value — stable reference
 	const actions = useMemo<ThreadActions>(
 		() => ({
@@ -769,6 +878,9 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 			onSelectThread: handleSelectThread,
 			onRenameFolder: handleRenameFolder,
 			onDeleteFolder: handleDeleteFolder,
+			onDropThread: handleDropThread,
+			onReorderFolder: handleReorderFolder,
+			onSetParent: handleSetParent,
 		}),
 		[
 			handleRenameThread,
@@ -777,6 +889,9 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 			handleSelectThread,
 			handleRenameFolder,
 			handleDeleteFolder,
+			handleDropThread,
+			handleReorderFolder,
+			handleSetParent,
 		],
 	);
 
@@ -912,6 +1027,12 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 					}}
 					borderTop="1px solid var(--wc-border-subtle)"
 					pt="2"
+					onDragOver={handleRootDragOver}
+					onDragLeave={handleRootDragLeave}
+					onDrop={handleRootDrop}
+					bg={rootDragOver ? "var(--wc-bg-hover)" : "transparent"}
+					borderRadius="md"
+					transition="background 0.15s"
 				>
 					<VStack align="start" gap="0" w="full">
 						{tree
@@ -947,9 +1068,6 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 	);
 });
 
-// ============================================================
-// FlatSearchThreadItem — Simple row for search results (no nesting)
-// ============================================================
 function FlatSearchThreadItem({ thread }: { thread: IChatThread }) {
 	const currentThreadId = useStore((s) => s.currentThreadId);
 	const setCurrentThreadId = useStore((s) => s.setCurrentThreadId);
