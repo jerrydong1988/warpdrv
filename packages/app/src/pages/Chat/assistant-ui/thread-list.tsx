@@ -17,7 +17,8 @@ import {
 	XIcon,
 } from "lucide-react";
 import { arrayToTree } from "performant-array-to-tree";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { IoStarSharp } from "react-icons/io5";
 import { fetchWorkspace } from "@/api/services";
 import { useThreadsAndFolders } from "@/hooks/useThreadsAndFolders";
@@ -179,32 +180,23 @@ interface ThreadActions {
 const ThreadActionsContext = React.createContext<ThreadActions | null>(null);
 
 // ============================================================
-// TreeNode — Generic recursive tree node (thread or folder)
+// TreeNode — Pure dispatcher (no state)
 // ============================================================
 function TreeNode({ node }: { node: TreeEntry }) {
-	const [expanded, setExpanded] = useState(false);
-
 	if (node.type === "thread") {
-		return <ThreadNode node={node} expanded={expanded} setExpanded={setExpanded} />;
+		return <ThreadNode node={node} />;
 	}
-	return <FolderNode node={node} expanded={expanded} setExpanded={setExpanded} />;
+	return <FolderNode node={node} />;
 }
 
 // ============================================================
 // ThreadNode
 // ============================================================
-function ThreadNode({
-	node,
-	expanded,
-	setExpanded,
-}: {
-	node: TreeEntry;
-	expanded: boolean;
-	setExpanded: (v: boolean) => void;
-}) {
+function ThreadNode({ node }: { node: TreeEntry }) {
 	const thread = useStore((s) => s.threads[node.id]);
 	if (!thread) return null;
 
+	const [expanded, setExpanded] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(
@@ -229,6 +221,15 @@ function ThreadNode({
 		}
 	}, [thread.meta]);
 
+	const containerId = node.parentId;
+	const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+	useLayoutEffect(() => {
+		setPortalTarget(
+			document.getElementById(`${containerId}-${metaFields.starred ? "starred" : "default"}`),
+		);
+	}, [containerId, metaFields.starred]);
+
 	const handleSelect = useCallback(() => {
 		const folderId = thread.folderId;
 		if (folderId) {
@@ -247,8 +248,10 @@ function ThreadNode({
 		return "empty";
 	}, [thread.totalPromptTokens, thread.totalCompletionTokens, thread.messageCount]);
 
-	return (
-		<>
+	if (!portalTarget) return null;
+
+	return createPortal(
+		<Box w="100%">
 			<Box
 				w="100%"
 				className={`group ${selected ? "selected" : ""}`}
@@ -424,30 +427,33 @@ function ThreadNode({
 						},
 					}}
 				>
-					{node.children.map((child) => (
-						<TreeNode key={child.id} node={child} />
-					))}
+					{node.children
+						.filter((c) => c.type === "folder")
+						.map((child) => (
+							<TreeNode key={child.id} node={child} />
+						))}
+					<div id={`${node.id}-starred`} />
+					<div id={`${node.id}-default`} />
+					{node.children
+						.filter((c) => c.type === "thread")
+						.map((child) => (
+							<TreeNode key={child.id} node={child} />
+						))}
 				</Box>
 			)}
-		</>
+		</Box>,
+		portalTarget,
 	);
 }
 
 // ============================================================
 // FolderNode
 // ============================================================
-function FolderNode({
-	node,
-	expanded,
-	setExpanded,
-}: {
-	node: TreeEntry;
-	expanded: boolean;
-	setExpanded: (v: boolean) => void;
-}) {
+function FolderNode({ node }: { node: TreeEntry }) {
 	const folder = useStore((s) => s.folders.find((f) => f.id === node.id));
 	if (!folder) return null;
 
+	const [expanded, setExpanded] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(
@@ -476,131 +482,129 @@ function FolderNode({
 	}, [folder.id]);
 
 	return (
-		<>
-			<Box
-				w="full"
-				my="1"
-				borderRadius="lg"
-				border="1px solid var(--wc-border-default)"
-				bg="var(--wc-bg-subtle)"
-				transition="background 0.15s"
+		<Box
+			w="full"
+			my="1"
+			borderRadius="lg"
+			border="1px solid var(--wc-border-default)"
+			bg="var(--wc-bg-subtle)"
+			transition="background 0.15s"
+		>
+			<HStack
+				gap="1"
+				px="2"
+				py="1.5"
+				cursor="pointer"
+				borderRadius="md"
+				position="relative"
+				_hover={{ bg: "var(--wc-bg-card)" }}
+				onClick={handleToggle}
 			>
-				<HStack
-					gap="1"
-					px="2"
-					py="1.5"
-					cursor="pointer"
-					borderRadius="md"
-					position="relative"
-					_hover={{ bg: "var(--wc-bg-card)" }}
-					onClick={handleToggle}
-				>
-					{expanded ? (
-						<ChevronDownIcon
-							size={12}
-							style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-						/>
-					) : (
-						<ChevronRightIcon
-							size={12}
-							style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-						/>
-					)}
-					{expanded ? (
-						<FolderOpenIcon
-							size={14}
-							style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-						/>
-					) : (
-						<FolderIcon
-							size={14}
-							style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-						/>
-					)}
-					{renaming ? (
-						<RenamePopover
-							value={folder.name}
-							onSave={(v) => {
-								actions?.onRenameFolder(folder.id, v);
-								setRenaming(false);
-							}}
-							onCancel={() => setRenaming(false)}
-						/>
-					) : (
-						<Text
-							flex="1"
-							fontSize="14px"
-							fontWeight="500"
-							color="var(--wc-text-secondary)"
-							overflow="hidden"
-							textOverflow="ellipsis"
-							whiteSpace="nowrap"
-							ml="1"
-							minW={0}
-						>
-							{folder.name}
-						</Text>
-					)}
-					<Text fontSize="12px" color="var(--wc-text-faint)" flexShrink={0}>
-						{threadCount}
+				{expanded ? (
+					<ChevronDownIcon
+						size={12}
+						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
+					/>
+				) : (
+					<ChevronRightIcon
+						size={12}
+						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
+					/>
+				)}
+				{expanded ? (
+					<FolderOpenIcon
+						size={14}
+						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
+					/>
+				) : (
+					<FolderIcon
+						size={14}
+						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
+					/>
+				)}
+				{renaming ? (
+					<RenamePopover
+						value={folder.name}
+						onSave={(v) => {
+							actions?.onRenameFolder(folder.id, v);
+							setRenaming(false);
+						}}
+						onCancel={() => setRenaming(false)}
+					/>
+				) : (
+					<Text
+						flex="1"
+						fontSize="14px"
+						fontWeight="500"
+						color="var(--wc-text-secondary)"
+						overflow="hidden"
+						textOverflow="ellipsis"
+						whiteSpace="nowrap"
+						ml="1"
+						minW={0}
+					>
+						{folder.name}
 					</Text>
-					<Menu.Root positioning={{ getAnchorRect }}>
-						<Menu.Trigger asChild>
-							<Box
-								ref={triggerRef as any}
-								as="button"
-								opacity={0.4}
-								cursor="pointer"
-								p="0.5"
-								className="group-hover:!opacity-100"
-								_hover={{ opacity: 1, bg: "var(--wc-bg-hover)" }}
-								borderRadius="sm"
-								type="button"
-								onClick={(e) => e.stopPropagation()}
+				)}
+				<Text fontSize="12px" color="var(--wc-text-faint)" flexShrink={0}>
+					{threadCount}
+				</Text>
+				<Menu.Root positioning={{ getAnchorRect }}>
+					<Menu.Trigger asChild>
+						<Box
+							ref={triggerRef as any}
+							as="button"
+							opacity={0.4}
+							cursor="pointer"
+							p="0.5"
+							className="group-hover:!opacity-100"
+							_hover={{ opacity: 1, bg: "var(--wc-bg-hover)" }}
+							borderRadius="sm"
+							type="button"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<MoreHorizontalIcon size={12} />
+						</Box>
+					</Menu.Trigger>
+					<Menu.Positioner>
+						<Menu.Content
+							bg="var(--wc-bg-elevated)"
+							borderWidth="1px"
+							borderColor="var(--wc-border-overlay)"
+							borderRadius="md"
+							py="1"
+							minW="120px"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<Menu.Item
+								value="rename"
+								onClick={() => setRenaming(true)}
+								style={{ fontSize: "12px", color: "var(--wc-text-primary)" }}
 							>
-								<MoreHorizontalIcon size={12} />
-							</Box>
-						</Menu.Trigger>
-						<Menu.Positioner>
-							<Menu.Content
-								bg="var(--wc-bg-elevated)"
-								borderWidth="1px"
-								borderColor="var(--wc-border-overlay)"
-								borderRadius="md"
-								py="1"
-								minW="120px"
-								onClick={(e) => e.stopPropagation()}
+								<HStack gap="2">
+									<PencilIcon size={12} />
+									<Text>Rename</Text>
+								</HStack>
+							</Menu.Item>
+							<Menu.Item
+								value="delete"
+								onClick={() => actions?.onDeleteFolder(folder.id)}
+								style={{ fontSize: "12px", color: "var(--wc-accent-red)" }}
 							>
-								<Menu.Item
-									value="rename"
-									onClick={() => setRenaming(true)}
-									style={{ fontSize: "12px", color: "var(--wc-text-primary)" }}
-								>
-									<HStack gap="2">
-										<PencilIcon size={12} />
-										<Text>Rename</Text>
-									</HStack>
-								</Menu.Item>
-								<Menu.Item
-									value="delete"
-									onClick={() => actions?.onDeleteFolder(folder.id)}
-									style={{ fontSize: "12px", color: "var(--wc-accent-red)" }}
-								>
-									<HStack gap="2">
-										<TrashIcon size={12} />
-										<Text>Delete</Text>
-									</HStack>
-								</Menu.Item>
-							</Menu.Content>
-						</Menu.Positioner>
-					</Menu.Root>
-				</HStack>
-			</Box>
+								<HStack gap="2">
+									<TrashIcon size={12} />
+									<Text>Delete</Text>
+								</HStack>
+							</Menu.Item>
+						</Menu.Content>
+					</Menu.Positioner>
+				</Menu.Root>
+			</HStack>
 
 			{expanded && node.children && node.children.length > 0 && (
 				<Box
 					pl="4"
-					my="1"
+					mb="2"
 					maxH="600px"
 					overflowY="auto"
 					css={{
@@ -611,12 +615,21 @@ function FolderNode({
 						},
 					}}
 				>
-					{node.children.map((child) => (
-						<TreeNode key={child.id} node={child} />
-					))}
+					{node.children
+						.filter((c) => c.type === "folder")
+						.map((child) => (
+							<TreeNode key={child.id} node={child} />
+						))}
+					<div id={`${node.id}-starred`} />
+					<div id={`${node.id}-default`} />
+					{node.children
+						.filter((c) => c.type === "thread")
+						.map((child) => (
+							<TreeNode key={child.id} node={child} />
+						))}
 				</Box>
 			)}
-		</>
+		</Box>
 	);
 }
 
@@ -673,13 +686,27 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 
 	// Build tree
 	const tree = useMemo(() => {
-		return arrayToTree(flatEntries, {
+		const result = arrayToTree(flatEntries, {
 			id: "id",
 			parentId: "parentId",
 			childrenField: "children",
 			rootParentIds: { root: true },
 			dataField: null,
 		});
+		// Sort: folders before threads at every level
+		function sortChildren(nodes: TreeEntry[]) {
+			nodes.sort((a, b) => {
+				if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+				return 0;
+			});
+			for (const node of nodes) {
+				if (node.children?.length) {
+					sortChildren(node.children);
+				}
+			}
+		}
+		sortChildren(result);
+		return result;
 	}, [flatEntries]);
 
 	// Handlers — call API, SSE updates store
@@ -871,9 +898,11 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 
 				{/* Tree rendering */}
 				<Box
+					w="full"
 					px="3"
 					flex="1"
 					overflowY="auto"
+					overflowX="hidden"
 					css={{
 						"&::-webkit-scrollbar": { width: "4px" },
 						"&::-webkit-scrollbar-thumb": {
@@ -885,9 +914,18 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 					pt="2"
 				>
 					<VStack align="start" gap="0" w="full">
-						{tree.map((node) => (
-							<TreeNode key={node.id} node={node} />
-						))}
+						{tree
+							.filter((n) => n.type === "folder")
+							.map((node) => (
+								<TreeNode key={node.id} node={node} />
+							))}
+						<div id="root-starred" />
+						<div id="root-default" />
+						{tree
+							.filter((n) => n.type === "thread")
+							.map((node) => (
+								<TreeNode key={node.id} node={node} />
+							))}
 					</VStack>
 				</Box>
 
