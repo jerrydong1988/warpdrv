@@ -13,11 +13,23 @@
 		"build": "npm run build -w @warpcore/app",
 		"build:desktop": "npm run build -w @warpcore/desktop",
 		"release": "bash release.sh",
-		"postinstall": "patch-package"
+		"postinstall": "patch-package",
+		"fmt": "biome check --write .",
+		"lint": "eslint ."
+	},
+	"lint-staged": {
+		"*.{ts,tsx,js,jsx,json,css}": "biome check --write --no-errors-on-unmatched"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "2.5.7",
+		"@eslint/js": "^10.0.1",
 		"concurrently": "^9.1.2",
 		"cross-env": "^10.1.0",
-		"patch-package": "^8.0.1"
+		"eslint": "^10.8.0",
+		"eslint-plugin-react-hooks": "^7.1.1",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.3.0",
+		"patch-package": "^8.0.1",
+		"typescript-eslint": "^8.66.0"
 	}
 }
