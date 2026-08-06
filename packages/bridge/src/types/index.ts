@@ -119,6 +119,7 @@ export interface IChatThread {
 	id: TThreadId;
 	title: string;
 	folderId: TFolderId | null;
+	parentId: TThreadId | null;
 	systemPrompt: string;
 	meta: string; // JSON blob — opaque to bridge
 	totalPromptTokens: number;
@@ -131,6 +132,7 @@ export interface IChatThreadCreatePayload {
 	id?: TThreadId;
 	title?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 	systemPrompt?: string;
 	meta?: string;
 }
@@ -175,6 +177,7 @@ export interface ISearchThreadResult {
 export interface IThreadPatch {
 	title?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 	systemPrompt?: string;
 	meta?: string; // JSON blob replacement
 	totalPromptTokens?: number;
@@ -366,6 +369,7 @@ export interface ICompletionRequest {
 	threadId: TThreadId;
 	userMessage?: ICompletionUserMessage;
 	parentId?: TMessageId | null;
+	threadParentId?: TThreadId | null;
 	serverId?: string;
 	whisperServerId?: string;
 	enableAutoEmbed?: boolean;
@@ -443,7 +447,11 @@ export type IBridgeEvent =
 	| { type: 'embedding.removed'; messageId: TMessageId; modelId: string; topic: string }
 	| { type: 'workspace_state.updated'; folderId: TFolderId; data: Record<string, unknown> }
 	| { type: 'thread_state.updated'; threadId: TThreadId; data: Record<string, unknown> }
-	| { type: 'message_state.updated'; messageId: TMessageId; data: Record<string, unknown> };
+		| { type: 'message_state.updated'; messageId: TMessageId; data: Record<string, unknown> }
+	| { type: 'folder.created'; folder: IFolder }
+	| { type: 'folder.updated'; folderId: TFolderId; updates: Partial<IFolder> }
+	| { type: 'folder.deleted'; folderId: TFolderId }
+	| { type: 'folder.reordered'; folders: IFolder[] };
 
 export interface IMessagePatch {
 	stats?: IChatMessageStats;

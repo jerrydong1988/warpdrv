@@ -268,15 +268,25 @@ export const sseHandlersSlice = (
 			delete state.modes[data.id];
 		}),
 
-		// Guardrails
-		'guardrails:init': (data: Record<string, IGuardrailDefinition>) => setState((state) => {
-			state.guardrails = data;
-		}),
-		'guardrails:update': (data: IGuardrailDefinition) => setState((state) => {
-			state.guardrails[data.id] = data;
-		}),
-		'guardrails:delete': (data: { id: string }) => setState((state) => {
-			delete state.guardrails[data.id];
-		}),
-	},
+				// Guardrails
+				'guardrails:init': (data: Record<string, IGuardrailDefinition>) => setState((state) => {
+					state.guardrails = data;
+				}),
+				'guardrails:update': (data: IGuardrailDefinition) => setState((state) => {
+					state.guardrails[data.id] = data;
+				}),
+				'guardrails:delete': (data: { id: string }) => setState((state) => {
+					delete state.guardrails[data.id];
+				}),
+
+				// Threads
+				'threads:init': (data: Record<string, any>) => setState((state) => {
+					state.threads = data;
+				}),
+
+				// Folders
+				'folders:init': (data: any[]) => setState((state) => {
+					state.folders = data;
+				}),
+			},
 });

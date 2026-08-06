@@ -50,6 +50,10 @@ export function useChatEventsStream() {
 	const applyWorkspaceStateUpdated = useStore(s => s.applyWorkspaceStateUpdated);
 	const applyThreadStateUpdated = useStore(s => s.applyThreadStateUpdated);
 	const applyMessageStateUpdated = useStore(s => s.applyMessageStateUpdated);
+	const applyFolderCreated = useStore(s => s.applyFolderCreated);
+	const applyFolderUpdated = useStore(s => s.applyFolderUpdated);
+	const applyFolderDeleted = useStore(s => s.applyFolderDeleted);
+	const applyFolderReordered = useStore(s => s.applyFolderReordered);
 
 	useEffect(() => {
 		console.log('[Chat SSE] Creating EventSource connection to /api/chat/events');
@@ -188,6 +192,18 @@ case 'inference.ended':
 			case 'message_state.updated':
 				applyMessageStateUpdated(event.messageId, event.data);
 				break;
+			case 'folder.created':
+				applyFolderCreated(event.folder);
+				break;
+			case 'folder.updated':
+				applyFolderUpdated(event.folderId, event.updates);
+				break;
+			case 'folder.deleted':
+				applyFolderDeleted(event.folderId);
+				break;
+			case 'folder.reordered':
+				applyFolderReordered(event.folders);
+				break;
 			default:
 				// Unknown event type, ignore
 				break;
@@ -216,6 +232,10 @@ case 'inference.ended':
 		es.addEventListener('workspace_state.updated', handleEvent);
 		es.addEventListener('thread_state.updated', handleEvent);
 		es.addEventListener('message_state.updated', handleEvent);
+		es.addEventListener('folder.created', handleEvent);
+		es.addEventListener('folder.updated', handleEvent);
+		es.addEventListener('folder.deleted', handleEvent);
+		es.addEventListener('folder.reordered', handleEvent);
 		es.onerror = (err) => {
 			console.error('[Chat SSE] ❌ Connection error:', err);
 		};

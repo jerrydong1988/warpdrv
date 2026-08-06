@@ -9,7 +9,8 @@ import {
 	type ThreadMessage,
 } from '@assistant-ui/react';
 import { Thread } from './assistant-ui/thread';
-import { ThreadList, useThreadsAndFolders } from './assistant-ui/thread-list';
+import { ThreadList } from './assistant-ui/thread-list';
+import { useThreadsAndFolders } from '@/hooks/useThreadsAndFolders';
 import { ChatSearchDialog } from './ChatSearchDialog';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { PageHeader } from '@/components/PageHeader';

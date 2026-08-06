@@ -433,6 +433,7 @@ export interface IChatThreadCreatePayload {
 	id?: string;
 	title?: string;
 	folderId?: string | null;
+	parentId?: string | null;
 	serverId?: string | null;
 	whisperServerId?: string | null;
 	systemPrompt?: string;

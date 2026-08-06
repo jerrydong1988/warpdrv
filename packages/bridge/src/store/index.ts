@@ -199,8 +199,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				const thread = draft.threads[threadId];
 				if (thread) {
 					if (updates.title !== undefined) draft.threads[threadId]!.title = updates.title;
-					if (updates.folderId !== undefined) draft.threads[threadId]!.folderId = updates.folderId;
-					if (updates.systemPrompt !== undefined) draft.threads[threadId]!.systemPrompt = updates.systemPrompt;
+							if (updates.folderId !== undefined) draft.threads[threadId]!.folderId = updates.folderId;
+							if (updates.parentId !== undefined) draft.threads[threadId]!.parentId = updates.parentId;
+							if (updates.systemPrompt !== undefined) draft.threads[threadId]!.systemPrompt = updates.systemPrompt;
 					if (updates.meta !== undefined) draft.threads[threadId]!.meta = updates.meta;
 					if (updates.totalPromptTokens !== undefined) draft.threads[threadId]!.totalPromptTokens = updates.totalPromptTokens;
 					if (updates.totalCompletionTokens !== undefined) draft.threads[threadId]!.totalCompletionTokens = updates.totalCompletionTokens;

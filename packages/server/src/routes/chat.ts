@@ -43,14 +43,16 @@ chatRouter.get('/threads', async (req, res) => {
 				id: body.id ?? crypto.randomUUID(),
 				title: body.title ?? 'New Chat',
 				folderId: body.folderId ?? null,
+				parentId: body.parentId ?? null,
 				systemPrompt: body.systemPrompt ?? '',
 				meta: JSON.stringify({ serverId: body.serverId ?? null, whisperServerId: body.whisperServerId ?? null, tags: body.tags ?? [], enableAutoEmbed: body.enableAutoEmbed ?? false }),
 				totalPromptTokens: body.totalPromptTokens ?? 0,
 				totalCompletionTokens: body.totalCompletionTokens ?? 0,
 				createdAt: now,
-				updatedAt: now,
-			});
-			res.json({ ok: true, data: null, error: null });
+					updatedAt: now,
+				});
+				broadcaster.emit({ type: 'thread.created', thread });
+				res.json({ ok: true, data: null, error: null });
 		} catch (err) {
 			res.status(500).json({ ok: false, data: null, error: String(err) });
 		}
@@ -134,23 +136,25 @@ chatRouter.put('/threads/:id', async (req, res) => {
 			starred: body.starred ?? meta.starred,
 		});
 
-		await persistence.updateThread(req.params.id, {
-			title: body.title ?? thread.title,
-			folderId: body.folderId ?? thread.folderId,
-			systemPrompt: body.systemPrompt ?? thread.systemPrompt,
-			meta: strMeta,
-		});
-
-		// Emit SSE event for all clients
-		broadcaster.emit({
-			type: 'thread.updated',
-			threadId: req.params.id,
-			updates: {
-				title: body.title ?? undefined,
-				folderId: body.folderId ?? undefined,
+			await persistence.updateThread(req.params.id, {
+				title: body.title ?? thread.title,
+				folderId: body.folderId ?? thread.folderId,
+				parentId: body.parentId ?? thread.parentId,
+				systemPrompt: body.systemPrompt ?? thread.systemPrompt,
 				meta: strMeta,
-			},
-		});
+			});
+
+			// Emit SSE event for all clients
+			broadcaster.emit({
+				type: 'thread.updated',
+				threadId: req.params.id,
+				updates: {
+					title: body.title ?? undefined,
+					folderId: body.folderId ?? undefined,
+					parentId: body.parentId ?? undefined,
+					meta: strMeta,
+				},
+			});
 
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
@@ -317,6 +321,7 @@ chatRouter.post('/folders', async (req, res) => {
 				createdAt: Date.now(),
 			};
 			await persistence.createFolder(folder);
+			broadcaster.emit({ type: 'folder.created', folder });
 			res.json({ ok: true, data: folder, error: null });
 		} catch (err) {
 			res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -327,6 +332,7 @@ chatRouter.put('/folders/:id', async (req, res) => {
 		try {
 			const { name, parentId, sortOrder } = req.body;
 			await persistence.updateFolder(req.params.id, { name, parentId, sortOrder });
+			broadcaster.emit({ type: 'folder.updated', folderId: req.params.id, updates: { name, parentId, sortOrder } });
 			res.json({ ok: true, data: null, error: null });
 		} catch (err) {
 			res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -362,6 +368,7 @@ chatRouter.put('/folders/:id/topic', async (req, res) => {
 chatRouter.delete('/folders/:id', async (req, res) => {
 	try {
 		await persistence.deleteFolder(req.params.id);
+		broadcaster.emit({ type: 'folder.deleted', folderId: req.params.id });
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -702,6 +709,8 @@ chatRouter.put('/folders/reorder', async (req, res) => {
 			return;
 		}
 		await persistence.reorderFolders(updates);
+		const folders = await persistence.listFolders();
+		broadcaster.emit({ type: 'folder.reordered', folders });
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });

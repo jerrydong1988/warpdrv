@@ -416,9 +416,21 @@ async function main() {
 		return result;
 	});
 
-	sseManager.onConnect('chatPresets:init', async () => {
-		return listChatPresets();
-	});
+		sseManager.onConnect('chatPresets:init', async () => {
+			return listChatPresets();
+		});
+
+		sseManager.onConnect('threads:init', async () => {
+			const threads = await persistence.listThreads({});
+			const result: Record<string, typeof threads[number]> = {};
+			for (const t of threads) result[t.id] = t;
+			return result;
+		});
+
+		sseManager.onConnect('folders:init', async () => {
+			const folders = await persistence.listFolders();
+			return folders;
+		});
 
 	const httpServer = createServer(app);
 

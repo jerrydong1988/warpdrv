@@ -224,6 +224,10 @@ export interface AppState extends IChatStoreState{
 	// Chat Folders
 	folders: IFolder[];
 	setFolders: (folders: IFolder[]) => void;
+	applyFolderCreated: (folder: IFolder) => void;
+	applyFolderUpdated: (folderId: TFolderId, updates: Partial<IFolder>) => void;
+	applyFolderDeleted: (folderId: TFolderId) => void;
+	applyFolderReordered: (folders: IFolder[]) => void;
 
 	// Workspaces
 	activeWorkspaceId: TFolderId | null;

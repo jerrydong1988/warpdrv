@@ -292,16 +292,17 @@ export class Orchestrator {
 					title = this.truncateTitle(request.userMessage.content);
 				}
 				thread = {
-					id: request.threadId,
-					title,
-					folderId: request.folderId ?? null,
-					systemPrompt: '',
-					meta: JSON.stringify({ serverId: request.serverId ?? null, whisperServerId: request.whisperServerId ?? null, tags: [], enableAutoEmbed: request.enableAutoEmbed ?? false }),
-					totalPromptTokens: 0,
-					totalCompletionTokens: 0,
-					createdAt: now,
-					updatedAt: now,
-				};
+						id: request.threadId,
+						title,
+						folderId: request.folderId ?? null,
+						parentId: request.threadParentId ?? null,
+						systemPrompt: '',
+						meta: JSON.stringify({ serverId: request.serverId ?? null, whisperServerId: request.whisperServerId ?? null, tags: [], enableAutoEmbed: request.enableAutoEmbed ?? false }),
+						totalPromptTokens: 0,
+						totalCompletionTokens: 0,
+						createdAt: now,
+						updatedAt: now,
+					};
 				await this.persistence.createThread(thread);
 				if (request.threadState) await this.persistence.updateThreadState(thread.id, request.threadState);
 				await this.persistence.setThreadConfig({

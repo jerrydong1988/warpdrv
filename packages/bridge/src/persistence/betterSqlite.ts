@@ -93,6 +93,7 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL DEFAULT 'New Chat',
 			folderId TEXT,
+			parentId TEXT,
 			systemPrompt TEXT NOT NULL DEFAULT '',
 			meta TEXT NOT NULL DEFAULT '{}',
 			totalPromptTokens INTEGER NOT NULL DEFAULT 0,
@@ -392,6 +393,14 @@ export class SqlitePersistence implements IPersistence {
 			// Column already exists
 		}
 
+		// Add parentId column to threads (for nested/sub-threads)
+		try {
+			this.db!.exec(`ALTER TABLE ${this.t.threads} ADD COLUMN parentId TEXT DEFAULT NULL`);
+			console.log('[migration] Added parentId to threads table');
+		} catch {
+			// Column already exists
+		}
+
 		// FTS5 — standard mode, populate index via INSERT
 		try {
 			const txn = this.db!.transaction(() => {
@@ -560,8 +569,8 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	async createThread(thread: IChatThread): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.threads} (id, title, folderId, systemPrompt, meta, totalPromptTokens, totalCompletionTokens, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		).run(thread.id, thread.title, thread.folderId, thread.systemPrompt, thread.meta, thread.totalPromptTokens, thread.totalCompletionTokens, thread.createdAt, thread.updatedAt);
+			`INSERT INTO ${this.t.threads} (id, title, folderId, parentId, systemPrompt, meta, totalPromptTokens, totalCompletionTokens, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		).run(thread.id, thread.title, thread.folderId, thread.parentId, thread.systemPrompt, thread.meta, thread.totalPromptTokens, thread.totalCompletionTokens, thread.createdAt, thread.updatedAt);
 	}
 
 	async getThread(id: TThreadId): Promise<IChatThread | null> {
@@ -595,6 +604,7 @@ export class SqlitePersistence implements IPersistence {
 		const vals: unknown[] = [];
 		if (updates.title !== undefined) { sets.push('title = ?'); vals.push(updates.title); }
 		if (updates.folderId !== undefined) { sets.push('folderId = ?'); vals.push(updates.folderId); }
+		if (updates.parentId !== undefined) { sets.push('parentId = ?'); vals.push(updates.parentId); }
 		if (updates.systemPrompt !== undefined) { sets.push('systemPrompt = ?'); vals.push(updates.systemPrompt); }
 		if (updates.meta !== undefined) { sets.push('meta = ?'); vals.push(updates.meta); }
 		sets.push('updatedAt = ?'); vals.push(Date.now());

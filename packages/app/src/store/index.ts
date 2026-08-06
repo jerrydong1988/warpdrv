@@ -251,6 +251,20 @@ export const useStore = create<AppState>()(
 		// Chat Folders
 				folders: [],
 				setFolders: (folders) => set(s => { s.folders = folders; }),
+				applyFolderCreated: (folder) => set(s => { s.folders = [...s.folders, folder]; }),
+				applyFolderUpdated: (folderId, updates) => set(s => {
+					s.folders = s.folders.map(f => f.id === folderId ? { ...f, ...updates } : f);
+				}),
+				applyFolderDeleted: (folderId) => set(s => {
+					s.folders = s.folders.filter(f => f.id !== folderId);
+					// Orphan threads from deleted folder
+					for (const threadId in s.threads) {
+						if (s.threads[threadId]?.folderId === folderId) {
+							s.threads[threadId].folderId = null;
+						}
+					}
+				}),
+				applyFolderReordered: (folders) => set(s => { s.folders = folders; }),
 
 				// Workspaces
 				activeWorkspaceId: null,

@@ -961,7 +961,7 @@ const ReasoningBlock: FC = React.memo(() => {
 	const [open, setOpen] = useState(false);
 	if (!reasoning) return null;
 	return (
-		<div className={`wc-reasoning mb-3${open ? ' wc-reasoning--open' : ''}`}>
+		<div className={`wc-reasoning mb-1${open ? ' wc-reasoning--open' : ''}`}>
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
