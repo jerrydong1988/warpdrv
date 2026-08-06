@@ -1,9 +1,9 @@
-import { Volume2 } from 'lucide-react';
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '@/store';
-import { TileContainer } from '../TileContainer';
-import { TileValueDisplay } from '../TileValueDisplay';
+import { Volume2 } from "lucide-react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useStore } from "@/store";
+import { TileContainer } from "../TileContainer";
+import { TileValueDisplay } from "../TileValueDisplay";
 
 export const KokoroTile = React.memo(() => {
 	const navigate = useNavigate();
@@ -15,13 +15,10 @@ export const KokoroTile = React.memo(() => {
 		<TileContainer
 			icon={<Volume2 size={18} />}
 			label="Kokoro TTS"
-			statusDot={isInstalled ? 'online' : 'offline'}
-			onClick={() => navigate('/settings')}
+			statusDot={isInstalled ? "online" : "offline"}
+			onClick={() => navigate("/settings")}
 		>
-			<TileValueDisplay
-				label="Voices Available"
-				value={isInstalled ? voiceCount : '—'}
-			/>
+			<TileValueDisplay label="Voices Available" value={isInstalled ? voiceCount : "—"} />
 		</TileContainer>
 	);
 });

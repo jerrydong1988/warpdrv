@@ -1,15 +1,15 @@
 import {
-	EServerStatus,
+	type EDeviceBackendType,
 	EKvQuantType,
-	EValidationStatus,
-	EDeviceBackendType,
-	ESplitMode,
-	ESpecType,
-	EResponseFormat,
-	EReasoningFormat,
-	EReasoningEffort,
+	type EReasoningEffort,
+	type EReasoningFormat,
+	type EResponseFormat,
+	type EServerStatus,
+	type ESpecType,
+	type ESplitMode,
 	ETheme,
-} from './enums';
+	type EValidationStatus,
+} from "./enums";
 // ============================================================
 // Identifiers
 // ============================================================
@@ -131,7 +131,7 @@ export interface IModel {
 // ============================================================
 export interface ISpecDecodeParams {
 	enabled: boolean;
-	mode?: 'draft' | 'ngram' | 'mtp' | 'dflash'; // undefined → 'draft' (backward compat)
+	mode?: "draft" | "ngram" | "mtp" | "dflash"; // undefined → 'draft' (backward compat)
 	// Shared across modes
 	draftMax: number; // max tokens to draft per step
 	draftMin: number; // min tokens to draft per step
@@ -154,8 +154,8 @@ export interface ISpecDecodeParams {
 }
 export const DEFAULT_SPEC_DECODE_PARAMS: ISpecDecodeParams = {
 	enabled: false,
-	draftModelPath: '',
-	draftDevice: '',
+	draftModelPath: "",
+	draftDevice: "",
 	draftGpuLayers: 999,
 	draftContextSize: 0,
 	draftMax: 16,
@@ -193,10 +193,10 @@ export interface ILaunchParams {
 	multiGpu?: boolean; // enables multi-GPU tensor split
 	splitMode?: ESplitMode; // layer | row | tensor
 	gpuSplitValues?: number[]; // per-GPU proportions, zeros exclude devices
-		mainGpu?: number; // -1 = default, >=0 = explicit GPU index
-		useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
-		preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
-	}
+	mainGpu?: number; // -1 = default, >=0 = explicit GPU index
+	useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
+	preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
+}
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	gpuLayers: 999,
@@ -214,15 +214,15 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	swaFull: false,
 	kvQuantK: EKvQuantType.F16,
 	kvQuantV: EKvQuantType.F16,
-	chatTemplate: '',
+	chatTemplate: "",
 	port: 0,
-	device: '',
-	extraArgs: '',
+	device: "",
+	extraArgs: "",
 	parallelSlots: 4,
 	specDecode: { ...DEFAULT_SPEC_DECODE_PARAMS },
-		useEmbedding: false,
-		preserveThinking: false,
-	};
+	useEmbedding: false,
+	preserveThinking: false,
+};
 // ============================================================
 // Running Servers
 // ============================================================
@@ -255,7 +255,7 @@ export interface IServer {
 }
 export interface ISlotStats {
 	id: number;
-	state: 'idle' | 'processing';
+	state: "idle" | "processing";
 	tokensGenerated: number;
 	tokensRemaining: number;
 }
@@ -298,11 +298,11 @@ export interface IPresetCreatePayload {
 // ============================================================
 // Settings
 // ============================================================
-export type TSortField = 'name' | 'recency' | 'backend';
-export type TBackendSortField = 'name' | 'createdAt' | 'updatedAt';
-export type TRecipeSortField = 'name' | 'createdAt' | 'updatedAt';
-export type TCheckpointSortField = 'recency' | 'size' | 'name' | 'slot';
-export type TSortOrder = 'asc' | 'desc';
+export type TSortField = "name" | "recency" | "backend";
+export type TBackendSortField = "name" | "createdAt" | "updatedAt";
+export type TRecipeSortField = "name" | "createdAt" | "updatedAt";
+export type TCheckpointSortField = "recency" | "size" | "name" | "slot";
+export type TSortOrder = "asc" | "desc";
 export interface ISettings {
 	modelRoots: string[];
 	portRangeStart: number;
@@ -351,42 +351,42 @@ export const DEFAULT_SETTINGS: ISettings = {
 	modelRoots: [],
 	portRangeStart: 8010,
 	portRangeEnd: 8099,
-	apiHost: '0.0.0.0',
+	apiHost: "0.0.0.0",
 	apiPort: 4400,
 	proxyPort: 1234,
 	proxyEnabled: true,
 	proxyAuthEnabled: false,
 	apiAuthEnabled: false,
 	authRequireForLocalhost: false,
-	serversSortField: 'name',
-	serversSortOrder: 'asc',
-	backendsSortField: 'name',
-	backendsSortOrder: 'asc',
-	recipesSortField: 'name',
-	recipesSortOrder: 'asc',
-	checkpointsSortField: 'recency',
-	checkpointsSortOrder: 'desc',
+	serversSortField: "name",
+	serversSortOrder: "asc",
+	backendsSortField: "name",
+	backendsSortOrder: "asc",
+	recipesSortField: "name",
+	recipesSortOrder: "asc",
+	checkpointsSortField: "recency",
+	checkpointsSortOrder: "desc",
 	startMinimized: false,
 	sidebarCollapsed: true,
 	windowWidth: 1100,
 	windowHeight: 750,
-	checkpointsPath: '',
+	checkpointsPath: "",
 	maxCheckpointDiskGB: 50,
 	disableTitleGen: false,
 	isOnboardingComplete: false,
 	theme: ETheme.DARK,
-	kokoroVoice: 'af_heart',
+	kokoroVoice: "af_heart",
 	kokoroSpeed: 1.0,
 	builtinMcpPort: 11437,
 	builtinMcpExposeExternal: false,
 	fsAllowedRoots: [],
 	appZoomLevel: 1.0,
 	chatFontSize: 14,
-	chatFontFamily: '',
+	chatFontFamily: "",
 	chatFixedWidth: false,
-	dictationPTTKey: 'Insert',
+	dictationPTTKey: "Insert",
 	dictationPTTModeHold: false,
-	globalPTTKey: '',
+	globalPTTKey: "",
 	globalPTTModeHold: false,
 };
 // ============================================================
@@ -443,10 +443,10 @@ export interface IChatThreadCreatePayload {
 	totalCompletionTokens?: number;
 }
 
-import type { IMessagePart, TMessageId } from '@warpcore/bridge';
+import type { IMessagePart, TMessageId } from "@warpcore/bridge";
 
 export interface IChatMessageCreatePayload {
-	id?: TMessageId,
+	id?: TMessageId;
 	role: string;
 	parentId?: string | null;
 	content: IMessagePart[];
@@ -571,9 +571,9 @@ export interface IAccessTokenCreateResult {
 	token: string; // the raw Bearer token - shown once, never again
 	info: IAccessTokenInfo;
 }
-export type TOs = 'win' | 'linux' | 'mac';
-export type TArch = 'x64' | 'arm64';
-export type TGpuVendor = 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown';
+export type TOs = "win" | "linux" | "mac";
+export type TArch = "x64" | "arm64";
+export type TGpuVendor = "nvidia" | "amd" | "intel" | "apple" | "unknown";
 export interface IGpuInfo {
 	vendor: TGpuVendor;
 	name: string;
@@ -584,8 +584,8 @@ export interface IHardwareInfo {
 	arch: TArch;
 	gpus: IGpuInfo[];
 }
-export type TBackendKind = 'cuda' | 'rocm' | 'vulkan' | 'metal' | 'cpu' | 'hip' | 'sycl';
-export type TReleaseSource = 'upstream' | 'lemonade';
+export type TBackendKind = "cuda" | "rocm" | "vulkan" | "metal" | "cpu" | "hip" | "sycl";
+export type TReleaseSource = "upstream" | "lemonade";
 export interface IBackendAsset {
 	key: string;
 	source: TReleaseSource;
@@ -611,7 +611,7 @@ export interface IKokoroStatus {
 // ============================================================
 export interface ITodoItem {
 	text: string;
-	status: 'pending' | 'done';
+	status: "pending" | "done";
 }
 // ============================================================
 // Tool Attachments

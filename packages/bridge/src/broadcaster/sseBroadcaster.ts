@@ -4,9 +4,9 @@
 // HTTP routes register sessions directly via getChannel().register(session).
 // In-process consumers can use subscribe() for callback-based delivery.
 // ============================================================
-import { createChannel, type Channel } from 'better-sse';
-import type { IBridgeBroadcaster } from '../types/interfaces';
-import type { IBridgeEvent } from '../types';
+import { type Channel, createChannel } from "better-sse";
+import type { IBridgeEvent } from "../types";
+import type { IBridgeBroadcaster } from "../types/interfaces";
 
 export class SseBroadcaster implements IBridgeBroadcaster {
 	private channel: Channel;

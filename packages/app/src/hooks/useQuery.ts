@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { IApiResponse, IApiListResponse } from '@warpcore/shared';
+import type { IApiListResponse, IApiResponse } from "@warpcore/shared";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface IUseQueryOptions {
 	// Poll interval in ms. 0 = no polling
@@ -29,11 +29,13 @@ export function useQuery<T>(
 
 	const refetch = useCallback(async () => {
 		if (!enabled) return;
-		setLoading(prev => prev || data === null);
+		setLoading((prev) => prev || data === null);
 		const result = await fetcher();
 		if (result.ok) {
 			if (options?.deepCompare) {
-				setData(prev => JSON.stringify(prev) === JSON.stringify(result.data) ? prev : result.data);
+				setData((prev) =>
+					JSON.stringify(prev) === JSON.stringify(result.data) ? prev : result.data,
+				);
 			} else {
 				setData(result.data);
 			}
@@ -77,14 +79,14 @@ export function useListQuery<T>(
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-	const lastJsonRef = useRef<string>('');
+	const lastJsonRef = useRef<string>("");
 	const enabled = options?.enabled ?? true;
 
 	const refetch = useCallback(async () => {
 		if (!enabled) return;
 		const result = await fetcher();
 		if (result.ok) {
-			const json = options?.deepCompare ? JSON.stringify(result.data) : '';
+			const json = options?.deepCompare ? JSON.stringify(result.data) : "";
 			if (options?.deepCompare && json === lastJsonRef.current) return;
 			lastJsonRef.current = json;
 			setData(result.data);
@@ -123,15 +125,18 @@ export function useMutation<TInput, TOutput>(
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const mutate = useCallback(async (input: TInput): Promise<TOutput | null> => {
-		setLoading(true);
-		setError(null);
-		const result = await mutator(input);
-		setLoading(false);
-		if (result.ok) return result.data;
-		setError(result.error);
-		return null;
-	}, [mutator]);
+	const mutate = useCallback(
+		async (input: TInput): Promise<TOutput | null> => {
+			setLoading(true);
+			setError(null);
+			const result = await mutator(input);
+			setLoading(false);
+			if (result.ok) return result.data;
+			setError(result.error);
+			return null;
+		},
+		[mutator],
+	);
 
 	return { mutate, loading, error };
 }

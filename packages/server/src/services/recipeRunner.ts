@@ -1,25 +1,25 @@
-import { spawn, spawnSync, type ChildProcess } from 'child_process';
-import { randomUUID } from 'crypto';
-import os from 'os';
-import { resolveBashPath } from '../util/shellResolver';
 import {
-	ERecipeStepStatus,
 	ERecipeRunStatus,
+	ERecipeStepStatus,
 	ERecipeStreamKind,
 	type IRecipeParsed,
 	type IRecipeRunState,
 	type IRecipeStepState,
+	type TRecipeId,
 	type TRecipeInputValues,
 	type TRunId,
-	type TRecipeId,
 	type TStepId,
-} from '@warpcore/shared';
+} from "@warpcore/shared";
+import { type ChildProcess, spawn, spawnSync } from "child_process";
+import { randomUUID } from "crypto";
+import os from "os";
+import { resolveBashPath } from "../util/shellResolver";
 
 function expandHome(p: string | undefined): string | undefined {
 	if (p === undefined) return undefined;
 	let out = p;
-	if (out === '~') return os.homedir();
-	if (out.startsWith('~/')) out = os.homedir() + out.slice(1);
+	if (out === "~") return os.homedir();
+	if (out.startsWith("~/")) out = os.homedir() + out.slice(1);
 	out = out.replace(/\$HOME/g, os.homedir());
 	return out;
 }
@@ -54,13 +54,13 @@ export async function startRun(
 	parsed: IRecipeParsed,
 	inputs: TRecipeInputValues,
 ): Promise<TRunId> {
-	if (activeRun !== null) throw new Error('A recipe run is already in progress');
-	if (sseEmitter === null) throw new Error('Recipe runner SSE emitter not initialized');
+	if (activeRun !== null) throw new Error("A recipe run is already in progress");
+	if (sseEmitter === null) throw new Error("Recipe runner SSE emitter not initialized");
 
 	const runId = randomUUID();
 	const startedAt = Date.now();
 
-	const stepStates: IRecipeStepState[] = parsed.steps.map(s => ({
+	const stepStates: IRecipeStepState[] = parsed.steps.map((s) => ({
 		id: s.id,
 		name: s.name,
 		status: ERecipeStepStatus.PENDING,
@@ -77,10 +77,10 @@ export async function startRun(
 
 	activeRun = { state, proc: null, cancelled: false };
 
-	sseEmitter.emit('runs:started', state);
+	sseEmitter.emit("runs:started", state);
 
-	void executeRun(parsed).catch(err => {
-		console.error('[recipeRunner] unhandled error in executeRun:', err);
+	void executeRun(parsed).catch((err) => {
+		console.error("[recipeRunner] unhandled error in executeRun:", err);
 	});
 
 	return runId;
@@ -94,13 +94,14 @@ export function cancelRun(): boolean {
 			const proc = activeRun.proc;
 			const pid = proc.pid;
 			activeRun.proc = null;
-			if (pid !== undefined && process.platform !== 'win32') {
-				process.kill(-pid, 'SIGKILL');
+			if (pid !== undefined && process.platform !== "win32") {
+				process.kill(-pid, "SIGKILL");
 			} else if (pid !== undefined) {
-				spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
+				spawnSync("taskkill", ["/T", "/F", "/PID", String(pid)], { stdio: "ignore" });
 			}
+		} catch (err) {
+			console.error("[recipeRunner] failed to kill:", err);
 		}
-		catch (err) { console.error('[recipeRunner] failed to kill:', err); }
 	}
 	return true;
 }
@@ -120,7 +121,10 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 
 	for (let i = 0; i < parsed.steps.length; i++) {
 		if (activeRun === null) return;
-		if (activeRun.cancelled) { runStatus = ERecipeRunStatus.CANCELLED; break; }
+		if (activeRun.cancelled) {
+			runStatus = ERecipeRunStatus.CANCELLED;
+			break;
+		}
 
 		const stepDef = parsed.steps[i]!;
 		const stepState = activeRun.state.steps[i]!;
@@ -129,13 +133,19 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 		stepState.status = ERecipeStepStatus.RUNNING;
 		stepState.startedAt = startedAt;
 
-		sseEmitter.emit('runs:step-started', {
+		sseEmitter.emit("runs:step-started", {
 			runId: activeRun.state.runId,
 			stepId: stepDef.id,
 			startedAt,
 		});
 
-		const result = await runStep(stepDef.body, stepDef.cwd, env, stepDef.id, activeRun.state.runId);
+		const result = await runStep(
+			stepDef.body,
+			stepDef.cwd,
+			env,
+			stepDef.id,
+			activeRun.state.runId,
+		);
 
 		const finishedAt = Date.now();
 		stepState.finishedAt = finishedAt;
@@ -148,7 +158,7 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 
 		stepState.status = stepFinalStatus;
 
-		sseEmitter.emit('runs:step-finished', {
+		sseEmitter.emit("runs:step-finished", {
 			runId: activeRun.state.runId,
 			stepId: stepDef.id,
 			status: stepFinalStatus,
@@ -156,8 +166,14 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 			finishedAt,
 		});
 
-		if (stepFinalStatus === ERecipeStepStatus.CANCELLED) { runStatus = ERecipeRunStatus.CANCELLED; break; }
-		if (stepFinalStatus === ERecipeStepStatus.FAILED) { runStatus = ERecipeRunStatus.FAILED; break; }
+		if (stepFinalStatus === ERecipeStepStatus.CANCELLED) {
+			runStatus = ERecipeRunStatus.CANCELLED;
+			break;
+		}
+		if (stepFinalStatus === ERecipeStepStatus.FAILED) {
+			runStatus = ERecipeRunStatus.FAILED;
+			break;
+		}
 	}
 
 	if (activeRun === null) return;
@@ -166,7 +182,7 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 	activeRun.state.status = runStatus;
 	activeRun.state.finishedAt = finishedAt;
 
-	sseEmitter.emit('runs:finished', {
+	sseEmitter.emit("runs:finished", {
 		runId: activeRun.state.runId,
 		status: runStatus,
 		finishedAt,
@@ -190,14 +206,13 @@ function runStep(
 	return new Promise<IStepResult>((resolve) => {
 		let proc: ChildProcess;
 		try {
-			proc = spawn(resolveBashPath(), ['-c', body], {
+			proc = spawn(resolveBashPath(), ["-c", body], {
 				cwd: expandHome(cwd) ?? process.cwd(),
 				env,
-				stdio: ['ignore', 'pipe', 'pipe'],
+				stdio: ["ignore", "pipe", "pipe"],
 			});
-		}
-		catch (err) {
-			sseEmitter?.emit('runs:step-output', {
+		} catch (err) {
+			sseEmitter?.emit("runs:step-output", {
 				runId,
 				stepId,
 				kind: ERecipeStreamKind.STDERR,
@@ -208,27 +223,27 @@ function runStep(
 		}
 		if (activeRun !== null) activeRun.proc = proc;
 
-		proc.stdout?.on('data', (chunk: Buffer) => {
-			sseEmitter?.emit('runs:step-output', {
+		proc.stdout?.on("data", (chunk: Buffer) => {
+			sseEmitter?.emit("runs:step-output", {
 				runId,
 				stepId,
 				kind: ERecipeStreamKind.STDOUT,
-				data: chunk.toString('utf8'),
+				data: chunk.toString("utf8"),
 			});
 		});
 
-		proc.stderr?.on('data', (chunk: Buffer) => {
-			console.log('[recipeRunner] stderr chunk:', chunk.length, 'bytes');
-			sseEmitter?.emit('runs:step-output', {
+		proc.stderr?.on("data", (chunk: Buffer) => {
+			console.log("[recipeRunner] stderr chunk:", chunk.length, "bytes");
+			sseEmitter?.emit("runs:step-output", {
 				runId,
 				stepId,
 				kind: ERecipeStreamKind.STDERR,
-				data: chunk.toString('utf8'),
+				data: chunk.toString("utf8"),
 			});
 		});
 
-		proc.on('error', (err) => {
-			sseEmitter?.emit('runs:step-output', {
+		proc.on("error", (err) => {
+			sseEmitter?.emit("runs:step-output", {
 				runId,
 				stepId,
 				kind: ERecipeStreamKind.STDERR,
@@ -236,11 +251,11 @@ function runStep(
 			});
 		});
 
-		proc.on('exit', (code, signal) => {
-			console.log('[recipeRunner] exit:', { stepId, code, signal });
+		proc.on("exit", (code, signal) => {
+			console.log("[recipeRunner] exit:", { stepId, code, signal });
 			if (activeRun !== null) activeRun.proc = null;
 			const cancelled = activeRun !== null && activeRun.cancelled;
-			const exitCode = code !== null ? code : (signal !== null ? 1 : 1);
+			const exitCode = code !== null ? code : signal !== null ? 1 : 1;
 			resolve({ exitCode, cancelled });
 		});
 	});

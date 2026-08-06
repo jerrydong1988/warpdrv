@@ -1,12 +1,9 @@
-import React from 'react';
-import { Box, Text, HStack } from '@chakra-ui/react';
-import { Globe } from 'lucide-react';
-import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { Box, HStack, Text } from "@chakra-ui/react";
+import { Globe } from "lucide-react";
+import React from "react";
+import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 
-export const FetchRenderer = React.memo((props: {
-	url?: string,
-	[key: string]: unknown
-}) => {
+export const FetchRenderer = React.memo((props: { url?: string; [key: string]: unknown }) => {
 	const { url, method, ...rest } = props;
 	const extras = Object.entries(rest).filter(([, v]) => v !== undefined);
 
@@ -34,22 +31,35 @@ export const FetchRenderer = React.memo((props: {
 
 export const FetchRendererMeta: IToolCallRenderer = {
 	component: FetchRenderer,
-	keywords: ['fetch', 'http', 'url', 'web', 'request', 'get', 'curl', 'download', 'navigate', 'scrape'],
+	keywords: [
+		"fetch",
+		"http",
+		"url",
+		"web",
+		"request",
+		"get",
+		"curl",
+		"download",
+		"navigate",
+		"scrape",
+	],
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
-		if (typeof url !== 'string' || url.length === 0) return false;
+		if (typeof url !== "string" || url.length === 0) return false;
 		// Basic URL sanity check — must look url-ish
-		if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) return false;
+		if (!/^https?:\/\//i.test(url) && !url.startsWith("/")) return false;
 		const { url: _u, uri: _i, link: _l, endpoint: _e, address: _a, ...rest } = args;
 		return { url, ...rest };
 	},
-  renderMini: React.memo(({ args }) => {
-    const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
-    const method = (args.method as string) || 'GET';
-    if (typeof url !== 'string') return '';
-    const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
-    return (
-      <Text whiteSpace="nowrap">{method} {truncated}</Text>
-    );
-  }),
+	renderMini: React.memo(({ args }) => {
+		const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
+		const method = (args.method as string) || "GET";
+		if (typeof url !== "string") return "";
+		const truncated = url.length > 70 ? url.slice(0, 67) + "..." : url;
+		return (
+			<Text whiteSpace="nowrap">
+				{method} {truncated}
+			</Text>
+		);
+	}),
 };

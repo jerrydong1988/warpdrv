@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { TWhisperBackendId, IWhisperBackend } from '@warpcore/shared';
+import type { IWhisperBackend, TWhisperBackendId } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface WhisperBackendsSlice {
 	whisperBackends: Record<TWhisperBackendId, IWhisperBackend>;
@@ -7,7 +7,7 @@ interface WhisperBackendsSlice {
 
 export const whisperBackendsSlice = (
 	_setState: ImmerSet<AppState>,
-	_getState: ImmerGet<AppState>
+	_getState: ImmerGet<AppState>,
 ): Partial<AppState> => ({
 	whisperBackends: {},
 });

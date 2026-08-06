@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import { configureEmbedding } from '@/api/mcpServices';
+import { configureEmbedding } from "@/api/mcpServices";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface EmbeddingSlice {
 	selectedEmbeddingServerId: string | null;
@@ -12,7 +12,7 @@ export const embeddingSlice = (
 ): Partial<AppState> => ({
 	selectedEmbeddingServerId: null,
 	setSelectedEmbeddingServerId: (id) => {
-		setState(draft => {
+		setState((draft) => {
 			draft.selectedEmbeddingServerId = id;
 			if (id) {
 				configureEmbedding(id).catch(console.error);

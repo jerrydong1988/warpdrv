@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 export async function assertPathAllowed(roots: string[], requestedPath: string): Promise<string> {
 	// Bypass: return resolved path without root validation
 	const absRequested = path.resolve(requestedPath);

@@ -1,13 +1,16 @@
-import React, { useCallback, useMemo, type FC } from 'react';
-import { Volume2, Loader2 } from 'lucide-react';
-import { FaStop } from 'react-icons/fa';
-import { useAuiState } from '@assistant-ui/react';
-import { useStore } from '@/store';
-import { Box } from '@chakra-ui/react';
-import removeMd from 'remove-markdown';
-import emojiRegex from 'emoji-regex';
+import { useAuiState } from "@assistant-ui/react";
+import { Box } from "@chakra-ui/react";
+import emojiRegex from "emoji-regex";
+import { Loader2, Volume2 } from "lucide-react";
+import React, { type FC, useCallback, useMemo } from "react";
+import { FaStop } from "react-icons/fa";
+import removeMd from "remove-markdown";
+import { useStore } from "@/store";
 
-const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = ({ children, onClick }) => (
+const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = ({
+	children,
+	onClick,
+}) => (
 	<Box
 		w="28px"
 		h="28px"
@@ -17,7 +20,7 @@ const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = (
 		cursor="pointer"
 		rounded="md"
 		color="var(--wc-text-secondary)"
-		_hover={{ bg: 'var(--wc-bg-selected)', color: 'var(--wc-text-heading)' }}
+		_hover={{ bg: "var(--wc-bg-selected)", color: "var(--wc-text-heading)" }}
 		onClick={onClick}
 	>
 		{children}
@@ -35,7 +38,7 @@ let ttsAnalyser: AnalyserNode | null = null;
 let ttsAnalyserListeners: Array<(a: AnalyserNode | null) => void> = [];
 function ensureAnalyser(): AnalyserNode {
 	if (!ttsAudioCtx) ttsAudioCtx = new AudioContext();
-	if (ttsAudioCtx.state === 'suspended') ttsAudioCtx.resume().catch(() => {});
+	if (ttsAudioCtx.state === "suspended") ttsAudioCtx.resume().catch(() => {});
 	if (!ttsAnalyser) {
 		ttsAnalyser = ttsAudioCtx.createAnalyser();
 		ttsAnalyser.fftSize = 256;
@@ -52,7 +55,7 @@ export function subscribeTTSAnalyser(cb: (a: AnalyserNode | null) => void): () =
 	ttsAnalyserListeners.push(cb);
 	cb(ttsAnalyser);
 	return () => {
-		ttsAnalyserListeners = ttsAnalyserListeners.filter(l => l !== cb);
+		ttsAnalyserListeners = ttsAnalyserListeners.filter((l) => l !== cb);
 	};
 }
 function checkVadComplete() {
@@ -64,82 +67,121 @@ function checkVadComplete() {
 	const done = s.ttsVadSentencesDone;
 	const threadId = s.currentThreadId;
 	const running = threadId ? s.isRunningByThread[threadId] : false;
-	console.log('[TTS vad] checkVadComplete: queue=', queueLen, 'playing=', playing, 'generating=', generating, 'sent=', sent, 'done=', done, 'running=', running);
+	console.log(
+		"[TTS vad] checkVadComplete: queue=",
+		queueLen,
+		"playing=",
+		playing,
+		"generating=",
+		generating,
+		"sent=",
+		sent,
+		"done=",
+		done,
+		"running=",
+		running,
+	);
 	if (queueLen > 0 || playing) return;
-	if (generating !== 'vad') return;
+	if (generating !== "vad") return;
 	if (sent !== done) return;
 	if (threadId && running) return;
-	console.log('[TTS vad] checkVadComplete: all done, calling stopTTS');
+	console.log("[TTS vad] checkVadComplete: all done, calling stopTTS");
 	stopTTS();
 }
 
 export async function startStream(requestId: number, text: string, voice: string): Promise<void> {
-	const cleaned = removeMd(text).replace(emojiRegex(), '').replace(/\s+/g, ' ').trim();
-	if (!cleaned) { console.log('[TTS] startStream: cleaned text is empty'); return; }
-	console.log('[TTS] startStream: requestId=', requestId, 'text=', JSON.stringify(cleaned.slice(0, 60)));
-	const startRes = await fetch('/api/kokoro/tts/start', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+	const cleaned = removeMd(text).replace(emojiRegex(), "").replace(/\s+/g, " ").trim();
+	if (!cleaned) {
+		console.log("[TTS] startStream: cleaned text is empty");
+		return;
+	}
+	console.log(
+		"[TTS] startStream: requestId=",
+		requestId,
+		"text=",
+		JSON.stringify(cleaned.slice(0, 60)),
+	);
+	const startRes = await fetch("/api/kokoro/tts/start", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ text: cleaned, voice }),
 	});
 	const startJson = await startRes.json();
-	if (!startJson.ok) throw new Error(startJson.error || 'tts start failed');
+	if (!startJson.ok) throw new Error(startJson.error || "tts start failed");
 	const streamId = startJson.data.streamId as string;
 	if (requestId !== currentRequestId) {
-		console.log('[TTS] startStream: requestId mismatch after fetch, requestId=', requestId, 'currentRequestId=', currentRequestId, 'aborting');
-		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: 'POST' }).catch(() => {});
+		console.log(
+			"[TTS] startStream: requestId mismatch after fetch, requestId=",
+			requestId,
+			"currentRequestId=",
+			currentRequestId,
+			"aborting",
+		);
+		fetch(`/api/kokoro/tts/abort/${streamId}`, { method: "POST" }).catch(() => {});
 		return;
 	}
-	console.log('[TTS] startStream: streamId=', streamId, 'setting up SSE');
+	console.log("[TTS] startStream: streamId=", streamId, "setting up SSE");
 	currentStreamAbortId = streamId;
 	const es = new EventSource(`/api/kokoro/tts/stream/${streamId}`);
 	currentEventSource = es;
-	es.addEventListener('chunk', (e: MessageEvent) => {
+	es.addEventListener("chunk", (e: MessageEvent) => {
 		if (requestId !== currentRequestId) {
-			console.log('[TTS] chunk DROPPED: requestId', requestId, '!== currentRequestId', currentRequestId);
+			console.log(
+				"[TTS] chunk DROPPED: requestId",
+				requestId,
+				"!== currentRequestId",
+				currentRequestId,
+			);
 			return;
 		}
 		const activeMsg = useStore.getState().ttsActiveMessageId;
 		if (activeMsg === null) {
-			console.log('[TTS] chunk DROPPED: ttsActiveMessageId is null');
+			console.log("[TTS] chunk DROPPED: ttsActiveMessageId is null");
 			return;
 		}
 		const payload = JSON.parse(e.data);
 		const bin = atob(payload.audio);
 		const bytes = new Uint8Array(bin.length);
 		for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-		const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+		const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
 		playbackQueue.push(url);
 		tryPlayNext();
 	});
-	es.addEventListener('done', () => {
-		console.log('[TTS] stream done: requestId=', requestId, 'currentRequestId=', currentRequestId, 'generating=', useStore.getState().ttsIsGenerating);
+	es.addEventListener("done", () => {
+		console.log(
+			"[TTS] stream done: requestId=",
+			requestId,
+			"currentRequestId=",
+			currentRequestId,
+			"generating=",
+			useStore.getState().ttsIsGenerating,
+		);
 		es.close();
 		if (currentEventSource === es) currentEventSource = null;
 		currentStreamAbortId = null;
 		if (requestId !== currentRequestId) return;
 		const s = useStore.getState();
-		if (s.ttsIsGenerating === 'button') {
+		if (s.ttsIsGenerating === "button") {
 			s.ttsSetGenerating(null);
 			if (playbackQueue.length === 0 && !isPlayingChunk) {
 				s.ttsSetSpeaking(false);
 			}
-		} else if (s.ttsIsGenerating === 'vad') {
+		} else if (s.ttsIsGenerating === "vad") {
 			s.ttsVadIncDone();
 			checkVadComplete();
 		}
 	});
-	es.addEventListener('error', (e: MessageEvent) => {
+	es.addEventListener("error", (e: MessageEvent) => {
 		es.close();
 		if (currentEventSource === es) currentEventSource = null;
 		currentStreamAbortId = null;
-		console.error('[KokoroTTS] Stream error:', (e as any)?.data);
+		console.error("[KokoroTTS] Stream error:", (e as any)?.data);
 		useStore.getState().ttsStop();
 	});
 }
 
 function tryPlayNext() {
-	console.log('[TTS] tryPlayNext: queue=', playbackQueue.length, 'playing=', isPlayingChunk);
+	console.log("[TTS] tryPlayNext: queue=", playbackQueue.length, "playing=", isPlayingChunk);
 	if (isPlayingChunk || playbackQueue.length === 0) return;
 	const url = playbackQueue.shift();
 	if (!url) return;
@@ -151,7 +193,7 @@ function tryPlayNext() {
 		const src = ttsAudioCtx!.createMediaElementSource(audioEl);
 		src.connect(analyser);
 	} catch (e) {
-		console.error('[KokoroTTS] analyser wire failed:', e);
+		console.error("[KokoroTTS] analyser wire failed:", e);
 	}
 	if (!useStore.getState().ttsIsSpeaking) {
 		useStore.getState().ttsSetSpeaking(true);
@@ -190,7 +232,7 @@ function tryPlayNext() {
 }
 
 export function stopTTS() {
-	console.log('[TTS] stopTTS: requestId→0, clearing queue, closing EventSource, aborting stream');
+	console.log("[TTS] stopTTS: requestId→0, clearing queue, closing EventSource, aborting stream");
 	currentRequestId = 0;
 	if (currentAudioEl) {
 		currentAudioEl.pause();
@@ -212,7 +254,7 @@ export function stopTTS() {
 		currentEventSource = null;
 	}
 	if (currentStreamAbortId) {
-		fetch(`/api/kokoro/tts/abort/${currentStreamAbortId}`, { method: 'POST' }).catch(() => {});
+		fetch(`/api/kokoro/tts/abort/${currentStreamAbortId}`, { method: "POST" }).catch(() => {});
 		currentStreamAbortId = null;
 	}
 }
@@ -224,7 +266,7 @@ export function setKokoroCurrentRequestId(id: number) {
 export const KokoroTTSButton = React.memo(() => {
 	const parts = useAuiState((s) => s.message.content);
 	const messageId = useAuiState((s) => s.message.id);
-	const voice = useStore((s) => s.settings.kokoroVoice || 'af_heart');
+	const voice = useStore((s) => s.settings.kokoroVoice || "af_heart");
 
 	const activeMessageId = useStore((s) => s.ttsActiveMessageId);
 	const isGenerating = useStore((s) => s.ttsIsGenerating);
@@ -234,11 +276,11 @@ export const KokoroTTSButton = React.memo(() => {
 	const isActive = activeMessageId === messageId;
 
 	const messageText = useMemo(() => {
-		if (!parts || parts.length === 0) return '';
+		if (!parts || parts.length === 0) return "";
 		return parts
-			.filter((p: any) => p.type === 'text')
+			.filter((p: any) => p.type === "text")
 			.map((p: any) => p.text)
-			.join('\n\n');
+			.join("\n\n");
 	}, [parts]);
 
 	const handleSpeak = useCallback(async () => {
@@ -257,14 +299,28 @@ export const KokoroTTSButton = React.memo(() => {
 		try {
 			await startStream(requestId, messageText, voice);
 		} catch (err) {
-			console.error('[KokoroTTS] Stream failed:', err);
+			console.error("[KokoroTTS] Stream failed:", err);
 			useStore.getState().ttsStop();
 		}
 	}, [isActive, activeMessageId, messageId, messageText, voice, ttsStart]);
 
 	return (
 		<ActionBarIcon onClick={handleSpeak}>
-			{isActive ? (isSpeaking ? <FaStop style={{ fontSize: 14, color: 'var(--wc-accent-green)', animation: 'pulse 1.5s ease infinite' }} /> : <Loader2 size={14} className="animate-spin" />) : <Volume2 size={14} />}
+			{isActive ? (
+				isSpeaking ? (
+					<FaStop
+						style={{
+							fontSize: 14,
+							color: "var(--wc-accent-green)",
+							animation: "pulse 1.5s ease infinite",
+						}}
+					/>
+				) : (
+					<Loader2 size={14} className="animate-spin" />
+				)
+			) : (
+				<Volume2 size={14} />
+			)}
 		</ActionBarIcon>
 	);
 });

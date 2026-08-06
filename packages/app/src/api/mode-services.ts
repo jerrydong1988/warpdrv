@@ -1,8 +1,8 @@
-import { api } from './client';
-import type { IMode, IModeCreatePayload, TModeId, IToolAttachment } from '@warpcore/shared';
+import type { IMode, IModeCreatePayload, IToolAttachment, TModeId } from "@warpcore/shared";
+import { api } from "./client";
 
 export async function createMode(payload: IModeCreatePayload): Promise<IMode> {
-	const res = await api.post<IMode>('/modes', payload);
+	const res = await api.post<IMode>("/modes", payload);
 	if (!res.ok) throw new Error(res.error);
 	return res.data!;
 }
@@ -24,7 +24,10 @@ export async function updateModeTools(id: TModeId, tools: IToolAttachment[]): Pr
 	return res.data!;
 }
 
-export async function updateModeGuardrails(id: TModeId, activeGuardrails: string[]): Promise<IMode> {
+export async function updateModeGuardrails(
+	id: TModeId,
+	activeGuardrails: string[],
+): Promise<IMode> {
 	const res = await api.patch<IMode>(`/modes/${id}/guardrails`, { activeGuardrails });
 	if (!res.ok) throw new Error(res.error);
 	return res.data!;

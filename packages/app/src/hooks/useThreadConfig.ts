@@ -1,27 +1,29 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useStore } from '../store';
-import { DEFAULT_INFERENCE_PARAMS } from '@/pages/Chat/ChatConfigSidebar';
-import { EReasoningEffort, IChatInferenceParams, IThreadConfig } from '@warpcore/shared';
-import { fetchThreadConfig, updateThreadConfig } from '@/api';
-import { fetchWorkspaceState } from '@/api/services';
+import { EReasoningEffort, type IChatInferenceParams, IThreadConfig } from "@warpcore/shared";
+import { useCallback, useEffect, useRef } from "react";
+import { fetchThreadConfig, updateThreadConfig } from "@/api";
+import { fetchWorkspaceState } from "@/api/services";
+import { DEFAULT_INFERENCE_PARAMS } from "@/pages/Chat/ChatConfigSidebar";
+import { useStore } from "../store";
 
-export function useThreadConfig(selectedPresetId: string | null,) {
-	const currentThreadId = useStore(s => s.currentThreadId);
-	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
-	const currentInferenceParams = useStore(s => s.currentInferenceParams as unknown as IChatInferenceParams);
-	const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
+export function useThreadConfig(selectedPresetId: string | null) {
+	const currentThreadId = useStore((s) => s.currentThreadId);
+	const currentSystemPrompt = useStore((s) => s.currentSystemPrompt);
+	const currentInferenceParams = useStore(
+		(s) => s.currentInferenceParams as unknown as IChatInferenceParams,
+	);
+	const activeWorkspaceId = useStore((s) => s.activeWorkspaceId);
 
 	// Actions
-	const setCurrentSystemPrompt = useStore(s => s.setCurrentSystemPrompt);
-	const setCurrentInferenceParams = useStore(s => s.setCurrentInferenceParams);
+	const setCurrentSystemPrompt = useStore((s) => s.setCurrentSystemPrompt);
+	const setCurrentInferenceParams = useStore((s) => s.setCurrentInferenceParams);
 
 	// Debounced save
 	const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const saveValuesRef = useRef<{
-		currentThreadId: string,
-		presetId: string | null,
-		systemPrompt: string,
-		params: string,
+		currentThreadId: string;
+		presetId: string | null;
+		systemPrompt: string;
+		params: string;
 	} | null>(null);
 
 	const flushChanges = useCallback(() => {
@@ -29,35 +31,44 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 		updateThreadConfig(currentThreadId, saveObj);
 	}, [updateThreadConfig]);
 
-	const debounceChange = useCallback((newParams?: any, newPrompt?: any) => {
-		if (!currentThreadId) return;
-		if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+	const debounceChange = useCallback(
+		(newParams?: any, newPrompt?: any) => {
+			if (!currentThreadId) return;
+			if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
-		saveValuesRef.current = {
-			currentThreadId: currentThreadId!,
-			presetId: selectedPresetId,
-			systemPrompt: newPrompt !== undefined ? newPrompt : currentSystemPrompt,
-			params: JSON.stringify(newParams || currentInferenceParams),
-		};
+			saveValuesRef.current = {
+				currentThreadId: currentThreadId!,
+				presetId: selectedPresetId,
+				systemPrompt: newPrompt !== undefined ? newPrompt : currentSystemPrompt,
+				params: JSON.stringify(newParams || currentInferenceParams),
+			};
 
-		saveTimerRef.current = setTimeout(flushChanges, 400);
-	}, [
-		currentThreadId,
-		selectedPresetId,
-		currentSystemPrompt,
-		currentInferenceParams,
-		flushChanges,
-	]);
+			saveTimerRef.current = setTimeout(flushChanges, 400);
+		},
+		[
+			currentThreadId,
+			selectedPresetId,
+			currentSystemPrompt,
+			currentInferenceParams,
+			flushChanges,
+		],
+	);
 
-	const handleParamsChange = useCallback((newParams: Partial<IChatInferenceParams>) => {
-		setCurrentInferenceParams(newParams as unknown as Record<string, unknown>);
-		debounceChange(newParams);
-	}, [debounceChange]);
+	const handleParamsChange = useCallback(
+		(newParams: Partial<IChatInferenceParams>) => {
+			setCurrentInferenceParams(newParams as unknown as Record<string, unknown>);
+			debounceChange(newParams);
+		},
+		[debounceChange],
+	);
 
-	const handleSystemPromptChange = useCallback((newPrompt: string) => {
-		setCurrentSystemPrompt(newPrompt);
-		debounceChange(undefined, newPrompt);
-	}, [debounceChange]);
+	const handleSystemPromptChange = useCallback(
+		(newPrompt: string) => {
+			setCurrentSystemPrompt(newPrompt);
+			debounceChange(undefined, newPrompt);
+		},
+		[debounceChange],
+	);
 
 	const flushPendingSaves = useCallback(() => {
 		if (!saveTimerRef.current) return;
@@ -87,7 +98,7 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 			store.setTempThreadServerId(wsState.defaultServerId as string);
 		}
 		if (wsState.defaultPresetId) {
-			const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
+			const preset = store.chatPresets.find((p) => p.id === wsState.defaultPresetId);
 			if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
 		}
 		if (wsState.defaultModeId) {
@@ -96,16 +107,17 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 		const effort = (wsState.defaultReasoningEffort as string) ?? EReasoningEffort.NONE;
 		store.setCurrentInferenceParams({
 			reasoningEffort: effort,
-			enableThinking: effort !== 'none',
+			enableThinking: effort !== "none",
 		} as unknown as Record<string, unknown>);
 	};
 
 	// Standard defaults (no workspace)
 	const setDefaults = () => {
 		setCurrentInferenceParams({
-			reasoningEffort: EReasoningEffort.NONE, enableThinking: false
+			reasoningEffort: EReasoningEffort.NONE,
+			enableThinking: false,
 		});
-		setCurrentSystemPrompt('');
+		setCurrentSystemPrompt("");
 	};
 
 	const loadConfig = useCallback(async (threadId: string | null) => {
@@ -137,7 +149,7 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 		}
 
 		const parsedParams = res.data.params ? JSON.parse(res.data.params) : {};
-		setCurrentSystemPrompt(res.data.systemPrompt ?? '');
+		setCurrentSystemPrompt(res.data.systemPrompt ?? "");
 		setCurrentInferenceParams(parsedParams);
 	}, []);
 
@@ -152,5 +164,5 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 		currentThreadId,
 		currentSystemPrompt,
 		currentInferenceParams,
-	}
+	};
 }

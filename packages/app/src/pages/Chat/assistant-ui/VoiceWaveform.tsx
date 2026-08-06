@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 interface IVoiceWaveformProps {
 	stream: MediaStream | null;
@@ -13,7 +13,7 @@ export function VoiceWaveform({
 	stream,
 	width = 200,
 	height = 36,
-	barColor = '#10b981',
+	barColor = "#10b981",
 	barWidth = 2,
 	gap = 1,
 }: IVoiceWaveformProps) {
@@ -25,7 +25,7 @@ export function VoiceWaveform({
 		if (!stream) return;
 		const canvas = canvasRef.current;
 		if (!canvas) return;
-		const ctx = canvas.getContext('2d');
+		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 
 		const dpr = window.devicePixelRatio || 1;

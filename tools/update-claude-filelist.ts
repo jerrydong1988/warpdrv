@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,7 +15,7 @@ const TEMPLATE = [
 	"",
 	"```filelist",
 	"```",
-	""
+	"",
 ].join("\n");
 
 if (!existsSync(CLAUDE)) {
@@ -35,7 +35,7 @@ if (!fence.test(original)) {
 const tracked = execFileSync(
 	"git",
 	["ls-files", "--cached", "--others", "--exclude-standard", "--", "packages/"],
-	{ cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }
+	{ cwd: ROOT, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
 )
 	.split("\n")
 	.filter((f) => EXTS.some((ext) => f.endsWith(ext)));
@@ -99,5 +99,9 @@ for (const pkg of packages) {
 
 const block = "```filelist\n" + out.join("\n") + "\n```";
 
-writeFileSync(CLAUDE, original.replace(fence, () => block), "utf8");
+writeFileSync(
+	CLAUDE,
+	original.replace(fence, () => block),
+	"utf8",
+);
 console.log(`CLAUDE.md updated (${packages.length} packages, ${tracked.length} files).`);

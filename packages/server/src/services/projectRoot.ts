@@ -1,4 +1,4 @@
-import { persistence } from '../index';
+import { persistence } from "../index";
 export async function getProjectRoot(threadId: string): Promise<string | null> {
 	const ts = await persistence.getThreadState(threadId);
 	if (ts?.projectRoot) return ts.projectRoot as string;

@@ -1,7 +1,7 @@
-import { parseGgufMetadata } from '../packages/server/src/services/ggufParser';
+import { parseGgufMetadata } from "../packages/server/src/services/ggufParser";
 
 async function main() {
-	const result = await parseGgufMetadata('path-to-model-gguf');
+	const result = await parseGgufMetadata("path-to-model-gguf");
 	console.log(JSON.stringify(result, null, 2));
 }
 

@@ -1,25 +1,48 @@
-import { Box, Text, HStack, VStack, Flex, Button, Spinner, Badge, Switch } from '@chakra-ui/react';
-import { Globe, Trash2, Server, ArrowRight, Play, Square, Shield } from 'lucide-react';
-import { useState, useCallback, useEffect } from 'react';
-import { useDependantState } from '../../hooks/useDependantState';
-import { PageHeader } from '../../components/PageHeader';
-import { Card } from '../../components/Card';
-import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
-import { useMutation } from '../../hooks/useQuery';
-import { useStore } from '../../store';
-import { clearStickyRoute, clearAllStickyRoutes, startProxy, stopProxy, updateSettings } from '../../api/services';
-import type { IProxyStatus, IStickyRouteInfo } from '../../api/services';
-import type { ISettings } from '@warpcore/shared';
-import { useToast } from '../../components/ToastProvider';
-import { BsRouter } from 'react-icons/bs';
-import { AccessTokensSection } from './AccessTokensSection';
+import { Badge, Box, Button, Flex, HStack, Spinner, Switch, Text, VStack } from "@chakra-ui/react";
+import type { ISettings } from "@warpcore/shared";
+import { ArrowRight, Globe, Play, Server, Shield, Square, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { BsRouter } from "react-icons/bs";
+import type { IProxyStatus, IStickyRouteInfo } from "../../api/services";
+import {
+	clearAllStickyRoutes,
+	clearStickyRoute,
+	startProxy,
+	stopProxy,
+	updateSettings,
+} from "../../api/services";
+import { Card } from "../../components/Card";
+import { ConfirmDialog } from "../../components/dialogs/ConfirmDialog";
+import { PageHeader } from "../../components/PageHeader";
+import { useToast } from "../../components/ToastProvider";
+import { useDependantState } from "../../hooks/useDependantState";
+import { useMutation } from "../../hooks/useQuery";
+import { useStore } from "../../store";
+import { AccessTokensSection } from "./AccessTokensSection";
 
 function StatPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
 	return (
-		<HStack gap="1.5" px="2.5" py="1.5" borderRadius="lg" bg="var(--wc-bg-subtle)" borderWidth="1px" borderColor="var(--wc-border-subtle)">
+		<HStack
+			gap="1.5"
+			px="2.5"
+			py="1.5"
+			borderRadius="lg"
+			bg="var(--wc-bg-subtle)"
+			borderWidth="1px"
+			borderColor="var(--wc-border-subtle)"
+		>
 			<Box color="var(--wc-text-faint)">{icon}</Box>
-			<Text fontSize="11px" color="var(--wc-text-muted)">{label}</Text>
-			<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)" fontFamily='"Geist Mono", monospace'>{value}</Text>
+			<Text fontSize="11px" color="var(--wc-text-muted)">
+				{label}
+			</Text>
+			<Text
+				fontSize="12px"
+				fontWeight="600"
+				color="var(--wc-text-secondary)"
+				fontFamily='"Geist Mono", monospace'
+			>
+				{value}
+			</Text>
 		</HStack>
 	);
 }
@@ -36,8 +59,19 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 				borderWidth="1px"
 				borderColor="var(--wc-accent-red-border)"
 			>
-				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-accent-red)" shadow="0 0 8px var(--wc-accent-red)" />
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-accent-red)" letterSpacing="0.02em">
+				<Box
+					w="6px"
+					h="6px"
+					borderRadius="full"
+					bg="var(--wc-accent-red)"
+					shadow="0 0 8px var(--wc-accent-red)"
+				/>
+				<Text
+					fontSize="11px"
+					fontWeight="600"
+					color="var(--wc-accent-red)"
+					letterSpacing="0.02em"
+				>
 					Error: {status.error}
 				</Text>
 			</HStack>
@@ -56,7 +90,12 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 				borderColor="var(--wc-border-subtle)"
 			>
 				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-text-muted)" />
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" letterSpacing="0.02em">
+				<Text
+					fontSize="11px"
+					fontWeight="600"
+					color="var(--wc-text-muted)"
+					letterSpacing="0.02em"
+				>
 					Stopped
 				</Text>
 			</HStack>
@@ -69,12 +108,23 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 			px="2.5"
 			py="1"
 			borderRadius="full"
-bg="var(--wc-accent-green-bg-8)"
-				borderWidth="1px"
-				borderColor="var(--wc-accent-green-border)"
+			bg="var(--wc-accent-green-bg-8)"
+			borderWidth="1px"
+			borderColor="var(--wc-accent-green-border)"
+		>
+			<Box
+				w="6px"
+				h="6px"
+				borderRadius="full"
+				bg="var(--wc-accent-green)"
+				shadow="0 0 8px var(--wc-accent-green)"
+			/>
+			<Text
+				fontSize="11px"
+				fontWeight="600"
+				color="var(--wc-accent-green)"
+				letterSpacing="0.02em"
 			>
-				<Box w="6px" h="6px" borderRadius="full" bg="var(--wc-accent-green)" shadow="0 0 8px var(--wc-accent-green)" />
-				<Text fontSize="11px" fontWeight="600" color="var(--wc-accent-green)" letterSpacing="0.02em">
 				Running on port {status.port}
 			</Text>
 		</HStack>
@@ -87,17 +137,21 @@ export function ProxyPage() {
 
 	const [clearingAll, setClearingAll] = useState(false);
 	const [restartConfirm, setRestartConfirm] = useState(false);
-	const settings = useStore(s => s.settings);
+	const settings = useStore((s) => s.settings);
 	const [proxyAuthEnabled, setProxyAuthEnabled] = useDependantState(settings.proxyAuthEnabled);
 	const [apiAuthEnabled, setApiAuthEnabled] = useDependantState(settings.apiAuthEnabled);
-	const [authRequireForLocalhost, setAuthRequireForLocalhost] = useDependantState(settings.authRequireForLocalhost);
+	const [authRequireForLocalhost, setAuthRequireForLocalhost] = useDependantState(
+		settings.authRequireForLocalhost,
+	);
 
 	const clearAllMut = useMutation<void, null>(useCallback(() => clearAllStickyRoutes(), []));
-	const clearOneMut = useMutation<string, { cleared: boolean }>(useCallback((alias) => clearStickyRoute(alias), []));
+	const clearOneMut = useMutation<string, { cleared: boolean }>(
+		useCallback((alias) => clearStickyRoute(alias), []),
+	);
 	const startMut = useMutation<void, null>(useCallback(() => startProxy(), []));
 	const stopMut = useMutation<void, null>(useCallback(() => stopProxy(), []));
 	const saveSettingsMut = useMutation<Partial<ISettings>, ISettings>(
-		useCallback((data: Partial<ISettings>) => updateSettings(data), [])
+		useCallback((data: Partial<ISettings>) => updateSettings(data), []),
 	);
 
 	const handleClearAll = async () => {
@@ -148,34 +202,34 @@ export function ProxyPage() {
 	};
 
 	const getStatusSubtitle = (status: IProxyStatus, routeCount: number): string => {
-		if (status.error) return 'Error';
-		if (!status.running) return 'Stopped';
+		if (status.error) return "Error";
+		if (!status.running) return "Stopped";
 		return `${routeCount} sticky routes`;
 	};
 
 	const getIconBg = (status: IProxyStatus): string => {
-		if (status.error) return 'var(--wc-accent-red-bg-8)';
-		if (!status.running) return 'var(--wc-bg-card)';
-		return 'var(--wc-accent-green-bg-8)';
+		if (status.error) return "var(--wc-accent-red-bg-8)";
+		if (!status.running) return "var(--wc-bg-card)";
+		return "var(--wc-accent-green-bg-8)";
 	};
 
 	const getIconBorder = (status: IProxyStatus): string => {
-		if (status.error) return 'var(--wc-border-strong)';
-		if (!status.running) return 'var(--wc-border-subtle)';
-		return 'var(--wc-accent-green-border)';
+		if (status.error) return "var(--wc-border-strong)";
+		if (!status.running) return "var(--wc-border-subtle)";
+		return "var(--wc-accent-green-border)";
 	};
 
 	const getIconColor = (status: IProxyStatus): string => {
-		if (status.error) return 'var(--wc-accent-red)';
-		if (!status.running) return 'var(--wc-text-faint)';
-		return 'var(--wc-accent-green)';
+		if (status.error) return "var(--wc-accent-red)";
+		if (!status.running) return "var(--wc-text-faint)";
+		return "var(--wc-accent-green)";
 	};
 
 	return (
 		<Box>
 			<PageHeader
 				title="Router"
-				subtitle={proxyStatus ? getStatusSubtitle(proxyStatus, proxyRoutes.length) : '-'}
+				subtitle={proxyStatus ? getStatusSubtitle(proxyStatus, proxyRoutes.length) : "-"}
 				icon={<BsRouter size={20} />}
 				actions={
 					proxyStatus?.enabled && proxyRoutes.length > 0 ? (
@@ -183,7 +237,10 @@ export function ProxyPage() {
 							size="sm"
 							variant="ghost"
 							color="var(--wc-text-muted)"
-							_hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }}
+							_hover={{
+								color: "var(--wc-accent-red)",
+								bg: "var(--wc-accent-red-bg-8)",
+							}}
 							borderRadius="lg"
 							fontSize="13px"
 							fontWeight="600"
@@ -203,19 +260,67 @@ export function ProxyPage() {
 							<Flex justify="space-between" align="start">
 								<HStack gap="3">
 									<Flex
-										w="10" h="10" borderRadius="lg" alignItems="center" justifyContent="center"
+										w="10"
+										h="10"
+										borderRadius="lg"
+										alignItems="center"
+										justifyContent="center"
 										position="relative"
-										bg={proxyStatus ? getIconBg(proxyStatus) : 'var(--wc-bg-card)'}
+										bg={
+											proxyStatus
+												? getIconBg(proxyStatus)
+												: "var(--wc-bg-card)"
+										}
 										borderWidth="1px"
-										borderColor={proxyStatus ? getIconBorder(proxyStatus) : 'var(--wc-border-subtle)'}
+										borderColor={
+											proxyStatus
+												? getIconBorder(proxyStatus)
+												: "var(--wc-border-subtle)"
+										}
 									>
-										<BsRouter size={18} color={proxyStatus ? getIconColor(proxyStatus) : 'var(--wc-text-faint)'} />
-										{!proxyStatus?.error && proxyStatus?.running && proxyStatus?.healthy && <Box position="absolute" top="-1px" right="-1px" w="8px" h="8px" borderRadius="full" bg="var(--wc-accent-green)" shadow="0 0 8px var(--wc-accent-green)" />}
+										<BsRouter
+											size={18}
+											color={
+												proxyStatus
+													? getIconColor(proxyStatus)
+													: "var(--wc-text-faint)"
+											}
+										/>
+										{!proxyStatus?.error &&
+											proxyStatus?.running &&
+											proxyStatus?.healthy && (
+												<Box
+													position="absolute"
+													top="-1px"
+													right="-1px"
+													w="8px"
+													h="8px"
+													borderRadius="full"
+													bg="var(--wc-accent-green)"
+													shadow="0 0 8px var(--wc-accent-green)"
+												/>
+											)}
 									</Flex>
 									<Box>
-										<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">Server Alias</Text>
+										<Text
+											fontSize="14px"
+											fontWeight="600"
+											color="var(--wc-text-primary)"
+										>
+											Server Alias
+										</Text>
 										<HStack gap="3" mt="0.5">
-											<ProxyStatusBadge status={proxyStatus ?? { enabled: false, port: 0, running: false, healthy: false, error: null }} />
+											<ProxyStatusBadge
+												status={
+													proxyStatus ?? {
+														enabled: false,
+														port: 0,
+														running: false,
+														healthy: false,
+														error: null,
+													}
+												}
+											/>
 										</HStack>
 									</Box>
 								</HStack>
@@ -223,11 +328,11 @@ export function ProxyPage() {
 								{!proxyStatus?.running ? (
 									<Button
 										size="sm"
-bg="var(--wc-accent-blue-bg-12)"
-						color="var(--wc-accent-blue)"
-						borderWidth="1px"
-						borderColor="var(--wc-accent-blue-border)"
-						_hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }}
+										bg="var(--wc-accent-blue-bg-12)"
+										color="var(--wc-accent-blue)"
+										borderWidth="1px"
+										borderColor="var(--wc-accent-blue-border)"
+										_hover={{ bg: "var(--wc-accent-blue-hover-bg)" }}
 										borderRadius="lg"
 										fontSize="13px"
 										fontWeight="500"
@@ -241,8 +346,11 @@ bg="var(--wc-accent-blue-bg-12)"
 									<Button
 										size="sm"
 										variant="ghost"
-color="var(--wc-text-muted)"
-									_hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }}
+										color="var(--wc-text-muted)"
+										_hover={{
+											color: "var(--wc-accent-red)",
+											bg: "var(--wc-accent-red-bg-8)",
+										}}
 										borderRadius="lg"
 										fontSize="13px"
 										fontWeight="500"
@@ -257,8 +365,16 @@ color="var(--wc-text-muted)"
 
 							{/* Details row - simplified from server cards */}
 							<HStack gap="2" flexWrap="wrap">
-								<StatPill icon={<Server size={12} />} label="Port" value={`${proxyStatus?.port ?? '-'}`} />
-								<StatPill icon={<Globe size={12} />} label="Routes" value={`${proxyRoutes.length}`} />
+								<StatPill
+									icon={<Server size={12} />}
+									label="Port"
+									value={`${proxyStatus?.port ?? "-"}`}
+								/>
+								<StatPill
+									icon={<Globe size={12} />}
+									label="Routes"
+									value={`${proxyRoutes.length}`}
+								/>
 							</HStack>
 						</VStack>
 					</Card>
@@ -268,42 +384,126 @@ color="var(--wc-text-muted)"
 						<VStack align="stretch" gap="3">
 							<HStack gap="2" mb="2">
 								<Shield size={14} color="var(--wc-text-tertiary)" />
-								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">Authentication</Text>
+								<Text
+									fontSize="14px"
+									fontWeight="600"
+									color="var(--wc-text-primary)"
+								>
+									Authentication
+								</Text>
 							</HStack>
 							<VStack gap="2" align="stretch">
-								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
+								<HStack
+									justify="space-between"
+									alignItems="center"
+									px="3"
+									py="2"
+									borderRadius="lg"
+									bg="var(--wc-bg-surface)"
+								>
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Proxy Auth</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Require Bearer token for /v1/* endpoints</Text>
+										<Text
+											fontSize="12px"
+											fontWeight="500"
+											color="var(--wc-text-secondary)"
+										>
+											Proxy Auth
+										</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">
+											Require Bearer token for /v1/* endpoints
+										</Text>
 									</Box>
-									<Switch.Root checked={proxyAuthEnabled} onCheckedChange={handleProxyAuthToggle}>
+									<Switch.Root
+										checked={proxyAuthEnabled}
+										onCheckedChange={handleProxyAuthToggle}
+									>
 										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: proxyAuthEnabled ? 'var(--wc-switch-active)' : 'var(--wc-bg-card)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+										<Switch.Control
+											css={{
+												bg: proxyAuthEnabled
+													? "var(--wc-switch-active)"
+													: "var(--wc-bg-card)",
+											}}
+										>
+											<Switch.Thumb
+												css={{ bg: "var(--wc-special-switch-thumb)" }}
+											/>
 										</Switch.Control>
 									</Switch.Root>
 								</HStack>
-								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
+								<HStack
+									justify="space-between"
+									alignItems="center"
+									px="3"
+									py="2"
+									borderRadius="lg"
+									bg="var(--wc-bg-surface)"
+								>
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Control API Auth</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Require auth for /api/* endpoints</Text>
+										<Text
+											fontSize="12px"
+											fontWeight="500"
+											color="var(--wc-text-secondary)"
+										>
+											Control API Auth
+										</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">
+											Require auth for /api/* endpoints
+										</Text>
 									</Box>
-									<Switch.Root checked={apiAuthEnabled} onCheckedChange={handleApiAuthToggle}>
+									<Switch.Root
+										checked={apiAuthEnabled}
+										onCheckedChange={handleApiAuthToggle}
+									>
 										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: apiAuthEnabled ? 'var(--wc-switch-active)' : 'var(--wc-bg-card)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+										<Switch.Control
+											css={{
+												bg: apiAuthEnabled
+													? "var(--wc-switch-active)"
+													: "var(--wc-bg-card)",
+											}}
+										>
+											<Switch.Thumb
+												css={{ bg: "var(--wc-special-switch-thumb)" }}
+											/>
 										</Switch.Control>
 									</Switch.Root>
 								</HStack>
-								<HStack justify="space-between" alignItems="center" px="3" py="2" borderRadius="lg" bg="var(--wc-bg-surface)">
+								<HStack
+									justify="space-between"
+									alignItems="center"
+									px="3"
+									py="2"
+									borderRadius="lg"
+									bg="var(--wc-bg-surface)"
+								>
 									<Box flex="1">
-										<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">Require Auth for Localhost</Text>
-										<Text fontSize="10px" color="var(--wc-text-faint)">Enforce auth even for localhost requests (testing)</Text>
+										<Text
+											fontSize="12px"
+											fontWeight="500"
+											color="var(--wc-text-secondary)"
+										>
+											Require Auth for Localhost
+										</Text>
+										<Text fontSize="10px" color="var(--wc-text-faint)">
+											Enforce auth even for localhost requests (testing)
+										</Text>
 									</Box>
-									<Switch.Root checked={authRequireForLocalhost} onCheckedChange={handleAuthRequireForLocalhostToggle}>
+									<Switch.Root
+										checked={authRequireForLocalhost}
+										onCheckedChange={handleAuthRequireForLocalhostToggle}
+									>
 										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: authRequireForLocalhost ? 'var(--wc-switch-active)' : 'var(--wc-bg-card)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+										<Switch.Control
+											css={{
+												bg: authRequireForLocalhost
+													? "var(--wc-switch-active)"
+													: "var(--wc-bg-card)",
+											}}
+										>
+											<Switch.Thumb
+												css={{ bg: "var(--wc-special-switch-thumb)" }}
+											/>
 										</Switch.Control>
 									</Switch.Root>
 								</HStack>
@@ -317,48 +517,91 @@ color="var(--wc-text-muted)"
 					{/* Routing Table Section */}
 					<Card>
 						<VStack align="stretch" gap="3">
-							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">
+							<Text
+								fontSize="13px"
+								fontWeight="600"
+								color="var(--wc-text-tertiary)"
+								textTransform="uppercase"
+								letterSpacing="0.05em"
+							>
 								Sticky Routes
-									</Text>
+							</Text>
 
-									{!proxyRoutes || proxyRoutes.length === 0 ? (
+							{!proxyRoutes || proxyRoutes.length === 0 ? (
+								<Flex
+									h="120px"
+									alignItems="center"
+									justifyContent="center"
+									borderWidth="1px"
+									borderColor="var(--wc-border-subtle)"
+									borderRadius="xl"
+									borderStyle="dashed"
+								>
+									<VStack gap="2" color="var(--wc-text-faint)">
+										<Text fontSize="13px">No sticky routes yet</Text>
+										<Text fontSize="11px" color="var(--wc-text-muted)">
+											Sticky routes are created when requests go through the
+											router
+										</Text>
+									</VStack>
+								</Flex>
+							) : (
+								<VStack align="stretch" gap="2">
+									{proxyRoutes.map((route: IStickyRouteInfo) => (
 										<Flex
-											h="120px" alignItems="center" justifyContent="center"
-											borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="xl" borderStyle="dashed"
+											key={route.alias}
+											justify="space-between"
+											align="center"
+											p="3"
+											borderRadius="lg"
+											bg="var(--wc-bg-surface)"
+											borderWidth="1px"
+											borderColor="var(--wc-border-subtle)"
 										>
-											<VStack gap="2" color="var(--wc-text-faint)">
-												<Text fontSize="13px">No sticky routes yet</Text>
-												<Text fontSize="11px" color="var(--wc-text-muted)">Sticky routes are created when requests go through the router</Text>
-											</VStack>
+											<HStack gap="3">
+												<Badge
+													px="2"
+													py="0.5"
+													borderRadius="md"
+													fontSize="11px"
+													fontFamily='"Geist Mono", monospace'
+													bg="var(--wc-accent-blue-bg-10)"
+													color="var(--wc-accent-blue)"
+													borderWidth="1px"
+													borderColor="var(--wc-accent-blue-border)"
+												>
+													{route.alias}
+												</Badge>
+												<ArrowRight
+													size={14}
+													color="var(--wc-text-placeholder)"
+												/>
+												<Text
+													fontSize="12px"
+													fontWeight="500"
+													color="var(--wc-text-secondary)"
+												>
+													{route.serverName ?? "Unknown"}
+												</Text>
+											</HStack>
+											<Button
+												size="xs"
+												variant="ghost"
+												color="var(--wc-text-faint)"
+												_hover={{
+													color: "var(--wc-accent-red)",
+													bg: "var(--wc-accent-red-bg-8)",
+												}}
+												borderRadius="md"
+												fontSize="11px"
+												onClick={() => handleClearOne(route.alias)}
+											>
+												Clear
+											</Button>
 										</Flex>
-									) : (
-										<VStack align="stretch" gap="2">
-											{proxyRoutes.map((route: IStickyRouteInfo) => (
-												<Flex key={route.alias} justify="space-between" align="center" p="3" borderRadius="lg" bg="var(--wc-bg-surface)" borderWidth="1px" borderColor="var(--wc-border-subtle)">
-													<HStack gap="3">
-														<Badge px="2" py="0.5" borderRadius="md" fontSize="11px" fontFamily='"Geist Mono", monospace' bg="var(--wc-accent-blue-bg-10)" color="var(--wc-accent-blue)" borderWidth="1px" borderColor="var(--wc-accent-blue-border)">
-															{route.alias}
-														</Badge>
-														<ArrowRight size={14} color="var(--wc-text-placeholder)" />
-														<Text fontSize="12px" fontWeight="500" color="var(--wc-text-secondary)">
-															{route.serverName ?? 'Unknown'}
-														</Text>
-													</HStack>
-													<Button
-														size="xs"
-														variant="ghost"
-color="var(--wc-text-faint)"
-													_hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }}
-														borderRadius="md"
-														fontSize="11px"
-														onClick={() => handleClearOne(route.alias)}
-													>
-														Clear
-													</Button>
-												</Flex>
-											))}
-										</VStack>
-									)}
+									))}
+								</VStack>
+							)}
 						</VStack>
 					</Card>
 				</VStack>
@@ -381,7 +624,10 @@ color="var(--wc-text-faint)"
 					message="Enabling proxy authentication requires restarting the proxy. This will terminate all existing connections. New connections will require authentication."
 					isOpen={true}
 					isLoading={stopMut.loading || startMut.loading || saveSettingsMut.loading}
-					onCancel={() => { setRestartConfirm(false); setProxyAuthEnabled(false); }}
+					onCancel={() => {
+						setRestartConfirm(false);
+						setProxyAuthEnabled(false);
+					}}
 					onConfirm={handleRestartAndApply}
 					confirmLabel="Restart"
 				/>

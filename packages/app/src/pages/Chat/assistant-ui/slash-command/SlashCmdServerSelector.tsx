@@ -1,8 +1,8 @@
+import { computePosition, flip, offset, shift } from "@floating-ui/dom";
+import { EServerStatus, type IServer } from "@warpcore/shared";
+import { ChevronDown, Eye } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { computePosition, flip, shift, offset } from "@floating-ui/dom";
-import { ChevronDown, Eye } from "lucide-react";
-import { EServerStatus, IServer } from "@warpcore/shared";
 import { useStore } from "@/store";
 
 type SlashCmdServerSelectorProps = {
@@ -146,22 +146,22 @@ export const SlashCmdServerSelector: React.FC<SlashCmdServerSelectorProps> = ({
 
 	return (
 		<>
-	<span
-			ref={triggerRef}
-			contentEditable={false}
-			tabIndex={0}
-			onMouseDown={handleTriggerMouseDown}
-			onClick={() => {
-				if (!isOpen) {
-					setIsOpen(true);
-					onFocus();
-				}
-			}}
-			onFocus={handleTriggerFocus}
-			onBlur={handleTriggerBlur}
-			onKeyDown={(e) => {
-				onKeyDown(e);
-			}}
+			<span
+				ref={triggerRef}
+				contentEditable={false}
+				tabIndex={0}
+				onMouseDown={handleTriggerMouseDown}
+				onClick={() => {
+					if (!isOpen) {
+						setIsOpen(true);
+						onFocus();
+					}
+				}}
+				onFocus={handleTriggerFocus}
+				onBlur={handleTriggerBlur}
+				onKeyDown={(e) => {
+					onKeyDown(e);
+				}}
 				style={{
 					display: "inline-flex",
 					alignItems: "center",

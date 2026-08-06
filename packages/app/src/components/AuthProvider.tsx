@@ -1,7 +1,7 @@
-import { Center, Spinner } from '@chakra-ui/react';
-import { useEffect, useState, ReactNode } from 'react';
-import { LoginPage } from '../pages/Login/LoginPage';
-import { fetchAuthCheck } from '../api/services';
+import { Center, Spinner } from "@chakra-ui/react";
+import { type ReactNode, useEffect, useState } from "react";
+import { fetchAuthCheck } from "../api/services";
+import { LoginPage } from "../pages/Login/LoginPage";
 
 interface IAuthProviderProps {
 	children: ReactNode;

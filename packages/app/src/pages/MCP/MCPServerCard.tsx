@@ -1,12 +1,19 @@
-import React from 'react';
-import { Box, Text, Badge, HStack } from '@chakra-ui/react';
-import { RotateCcw, RefreshCw, Trash2 } from 'lucide-react';
-import { McpStatusDot } from './McpStatusDot';
-import type { IMcpServerEntry } from '@warpcore/shared';
-import type { IMcpServerState } from '@warpcore/bridge';
-import { EMcpServerStatus } from '@warpcore/bridge';
+import { Badge, Box, HStack, Text } from "@chakra-ui/react";
+import type { IMcpServerState } from "@warpcore/bridge";
+import { EMcpServerStatus } from "@warpcore/bridge";
+import type { IMcpServerEntry } from "@warpcore/shared";
+import { RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import React from "react";
+import { McpStatusDot } from "./McpStatusDot";
 
-export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemove }: {
+export function MCPServerCard({
+	name,
+	entry,
+	state,
+	onRestart,
+	onRefresh,
+	onRemove,
+}: {
 	name: string;
 	entry: IMcpServerEntry;
 	state: IMcpServerState | null;
@@ -15,8 +22,8 @@ export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemo
 	onRemove: () => void;
 }) {
 	const status = state?.status ?? EMcpServerStatus.DISCONNECTED;
-	const transportType = entry.url ? 'HTTP' : 'STDIO';
-	const connectionDetail = entry.url ?? `${entry.command} ${(entry.args ?? []).join(' ')}`;
+	const transportType = entry.url ? "HTTP" : "STDIO";
+	const connectionDetail = entry.url ?? `${entry.command} ${(entry.args ?? []).join(" ")}`;
 
 	return (
 		<Box
@@ -25,7 +32,7 @@ export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemo
 			borderColor="var(--wc-border-subtle)"
 			borderRadius="md"
 			bg="var(--wc-bg-surface)"
-			_hover={{ borderColor: 'var(--wc-border-overlay)' }}
+			_hover={{ borderColor: "var(--wc-border-overlay)" }}
 		>
 			<HStack gap="3" mb="2">
 				<McpStatusDot status={status} />
@@ -69,7 +76,7 @@ export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemo
 					as="button"
 					p="1.5"
 					borderRadius="sm"
-					_hover={{ bg: 'var(--wc-bg-hover)' }}
+					_hover={{ bg: "var(--wc-bg-hover)" }}
 					onClick={onRefresh}
 					title="Refresh tools"
 				>
@@ -79,7 +86,7 @@ export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemo
 					as="button"
 					p="1.5"
 					borderRadius="sm"
-					_hover={{ bg: 'var(--wc-bg-hover)' }}
+					_hover={{ bg: "var(--wc-bg-hover)" }}
 					onClick={onRestart}
 					title="Restart server"
 				>
@@ -89,7 +96,7 @@ export function MCPServerCard({ name, entry, state, onRestart, onRefresh, onRemo
 					as="button"
 					p="1.5"
 					borderRadius="sm"
-					_hover={{ bg: 'var(--wc-accent-red-alt-bg)' }}
+					_hover={{ bg: "var(--wc-accent-red-alt-bg)" }}
 					onClick={onRemove}
 					title="Remove server"
 				>

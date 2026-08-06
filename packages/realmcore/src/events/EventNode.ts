@@ -132,13 +132,11 @@ export function computeTargetAddr(sourceAddr: TSourceAddr, path: IPath): TTarget
 		if (seg === STAR || seg === STARSTAR) {
 			seenWildcard = true;
 			stack.push(seg);
-		}
-		else if (seg === UP) {
+		} else if (seg === UP) {
 			if (seenWildcard) throw new Error("'..' after a wildcard segment is undefined");
 			if (stack.length === 0) throw new Error("path walks above root");
 			stack.pop();
-		}
-		else stack.push(seg);
+		} else stack.push(seg);
 	}
 	return joinAddr(stack);
 }
@@ -164,17 +162,14 @@ function matchSegs(pat: Array<string>, seg: Array<string>): boolean {
 			starPi = pi;
 			starSi = si;
 			pi += 1;
-		}
-		else if (pi < pat.length && (pat[pi] === STAR || pat[pi] === seg[si])) {
+		} else if (pi < pat.length && (pat[pi] === STAR || pat[pi] === seg[si])) {
 			pi += 1;
 			si += 1;
-		}
-		else if (starPi >= 0) {
+		} else if (starPi >= 0) {
 			pi = starPi + 1;
 			starSi += 1;
 			si = starSi;
-		}
-		else return false;
+		} else return false;
 	}
 	while (pi < pat.length && pat[pi] === STARSTAR) pi += 1;
 	return pi === pat.length;
@@ -203,11 +198,11 @@ export class EventNode implements IExternalNode {
 	public mapSubscriberToIds: Record<TSubscriberAddr, Set<TCallbackId>>;
 
 	constructor(
-		public readonly nodeId: TNodeId, 
-		public readonly isRoot: boolean, 
+		public readonly nodeId: TNodeId,
+		public readonly isRoot: boolean,
 
-		private onReady?: {(): void},
-		private onDispose?: {(): Promise<void>},
+		private onReady?: () => void,
+		private onDispose?: () => Promise<void>,
 	) {
 		this.nodeAddr = isRoot ? SEP + nodeId : "";
 		this.parent = null;
@@ -267,7 +262,12 @@ export class EventNode implements IExternalNode {
 	// local caller can unsub. the reverse map records where the callback lives so
 	// it can be removed by id alone.
 
-	public listen(name: TEventName, source: TSourcePath, cb: TCallback, id?: TCallbackId): TCallbackId {
+	public listen(
+		name: TEventName,
+		source: TSourcePath,
+		cb: TCallback,
+		id?: TCallbackId,
+	): TCallbackId {
 		const sourceAddr = computeTargetAddr(this.nodeAddr, parsePath(source));
 		const cbId = id || nanoid(8);
 		this.callbacks[cbId] = cb;
@@ -298,7 +298,12 @@ export class EventNode implements IExternalNode {
 	// target addr when there is no wildcard, stamps this node as the source, and
 	// routes. returns the routed result.
 
-	public pub(targetPath: TTargetPath, name: TEventName, payload?: unknown, opts?: { expectResponse?: boolean; isParallel?: boolean; seed?: unknown }): TMaybePromise<unknown> {
+	public pub(
+		targetPath: TTargetPath,
+		name: TEventName,
+		payload?: unknown,
+		opts?: { expectResponse?: boolean; isParallel?: boolean; seed?: unknown },
+	): TMaybePromise<unknown> {
 		const path = parsePath(targetPath);
 		const wild = hasWildcard(targetPath);
 		const ev: IEvent = {
@@ -319,11 +324,17 @@ export class EventNode implements IExternalNode {
 	// gated to the target as its source, so events the target relays back match.
 	// sys.sub carries the id; the target installs the relay (see setupInternalEvents).
 
-	public async sub(targetPath: TTargetPath, name: TEventName, cb: TCallback): Promise<TCallbackId> {
+	public async sub(
+		targetPath: TTargetPath,
+		name: TEventName,
+		cb: TCallback,
+	): Promise<TCallbackId> {
 		const id = nanoid(8);
 		// subscribing to self is just a local listener: the event already fires
 		// here, so no relay round-trip is needed.
-		const targetAddr = hasWildcard(targetPath) ? undefined : computeTargetAddr(this.nodeAddr, parsePath(targetPath));
+		const targetAddr = hasWildcard(targetPath)
+			? undefined
+			: computeTargetAddr(this.nodeAddr, parsePath(targetPath));
 		if (targetAddr === this.nodeAddr) {
 			this.listen(name, SELF, cb, id);
 			return id;
@@ -356,15 +367,32 @@ export class EventNode implements IExternalNode {
 	// survey fans out in parallel and collects every handler's return. target
 	// defaults to self.
 
-	public broadcast(name: TEventName, payload?: unknown, targetPath: TTargetPath = SELF): TMaybePromise<unknown> {
+	public broadcast(
+		name: TEventName,
+		payload?: unknown,
+		targetPath: TTargetPath = SELF,
+	): TMaybePromise<unknown> {
 		return this.pub(targetPath, name, payload, { isParallel: true, expectResponse: false });
 	}
 
-	public pipe(name: TEventName, payload?: unknown, targetPath: TTargetPath = SELF, seed?: unknown): TMaybePromise<unknown> {
-		return this.pub(targetPath, name, payload, { isParallel: false, expectResponse: true, seed });
+	public pipe(
+		name: TEventName,
+		payload?: unknown,
+		targetPath: TTargetPath = SELF,
+		seed?: unknown,
+	): TMaybePromise<unknown> {
+		return this.pub(targetPath, name, payload, {
+			isParallel: false,
+			expectResponse: true,
+			seed,
+		});
 	}
 
-	public survey(name: TEventName, payload?: unknown, targetPath: TTargetPath = SELF): TMaybePromise<unknown> {
+	public survey(
+		name: TEventName,
+		payload?: unknown,
+		targetPath: TTargetPath = SELF,
+	): TMaybePromise<unknown> {
 		return this.pub(targetPath, name, payload, { isParallel: true, expectResponse: true });
 	}
 
@@ -376,14 +404,16 @@ export class EventNode implements IExternalNode {
 	public on(targetPath: TTargetPath, name: TEventName, cb: TCallback): Promise<TCallbackId> {
 		return this.sub(targetPath, name, async (api) => {
 			const out = await cb(api);
-			if (out !== undefined) console.warn("on(): handler returned a value for a no-return event:", name);
+			if (out !== undefined)
+				console.warn("on(): handler returned a value for a no-return event:", name);
 		});
 	}
 
 	public hook(targetPath: TTargetPath, name: TEventName, cb: TCallback): Promise<TCallbackId> {
 		return this.sub(targetPath, name, async (api) => {
 			const out = await cb(api);
-			if (out === undefined) console.warn("hook(): handler returned no value for a return event:", name);
+			if (out === undefined)
+				console.warn("hook(): handler returned no value for a return event:", name);
 			return out;
 		});
 	}
@@ -394,12 +424,18 @@ export class EventNode implements IExternalNode {
 	public fn(name: TEventName, cb: TCallback): TCallbackId {
 		return this.listen(name, SEP + STARSTAR, async (api) => {
 			const out = await cb(api);
-			if (out === undefined) console.warn("fn(): handler returned no value for an invoked event:", name);
+			if (out === undefined)
+				console.warn("fn(): handler returned no value for an invoked event:", name);
 			return out;
 		});
 	}
 
-	public invoke(targetPath: TTargetPath, name: TEventName, payload?: unknown, seed?: unknown): TMaybePromise<unknown> {
+	public invoke(
+		targetPath: TTargetPath,
+		name: TEventName,
+		payload?: unknown,
+		seed?: unknown,
+	): TMaybePromise<unknown> {
 		return this.pipe(name, payload, targetPath, seed);
 	}
 
@@ -416,7 +452,12 @@ export class EventNode implements IExternalNode {
 	// so consume fans it to local listeners and relay listeners alike.
 	private handleUnwrap(api: IEventApi): TMaybePromise<unknown> {
 		const inner = api.payload as IEvent;
-		const ev: IEvent = { ...inner, sourceAddr: this.nodeAddr, targetPath: this.nodeAddr, targetAddr: this.nodeAddr };
+		const ev: IEvent = {
+			...inner,
+			sourceAddr: this.nodeAddr,
+			targetPath: this.nodeAddr,
+			targetAddr: this.nodeAddr,
+		};
 		return this.route(ev);
 	}
 
@@ -426,15 +467,22 @@ export class EventNode implements IExternalNode {
 		const p = api.payload as { name: TEventName; id: TCallbackId };
 		const subscriber = api.event.sourceAddr;
 		const backPath = api.returnPath;
-		this.listen(p.name, SELF, (relayApi) => {
-			const back = parsePath(backPath);
-			const fwd: IEvent = {
-				...relayApi.event,
-				targetPath: backPath,
-				targetAddr: hasWildcard(backPath) ? undefined : computeTargetAddr(this.nodeAddr, back),
-			};
-			return this.route(fwd);
-		}, p.id);
+		this.listen(
+			p.name,
+			SELF,
+			(relayApi) => {
+				const back = parsePath(backPath);
+				const fwd: IEvent = {
+					...relayApi.event,
+					targetPath: backPath,
+					targetAddr: hasWildcard(backPath)
+						? undefined
+						: computeTargetAddr(this.nodeAddr, back),
+				};
+				return this.route(fwd);
+			},
+			p.id,
+		);
 		if (!this.mapSubscriberToIds[subscriber]) this.mapSubscriberToIds[subscriber] = new Set();
 		this.mapSubscriberToIds[subscriber].add(p.id);
 	}
@@ -474,7 +522,13 @@ export class EventNode implements IExternalNode {
 		let r = rs;
 		if (!r) {
 			const path = parsePath(ev.targetPath);
-			r = { isAbsolute: path.isAbsolute, hasWildcard: hasWildcard(ev.targetPath), haveAncestor: false, cursor: 0, returnPath: "" };
+			r = {
+				isAbsolute: path.isAbsolute,
+				hasWildcard: hasWildcard(ev.targetPath),
+				haveAncestor: false,
+				cursor: 0,
+				returnPath: "",
+			};
 		}
 		const here = addrSegments(this.nodeAddr);
 
@@ -482,13 +536,17 @@ export class EventNode implements IExternalNode {
 		// this node's id to the returnPath (the way back descends into it).
 		if (r.isAbsolute && !r.haveAncestor) {
 			const target = addrSegments(ev.targetAddr || "");
-			const isAncestorOfTarget = !r.hasWildcard
-				&& here.length <= target.length
-				&& here.every((seg, i) => seg === target[i]);
+			const isAncestorOfTarget =
+				!r.hasWildcard &&
+				here.length <= target.length &&
+				here.every((seg, i) => seg === target[i]);
 			const pivot = r.hasWildcard ? this.isRoot : isAncestorOfTarget;
 			if (pivot) return this.route(ev, { ...r, haveAncestor: true });
 			if (!this.parent) throw new Error("Route reached a detached non-root node - Absolute!");
-			return this.parent.route(ev, { ...r, returnPath: prependSeg(this.nodeId, r.returnPath) });
+			return this.parent.route(ev, {
+				...r,
+				returnPath: prependSeg(this.nodeId, r.returnPath),
+			});
 		}
 
 		// concrete downward / toward-target walk (absolute past pivot, or relative).
@@ -503,7 +561,10 @@ export class EventNode implements IExternalNode {
 				return child.route(ev, { ...r, returnPath: prependSeg(UP, r.returnPath) });
 			}
 			if (!this.parent) throw new Error("route reached a detached non-root node!");
-			return this.parent.route(ev, { ...r, returnPath: prependSeg(this.nodeId, r.returnPath) });
+			return this.parent.route(ev, {
+				...r,
+				returnPath: prependSeg(this.nodeId, r.returnPath),
+			});
 		}
 
 		// from here on: wildcard fan-out. work out whether this node consumes, and
@@ -515,28 +576,33 @@ export class EventNode implements IExternalNode {
 		if (r.isAbsolute) {
 			matched = this.nodeAddr.length > 0 && matchAddr(ev.targetPath, this.nodeAddr);
 			nextCursor = r.cursor;
-		}
-		else if (r.cursor >= segs.length) {
+		} else if (r.cursor >= segs.length) {
 			return this.consume(ev, r);
-		}
-		else {
+		} else {
 			const seg = segs[r.cursor];
 			if (seg === UP) {
 				if (!this.parent) throw new Error("relative route walks above root");
-				return this.parent.route(ev, { ...r, cursor: r.cursor + 1, returnPath: prependSeg(this.nodeId, r.returnPath) });
+				return this.parent.route(ev, {
+					...r,
+					cursor: r.cursor + 1,
+					returnPath: prependSeg(this.nodeId, r.returnPath),
+				});
 			}
 			if (seg === STARSTAR) {
 				matched = r.cursor + 1 >= segs.length;
 				nextCursor = r.cursor;
-			}
-			else if (seg === STAR) {
+			} else if (seg === STAR) {
 				matched = false;
 				nextCursor = r.cursor + 1;
-			}
-			else {
+			} else {
 				const child = this.children[seg];
-				if (!child) return ev.expectResponse ? (ev.isParallel ? [] : currentResult(ev)) : undefined;
-				return child.route(ev, { ...r, cursor: r.cursor + 1, returnPath: prependSeg(UP, r.returnPath) });
+				if (!child)
+					return ev.expectResponse ? (ev.isParallel ? [] : currentResult(ev)) : undefined;
+				return child.route(ev, {
+					...r,
+					cursor: r.cursor + 1,
+					returnPath: prependSeg(UP, r.returnPath),
+				});
 			}
 		}
 
@@ -545,14 +611,24 @@ export class EventNode implements IExternalNode {
 		const childReturn = prependSeg(UP, r.returnPath);
 		if (!ev.expectResponse) {
 			if (matched) this.consume(ev, r);
-			for (const id in this.children) this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+			for (const id in this.children)
+				this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
 			return;
 		}
 
 		if (ev.isParallel) {
 			const pending: Array<Promise<unknown>> = [];
 			if (matched) pending.push(Promise.resolve(this.consume(ev, r)));
-			for (const id in this.children) pending.push(Promise.resolve(this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn })));
+			for (const id in this.children)
+				pending.push(
+					Promise.resolve(
+						this.children[id].route(ev, {
+							...r,
+							cursor: nextCursor,
+							returnPath: childReturn,
+						}),
+					),
+				);
 			const settled = await Promise.all(pending);
 			const out: Array<unknown> = [];
 			for (const part of settled) {
@@ -563,7 +639,12 @@ export class EventNode implements IExternalNode {
 		}
 
 		if (matched) ev.result = await this.consume(ev, r);
-		for (const id in this.children) ev.result = await this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+		for (const id in this.children)
+			ev.result = await this.children[id].route(ev, {
+				...r,
+				cursor: nextCursor,
+				returnPath: childReturn,
+			});
 		return ev.result;
 	}
 
@@ -593,7 +674,12 @@ export class EventNode implements IExternalNode {
 			const pending: Array<Promise<void>> = [];
 			for (const cbId of ids) {
 				const cb = this.callbacks[cbId];
-				if (cb) pending.push(Promise.resolve(cb(this.makeApi(ev, ev.seed, returnPath))).then((r) => { out.push(r); }));
+				if (cb)
+					pending.push(
+						Promise.resolve(cb(this.makeApi(ev, ev.seed, returnPath))).then((r) => {
+							out.push(r);
+						}),
+					);
 			}
 			return Promise.all(pending).then(() => out);
 		}
@@ -640,7 +726,12 @@ export class EventNode implements IExternalNode {
 		return out;
 	}
 
-	private makeApi(ev: IEvent, result: unknown, returnPath: TSourcePath, next?: () => Promise<unknown>): IEventApi {
+	private makeApi(
+		ev: IEvent,
+		result: unknown,
+		returnPath: TSourcePath,
+		next?: () => Promise<unknown>,
+	): IEventApi {
 		return {
 			event: ev,
 			payload: ev.payload,

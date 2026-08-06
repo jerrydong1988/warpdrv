@@ -1,4 +1,4 @@
-import type { IApiResponse } from '@warpcore/shared';
+import type { IApiResponse } from "@warpcore/shared";
 
 export interface ISummaryData {
 	servers: { running: number; errors: number };
@@ -8,12 +8,12 @@ export interface ISummaryData {
 	mcp: { total: number; connected: number; connecting: number; error: number };
 }
 
-const API_BASE = '/api';
+const API_BASE = "/api";
 
 export async function fetchSummary(): Promise<IApiResponse<ISummaryData>> {
 	try {
 		const res = await fetch(`${API_BASE}/summary`, {
-			headers: { 'Content-Type': 'application/json' },
+			headers: { "Content-Type": "application/json" },
 		});
 		return await res.json();
 	} catch (err) {

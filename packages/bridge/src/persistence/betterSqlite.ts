@@ -3,45 +3,46 @@
 // SQLite persistence using better-sqlite3. Node only.
 // Schema mirrors WarpCore's chat.db. Table prefix configurable.
 // ============================================================
-import Database from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
-import type { IPersistence } from '../types/interfaces';
+
 import type {
-	IFolder,
-	IReorderFolderEntry,
-	IWorkspace,
-	IChatThread,
-	IListThreadsOptions,
-	IThreadConfig,
+	ICodeGraphEdge,
+	ICodeGraphFile,
+	ICodeGraphNode,
+	ICodeGraphSearchOptions,
+} from "@warpcore/shared";
+import Database from "better-sqlite3";
+import fs from "fs";
+import path from "path";
+import type {
 	IChatMessage,
+	IChatThread,
+	IFolder,
+	IListThreadsOptions,
 	IMessagePart,
-	IToolCall,
-	IToolAttachment,
-	IServerPermission,
-	IToolPermission,
-	IThreadToolPermission,
-	TFolderId,
-	TThreadId,
-	TMessageId,
-	TToolCallId,
+	IReorderFolderEntry,
 	ISearchOptions,
 	ISearchResult,
 	ISearchThreadResult,
-} from '../types';
-import type {
-	ICodeGraphNode,
-	ICodeGraphEdge,
-	ICodeGraphFile,
-	ICodeGraphSearchOptions,
-} from '@warpcore/shared';
-import { folderNameToTopic } from '../util/topic';
+	IServerPermission,
+	IThreadConfig,
+	IThreadToolPermission,
+	IToolAttachment,
+	IToolCall,
+	IToolPermission,
+	IWorkspace,
+	TFolderId,
+	TMessageId,
+	TThreadId,
+	TToolCallId,
+} from "../types";
 import {
-	EChatRole,
+	type EChatRole,
 	EMessagePartType,
-	EToolApprovalMode,
+	type EToolApprovalMode,
 	EToolCallStatus,
-} from '../types';
+} from "../types";
+import type { IPersistence } from "../types/interfaces";
+import { folderNameToTopic } from "../util/topic";
 
 export interface IBetterSqlitePersistenceOptions {
 	// Prefix prepended to all table names. Default: '' (matches WarpCore).
@@ -329,7 +330,7 @@ export class SqlitePersistence implements IPersistence {
 
 	constructor(dbPath: string, options: IBetterSqlitePersistenceOptions = {}) {
 		this.dbPath = dbPath;
-		this.t = buildTableNames(options.tablePrefix ?? '');
+		this.t = buildTableNames(options.tablePrefix ?? "");
 	}
 
 	async init(): Promise<void> {
@@ -338,44 +339,52 @@ export class SqlitePersistence implements IPersistence {
 
 		this.db = new Database(this.dbPath, {
 			nativeBinding: (process as any).pkg
-				? path.join(process.env.WARPCORE_RESOURCE_DIR ?? path.dirname(process.execPath), 'binaries', 'better_sqlite3.node')
-				: undefined
+				? path.join(
+						process.env.WARPCORE_RESOURCE_DIR ?? path.dirname(process.execPath),
+						"binaries",
+						"better_sqlite3.node",
+					)
+				: undefined,
 		});
 
-		this.db.pragma('journal_mode = WAL');
-		this.db.pragma('foreign_keys = ON');
+		this.db.pragma("journal_mode = WAL");
+		this.db.pragma("foreign_keys = ON");
 		this.migrateCodeGraphSchema();
 		this.db.exec(buildSchema(this.t));
 		this.runMigrations();
 	}
 
 	private migrateCodeGraphSchema(): void {
-			try {
-				const cols = this.db!.prepare(`PRAGMA table_info(${this.t.codeGraphEdges})`).all() as Array<{ name: string }>;
-				if (cols.length === 0) return;
-				if (cols.some((c) => c.name === 'projectId')) return;
-				this.db!.exec(`
+		try {
+			const cols = this.db!.prepare(
+				`PRAGMA table_info(${this.t.codeGraphEdges})`,
+			).all() as Array<{ name: string }>;
+			if (cols.length === 0) return;
+			if (cols.some((c) => c.name === "projectId")) return;
+			this.db!.exec(`
 					DROP TABLE IF EXISTS ${this.t.codeGraphNodesFts};
 					DROP TABLE IF EXISTS ${this.t.codeGraphEdges};
 					DROP TABLE IF EXISTS ${this.t.codeGraphNodes};
 					DROP TABLE IF EXISTS ${this.t.codeGraphFiles};
 				`);
-				console.log('[migration] Dropped code graph tables for multi-project rebuild');
-			} catch (err) {
-				console.error('[migration] Code graph rebuild failed:', err);
-			}
+			console.log("[migration] Dropped code graph tables for multi-project rebuild");
+		} catch (err) {
+			console.error("[migration] Code graph rebuild failed:", err);
 		}
-		private runMigrations(): void {
+	}
+	private runMigrations(): void {
 		const columnSchema = [
-			{ name: 'data', type: 'TEXT' },
-			{ name: 'mimeType', type: 'TEXT' },
-			{ name: 'fileName', type: 'TEXT' },
-			{ name: 'fileSize', type: 'INTEGER' },
-			{ name: 'extractedText', type: 'TEXT' },
+			{ name: "data", type: "TEXT" },
+			{ name: "mimeType", type: "TEXT" },
+			{ name: "fileName", type: "TEXT" },
+			{ name: "fileSize", type: "INTEGER" },
+			{ name: "extractedText", type: "TEXT" },
 		];
 		for (const col of columnSchema) {
 			try {
-				this.db!.exec(`ALTER TABLE ${this.t.messageParts} ADD COLUMN ${col.name} ${col.type}`);
+				this.db!.exec(
+					`ALTER TABLE ${this.t.messageParts} ADD COLUMN ${col.name} ${col.type}`,
+				);
 			} catch {
 				// Column already exists (SQLite returns error on duplicate ADD COLUMN)
 			}
@@ -383,10 +392,17 @@ export class SqlitePersistence implements IPersistence {
 
 		// Add topic column to folders, populate from name
 		try {
-			this.db!.exec(`ALTER TABLE ${this.t.folders} ADD COLUMN topic TEXT NOT NULL DEFAULT ''`);
-			const folders = this.db!.prepare(`SELECT id, name FROM ${this.t.folders}`).all() as Array<{ id: string; name: string }>;
+			this.db!.exec(
+				`ALTER TABLE ${this.t.folders} ADD COLUMN topic TEXT NOT NULL DEFAULT ''`,
+			);
+			const folders = this.db!.prepare(
+				`SELECT id, name FROM ${this.t.folders}`,
+			).all() as Array<{ id: string; name: string }>;
 			for (const f of folders) {
-				this.db!.prepare(`UPDATE ${this.t.folders} SET topic = ? WHERE id = ?`).run(folderNameToTopic(f.name), f.id);
+				this.db!.prepare(`UPDATE ${this.t.folders} SET topic = ? WHERE id = ?`).run(
+					folderNameToTopic(f.name),
+					f.id,
+				);
 			}
 			console.log(`[migration] Added topic to ${folders.length} folders`);
 		} catch {
@@ -396,7 +412,7 @@ export class SqlitePersistence implements IPersistence {
 		// Add parentId column to threads (for nested/sub-threads)
 		try {
 			this.db!.exec(`ALTER TABLE ${this.t.threads} ADD COLUMN parentId TEXT DEFAULT NULL`);
-			console.log('[migration] Added parentId to threads table');
+			console.log("[migration] Added parentId to threads table");
 		} catch {
 			// Column already exists
 		}
@@ -405,28 +421,32 @@ export class SqlitePersistence implements IPersistence {
 		try {
 			const txn = this.db!.transaction(() => {
 				this.db!.prepare(
-					`INSERT INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`
+					`INSERT INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`,
 				).run();
 				this.db!.prepare(
 					`INSERT INTO ${this.t.messagePartsFts}(rowid, text)
 					 SELECT rowid, CASE WHEN type IN ('text','reasoning') THEN text ELSE extractedText END
 					 FROM ${this.t.messageParts}
 					 WHERE (type IN ('text','reasoning') AND text IS NOT NULL AND length(text) > 0)
-					    OR (type = 'attachment' AND extractedText IS NOT NULL AND length(extractedText) > 0)`
+					    OR (type = 'attachment' AND extractedText IS NOT NULL AND length(extractedText) > 0)`,
 				).run();
 			});
 			txn();
 
-			const mpCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.messagePartsFts}`).get() as { c: number };
-			const thCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.threadFts}`).get() as { c: number };
+			const mpCount = this.db!.prepare(
+				`SELECT count(*) as c FROM ${this.t.messagePartsFts}`,
+			).get() as { c: number };
+			const thCount = this.db!.prepare(
+				`SELECT count(*) as c FROM ${this.t.threadFts}`,
+			).get() as { c: number };
 			console.log(`[FTS5] Indexed ${mpCount.c} message parts, ${thCount.c} threads`);
 		} catch (err) {
-			console.error('[FTS5] Index build failed:', err);
+			console.error("[FTS5] Index build failed:", err);
 		}
 
-			// State tables
-			try {
-				this.db!.exec(`
+		// State tables
+		try {
+			this.db!.exec(`
 					CREATE TABLE IF NOT EXISTS ${this.t.workspaceStates} (
 						folderId TEXT PRIMARY KEY,
 						data TEXT NOT NULL DEFAULT '{}'
@@ -440,18 +460,22 @@ export class SqlitePersistence implements IPersistence {
 						data TEXT NOT NULL DEFAULT '{}'
 					);
 				`);
-			} catch (err) {
-				console.error('[migration] State tables creation failed:', err);
-			}
+		} catch (err) {
+			console.error("[migration] State tables creation failed:", err);
+		}
 
-			// Migration: guardrails table gets id column (name was PK, now id is PK)
-			try {
-				const cols = this.db!.prepare(`PRAGMA table_info(${this.t.guardrails})`).all() as Array<{ name: string }>;
-				if (cols.some(c => c.name === 'id')) return; // Already migrated
+		// Migration: guardrails table gets id column (name was PK, now id is PK)
+		try {
+			const cols = this.db!.prepare(
+				`PRAGMA table_info(${this.t.guardrails})`,
+			).all() as Array<{ name: string }>;
+			if (cols.some((c) => c.name === "id")) return; // Already migrated
 
-				const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
-				this.db!.exec(`DROP TABLE ${this.t.guardrails}`);
-				this.db!.exec(`
+			const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<
+				Record<string, unknown>
+			>;
+			this.db!.exec(`DROP TABLE ${this.t.guardrails}`);
+			this.db!.exec(`
 					CREATE TABLE ${this.t.guardrails} (
 						id TEXT PRIMARY KEY,
 						name TEXT NOT NULL,
@@ -463,47 +487,66 @@ export class SqlitePersistence implements IPersistence {
 						includeBaseMessage INTEGER DEFAULT 0
 					)
 				`);
-				for (const r of rows) {
-					this.db!.prepare(`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
-						r.name as string,
-						r.name as string,
-						r.serverId as string,
-						r.prompt as string ?? null,
-						r.triggerOnTools as string,
-						r.inferenceParams as string,
-						r.messagesCount as number,
-						(r.includeBaseMessage as number) ?? 0
-					);
-				}
-				console.log(`[migration] guardrails: added id column, migrated ${rows.length} rows`);
-			} catch (err) {
-				console.error('[migration] guardrails id migration failed:', err);
+			for (const r of rows) {
+				this.db!.prepare(
+					`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				).run(
+					r.name as string,
+					r.name as string,
+					r.serverId as string,
+					(r.prompt as string) ?? null,
+					r.triggerOnTools as string,
+					r.inferenceParams as string,
+					r.messagesCount as number,
+					(r.includeBaseMessage as number) ?? 0,
+				);
 			}
+			console.log(`[migration] guardrails: added id column, migrated ${rows.length} rows`);
+		} catch (err) {
+			console.error("[migration] guardrails id migration failed:", err);
 		}
+	}
 
 	// ============================================================
 	// Folders
 	// ============================================================
 	async createFolder(folder: IFolder): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.folders} (id, name, topic, parentId, sortOrder, createdAt) VALUES (?, ?, ?, ?, ?, ?)`
-		).run(folder.id, folder.name, folder.topic, folder.parentId, folder.sortOrder, folder.createdAt);
+			`INSERT INTO ${this.t.folders} (id, name, topic, parentId, sortOrder, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+		).run(
+			folder.id,
+			folder.name,
+			folder.topic,
+			folder.parentId,
+			folder.sortOrder,
+			folder.createdAt,
+		);
 	}
 
 	async getFolder(id: TFolderId): Promise<IFolder | null> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.folders} WHERE id = ?`).get(id) as IFolder | undefined ?? null;
+		return (
+			(this.db!.prepare(`SELECT * FROM ${this.t.folders} WHERE id = ?`).get(id) as
+				| IFolder
+				| undefined) ?? null
+		);
 	}
 
 	async listFolders(): Promise<IFolder[]> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.folders} ORDER BY sortOrder ASC, createdAt ASC`).all() as IFolder[];
+		return this.db!.prepare(
+			`SELECT * FROM ${this.t.folders} ORDER BY sortOrder ASC, createdAt ASC`,
+		).all() as IFolder[];
 	}
 
 	async getFolderByTopic(topic: string): Promise<IFolder | null> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.folders} WHERE topic = ?`).get(topic) as IFolder | undefined ?? null;
+		return (
+			(this.db!.prepare(`SELECT * FROM ${this.t.folders} WHERE topic = ?`).get(topic) as
+				| IFolder
+				| undefined) ?? null
+		);
 	}
 
 	async isTopicUnique(topic: string, excludeFolderId?: TFolderId): Promise<boolean> {
-		if (topic === 'global') return false;
+		if (topic === "global") return false;
 		const existing = await this.getFolderByTopic(topic);
 		if (!existing) return true;
 		return existing.id !== excludeFolderId;
@@ -512,13 +555,27 @@ export class SqlitePersistence implements IPersistence {
 	async updateFolder(id: TFolderId, updates: Partial<IFolder>): Promise<void> {
 		const sets: string[] = [];
 		const vals: unknown[] = [];
-		if (updates.name !== undefined) { sets.push('name = ?'); vals.push(updates.name); }
-		if (updates.topic !== undefined) { sets.push('topic = ?'); vals.push(updates.topic); }
-		if (updates.parentId !== undefined) { sets.push('parentId = ?'); vals.push(updates.parentId); }
-		if (updates.sortOrder !== undefined) { sets.push('sortOrder = ?'); vals.push(updates.sortOrder); }
+		if (updates.name !== undefined) {
+			sets.push("name = ?");
+			vals.push(updates.name);
+		}
+		if (updates.topic !== undefined) {
+			sets.push("topic = ?");
+			vals.push(updates.topic);
+		}
+		if (updates.parentId !== undefined) {
+			sets.push("parentId = ?");
+			vals.push(updates.parentId);
+		}
+		if (updates.sortOrder !== undefined) {
+			sets.push("sortOrder = ?");
+			vals.push(updates.sortOrder);
+		}
 		if (sets.length === 0) return;
 		vals.push(id);
-		this.db!.prepare(`UPDATE ${this.t.folders} SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+		this.db!.prepare(`UPDATE ${this.t.folders} SET ${sets.join(", ")} WHERE id = ?`).run(
+			...vals,
+		);
 	}
 
 	async deleteFolder(id: TFolderId): Promise<void> {
@@ -539,13 +596,16 @@ export class SqlitePersistence implements IPersistence {
 	// Workspaces
 	// ============================================================
 	async createWorkspace(workspace: IWorkspace): Promise<void> {
-		this.db!.prepare(
-			`INSERT INTO ${this.t.workspaces} (folderId, data) VALUES (?, ?)`
-		).run(workspace.folderId, JSON.stringify(workspace.data));
+		this.db!.prepare(`INSERT INTO ${this.t.workspaces} (folderId, data) VALUES (?, ?)`).run(
+			workspace.folderId,
+			JSON.stringify(workspace.data),
+		);
 	}
 
 	async getWorkspace(folderId: TFolderId): Promise<IWorkspace | null> {
-		const row = this.db!.prepare(`SELECT * FROM ${this.t.workspaces} WHERE folderId = ?`).get(folderId) as { folderId: string; data: string } | undefined;
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.workspaces} WHERE folderId = ?`).get(
+			folderId,
+		) as { folderId: string; data: string } | undefined;
 		if (!row) return null;
 		return { folderId: row.folderId, data: JSON.parse(row.data) };
 	}
@@ -554,7 +614,10 @@ export class SqlitePersistence implements IPersistence {
 		const existing = await this.getWorkspace(folderId);
 		if (existing) {
 			// Additive merge — new fields overlay onto existing data
-			this.db!.prepare(`UPDATE ${this.t.workspaces} SET data = ? WHERE folderId = ?`).run(JSON.stringify({ ...existing.data, ...data }), folderId);
+			this.db!.prepare(`UPDATE ${this.t.workspaces} SET data = ? WHERE folderId = ?`).run(
+				JSON.stringify({ ...existing.data, ...data }),
+				folderId,
+			);
 		} else {
 			await this.createWorkspace({ folderId, data });
 		}
@@ -569,12 +632,27 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	async createThread(thread: IChatThread): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.threads} (id, title, folderId, parentId, systemPrompt, meta, totalPromptTokens, totalCompletionTokens, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		).run(thread.id, thread.title, thread.folderId, thread.parentId, thread.systemPrompt, thread.meta, thread.totalPromptTokens, thread.totalCompletionTokens, thread.createdAt, thread.updatedAt);
+			`INSERT INTO ${this.t.threads} (id, title, folderId, parentId, systemPrompt, meta, totalPromptTokens, totalCompletionTokens, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		).run(
+			thread.id,
+			thread.title,
+			thread.folderId,
+			thread.parentId,
+			thread.systemPrompt,
+			thread.meta,
+			thread.totalPromptTokens,
+			thread.totalCompletionTokens,
+			thread.createdAt,
+			thread.updatedAt,
+		);
 	}
 
 	async getThread(id: TThreadId): Promise<IChatThread | null> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.threads} WHERE id = ?`).get(id) as IChatThread | undefined ?? null;
+		return (
+			(this.db!.prepare(`SELECT * FROM ${this.t.threads} WHERE id = ?`).get(id) as
+				| IChatThread
+				| undefined) ?? null
+		);
 	}
 
 	async listThreads(options?: IListThreadsOptions): Promise<IChatThread[]> {
@@ -583,44 +661,66 @@ export class SqlitePersistence implements IPersistence {
 
 		if (options?.folderId !== undefined) {
 			if (options.folderId === null) {
-				conditions.push('folderId IS NULL');
+				conditions.push("folderId IS NULL");
 			} else {
-				conditions.push('folderId = ?');
+				conditions.push("folderId = ?");
 				vals.push(options.folderId);
 			}
 		}
 		if (options?.query) {
-			conditions.push('title LIKE ?');
+			conditions.push("title LIKE ?");
 			vals.push(`%${options.query}%`);
 		}
 
-		const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-		const threads = this.db!.prepare(`SELECT * FROM ${this.t.threads} ${where} ORDER BY updatedAt DESC`).all(...vals) as IChatThread[];
+		const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+		const threads = this.db!.prepare(
+			`SELECT * FROM ${this.t.threads} ${where} ORDER BY updatedAt DESC`,
+		).all(...vals) as IChatThread[];
 		return threads;
 	}
 
 	async updateThread(id: TThreadId, updates: Partial<IChatThread>): Promise<void> {
 		const sets: string[] = [];
 		const vals: unknown[] = [];
-		if (updates.title !== undefined) { sets.push('title = ?'); vals.push(updates.title); }
-		if (updates.folderId !== undefined) { sets.push('folderId = ?'); vals.push(updates.folderId); }
-		if (updates.parentId !== undefined) { sets.push('parentId = ?'); vals.push(updates.parentId); }
-		if (updates.systemPrompt !== undefined) { sets.push('systemPrompt = ?'); vals.push(updates.systemPrompt); }
-		if (updates.meta !== undefined) { sets.push('meta = ?'); vals.push(updates.meta); }
-		sets.push('updatedAt = ?'); vals.push(Date.now());
+		if (updates.title !== undefined) {
+			sets.push("title = ?");
+			vals.push(updates.title);
+		}
+		if (updates.folderId !== undefined) {
+			sets.push("folderId = ?");
+			vals.push(updates.folderId);
+		}
+		if (updates.parentId !== undefined) {
+			sets.push("parentId = ?");
+			vals.push(updates.parentId);
+		}
+		if (updates.systemPrompt !== undefined) {
+			sets.push("systemPrompt = ?");
+			vals.push(updates.systemPrompt);
+		}
+		if (updates.meta !== undefined) {
+			sets.push("meta = ?");
+			vals.push(updates.meta);
+		}
+		sets.push("updatedAt = ?");
+		vals.push(Date.now());
 		vals.push(id);
-		this.db!.prepare(`UPDATE ${this.t.threads} SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+		this.db!.prepare(`UPDATE ${this.t.threads} SET ${sets.join(", ")} WHERE id = ?`).run(
+			...vals,
+		);
 	}
 
 	async deleteThread(id: TThreadId): Promise<void> {
 		this.db!.prepare(`DELETE FROM ${this.t.threads} WHERE id = ?`).run(id);
 	}
 
-	async deleteThreadCascade(id: TThreadId): Promise<Array<{ messageId: string; modelId: string; topic: string }>> {
+	async deleteThreadCascade(
+		id: TThreadId,
+	): Promise<Array<{ messageId: string; modelId: string; topic: string }>> {
 		return this.db!.transaction(() => {
 			// 1. Get all embeddings before deleting
 			const embeddings = this.db!.prepare(
-				`SELECT messageId, modelId, topic FROM ${this.t.embeddingIndex} WHERE threadId = ?`
+				`SELECT messageId, modelId, topic FROM ${this.t.embeddingIndex} WHERE threadId = ?`,
 			).all(id) as Array<{ messageId: string; modelId: string; topic: string }>;
 
 			// 2. Delete embedding index entries
@@ -628,14 +728,16 @@ export class SqlitePersistence implements IPersistence {
 
 			// 3. Get all messageIds
 			const messageIds = this.db!.prepare(
-				`SELECT id FROM ${this.t.messages} WHERE threadId = ?`
+				`SELECT id FROM ${this.t.messages} WHERE threadId = ?`,
 			).all(id) as Array<{ id: string }>;
-			const ids = messageIds.map(m => m.id);
+			const ids = messageIds.map((m) => m.id);
 
 			// 4. Delete message parts
 			if (ids.length) {
-				const placeholders = ids.map(() => '?').join(',');
-				this.db!.prepare(`DELETE FROM ${this.t.messageParts} WHERE messageId IN (${placeholders})`).run(...ids);
+				const placeholders = ids.map(() => "?").join(",");
+				this.db!.prepare(
+					`DELETE FROM ${this.t.messageParts} WHERE messageId IN (${placeholders})`,
+				).run(...ids);
 			}
 
 			// 5. Delete tool calls
@@ -648,18 +750,24 @@ export class SqlitePersistence implements IPersistence {
 			this.db!.prepare(`DELETE FROM ${this.t.threadConfigs} WHERE threadId = ?`).run(id);
 
 			// 8. Delete thread tool permissions
-			this.db!.prepare(`DELETE FROM ${this.t.threadToolPermissions} WHERE threadId = ?`).run(id);
+			this.db!.prepare(`DELETE FROM ${this.t.threadToolPermissions} WHERE threadId = ?`).run(
+				id,
+			);
 
 			// 9. Delete thread attached tools
-			this.db!.prepare(`DELETE FROM ${this.t.threadAttachedTools} WHERE threadId = ?`).run(id);
+			this.db!.prepare(`DELETE FROM ${this.t.threadAttachedTools} WHERE threadId = ?`).run(
+				id,
+			);
 
 			// 10. Delete thread states
 			this.db!.prepare(`DELETE FROM ${this.t.threadStates} WHERE threadId = ?`).run(id);
 
 			// 11. Delete message states
 			if (ids.length) {
-				const placeholders = ids.map(() => '?').join(',');
-				this.db!.prepare(`DELETE FROM ${this.t.messageStates} WHERE messageId IN (${placeholders})`).run(...ids);
+				const placeholders = ids.map(() => "?").join(",");
+				this.db!.prepare(
+					`DELETE FROM ${this.t.messageStates} WHERE messageId IN (${placeholders})`,
+				).run(...ids);
 			}
 
 			// 12. Delete thread
@@ -669,9 +777,13 @@ export class SqlitePersistence implements IPersistence {
 		})();
 	}
 
-	async incrementThreadTokens(id: TThreadId, promptDelta: number = 0, completionDelta: number = 0): Promise<void> {
+	async incrementThreadTokens(
+		id: TThreadId,
+		promptDelta: number = 0,
+		completionDelta: number = 0,
+	): Promise<void> {
 		this.db!.prepare(
-			`UPDATE ${this.t.threads} SET totalPromptTokens = totalPromptTokens + ?, totalCompletionTokens = totalCompletionTokens + ?, updatedAt = ? WHERE id = ?`
+			`UPDATE ${this.t.threads} SET totalPromptTokens = totalPromptTokens + ?, totalCompletionTokens = totalCompletionTokens + ?, updatedAt = ? WHERE id = ?`,
 		).run(promptDelta, completionDelta, Date.now(), id);
 	}
 
@@ -679,13 +791,17 @@ export class SqlitePersistence implements IPersistence {
 	// Thread Configs
 	// ============================================================
 	async getThreadConfig(threadId: TThreadId): Promise<IThreadConfig | null> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.threadConfigs} WHERE threadId = ?`).get(threadId) as IThreadConfig | undefined ?? null;
+		return (
+			(this.db!.prepare(`SELECT * FROM ${this.t.threadConfigs} WHERE threadId = ?`).get(
+				threadId,
+			) as IThreadConfig | undefined) ?? null
+		);
 	}
 
 	async setThreadConfig(config: IThreadConfig): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.threadConfigs} (threadId, presetId, systemPrompt, params) VALUES (?, ?, ?, ?)
-			 ON CONFLICT(threadId) DO UPDATE SET presetId = excluded.presetId, systemPrompt = excluded.systemPrompt, params = excluded.params`
+			 ON CONFLICT(threadId) DO UPDATE SET presetId = excluded.presetId, systemPrompt = excluded.systemPrompt, params = excluded.params`,
 		).run(config.threadId, config.presetId, config.systemPrompt, config.params);
 	}
 
@@ -700,8 +816,15 @@ export class SqlitePersistence implements IPersistence {
 		const stats = message.stats ? JSON.stringify(message.stats) : null;
 		const txn = this.db!.transaction(() => {
 			this.db!.prepare(
-				`INSERT INTO ${this.t.messages} (id, parentId, threadId, role, stats, createdAt) VALUES (?, ?, ?, ?, ?, ?)`
-			).run(message.id, message.parentId ?? null, message.threadId, message.role, stats, message.createdAt);
+				`INSERT INTO ${this.t.messages} (id, parentId, threadId, role, stats, createdAt) VALUES (?, ?, ?, ?, ?, ?)`,
+			).run(
+				message.id,
+				message.parentId ?? null,
+				message.threadId,
+				message.role,
+				stats,
+				message.createdAt,
+			);
 			for (const part of message.content) {
 				this.insertPart(message.id, part);
 			}
@@ -715,7 +838,9 @@ export class SqlitePersistence implements IPersistence {
 
 	async replaceMessageParts(messageId: TMessageId, parts: IMessagePart[]): Promise<void> {
 		const txn = this.db!.transaction(() => {
-			this.db!.prepare(`DELETE FROM ${this.t.messageParts} WHERE messageId = ?`).run(messageId);
+			this.db!.prepare(`DELETE FROM ${this.t.messageParts} WHERE messageId = ?`).run(
+				messageId,
+			);
 			for (const part of parts) {
 				this.insertPart(messageId, part);
 			}
@@ -724,15 +849,20 @@ export class SqlitePersistence implements IPersistence {
 	}
 
 	async deleteMessage(id: TMessageId): Promise<void> {
-		const msg = this.db!.prepare(`SELECT parentId FROM ${this.t.messages} WHERE id = ?`).get(id) as { parentId?: string | null } | undefined;
+		const msg = this.db!.prepare(`SELECT parentId FROM ${this.t.messages} WHERE id = ?`).get(
+			id,
+		) as { parentId?: string | null } | undefined;
 		if (!msg) return;
 
 		if (!msg.parentId) {
-			throw new Error('Cannot delete root message');
+			throw new Error("Cannot delete root message");
 		}
 
 		this.db!.transaction((() => {
-			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(msg.parentId, id);
+			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(
+				msg.parentId,
+				id,
+			);
 			this.db!.prepare(`DELETE FROM ${this.t.messages} WHERE id = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messageStates} WHERE messageId = ?`).run(id);
 		}) as any)();
@@ -740,67 +870,105 @@ export class SqlitePersistence implements IPersistence {
 
 	async getMessages(threadId: TThreadId): Promise<IChatMessage[]> {
 		const rows = this.db!.prepare(
-			`SELECT * FROM ${this.t.messages} WHERE threadId = ? ORDER BY createdAt ASC`
+			`SELECT * FROM ${this.t.messages} WHERE threadId = ? ORDER BY createdAt ASC`,
 		).all(threadId) as Array<Record<string, unknown>>;
-		return rows.map(r => this.hydrateMessage(r));
+		return rows.map((r) => this.hydrateMessage(r));
 	}
 
 	async getMessage(id: TMessageId): Promise<IChatMessage | null> {
-		const row = this.db!.prepare(`SELECT * FROM ${this.t.messages} WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.messages} WHERE id = ?`).get(id) as
+			| Record<string, unknown>
+			| undefined;
 		if (!row) return null;
 		return this.hydrateMessage(row);
 	}
 
-	async updateMessage(id: TMessageId, updates: Partial<Pick<IChatMessage, 'stats'>>): Promise<void> {
+	async updateMessage(
+		id: TMessageId,
+		updates: Partial<Pick<IChatMessage, "stats">>,
+	): Promise<void> {
 		const sets: string[] = [];
 		const vals: unknown[] = [];
 		if (updates.stats !== undefined) {
-			sets.push('stats = ?');
+			sets.push("stats = ?");
 			vals.push(updates.stats ? JSON.stringify(updates.stats) : null);
 		}
 		if (sets.length === 0) return;
 		vals.push(id);
-		this.db!.prepare(`UPDATE ${this.t.messages} SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+		this.db!.prepare(`UPDATE ${this.t.messages} SET ${sets.join(", ")} WHERE id = ?`).run(
+			...vals,
+		);
 	}
 
 	private insertPart(messageId: TMessageId, part: IMessagePart): void {
-		const text = part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING
-			? part.text
-			: null;
+		const text =
+			part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING
+				? part.text
+				: null;
 		const toolCallId = part.type === EMessagePartType.TOOL_CALL ? part.toolCallId : null;
 		const data = part.type === EMessagePartType.ATTACHMENT ? part.data : null;
 		const mimeType = part.type === EMessagePartType.ATTACHMENT ? part.mimeType : null;
 		const fileName = part.type === EMessagePartType.ATTACHMENT ? part.fileName : null;
 		const fileSize = part.type === EMessagePartType.ATTACHMENT ? part.fileSize : null;
-		const extractedText = part.type === EMessagePartType.ATTACHMENT ? (part.extractedText ?? null) : null;
+		const extractedText =
+			part.type === EMessagePartType.ATTACHMENT ? (part.extractedText ?? null) : null;
 		this.db!.prepare(
-			`INSERT INTO ${this.t.messageParts} (id, messageId, type, orderIndex, text, toolCallId, data, mimeType, fileName, fileSize, extractedText) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		).run(part.id, messageId, part.type, part.orderIndex, text, toolCallId, data, mimeType, fileName, fileSize, extractedText);
+			`INSERT INTO ${this.t.messageParts} (id, messageId, type, orderIndex, text, toolCallId, data, mimeType, fileName, fileSize, extractedText) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		).run(
+			part.id,
+			messageId,
+			part.type,
+			part.orderIndex,
+			text,
+			toolCallId,
+			data,
+			mimeType,
+			fileName,
+			fileSize,
+			extractedText,
+		);
 	}
 
 	private hydrateMessage(row: Record<string, unknown>): IChatMessage {
 		const partRows = this.db!.prepare(
-			`SELECT * FROM ${this.t.messageParts} WHERE messageId = ? ORDER BY orderIndex ASC`
+			`SELECT * FROM ${this.t.messageParts} WHERE messageId = ? ORDER BY orderIndex ASC`,
 		).all(row.id as string) as Array<Record<string, unknown>>;
 
-		const content: IMessagePart[] = partRows.map(p => {
+		const content: IMessagePart[] = partRows.map((p) => {
 			if (p.type === EMessagePartType.TEXT) {
-				return { id: p.id as string, type: EMessagePartType.TEXT, orderIndex: p.orderIndex as number, text: (p.text as string) ?? '' };
+				return {
+					id: p.id as string,
+					type: EMessagePartType.TEXT,
+					orderIndex: p.orderIndex as number,
+					text: (p.text as string) ?? "",
+				};
 			}
 			if (p.type === EMessagePartType.REASONING) {
-				return { id: p.id as string, type: EMessagePartType.REASONING, orderIndex: p.orderIndex as number, text: (p.text as string) ?? '' };
+				return {
+					id: p.id as string,
+					type: EMessagePartType.REASONING,
+					orderIndex: p.orderIndex as number,
+					text: (p.text as string) ?? "",
+				};
 			}
 			if (p.type === EMessagePartType.ATTACHMENT) {
 				return {
-					id: p.id as string, type: EMessagePartType.ATTACHMENT, orderIndex: p.orderIndex as number,
-					data: (p.data as string) ?? '',
-					mimeType: (p.mimeType as string) ?? '',
-					fileName: (p.fileName as string) ?? '',
+					id: p.id as string,
+					type: EMessagePartType.ATTACHMENT,
+					orderIndex: p.orderIndex as number,
+					data: (p.data as string) ?? "",
+					mimeType: (p.mimeType as string) ?? "",
+					fileName: (p.fileName as string) ?? "",
 					fileSize: (p.fileSize as number) ?? 0,
 					extractedText: (p.extractedText as string) ?? undefined,
 				};
 			}
-			return { id: p.id as string, type: EMessagePartType.TOOL_CALL, orderIndex: p.orderIndex as number, toolCallId: p.toolCallId as string };
+			return {
+				id: p.id as string,
+				type: EMessagePartType.TOOL_CALL,
+				orderIndex: p.orderIndex as number,
+				toolCallId: p.toolCallId as string,
+			};
 		});
 
 		const statsRaw = row.stats as string | null;
@@ -821,42 +989,71 @@ export class SqlitePersistence implements IPersistence {
 	async createToolCall(toolCall: IToolCall): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.toolCalls} (id, messageId, threadId, serverName, toolName, arguments, result, status, error, createdAt, resolvedAt)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		).run(toolCall.id, toolCall.messageId, toolCall.threadId, toolCall.serverName, toolCall.toolName,
-			toolCall.arguments, toolCall.result, toolCall.status, toolCall.error, toolCall.createdAt, toolCall.resolvedAt);
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		).run(
+			toolCall.id,
+			toolCall.messageId,
+			toolCall.threadId,
+			toolCall.serverName,
+			toolCall.toolName,
+			toolCall.arguments,
+			toolCall.result,
+			toolCall.status,
+			toolCall.error,
+			toolCall.createdAt,
+			toolCall.resolvedAt,
+		);
 	}
 
 	async updateToolCall(id: TToolCallId, updates: Partial<IToolCall>): Promise<void> {
 		const sets: string[] = [];
 		const vals: unknown[] = [];
-		if (updates.status !== undefined) { sets.push('status = ?'); vals.push(updates.status); }
-		if (updates.result !== undefined) { sets.push('result = ?'); vals.push(updates.result); }
-		if (updates.error !== undefined) { sets.push('error = ?'); vals.push(updates.error); }
-		if (updates.resolvedAt !== undefined) { sets.push('resolvedAt = ?'); vals.push(updates.resolvedAt); }
+		if (updates.status !== undefined) {
+			sets.push("status = ?");
+			vals.push(updates.status);
+		}
+		if (updates.result !== undefined) {
+			sets.push("result = ?");
+			vals.push(updates.result);
+		}
+		if (updates.error !== undefined) {
+			sets.push("error = ?");
+			vals.push(updates.error);
+		}
+		if (updates.resolvedAt !== undefined) {
+			sets.push("resolvedAt = ?");
+			vals.push(updates.resolvedAt);
+		}
 		if (sets.length === 0) return;
 		vals.push(id);
-		this.db!.prepare(`UPDATE ${this.t.toolCalls} SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+		this.db!.prepare(`UPDATE ${this.t.toolCalls} SET ${sets.join(", ")} WHERE id = ?`).run(
+			...vals,
+		);
 	}
 
 	async getToolCall(id: TToolCallId): Promise<IToolCall | null> {
-		return this.db!.prepare(`SELECT * FROM ${this.t.toolCalls} WHERE id = ?`).get(id) as IToolCall | undefined ?? null;
+		return (
+			(this.db!.prepare(`SELECT * FROM ${this.t.toolCalls} WHERE id = ?`).get(id) as
+				| IToolCall
+				| undefined) ?? null
+		);
 	}
 
 	async getToolCallsForThread(threadId: TThreadId): Promise<IToolCall[]> {
 		return this.db!.prepare(
-			`SELECT * FROM ${this.t.toolCalls} WHERE threadId = ? ORDER BY createdAt ASC`
+			`SELECT * FROM ${this.t.toolCalls} WHERE threadId = ? ORDER BY createdAt ASC`,
 		).all(threadId) as IToolCall[];
 	}
 
 	async getToolCallsForMessage(messageId: TMessageId): Promise<IToolCall[]> {
 		return this.db!.prepare(
-			`SELECT * FROM ${this.t.toolCalls} WHERE messageId = ? ORDER BY createdAt ASC`
+			`SELECT * FROM ${this.t.toolCalls} WHERE messageId = ? ORDER BY createdAt ASC`,
 		).all(messageId) as IToolCall[];
 	}
 
 	async getPendingToolCalls(): Promise<IToolCall[]> {
 		return this.db!.prepare(
-			`SELECT * FROM ${this.t.toolCalls} WHERE status = ? ORDER BY createdAt ASC`
+			`SELECT * FROM ${this.t.toolCalls} WHERE status = ? ORDER BY createdAt ASC`,
 		).all(EToolCallStatus.PENDING) as IToolCall[];
 	}
 
@@ -865,7 +1062,7 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	async getServerPermission(serverName: string): Promise<IServerPermission | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.serverPermissions} WHERE serverName = ?`
+			`SELECT * FROM ${this.t.serverPermissions} WHERE serverName = ?`,
 		).get(serverName) as { serverName: string; enabled: number } | undefined;
 		if (!row) return null;
 		return { serverName: row.serverName, enabled: row.enabled === 1 };
@@ -874,13 +1071,16 @@ export class SqlitePersistence implements IPersistence {
 	async setServerPermission(serverName: string, enabled: boolean): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.serverPermissions} (serverName, enabled) VALUES (?, ?)
-			 ON CONFLICT(serverName) DO UPDATE SET enabled = excluded.enabled`
+			 ON CONFLICT(serverName) DO UPDATE SET enabled = excluded.enabled`,
 		).run(serverName, enabled ? 1 : 0);
 	}
 
 	async getAllServerPermissions(): Promise<IServerPermission[]> {
-		const rows = this.db!.prepare(`SELECT * FROM ${this.t.serverPermissions}`).all() as Array<{ serverName: string; enabled: number }>;
-		return rows.map(r => ({ serverName: r.serverName, enabled: r.enabled === 1 }));
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.serverPermissions}`).all() as Array<{
+			serverName: string;
+			enabled: number;
+		}>;
+		return rows.map((r) => ({ serverName: r.serverName, enabled: r.enabled === 1 }));
 	}
 
 	// ============================================================
@@ -888,8 +1088,10 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	async getToolPermission(serverName: string, toolName: string): Promise<IToolPermission | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.toolPermissions} WHERE serverName = ? AND toolName = ?`
-		).get(serverName, toolName) as { serverName: string; toolName: string; enabled: number; approvalMode: string } | undefined;
+			`SELECT * FROM ${this.t.toolPermissions} WHERE serverName = ? AND toolName = ?`,
+		).get(serverName, toolName) as
+			| { serverName: string; toolName: string; enabled: number; approvalMode: string }
+			| undefined;
 		if (!row) return null;
 		return {
 			serverName: row.serverName,
@@ -899,16 +1101,26 @@ export class SqlitePersistence implements IPersistence {
 		};
 	}
 
-	async setToolPermission(serverName: string, toolName: string, enabled: boolean, approvalMode: EToolApprovalMode): Promise<void> {
+	async setToolPermission(
+		serverName: string,
+		toolName: string,
+		enabled: boolean,
+		approvalMode: EToolApprovalMode,
+	): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.toolPermissions} (serverName, toolName, enabled, approvalMode) VALUES (?, ?, ?, ?)
-			 ON CONFLICT(serverName, toolName) DO UPDATE SET enabled = excluded.enabled, approvalMode = excluded.approvalMode`
+			 ON CONFLICT(serverName, toolName) DO UPDATE SET enabled = excluded.enabled, approvalMode = excluded.approvalMode`,
 		).run(serverName, toolName, enabled ? 1 : 0, approvalMode);
 	}
 
 	async getAllToolPermissions(): Promise<IToolPermission[]> {
-		const rows = this.db!.prepare(`SELECT * FROM ${this.t.toolPermissions}`).all() as Array<{ serverName: string; toolName: string; enabled: number; approvalMode: string }>;
-		return rows.map(r => ({
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.toolPermissions}`).all() as Array<{
+			serverName: string;
+			toolName: string;
+			enabled: number;
+			approvalMode: string;
+		}>;
+		return rows.map((r) => ({
 			serverName: r.serverName,
 			toolName: r.toolName,
 			enabled: r.enabled === 1,
@@ -919,10 +1131,22 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	// Permissions — thread-level tool overrides
 	// ============================================================
-	async getThreadToolPermission(threadId: TThreadId, serverName: string, toolName: string): Promise<IThreadToolPermission | null> {
+	async getThreadToolPermission(
+		threadId: TThreadId,
+		serverName: string,
+		toolName: string,
+	): Promise<IThreadToolPermission | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.threadToolPermissions} WHERE threadId = ? AND serverName = ? AND toolName = ?`
-		).get(threadId, serverName, toolName) as { threadId: string; serverName: string; toolName: string; enabled: number; approvalMode: string } | undefined;
+			`SELECT * FROM ${this.t.threadToolPermissions} WHERE threadId = ? AND serverName = ? AND toolName = ?`,
+		).get(threadId, serverName, toolName) as
+			| {
+					threadId: string;
+					serverName: string;
+					toolName: string;
+					enabled: number;
+					approvalMode: string;
+			  }
+			| undefined;
 		if (!row) return null;
 		return {
 			threadId: row.threadId,
@@ -933,24 +1157,40 @@ export class SqlitePersistence implements IPersistence {
 		};
 	}
 
-	async setThreadToolPermission(threadId: TThreadId, serverName: string, toolName: string, enabled: boolean, approvalMode: EToolApprovalMode): Promise<void> {
+	async setThreadToolPermission(
+		threadId: TThreadId,
+		serverName: string,
+		toolName: string,
+		enabled: boolean,
+		approvalMode: EToolApprovalMode,
+	): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.threadToolPermissions} (threadId, serverName, toolName, enabled, approvalMode) VALUES (?, ?, ?, ?, ?)
-			 ON CONFLICT(threadId, serverName, toolName) DO UPDATE SET enabled = excluded.enabled, approvalMode = excluded.approvalMode`
+			 ON CONFLICT(threadId, serverName, toolName) DO UPDATE SET enabled = excluded.enabled, approvalMode = excluded.approvalMode`,
 		).run(threadId, serverName, toolName, enabled ? 1 : 0, approvalMode);
 	}
 
-	async deleteThreadToolPermission(threadId: TThreadId, serverName: string, toolName: string): Promise<void> {
+	async deleteThreadToolPermission(
+		threadId: TThreadId,
+		serverName: string,
+		toolName: string,
+	): Promise<void> {
 		this.db!.prepare(
-			`DELETE FROM ${this.t.threadToolPermissions} WHERE threadId = ? AND serverName = ? AND toolName = ?`
+			`DELETE FROM ${this.t.threadToolPermissions} WHERE threadId = ? AND serverName = ? AND toolName = ?`,
 		).run(threadId, serverName, toolName);
 	}
 
 	async getAllThreadToolPermissions(threadId: TThreadId): Promise<IThreadToolPermission[]> {
 		const rows = this.db!.prepare(
-			`SELECT * FROM ${this.t.threadToolPermissions} WHERE threadId = ?`
-		).all(threadId) as Array<{ threadId: string; serverName: string; toolName: string; enabled: number; approvalMode: string }>;
-		return rows.map(r => ({
+			`SELECT * FROM ${this.t.threadToolPermissions} WHERE threadId = ?`,
+		).all(threadId) as Array<{
+			threadId: string;
+			serverName: string;
+			toolName: string;
+			enabled: number;
+			approvalMode: string;
+		}>;
+		return rows.map((r) => ({
 			threadId: r.threadId,
 			serverName: r.serverName,
 			toolName: r.toolName,
@@ -962,16 +1202,22 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	// Thread Attached Tools
 	// ============================================================
-	async saveThreadAttachedTools(threadId: TThreadId, attachAllTools: boolean, tools: IToolAttachment[]): Promise<void> {
+	async saveThreadAttachedTools(
+		threadId: TThreadId,
+		attachAllTools: boolean,
+		tools: IToolAttachment[],
+	): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.threadAttachedTools} (threadId, attachAllTools, tools) VALUES (?, ?, ?)
-			 ON CONFLICT(threadId) DO UPDATE SET attachAllTools = excluded.attachAllTools, tools = excluded.tools`
+			 ON CONFLICT(threadId) DO UPDATE SET attachAllTools = excluded.attachAllTools, tools = excluded.tools`,
 		).run(threadId, attachAllTools ? 1 : 0, JSON.stringify(tools));
 	}
 
-	async getThreadAttachedTools(threadId: TThreadId): Promise<{ attachAllTools: boolean; tools: IToolAttachment[] } | null> {
+	async getThreadAttachedTools(
+		threadId: TThreadId,
+	): Promise<{ attachAllTools: boolean; tools: IToolAttachment[] } | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.threadAttachedTools} WHERE threadId = ?`
+			`SELECT * FROM ${this.t.threadAttachedTools} WHERE threadId = ?`,
 		).get(threadId) as { threadId: string; attachAllTools: number; tools: string } | undefined;
 		if (!row) return null;
 		return {
@@ -986,24 +1232,26 @@ export class SqlitePersistence implements IPersistence {
 
 	private preprocessQuery(q: string): string {
 		// Strip FTS5 special chars, split whitespace, append * for prefix matching
-		const stripped = q.replace(/[\"\(\)\:\^\-\*]/g, ' ');
+		const stripped = q.replace(/["():^\-*]/g, " ");
 		return stripped
 			.split(/\s+/)
-			.map(t => t.trim().toLowerCase())
-			.filter(t => t.length > 0)
-			.map(t => t + '*')
-			.join(' ');
+			.map((t) => t.trim().toLowerCase())
+			.filter((t) => t.length > 0)
+			.map((t) => t + "*")
+			.join(" ");
 	}
 
 	async searchMessages(q: string, options: ISearchOptions): Promise<ISearchResult[]> {
 		const processed = this.preprocessQuery(q);
 		if (!processed) return [];
-		console.log(`[FTS5] searchMessages: mode=${options.mode}, query="${q}" -> processed="${processed}"`);
+		console.log(
+			`[FTS5] searchMessages: mode=${options.mode}, query="${q}" -> processed="${processed}"`,
+		);
 
 		const limit = Math.min(options.limit ?? 50, 200);
 		const offset = options.offset ?? 0;
 
-		if (options.mode === 'thread') {
+		if (options.mode === "thread") {
 			if (!options.threadId) return [];
 			const rows = this.db!.prepare(
 				`SELECT m.id as messageId, m.threadId, thr.title as threadTitle,
@@ -1015,11 +1263,11 @@ export class SqlitePersistence implements IPersistence {
 				 JOIN ${this.t.threads} thr ON thr.id = m.threadId
 				 WHERE ${this.t.messagePartsFts} MATCH ? AND m.threadId = ?
 				 ORDER BY bm25(${this.t.messagePartsFts}), m.createdAt DESC
-				 LIMIT ? OFFSET ?`
+				 LIMIT ? OFFSET ?`,
 			).all(processed, options.threadId, limit, offset) as Array<Record<string, unknown>>;
 			console.log(`[FTS5] thread mode: ${rows.length} results`);
-			return rows.map(r => ({
-				type: 'message' as const,
+			return rows.map((r) => ({
+				type: "message" as const,
 				threadId: r.threadId as string,
 				threadTitle: r.threadTitle as string,
 				messageId: r.messageId as string,
@@ -1029,7 +1277,7 @@ export class SqlitePersistence implements IPersistence {
 			}));
 		}
 
-		if (options.mode === 'everywhere') {
+		if (options.mode === "everywhere") {
 			const halfLimit = Math.ceil(limit / 2);
 
 			// Thread branch
@@ -1039,7 +1287,7 @@ export class SqlitePersistence implements IPersistence {
 				 JOIN ${this.t.threads} t ON t.rowid = ${this.t.threadFts}.rowid
 				 WHERE ${this.t.threadFts} MATCH ?
 				 ORDER BY bm25(${this.t.threadFts}), t.updatedAt DESC
-				 LIMIT ?`
+				 LIMIT ?`,
 			).all(processed, halfLimit) as Array<Record<string, unknown>>;
 			console.log(`[FTS5] everywhere: ${threadRows.length} thread results`);
 
@@ -1054,28 +1302,32 @@ export class SqlitePersistence implements IPersistence {
 				 JOIN ${this.t.threads} thr ON thr.id = m.threadId
 				 WHERE ${this.t.messagePartsFts} MATCH ?
 				 ORDER BY bm25(${this.t.messagePartsFts}), m.createdAt DESC
-				 LIMIT ?`
+				 LIMIT ?`,
 			).all(processed, halfLimit) as Array<Record<string, unknown>>;
 			console.log(`[FTS5] everywhere: ${msgRows.length} message results`);
 
 			const results: ISearchResult[] = [];
 
-			results.push(...threadRows.map(r => ({
-				type: 'thread' as const,
-				threadId: r.threadId as string,
-				threadTitle: r.threadTitle as string,
-				createdAt: r.createdAt as number,
-			})));
+			results.push(
+				...threadRows.map((r) => ({
+					type: "thread" as const,
+					threadId: r.threadId as string,
+					threadTitle: r.threadTitle as string,
+					createdAt: r.createdAt as number,
+				})),
+			);
 
-			results.push(...msgRows.map(r => ({
-				type: 'message' as const,
-				threadId: r.threadId as string,
-				threadTitle: r.threadTitle as string,
-				messageId: r.messageId as string,
-				snippet: r.snippet as string,
-				role: r.role as string,
-				createdAt: r.createdAt as number,
-			})));
+			results.push(
+				...msgRows.map((r) => ({
+					type: "message" as const,
+					threadId: r.threadId as string,
+					threadTitle: r.threadTitle as string,
+					messageId: r.messageId as string,
+					snippet: r.snippet as string,
+					role: r.role as string,
+					createdAt: r.createdAt as number,
+				})),
+			);
 
 			return results;
 		}
@@ -1084,7 +1336,10 @@ export class SqlitePersistence implements IPersistence {
 		return [];
 	}
 
-	async searchThreads(q: string, options?: { limit?: number; offset?: number }): Promise<ISearchThreadResult[]> {
+	async searchThreads(
+		q: string,
+		options?: { limit?: number; offset?: number },
+	): Promise<ISearchThreadResult[]> {
 		const processed = this.preprocessQuery(q);
 		if (!processed) return [];
 
@@ -1114,10 +1369,10 @@ export class SqlitePersistence implements IPersistence {
 			 )
 
 			 ORDER BY sortPriority DESC, matchCount DESC, lastMatchAt DESC
-			 LIMIT ? OFFSET ?`
+			 LIMIT ? OFFSET ?`,
 		).all(processed, processed, processed, limit, offset) as Array<Record<string, unknown>>;
 
-		return rows.map(r => ({
+		return rows.map((r) => ({
 			threadId: r.threadId as string,
 			threadTitle: r.threadTitle as string,
 			matchCount: Number(r.matchCount),
@@ -1128,38 +1383,49 @@ export class SqlitePersistence implements IPersistence {
 	// ============================================================
 	// Embedding Index
 	// ============================================================
-	async insertEmbeddingStatus(messageId: string, threadId: string, modelId: string, topic: string): Promise<void> {
+	async insertEmbeddingStatus(
+		messageId: string,
+		threadId: string,
+		modelId: string,
+		topic: string,
+	): Promise<void> {
 		this.db!.prepare(
 			`INSERT OR IGNORE INTO ${this.t.embeddingIndex} (messageId, threadId, modelId, topic, embeddedAt)
-			 VALUES (?, ?, ?, ?, ?)`
+			 VALUES (?, ?, ?, ?, ?)`,
 		).run(messageId, threadId, modelId, topic, Date.now());
 	}
 
-	async getThreadEmbeddingStatuses(threadId: TThreadId, modelId: string, topic: string): Promise<Set<string>> {
+	async getThreadEmbeddingStatuses(
+		threadId: TThreadId,
+		modelId: string,
+		topic: string,
+	): Promise<Set<string>> {
 		const rows = this.db!.prepare(
-			`SELECT messageId FROM ${this.t.embeddingIndex} WHERE threadId = ? AND modelId = ? AND topic = ?`
+			`SELECT messageId FROM ${this.t.embeddingIndex} WHERE threadId = ? AND modelId = ? AND topic = ?`,
 		).all(threadId, modelId, topic) as Array<{ messageId: string }>;
-		return new Set(rows.map(r => r.messageId));
+		return new Set(rows.map((r) => r.messageId));
 	}
 
 	async deleteEmbeddingStatus(messageId: string, modelId: string, topic: string): Promise<void> {
 		this.db!.prepare(
-			`DELETE FROM ${this.t.embeddingIndex} WHERE messageId = ? AND modelId = ? AND topic = ?`
+			`DELETE FROM ${this.t.embeddingIndex} WHERE messageId = ? AND modelId = ? AND topic = ?`,
 		).run(messageId, modelId, topic);
 	}
 
 	async getMessageIdsByThreadId(threadId: TThreadId): Promise<string[]> {
-		const rows = this.db!.prepare(
-			`SELECT id FROM ${this.t.messages} WHERE threadId = ?`
-		).all(threadId) as Array<{ id: string }>;
-		return rows.map(r => r.id);
+		const rows = this.db!.prepare(`SELECT id FROM ${this.t.messages} WHERE threadId = ?`).all(
+			threadId,
+		) as Array<{ id: string }>;
+		return rows.map((r) => r.id);
 	}
 
 	// ============================================================
 	// Persisted States
 	// ============================================================
 	async getWorkspaceState(folderId: TFolderId): Promise<Record<string, unknown> | null> {
-		const row = this.db!.prepare(`SELECT data FROM ${this.t.workspaceStates} WHERE folderId = ?`).get(folderId) as { data: string } | undefined;
+		const row = this.db!.prepare(
+			`SELECT data FROM ${this.t.workspaceStates} WHERE folderId = ?`,
+		).get(folderId) as { data: string } | undefined;
 		if (!row) return null;
 		return JSON.parse(row.data);
 	}
@@ -1169,12 +1435,14 @@ export class SqlitePersistence implements IPersistence {
 		const merged = { ...(existing || {}), ...data };
 		this.db!.prepare(
 			`INSERT INTO ${this.t.workspaceStates} (folderId, data) VALUES (?, ?)
-			 ON CONFLICT(folderId) DO UPDATE SET data = excluded.data`
+			 ON CONFLICT(folderId) DO UPDATE SET data = excluded.data`,
 		).run(folderId, JSON.stringify(merged));
 	}
 
 	async getThreadState(threadId: TThreadId): Promise<Record<string, unknown> | null> {
-		const row = this.db!.prepare(`SELECT data FROM ${this.t.threadStates} WHERE threadId = ?`).get(threadId) as { data: string } | undefined;
+		const row = this.db!.prepare(
+			`SELECT data FROM ${this.t.threadStates} WHERE threadId = ?`,
+		).get(threadId) as { data: string } | undefined;
 		if (!row) return null;
 		return JSON.parse(row.data);
 	}
@@ -1184,12 +1452,14 @@ export class SqlitePersistence implements IPersistence {
 		const merged = { ...(existing || {}), ...data };
 		this.db!.prepare(
 			`INSERT INTO ${this.t.threadStates} (threadId, data) VALUES (?, ?)
-			 ON CONFLICT(threadId) DO UPDATE SET data = excluded.data`
+			 ON CONFLICT(threadId) DO UPDATE SET data = excluded.data`,
 		).run(threadId, JSON.stringify(merged));
 	}
 
 	async getMessageState(messageId: TMessageId): Promise<Record<string, unknown> | null> {
-		const row = this.db!.prepare(`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`).get(messageId) as { data: string } | undefined;
+		const row = this.db!.prepare(
+			`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`,
+		).get(messageId) as { data: string } | undefined;
 		if (!row) return null;
 		return JSON.parse(row.data);
 	}
@@ -1199,18 +1469,22 @@ export class SqlitePersistence implements IPersistence {
 		const merged = { ...(existing || {}), ...data };
 		this.db!.prepare(
 			`INSERT INTO ${this.t.messageStates} (messageId, data) VALUES (?, ?)
-			 ON CONFLICT(messageId) DO UPDATE SET data = excluded.data`
+			 ON CONFLICT(messageId) DO UPDATE SET data = excluded.data`,
 		).run(messageId, JSON.stringify(merged));
 	}
 
-	async getMessageStatesByThreadId(threadId: TThreadId): Promise<Array<{ messageId: string; data: Record<string, unknown> }>> {
+	async getMessageStatesByThreadId(
+		threadId: TThreadId,
+	): Promise<Array<{ messageId: string; data: Record<string, unknown> }>> {
 		const messageIds = this.db!.prepare(
-			`SELECT m.id FROM ${this.t.messages} m WHERE m.threadId = ?`
+			`SELECT m.id FROM ${this.t.messages} m WHERE m.threadId = ?`,
 		).all(threadId) as Array<{ id: string }>;
 
 		const result: Array<{ messageId: string; data: Record<string, unknown> }> = [];
 		for (const { id } of messageIds) {
-			const row = this.db!.prepare(`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`).get(id) as { data: string } | undefined;
+			const row = this.db!.prepare(
+				`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`,
+			).get(id) as { data: string } | undefined;
 			if (row) {
 				result.push({ messageId: id, data: JSON.parse(row.data) });
 			}
@@ -1228,22 +1502,22 @@ export class SqlitePersistence implements IPersistence {
 			`SELECT DISTINCT projectId FROM ${this.t.codeGraphFiles}
 			 WHERE ? LIKE projectId || '/%'
 			 ORDER BY LENGTH(projectId) DESC
-			 LIMIT 1`
+			 LIMIT 1`,
 		).get(absPath) as { projectId: string } | undefined;
 		return row?.projectId ?? null;
 	}
 
 	async codeGraphGetFile(projectId: string, filePath: string): Promise<ICodeGraphFile | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`
+			`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`,
 		).get(projectId, filePath) as ICodeGraphFile | undefined;
 		return row ?? null;
 	}
 
 	async codeGraphListFiles(projectId: string): Promise<ICodeGraphFile[]> {
-		return this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ?`
-		).all(projectId) as ICodeGraphFile[];
+		return this.db!.prepare(`SELECT * FROM ${this.t.codeGraphFiles} WHERE projectId = ?`).all(
+			projectId,
+		) as ICodeGraphFile[];
 	}
 
 	async codeGraphUpsertFile(file: ICodeGraphFile): Promise<void> {
@@ -1254,46 +1528,87 @@ export class SqlitePersistence implements IPersistence {
 				language = excluded.language,
 				mtime = excluded.mtime,
 				contentHash = excluded.contentHash,
-				indexedAt = excluded.indexedAt`
-		).run(file.id, file.projectId, file.filePath, file.language, file.mtime, file.contentHash, file.indexedAt);
+				indexedAt = excluded.indexedAt`,
+		).run(
+			file.id,
+			file.projectId,
+			file.filePath,
+			file.language,
+			file.mtime,
+			file.contentHash,
+			file.indexedAt,
+		);
 	}
 
 	async codeGraphDeleteByFile(projectId: string, filePath: string): Promise<void> {
 		const txn = this.db!.transaction(() => {
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(filePath);
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`,
+			).run(projectId, filePath);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(
+				filePath,
+			);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`,
+			).run(projectId, filePath);
 		});
 		txn();
 	}
 
-	async codeGraphUpsertNodes(projectId: string, filePath: string, nodes: ICodeGraphNode[]): Promise<void> {
+	async codeGraphUpsertNodes(
+		projectId: string,
+		filePath: string,
+		nodes: ICodeGraphNode[],
+	): Promise<void> {
 		const txn = this.db!.transaction(() => {
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`,
+			).run(projectId, filePath);
 			const insert = this.db!.prepare(
 				`INSERT INTO ${this.t.codeGraphNodes} (id, filePath, projectId, symbol, kind, language, startLine, endLine, startCol, endCol, signature, isExported)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			);
 			for (const n of nodes) {
-				insert.run(n.id, n.filePath, n.projectId, n.symbol, n.kind, n.language, n.startLine, n.endLine, n.startCol, n.endCol, n.signature ?? null, n.isExported ? 1 : 0);
+				insert.run(
+					n.id,
+					n.filePath,
+					n.projectId,
+					n.symbol,
+					n.kind,
+					n.language,
+					n.startLine,
+					n.endLine,
+					n.startCol,
+					n.endCol,
+					n.signature ?? null,
+					n.isExported ? 1 : 0,
+				);
 			}
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`).run(projectId, filePath);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`,
+			).run(projectId, filePath);
 			const ftsInsert = this.db!.prepare(
-				`INSERT INTO ${this.t.codeGraphNodesFts} (nodeId, symbol, kind, signature) VALUES (?, ?, ?, ?)`
+				`INSERT INTO ${this.t.codeGraphNodesFts} (nodeId, symbol, kind, signature) VALUES (?, ?, ?, ?)`,
 			);
 			for (const n of nodes) {
-				ftsInsert.run(n.id, n.symbol, n.kind, n.signature ?? '');
+				ftsInsert.run(n.id, n.symbol, n.kind, n.signature ?? "");
 			}
 		});
 		txn();
 	}
 
-	async codeGraphUpsertEdges(projectId: string, filePath: string, edges: ICodeGraphEdge[]): Promise<void> {
+	async codeGraphUpsertEdges(
+		projectId: string,
+		filePath: string,
+		edges: ICodeGraphEdge[],
+	): Promise<void> {
 		const txn = this.db!.transaction(() => {
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphEdges} WHERE projectId = ? AND filePath = ?`,
+			).run(projectId, filePath);
 			const insert = this.db!.prepare(
 				`INSERT INTO ${this.t.codeGraphEdges} (id, projectId, sourceId, filePath, targetSymbol, edgeType)
-				 VALUES (?, ?, ?, ?, ?, ?)`
+				 VALUES (?, ?, ?, ?, ?, ?)`,
 			);
 			for (const e of edges) {
 				insert.run(e.id, projectId, e.sourceId, e.filePath, e.targetSymbol, e.edgeType);
@@ -1302,7 +1617,11 @@ export class SqlitePersistence implements IPersistence {
 		txn();
 	}
 
-	async codeGraphSearchNodes(projectId: string, query: string, options?: ICodeGraphSearchOptions): Promise<ICodeGraphNode[]> {
+	async codeGraphSearchNodes(
+		projectId: string,
+		query: string,
+		options?: ICodeGraphSearchOptions,
+	): Promise<ICodeGraphNode[]> {
 		const limit = options?.limit ?? 20;
 		const clauses: string[] = [`n.projectId = ?`];
 		const params: unknown[] = [projectId];
@@ -1316,47 +1635,51 @@ export class SqlitePersistence implements IPersistence {
 			params.push(options.filePath);
 		}
 
-		const where = clauses.join(' AND ');
+		const where = clauses.join(" AND ");
 
 		if (options?.fuzzy) {
 			const ftsResults = this.db!.prepare(
-				`SELECT nodeId FROM ${this.t.codeGraphNodesFts} WHERE ${this.t.codeGraphNodesFts} MATCH ?`
+				`SELECT nodeId FROM ${this.t.codeGraphNodesFts} WHERE ${this.t.codeGraphNodesFts} MATCH ?`,
 			).all(query) as Array<{ nodeId: string }>;
 			if (ftsResults.length === 0) return [];
-			const nodeIds = ftsResults.map(r => r.nodeId);
-			const placeholders = nodeIds.map(() => '?').join(',');
+			const nodeIds = ftsResults.map((r) => r.nodeId);
+			const placeholders = nodeIds.map(() => "?").join(",");
 			const rows = this.db!.prepare(
-				`SELECT * FROM ${this.t.codeGraphNodes} WHERE id IN (${placeholders}) LIMIT ?`
+				`SELECT * FROM ${this.t.codeGraphNodes} WHERE id IN (${placeholders}) LIMIT ?`,
 			).all(...nodeIds, limit) as ICodeGraphNode[];
 			return rows;
 		}
 
 		const rows = this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphNodes} n WHERE ${where} AND (n.symbol LIKE ? OR n.symbol LIKE ?) ORDER BY n.symbol LIMIT ?`
+			`SELECT * FROM ${this.t.codeGraphNodes} n WHERE ${where} AND (n.symbol LIKE ? OR n.symbol LIKE ?) ORDER BY n.symbol LIMIT ?`,
 		).all(...params, `%${query}%`, `${query}.%`, limit) as ICodeGraphNode[];
 		return rows;
 	}
 
 	async codeGraphGetNode(projectId: string, nodeId: string): Promise<ICodeGraphNode | null> {
 		const row = this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphNodes} WHERE id = ? AND projectId = ?`
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE id = ? AND projectId = ?`,
 		).get(nodeId, projectId) as ICodeGraphNode | undefined;
 		return row ?? null;
 	}
 
 	async codeGraphGetNodesByFile(projectId: string, filePath: string): Promise<ICodeGraphNode[]> {
 		return this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ? ORDER BY startLine, startCol`
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ? ORDER BY startLine, startCol`,
 		).all(projectId, filePath) as ICodeGraphNode[];
 	}
 
 	async codeGraphGetAllNodes(projectId: string): Promise<ICodeGraphNode[]> {
 		return this.db!.prepare(
-			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? ORDER BY filePath, startLine, startCol`
+			`SELECT * FROM ${this.t.codeGraphNodes} WHERE projectId = ? ORDER BY filePath, startLine, startCol`,
 		).all(projectId) as ICodeGraphNode[];
 	}
 
-	async codeGraphGetCallers(projectId: string, symbolName: string, depth: number = 1): Promise<ICodeGraphNode[]> {
+	async codeGraphGetCallers(
+		projectId: string,
+		symbolName: string,
+		depth: number = 1,
+	): Promise<ICodeGraphNode[]> {
 		if (depth === 1) {
 			const rows = this.db!.prepare(`
 				SELECT DISTINCT n.* FROM ${this.t.codeGraphNodes} n
@@ -1379,13 +1702,20 @@ export class SqlitePersistence implements IPersistence {
 			JOIN ${this.t.codeGraphNodes} n ON e.sourceId = n.id
 			WHERE c.d < ? AND n.projectId = ?
 		)`;
-		const rows = this.db!.prepare(
-			`${withClause} SELECT * FROM callers ORDER BY d, symbol`
-		).all(symbolName, projectId, depth, projectId) as ICodeGraphNode[];
+		const rows = this.db!.prepare(`${withClause} SELECT * FROM callers ORDER BY d, symbol`).all(
+			symbolName,
+			projectId,
+			depth,
+			projectId,
+		) as ICodeGraphNode[];
 		return rows;
 	}
 
-	async codeGraphGetCallees(projectId: string, nodeId: string, depth: number = 1): Promise<ICodeGraphNode[]> {
+	async codeGraphGetCallees(
+		projectId: string,
+		nodeId: string,
+		depth: number = 1,
+	): Promise<ICodeGraphNode[]> {
 		if (depth === 1) {
 			const rows = this.db!.prepare(`
 				SELECT DISTINCT n.* FROM ${this.t.codeGraphNodes} n
@@ -1408,9 +1738,12 @@ export class SqlitePersistence implements IPersistence {
 			JOIN ${this.t.codeGraphNodes} n ON e.targetSymbol = n.symbol
 			WHERE c.d < ? AND n.projectId = ?
 		)`;
-		const rows = this.db!.prepare(
-			`${withClause} SELECT * FROM callees ORDER BY d, symbol`
-		).all(nodeId, projectId, depth, projectId) as ICodeGraphNode[];
+		const rows = this.db!.prepare(`${withClause} SELECT * FROM callees ORDER BY d, symbol`).all(
+			nodeId,
+			projectId,
+			depth,
+			projectId,
+		) as ICodeGraphNode[];
 		return rows;
 	}
 
@@ -1421,20 +1754,28 @@ export class SqlitePersistence implements IPersistence {
 			GROUP BY symbol
 			HAVING COUNT(*) > 1
 		`).all(projectId) as Array<{ symbol: string }>;
-		return new Set(rows.map(r => r.symbol));
+		return new Set(rows.map((r) => r.symbol));
 	}
 
 	async codeGraphClearProject(projectId: string): Promise<void> {
 		const files = this.db!.prepare(
-			`SELECT filePath FROM ${this.t.codeGraphFiles} WHERE projectId = ?`
+			`SELECT filePath FROM ${this.t.codeGraphFiles} WHERE projectId = ?`,
 		).all(projectId) as Array<{ filePath: string }>;
 		const txn = this.db!.transaction(() => {
 			for (const f of files) {
-				this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, f.filePath);
-				this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(f.filePath);
+				this.db!.prepare(
+					`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`,
+				).run(projectId, f.filePath);
+				this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(
+					f.filePath,
+				);
 			}
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ?`).run(projectId);
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ?)`).run(projectId);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ?`).run(
+				projectId,
+			);
+			this.db!.prepare(
+				`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ?)`,
+			).run(projectId);
 		});
 		txn();
 	}
@@ -1443,9 +1784,37 @@ export class SqlitePersistence implements IPersistence {
 	// Guardrails
 	// ============================================================
 
-	async listGuardrails(): Promise<Record<string, { id: string; name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }>> {
-		const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<Record<string, unknown>>;
-		const result: Record<string, { id: string; name: string; serverId: string; prompt?: string; triggerOnTools: IToolAttachment[]; inferenceParams: Record<string, unknown>; messagesCount: number; includeBaseMessage: boolean }> = {};
+	async listGuardrails(): Promise<
+		Record<
+			string,
+			{
+				id: string;
+				name: string;
+				serverId: string;
+				prompt?: string;
+				triggerOnTools: IToolAttachment[];
+				inferenceParams: Record<string, unknown>;
+				messagesCount: number;
+				includeBaseMessage: boolean;
+			}
+		>
+	> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<
+			Record<string, unknown>
+		>;
+		const result: Record<
+			string,
+			{
+				id: string;
+				name: string;
+				serverId: string;
+				prompt?: string;
+				triggerOnTools: IToolAttachment[];
+				inferenceParams: Record<string, unknown>;
+				messagesCount: number;
+				includeBaseMessage: boolean;
+			}
+		> = {};
 		for (const r of rows) {
 			result[r.id as string] = {
 				id: r.id as string,
@@ -1461,7 +1830,16 @@ export class SqlitePersistence implements IPersistence {
 		return result;
 	}
 
-	async upsertGuardrail(guardrail: { id: string; name: string; serverId: string; prompt?: string; triggerOnTools?: IToolAttachment[]; inferenceParams?: Record<string, unknown>; messagesCount?: number; includeBaseMessage?: boolean }): Promise<void> {
+	async upsertGuardrail(guardrail: {
+		id: string;
+		name: string;
+		serverId: string;
+		prompt?: string;
+		triggerOnTools?: IToolAttachment[];
+		inferenceParams?: Record<string, unknown>;
+		messagesCount?: number;
+		includeBaseMessage?: boolean;
+	}): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -1472,7 +1850,7 @@ export class SqlitePersistence implements IPersistence {
 				triggerOnTools = excluded.triggerOnTools,
 				inferenceParams = excluded.inferenceParams,
 				messagesCount = excluded.messagesCount,
-				includeBaseMessage = excluded.includeBaseMessage`
+				includeBaseMessage = excluded.includeBaseMessage`,
 		).run(
 			guardrail.id,
 			guardrail.name,
@@ -1493,9 +1871,21 @@ export class SqlitePersistence implements IPersistence {
 	// Modes
 	// ============================================================
 
-	async listModes(): Promise<Array<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }>> {
-		const rows = this.db!.prepare(`SELECT * FROM ${this.t.modes}`).all() as Array<Record<string, unknown>>;
-		return rows.map(r => ({
+	async listModes(): Promise<
+		Array<{
+			id: string;
+			name: string;
+			scope: string;
+			color: string;
+			prompt?: string;
+			allowedTools: IToolAttachment[];
+			activeGuardrails: string[];
+		}>
+	> {
+		const rows = this.db!.prepare(`SELECT * FROM ${this.t.modes}`).all() as Array<
+			Record<string, unknown>
+		>;
+		return rows.map((r) => ({
 			id: r.id as string,
 			name: r.name as string,
 			scope: r.scope as string,
@@ -1506,8 +1896,18 @@ export class SqlitePersistence implements IPersistence {
 		}));
 	}
 
-	async getMode(id: string): Promise<{ id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] } | null> {
-		const row = this.db!.prepare(`SELECT * FROM ${this.t.modes} WHERE id = ?`).get(id) as Record<string, unknown> | undefined;
+	async getMode(id: string): Promise<{
+		id: string;
+		name: string;
+		scope: string;
+		color: string;
+		prompt?: string;
+		allowedTools: IToolAttachment[];
+		activeGuardrails: string[];
+	} | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.modes} WHERE id = ?`).get(id) as
+			| Record<string, unknown>
+			| undefined;
 		if (!row) return null;
 		return {
 			id: row.id as string,
@@ -1520,7 +1920,15 @@ export class SqlitePersistence implements IPersistence {
 		};
 	}
 
-	async upsertMode(mode: { id: string; name: string; scope: string; color: string; prompt?: string; allowedTools: IToolAttachment[]; activeGuardrails: string[] }): Promise<void> {
+	async upsertMode(mode: {
+		id: string;
+		name: string;
+		scope: string;
+		color: string;
+		prompt?: string;
+		allowedTools: IToolAttachment[];
+		activeGuardrails: string[];
+	}): Promise<void> {
 		this.db!.prepare(
 			`INSERT INTO ${this.t.modes} (id, name, scope, color, prompt, allowedTools, activeGuardrails)
 			 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1530,7 +1938,7 @@ export class SqlitePersistence implements IPersistence {
 				color = excluded.color,
 				prompt = excluded.prompt,
 				allowedTools = excluded.allowedTools,
-				activeGuardrails = excluded.activeGuardrails`
+				activeGuardrails = excluded.activeGuardrails`,
 		).run(
 			mode.id,
 			mode.name,

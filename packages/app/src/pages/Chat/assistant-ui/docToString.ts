@@ -16,7 +16,10 @@ export const extractCommands = (doc: JSONContent | undefined): IExtractedSlashCo
 				const name = (child.attrs?.name as string) ?? "";
 				let params: Record<string, string> = {};
 				try {
-					params = JSON.parse((child.attrs?.args as string) || "{}") as Record<string, string>;
+					params = JSON.parse((child.attrs?.args as string) || "{}") as Record<
+						string,
+						string
+					>;
 				} catch {
 					params = {};
 				}

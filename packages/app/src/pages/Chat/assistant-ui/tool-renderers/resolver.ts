@@ -1,5 +1,5 @@
-import type { IToolCallRenderer } from '@/store/types';
-import type React from 'react';
+import type React from "react";
+import type { IToolCallRenderer } from "@/store/types";
 
 export interface IResolvedRenderer {
 	component: React.ComponentType<any>;
@@ -12,10 +12,10 @@ export interface IResolvedRenderer {
 // "search-files.v2" -> ["search","files","v2"]
 export function tokenizeToolName(name: string): string[] {
 	return name
-		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
 		.split(/[\s_\-.:]+/)
-		.map(t => t.toLowerCase())
-		.filter(t => t.length > 0);
+		.map((t) => t.toLowerCase())
+		.filter((t) => t.length > 0);
 }
 
 // Returns names of renderers whose keywords overlap with the tool name tokens.

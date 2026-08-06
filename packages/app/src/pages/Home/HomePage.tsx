@@ -1,24 +1,20 @@
-import { Box, Text, HStack, VStack, Flex, Image } from '@chakra-ui/react';
-import {
-	Home as HomeIcon,
-	ChevronDown,
-	ChevronUp,
-} from 'lucide-react';
-import React, { useState, useMemo } from 'react';
-import { PageHeader } from '@/components/PageHeader';
-import { useStore } from '@/store';
-import { RegisterBackendStep } from './Steps/RegisterBackendStep';
-import { LoadModelStep } from './Steps/LoadModelStep';
-import { CreateServerStep } from './Steps/CreateServerStep';
-import { ServersTile } from './Tiles/ServersTile';
-import { BackendsTile } from './Tiles/BackendsTile';
-import { ModelsTile } from './Tiles/ModelsTile';
-import { DownloadsTile } from './Tiles/DownloadsTile';
-import { ProxyTile } from './Tiles/ProxyTile';
-import { McpTile } from './Tiles/McpTile';
-import { AppServerTile } from './Tiles/AppServerTile';
-import { KokoroTile } from './Tiles/KokoroTile';
-import { UpdateBanner } from '@/components/UpdateBanner';
+import { Box, Flex, HStack, Image, Text, VStack } from "@chakra-ui/react";
+import { ChevronDown, ChevronUp, Home as HomeIcon } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { PageHeader } from "@/components/PageHeader";
+import { UpdateBanner } from "@/components/UpdateBanner";
+import { useStore } from "@/store";
+import { CreateServerStep } from "./Steps/CreateServerStep";
+import { LoadModelStep } from "./Steps/LoadModelStep";
+import { RegisterBackendStep } from "./Steps/RegisterBackendStep";
+import { AppServerTile } from "./Tiles/AppServerTile";
+import { BackendsTile } from "./Tiles/BackendsTile";
+import { DownloadsTile } from "./Tiles/DownloadsTile";
+import { KokoroTile } from "./Tiles/KokoroTile";
+import { McpTile } from "./Tiles/McpTile";
+import { ModelsTile } from "./Tiles/ModelsTile";
+import { ProxyTile } from "./Tiles/ProxyTile";
+import { ServersTile } from "./Tiles/ServersTile";
 
 export const HomePage = React.memo(() => {
 	const servers = useStore((s) => s.servers);
@@ -32,9 +28,9 @@ export const HomePage = React.memo(() => {
 	const allComplete = hasBackends && hasModels && hasServers;
 
 	const firstIncomplete = useMemo(() => {
-		if (!hasBackends) return 'backends';
-		if (!hasModels) return 'models';
-		if (!hasServers) return 'server';
+		if (!hasBackends) return "backends";
+		if (!hasModels) return "models";
+		if (!hasServers) return "server";
 		return null;
 	}, [hasBackends, hasModels, hasServers]);
 
@@ -43,13 +39,10 @@ export const HomePage = React.memo(() => {
 	return (
 		<Box
 			style={{
-				height: "100%"
+				height: "100%",
 			}}
 		>
-			<PageHeader
-				title="Home"
-				icon={<HomeIcon size={20} />}
-			/>
+			<PageHeader title="Home" icon={<HomeIcon size={20} />} />
 
 			<Box pt="76px" px="4" pb="4">
 				<VStack align="stretch" gap="5">
@@ -58,11 +51,19 @@ export const HomePage = React.memo(() => {
 						<HStack gap="3">
 							<Image src="/logo.png" w="64px" h="64px" borderRadius="md" />
 							<VStack align="flex-start" gap="0">
-								<Text fontSize="20px" fontWeight="500" color="var(--wc-text-tertiary)">
+								<Text
+									fontSize="20px"
+									fontWeight="500"
+									color="var(--wc-text-tertiary)"
+								>
 									Welcome
 								</Text>
-								<Text fontSize="24px" fontWeight="600" color="var(--wc-text-heading)">
-									{allComplete ? 'warpdrv is ready!' : "Setup"}
+								<Text
+									fontSize="24px"
+									fontWeight="600"
+									color="var(--wc-text-heading)"
+								>
+									{allComplete ? "warpdrv is ready!" : "Setup"}
 								</Text>
 							</VStack>
 						</HStack>
@@ -75,28 +76,54 @@ export const HomePage = React.memo(() => {
 								borderRadius="md"
 								cursor="pointer"
 								onClick={() => setShowSteps(!showSteps)}
-color="var(--wc-text-muted)"
-				_hover={{ bg: 'var(--wc-bg-hover)', color: 'var(--wc-text-secondary)' }}
+								color="var(--wc-text-muted)"
+								_hover={{
+									bg: "var(--wc-bg-hover)",
+									color: "var(--wc-text-secondary)",
+								}}
 								transition="all 0.15s ease"
 								fontSize={"11px"}
-							>	
+							>
 								Details&nbsp;
-								{!showSteps 
-									? <ChevronDown size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-									: <ChevronUp size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-								}
+								{!showSteps ? (
+									<ChevronDown
+										size={20}
+										transform={showSteps ? "rotate(180deg)" : "rotate(0deg)"}
+										transition="transform 0.15s ease"
+									/>
+								) : (
+									<ChevronUp
+										size={20}
+										transform={showSteps ? "rotate(180deg)" : "rotate(0deg)"}
+										transition="transform 0.15s ease"
+									/>
+								)}
 							</Flex>
 						)}
 					</Flex>
 
-					{(!allComplete || showSteps) && <Box w="100%" h="1px" bg="var(--wc-border-subtle)" />}
+					{(!allComplete || showSteps) && (
+						<Box w="100%" h="1px" bg="var(--wc-border-subtle)" />
+					)}
 
 					{/* Next Steps */}
 					{!allComplete || showSteps ? (
 						<VStack align="stretch" gap="2">
-							<RegisterBackendStep done={hasBackends} isOpenDefault={firstIncomplete === 'backends'} isHighlighted={firstIncomplete === 'backends'} />
-							<LoadModelStep done={hasModels} isOpenDefault={firstIncomplete === 'models'} isHighlighted={firstIncomplete === 'models'} />
-							<CreateServerStep done={hasServers} isOpenDefault={firstIncomplete === 'server'} isHighlighted={firstIncomplete === 'server'} />
+							<RegisterBackendStep
+								done={hasBackends}
+								isOpenDefault={firstIncomplete === "backends"}
+								isHighlighted={firstIncomplete === "backends"}
+							/>
+							<LoadModelStep
+								done={hasModels}
+								isOpenDefault={firstIncomplete === "models"}
+								isHighlighted={firstIncomplete === "models"}
+							/>
+							<CreateServerStep
+								done={hasServers}
+								isOpenDefault={firstIncomplete === "server"}
+								isHighlighted={firstIncomplete === "server"}
+							/>
 						</VStack>
 					) : null}
 
@@ -117,9 +144,6 @@ color="var(--wc-text-muted)"
 						<ModelsTile />
 						<DownloadsTile />
 					</Box>
-
-
-
 				</VStack>
 			</Box>
 

@@ -1,9 +1,12 @@
-import type { Request, Response } from 'express';
-import { createSession } from 'better-sse';
+import { createSession } from "better-sse";
+import type { Request, Response } from "express";
 
 export class SSEManager {
 	private sessions: Array<{ session: any; req: Request; res: Response }> = [];
-	private intervals: Record<string, { callback: () => unknown | null; intervalMs: number; timer: NodeJS.Timeout }>;
+	private intervals: Record<
+		string,
+		{ callback: () => unknown | null; intervalMs: number; timer: NodeJS.Timeout }
+	>;
 	private connectHandlers: Record<string, Array<() => Promise<unknown>>>;
 	private disconnectHandlers: Record<string, Array<() => Promise<unknown>>>;
 
@@ -13,13 +16,17 @@ export class SSEManager {
 		this.disconnectHandlers = {};
 	}
 
-	onInterval(channel: string, callback: () => (Promise<unknown | null> | unknown | null), intervalMs: number): void {
-		if (this.intervals[channel]) throw (`[SSE] Channel '${channel}' already registered. Possible duplicate registration.`);
+	onInterval(
+		channel: string,
+		callback: () => Promise<unknown | null> | unknown | null,
+		intervalMs: number,
+	): void {
+		if (this.intervals[channel])
+			throw `[SSE] Channel '${channel}' already registered. Possible duplicate registration.`;
 
 		const timer = setInterval(async () => {
 			const data = await callback();
 			if (data !== null) this.emit(channel, data);
-			
 		}, intervalMs);
 
 		this.intervals[channel] = { callback, intervalMs, timer };
@@ -56,7 +63,7 @@ export class SSEManager {
 	}
 
 	async handleConnection(req: Request, res: Response, onDisconnect: () => void): Promise<void> {
-		console.log('[SSE] New connection established');
+		console.log("[SSE] New connection established");
 
 		try {
 			const session = await createSession(req, res);
@@ -78,13 +85,13 @@ export class SSEManager {
 			}
 
 			await new Promise<void>((resolve, reject) => {
-				req.on('close', () => resolve());
-				req.on('error', () => resolve());
+				req.on("close", () => resolve());
+				req.on("error", () => resolve());
 			});
 		} catch (err) {
-			console.error('[SSE] Failed to create session:', err);
+			console.error("[SSE] Failed to create session:", err);
 		} finally {
-			const idx = this.sessions.findIndex(s => s.req === req);
+			const idx = this.sessions.findIndex((s) => s.req === req);
 			if (idx > -1) this.sessions.splice(idx, 1);
 			onDisconnect();
 			(async () => {
@@ -92,7 +99,9 @@ export class SSEManager {
 					const handlers = this.disconnectHandlers[channel];
 					if (!handlers) continue;
 					for (const handler of handlers) {
-						try { await handler(); } catch {}
+						try {
+							await handler();
+						} catch {}
 					}
 				}
 			})();

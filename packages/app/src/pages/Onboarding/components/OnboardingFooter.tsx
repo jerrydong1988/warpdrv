@@ -1,5 +1,5 @@
-import { Box, Button, Flex } from '@chakra-ui/react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Box, Button, Flex } from "@chakra-ui/react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface IOnboardingFooterProps {
 	onBack?: () => void;
@@ -12,8 +12,8 @@ interface IOnboardingFooterProps {
 export function OnboardingFooter({
 	onBack,
 	onNext,
-	backLabel = 'Back',
-	nextLabel = 'Next',
+	backLabel = "Back",
+	nextLabel = "Next",
 	disableBack = false,
 }: IOnboardingFooterProps) {
 	return (
@@ -28,7 +28,7 @@ export function OnboardingFooter({
 				<Button
 					variant="ghost"
 					color="var(--wc-text-secondary)"
-					_hover={{ color: 'var(--wc-text-primary)' }}
+					_hover={{ color: "var(--wc-text-primary)" }}
 					borderRadius="lg"
 					fontSize="13px"
 					leftIcon={<ArrowLeft size={16} />}
@@ -41,7 +41,7 @@ export function OnboardingFooter({
 				<Button
 					bg="var(--wc-accent-blue)"
 					color="white"
-					_hover={{ bg: 'var(--wc-accent-blue-hover)' }}
+					_hover={{ bg: "var(--wc-accent-blue-hover)" }}
 					borderRadius="lg"
 					fontSize="13px"
 					fontWeight="500"

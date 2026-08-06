@@ -1,4 +1,4 @@
-import { IExternalNode, IEvent, IRouteState, TNodeId, TAddr } from "./EventNode";
+import type { IEvent, IExternalNode, IRouteState, TAddr, TNodeId } from "./EventNode";
 
 // the transport seam. a transport carries a message to its peer and resolves
 // with the peer handler's response. request/response correlation (matching a
@@ -58,7 +58,9 @@ export class RemoteNode implements IExternalNode {
 
 	public async addParent(parent: IExternalNode): Promise<void> {
 		this.nodeAddr = parent.nodeAddr + "/" + this.nodeId;
-		await this.transport.sendMessage(ERemoteNodeMsg.ADD_PARENT, { parentAddr: parent.nodeAddr });
+		await this.transport.sendMessage(ERemoteNodeMsg.ADD_PARENT, {
+			parentAddr: parent.nodeAddr,
+		});
 	}
 
 	public async removeParent(): Promise<void> {

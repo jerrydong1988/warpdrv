@@ -2,9 +2,9 @@
 // Hub File Parser - Handles nested directories and split GGUF files
 // ============================================================
 
-import path from 'path';
-import fs from 'fs';
-import type { IHubFile } from '@warpcore/shared';
+import type { IHubFile } from "@warpcore/shared";
+import fs from "fs";
+import path from "path";
 
 // Pattern for split GGUF files: model-00001-of-00002.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
@@ -42,7 +42,7 @@ export function extractShardInfo(filename: string): {
 
 	// Extract parent model name (everything before the shard suffix)
 	// e.g., "Llama-3.2-1B-Instruct-00001-of-00002.gguf" -> "Llama-3.2-1B-Instruct"
-	const parentModel = filename.replace(SHARD_REGEX, '');
+	const parentModel = filename.replace(SHARD_REGEX, "");
 
 	return { shardIndex, shardTotal, parentModel };
 }
@@ -65,7 +65,7 @@ export function groupSplitFilesByModel(files: IHubFile[]): Map<string, IHubFile[
 			key = parentModel;
 		} else {
 			// Not a shard - use the filename itself as the key (without .gguf extension)
-			key = file.filename.replace(/\.gguf$/i, '');
+			key = file.filename.replace(/\.gguf$/i, "");
 		}
 
 		if (!groups.has(key)) {
@@ -121,7 +121,7 @@ export function processGgufFiles(files: IHubFile[]): IHubFile[] {
 export async function fetchFilesFromDirectories(
 	modelId: string,
 	dirs: IHubRawDir[],
-	branch: string = 'main',
+	branch: string = "main",
 ): Promise<IHubRawFile[]> {
 	const allFiles: IHubRawFile[] = [];
 
@@ -132,9 +132,9 @@ export async function fetchFilesFromDirectories(
 		try {
 			const response = await fetch(dirUrl);
 			if (response.ok) {
-				const contents = await response.json() as (IHubRawFile | IHubRawDir)[];
+				const contents = (await response.json()) as (IHubRawFile | IHubRawDir)[];
 				for (const item of contents) {
-					if (item.type === 'file') {
+					if (item.type === "file") {
 						// HF API already returns full path when querying /tree/main/{dirPath}
 						// file.path is already "MXFP4_MOE/file-00001-of-00003.gguf"
 						const file = item as IHubRawFile;
@@ -155,7 +155,7 @@ export async function fetchFilesFromDirectories(
 export async function fetchAllGgufFiles(
 	author: string,
 	modelName: string,
-	branch: string = 'main',
+	branch: string = "main",
 ): Promise<IHubRawFile[]> {
 	const modelId = `${author}/${modelName}`;
 	const treeUrl = `https://huggingface.co/api/models/${modelId}/tree/${branch}`;
@@ -164,16 +164,19 @@ export async function fetchAllGgufFiles(
 		const response = await fetch(treeUrl);
 		if (!response.ok) return [];
 
-		const contents = await response.json() as (IHubRawFile | IHubRawDir)[];
+		const contents = (await response.json()) as (IHubRawFile | IHubRawDir)[];
 
 		// Separate files and directories
 		const files: IHubRawFile[] = [];
 		const dirs: IHubRawDir[] = [];
 
 		for (const item of contents) {
-			if (item.type === 'file' && (String(item.path).endsWith('.gguf') || String(item.path).endsWith('.bin'))) {
+			if (
+				item.type === "file" &&
+				(String(item.path).endsWith(".gguf") || String(item.path).endsWith(".bin"))
+			) {
 				files.push(item as IHubRawFile);
-			} else if (item.type === 'directory') {
+			} else if (item.type === "directory") {
 				dirs.push(item as IHubRawDir);
 			}
 		}
@@ -197,15 +200,15 @@ export function mapFilesToHubFiles(
 	modelRoots: string[],
 ): IHubFile[] {
 	return files.map((raw) => {
-		const filename = String(raw.path ?? '');
+		const filename = String(raw.path ?? "");
 		const size = Number(raw.size ?? 0);
-		const isGguf = filename.endsWith('.gguf');
-		const isWhisperBin = filename.endsWith('.bin');
+		const isGguf = filename.endsWith(".gguf");
+		const isWhisperBin = filename.endsWith(".bin");
 
 		// Extract quant type from the basename
 		const basename = path.basename(filename);
 		const quantMatch = basename.match(QUANT_REGEX);
-		const quantType = quantMatch ? quantMatch[1]!.toUpperCase() : '';
+		const quantType = quantMatch ? quantMatch[1]!.toUpperCase() : "";
 
 		// Check if downloaded in any model root
 		let isDownloaded = false;

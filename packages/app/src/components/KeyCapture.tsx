@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Text, HStack } from '@chakra-ui/react';
+import { Button, HStack, Text } from "@chakra-ui/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface IKeyCaptureProps {
 	value: string;
@@ -9,25 +9,25 @@ interface IKeyCaptureProps {
 }
 
 const MODIFIER_MAP: Record<string, string> = {
-	ControlLeft: 'Ctrl',
-	ControlRight: 'Ctrl',
-	ShiftLeft: 'Shift',
-	ShiftRight: 'Shift',
-	AltLeft: 'Alt',
-	AltRight: 'Alt',
-	MetaLeft: 'Meta',
-	MetaRight: 'Meta',
+	ControlLeft: "Ctrl",
+	ControlRight: "Ctrl",
+	ShiftLeft: "Shift",
+	ShiftRight: "Shift",
+	AltLeft: "Alt",
+	AltRight: "Alt",
+	MetaLeft: "Meta",
+	MetaRight: "Meta",
 };
 
 function formatCombo(combo: string): string {
-	if (!combo) return 'Disabled';
+	if (!combo) return "Disabled";
 	return combo
-		.split('|')
+		.split("|")
 		.map((code) => MODIFIER_MAP[code] ?? code)
-		.join(' + ');
+		.join(" + ");
 }
 
-export function KeyCapture({ value, onChange, onDisable, label = 'PTT Key' }: IKeyCaptureProps) {
+export function KeyCapture({ value, onChange, onDisable, label = "PTT Key" }: IKeyCaptureProps) {
 	const [capturing, setCapturing] = useState(false);
 	const localKeysRef = useRef<Record<string, true>>({});
 	const onChangeRef = useRef(onChange);
@@ -43,28 +43,30 @@ export function KeyCapture({ value, onChange, onDisable, label = 'PTT Key' }: IK
 		e.preventDefault();
 		e.stopPropagation();
 		setCapturing(false);
-		if (e.code === 'Escape') return;
+		if (e.code === "Escape") return;
 		const snapshot = Object.keys(localKeysRef.current);
 		if (snapshot.length > 0) {
-			onChangeRef.current(snapshot.join('|'));
+			onChangeRef.current(snapshot.join("|"));
 		}
 	}, []);
 
 	useEffect(() => {
 		if (capturing) {
 			localKeysRef.current = {};
-			document.addEventListener('keydown', onDown, true);
-			document.addEventListener('keyup', onUp, true);
+			document.addEventListener("keydown", onDown, true);
+			document.addEventListener("keyup", onUp, true);
 			return () => {
-				document.removeEventListener('keydown', onDown, true);
-				document.removeEventListener('keyup', onUp, true);
+				document.removeEventListener("keydown", onDown, true);
+				document.removeEventListener("keyup", onUp, true);
 			};
 		}
 	}, [capturing, onDown, onUp]);
 
 	return (
 		<HStack gap="3" align="center">
-			<Text fontSize="13px" color="var(--wc-text-secondary)">{label}</Text>
+			<Text fontSize="13px" color="var(--wc-text-secondary)">
+				{label}
+			</Text>
 			{capturing ? (
 				<Button
 					variant="outline"
@@ -104,7 +106,10 @@ export function KeyCapture({ value, onChange, onDisable, label = 'PTT Key' }: IK
 				color="var(--wc-text-muted)"
 				fontSize="12px"
 				borderRadius="lg"
-				onClick={() => { setCapturing(false); onDisable(); }}
+				onClick={() => {
+					setCapturing(false);
+					onDisable();
+				}}
 			>
 				Disable
 			</Button>

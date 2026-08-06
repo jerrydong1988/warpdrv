@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { Box, Flex, VStack, Text, Input, Button, Heading } from '@chakra-ui/react';
-import { Key } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '../../components/ToastProvider';
-import { login } from '../../api/services';
+import { Box, Button, Flex, Heading, Input, Text, VStack } from "@chakra-ui/react";
+import { Key } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { login } from "../../api/services";
+import { useToast } from "../../components/ToastProvider";
 
 export function LoginPage() {
 	const navigate = useNavigate();
 	const { toast } = useToast();
-	const [token, setToken] = useState('');
+	const [token, setToken] = useState("");
 	const [loading, setLoading] = useState(false);
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -20,21 +20,15 @@ export function LoginPage() {
 		setLoading(false);
 
 		if (result.ok) {
-			toast('success', 'Logged in successfully');
-			navigate('/');
+			toast("success", "Logged in successfully");
+			navigate("/");
 		} else {
-			toast('error', result.error ?? 'Login failed');
+			toast("error", result.error ?? "Login failed");
 		}
 	};
 
 	return (
-		<Flex
-			minH="100vh"
-			alignItems="center"
-			justifyContent="center"
-			bg="var(--wc-bg-page)"
-			p="4"
-		>
+		<Flex minH="100vh" alignItems="center" justifyContent="center" bg="var(--wc-bg-page)" p="4">
 			<Box
 				w="full"
 				maxW="sm"
@@ -79,8 +73,8 @@ export function LoginPage() {
 								borderColor="var(--wc-border-default)"
 								color="var(--wc-text-primary)"
 								fontSize="12px"
-								_placeholder={{ color: 'var(--wc-text-placeholder)' }}
-								_focus={{ borderColor: 'var(--wc-accent-blue-focus)' }}
+								_placeholder={{ color: "var(--wc-text-placeholder)" }}
+								_focus={{ borderColor: "var(--wc-accent-blue-focus)" }}
 							/>
 
 							<Button
@@ -88,12 +82,12 @@ export function LoginPage() {
 								size="sm"
 								bg="var(--wc-accent-blue-bg-12)"
 								color="var(--wc-accent-blue)"
-								_hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }}
+								_hover={{ bg: "var(--wc-accent-blue-hover-bg)" }}
 								fontSize="12px"
 								fontWeight="500"
 								disabled={loading || !token.trim()}
 							>
-								{loading ? 'Logging in...' : 'Login'}
+								{loading ? "Logging in..." : "Login"}
 							</Button>
 						</VStack>
 					</form>

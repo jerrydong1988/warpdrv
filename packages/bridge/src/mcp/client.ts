@@ -4,16 +4,15 @@
 // Node only — uses child processes for stdio transport.
 // ============================================================
 
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { randomUUID } from 'node:crypto';
-import type { IMcpClient } from '../types/interfaces';
-import type { IBridgeBroadcaster } from '../types/interfaces';
-import type { IMcpServerEntry, IMcpServerState, IToolDefinition } from '../types';
-import { EMcpServerStatus, EMcpTransportType } from '../types';
-import { ElicitationRegistry } from './elicitationRegistry';
+import { randomUUID } from "node:crypto";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { IMcpServerEntry, IMcpServerState, IToolDefinition } from "../types";
+import { EMcpServerStatus, EMcpTransportType } from "../types";
+import type { IBridgeBroadcaster, IMcpClient } from "../types/interfaces";
+import { ElicitationRegistry } from "./elicitationRegistry";
 
 interface IClientEntry {
 	name: string;
@@ -32,7 +31,10 @@ export class McpClientManager implements IMcpClient {
 	private broadcaster?: IBridgeBroadcaster;
 	public readonly elicitationRegistry: ElicitationRegistry;
 
-	constructor(onChange?: (servers: Record<string, IMcpServerState>) => void, broadcaster?: IBridgeBroadcaster) {
+	constructor(
+		onChange?: (servers: Record<string, IMcpServerState>) => void,
+		broadcaster?: IBridgeBroadcaster,
+	) {
 		this.onChange = onChange;
 		this.broadcaster = broadcaster;
 		this.elicitationRegistry = new ElicitationRegistry();
@@ -61,22 +63,24 @@ export class McpClientManager implements IMcpClient {
 		};
 
 		const client = new Client(
-			{ name: `warpbridge-${name}`, version: '1.0.0' },
+			{ name: `warpbridge-${name}`, version: "1.0.0" },
 			{ capabilities: { elicitation: { form: {}, url: {} } } },
 		);
 		client.setRequestHandler(ElicitRequestSchema, async (req) => {
 			const id = randomUUID();
 			const promise = this.elicitationRegistry.register(id, name);
 			this.broadcaster?.emit({
-				type: 'elicitation_request',
-				threadId: this.activeThreadByServer[name] ?? '',
+				type: "elicitation_request",
+				threadId: this.activeThreadByServer[name] ?? "",
 				request: {
 					id,
 					serverName: name,
 					message: req.params.message,
-					mode: (req.params.mode as 'form' | 'url' | undefined) ?? 'form',
+					mode: (req.params.mode as "form" | "url" | undefined) ?? "form",
 					url: req.params.url as string | undefined,
-					requestedSchema: req.params.requestedSchema as Record<string, unknown> | undefined,
+					requestedSchema: req.params.requestedSchema as
+						| Record<string, unknown>
+						| undefined,
 				},
 			});
 			const response = await promise;
@@ -112,24 +116,32 @@ export class McpClientManager implements IMcpClient {
 						if (v !== undefined) headers[k] = v;
 					}
 				}
-				transport = new StreamableHTTPClientTransport(
-					new URL(entry.url!),
-					{ requestInit: { headers } },
-				);
+				transport = new StreamableHTTPClientTransport(new URL(entry.url!), {
+					requestInit: { headers },
+				});
 			}
 
-			this.clients[name] = { name, client, transport, state, reconnectTimer: null, config: entry, wasConnected: false, _disconnecting: false };
+			this.clients[name] = {
+				name,
+				client,
+				transport,
+				state,
+				reconnectTimer: null,
+				config: entry,
+				wasConnected: false,
+				_disconnecting: false,
+			};
 			this.emitChange();
 
 			await client.connect(transport);
 
 			const toolsResult = await client.listTools();
-			state.tools = (toolsResult.tools ?? []).map(t => {
+			state.tools = (toolsResult.tools ?? []).map((t) => {
 				const schema = { ...(t.inputSchema ?? {}) } as Record<string, unknown>;
-				delete schema['$schema'];
+				delete schema["$schema"];
 				return {
 					name: t.name,
-					description: t.description ?? '',
+					description: t.description ?? "",
 					inputSchema: schema,
 					serverName: name,
 				};
@@ -145,7 +157,7 @@ export class McpClientManager implements IMcpClient {
 				const ce = this.clients[name];
 				if (!ce || ce._disconnecting) return;
 				state.status = EMcpServerStatus.DISCONNECTED;
-				state.error = 'Connection closed';
+				state.error = "Connection closed";
 				this.emitChange();
 				if (ce.wasConnected) {
 					this.scheduleReconnect(name);
@@ -155,13 +167,22 @@ export class McpClientManager implements IMcpClient {
 			const errorMsg = err instanceof Error ? err.message : String(err);
 			console.error(`[MCP] Failed to connect '${name}':`, errorMsg);
 			if (transportType === EMcpTransportType.STDIO) {
-				console.error(`[MCP]   Command: ${entry.command ?? 'N/A'}`);
+				console.error(`[MCP]   Command: ${entry.command ?? "N/A"}`);
 				console.error(`[MCP]   Args: ${JSON.stringify(entry.args ?? [])}`);
-				console.error(`[MCP]   PATH: ${stdioEnv?.PATH || '(not set)'}`);
+				console.error(`[MCP]   PATH: ${stdioEnv?.PATH || "(not set)"}`);
 			}
 			state.status = EMcpServerStatus.ERROR;
 			state.error = errorMsg;
-			this.clients[name] = { name, client, transport: transport!, state, reconnectTimer: null, config: entry, wasConnected: false, _disconnecting: false };
+			this.clients[name] = {
+				name,
+				client,
+				transport: transport!,
+				state,
+				reconnectTimer: null,
+				config: entry,
+				wasConnected: false,
+				_disconnecting: false,
+			};
 			this.emitChange();
 		}
 	}
@@ -173,9 +194,13 @@ export class McpClientManager implements IMcpClient {
 		entry._disconnecting = true;
 		const cancelled = this.elicitationRegistry.cancelAllForServer(name);
 		for (const id of cancelled) {
-			this.broadcaster?.emit({ type: 'elicitation_resolved', id });
+			this.broadcaster?.emit({ type: "elicitation_resolved", id });
 		}
-		try { await entry.client.close(); } catch { /* ignore */ }
+		try {
+			await entry.client.close();
+		} catch {
+			/* ignore */
+		}
 		delete this.clients[name];
 		this.emitChange();
 	}
@@ -258,7 +283,7 @@ export class McpClientManager implements IMcpClient {
 			clearTimeout(timer);
 			const cancelled = this.elicitationRegistry.cancelAllForServer(serverName);
 			for (const id of cancelled) {
-				this.broadcaster?.emit({ type: 'elicitation_resolved', id });
+				this.broadcaster?.emit({ type: "elicitation_resolved", id });
 			}
 			throw err;
 		}
@@ -267,7 +292,7 @@ export class McpClientManager implements IMcpClient {
 	findToolServer(toolName: string): string | null {
 		for (const [name, entry] of Object.entries(this.clients)) {
 			if (entry.state.status !== EMcpServerStatus.CONNECTED) continue;
-			if (entry.state.tools.some(t => t.name === toolName)) return name;
+			if (entry.state.tools.some((t) => t.name === toolName)) return name;
 		}
 		return null;
 	}
@@ -288,21 +313,25 @@ export class McpClientManager implements IMcpClient {
 
 		// Interpolate {{ws.<key>}} and {{ts.<key>}} in all string values
 		let result = merged;
-		if (wsVars) result = this.interpolateArgs(result, wsVars, 'ws');
-		if (tsVars) result = this.interpolateArgs(result, tsVars, 'ts');
+		if (wsVars) result = this.interpolateArgs(result, wsVars, "ws");
+		if (tsVars) result = this.interpolateArgs(result, tsVars, "ts");
 		return result;
 	}
 
-	private interpolateArgs(args: Record<string, unknown>, vars: Record<string, unknown>, prefix: string): Record<string, unknown> {
+	private interpolateArgs(
+		args: Record<string, unknown>,
+		vars: Record<string, unknown>,
+		prefix: string,
+	): Record<string, unknown> {
 		const result: Record<string, unknown> = {};
-		const pattern = new RegExp(`\\{\\{${prefix}\\.(\\w+)\\}\\}`, 'g');
+		const pattern = new RegExp(`\\{\\{${prefix}\\.(\\w+)\\}\\}`, "g");
 		for (const [key, value] of Object.entries(args)) {
-			if (typeof value === 'string') {
+			if (typeof value === "string") {
 				result[key] = value.replace(pattern, (_match, varKey) => {
 					const resolved = vars[varKey];
 					return resolved !== undefined ? String(resolved) : `{{${prefix}.${varKey}}}`;
 				});
-			} else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+			} else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
 				result[key] = this.interpolateArgs(value as Record<string, unknown>, vars, prefix);
 			} else {
 				result[key] = value;

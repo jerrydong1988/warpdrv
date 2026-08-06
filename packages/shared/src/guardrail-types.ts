@@ -1,8 +1,8 @@
-import type { IToolAttachment } from './types';
+import type { IToolAttachment } from "./types";
 
 export enum EGuardrailIssueType {
-	VIOLATION = 'violation',
-	WARNING = 'warning',
+	VIOLATION = "violation",
+	WARNING = "warning",
 }
 
 export interface IGuardrailIssue {

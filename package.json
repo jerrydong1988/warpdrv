@@ -14,11 +14,12 @@
 		"build:desktop": "npm run build -w @warpcore/desktop",
 		"release": "bash release.sh",
 		"postinstall": "patch-package",
-		"fmt": "biome check --write .",
+		"fmt": "biome format --write .",
+		"lint:biome": "biome lint .",
 		"lint": "eslint ."
 	},
 	"lint-staged": {
-		"*.{ts,tsx,js,jsx,json,css}": "biome check --write --no-errors-on-unmatched"
+		"*.{ts,tsx,js,jsx,json,css}": "biome format --write --no-errors-on-unmatched"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.7",

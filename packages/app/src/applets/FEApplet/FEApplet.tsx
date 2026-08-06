@@ -1,242 +1,378 @@
-import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
-import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
-import { EUISpaceLoc } from '@/store/slices/uiSpaces';
-import type { IAppletAPIFE } from '../lib/types';
-import type { TUiSpaceComponentDef } from '@/store/slices/uiSpaces';
-import { Box, Text, VStack, Flex, Spinner, Badge, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, Tabs, Switch, Input, Textarea, Button, SegmentGroup, ColorPicker, parseColor } from '@chakra-ui/react';
-import { ChevronDown, CheckCircle, AlertTriangle, XCircle, ChevronRight, Edit2, Trash2, Check } from 'lucide-react';
-import { FaShieldAlt } from 'react-icons/fa';
-import { LuListTodo } from 'react-icons/lu';
-import { MdDragHandle } from 'react-icons/md';
-import { GoShield, GoShieldCheck } from 'react-icons/go';
-import { nanoid } from 'nanoid';
-import { useAuiState } from '@assistant-ui/react';
-import { useStore } from '@/store';
-import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
-import type { ITodoItem, IGuardrailDefinition, IGuardrailIssue, IGuardrailError, IMode, TModeId, IToolAttachment } from '@warpcore/shared';
-import { EMcpServerStatus } from '@warpcore/bridge';
-import { EGuardrailIssueType } from '@warpcore/shared';
-import { createMode as createModeApi, updateMode as updateModeApi, deleteMode as deleteModeApi, updateModeGuardrails as updateModeGuardrailsApi } from '@/api/mode-services';
-import { createGuardrail as createGuardrailApi, updateGuardrail as updateGuardrailApi, deleteGuardrail as deleteGuardrailApi } from '@/api/guardrail-services';
-import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
-import { parseGuardrailValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails';
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
-import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
-import { useDependantState } from '@/hooks/useDependantState';
-import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
-import { ServerPicker } from '@/components/ServerPicker';
-import { TbMessage2Plus } from 'react-icons/tb';
-import { TiFlowSwitch } from 'react-icons/ti';
-import { ModeTabs } from '../ui/ModeTabs';
-import { GuardrailBadge, ModeGuardrailPicker } from '../ui/GuardrailBadge';
+import { useAuiState } from "@assistant-ui/react";
+import {
+	AccordionItem as AccordionItemComp,
+	AccordionItemContent,
+	AccordionItemTrigger,
+	AccordionRoot,
+	Badge,
+	Box,
+	Button,
+	ColorPicker,
+	Flex,
+	HStack,
+	Input,
+	parseColor,
+	SegmentGroup,
+	Spinner,
+	Switch,
+	Tabs,
+	Text,
+	Textarea,
+	VStack,
+} from "@chakra-ui/react";
+import { EMcpServerStatus } from "@warpcore/bridge";
+import type { IAppletFn, TAppletDefinition } from "@warpcore/realmcore";
+import { EAppletHostType, EAppletScope } from "@warpcore/realmcore";
+import type {
+	IGuardrailDefinition,
+	IGuardrailError,
+	IGuardrailIssue,
+	IMode,
+	ITodoItem,
+	IToolAttachment,
+	TModeId,
+} from "@warpcore/shared";
+import { EGuardrailIssueType } from "@warpcore/shared";
+import {
+	AlertTriangle,
+	Check,
+	CheckCircle,
+	ChevronDown,
+	ChevronRight,
+	Edit2,
+	Trash2,
+	XCircle,
+} from "lucide-react";
+import { nanoid } from "nanoid";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FaShieldAlt } from "react-icons/fa";
+import { GoShield, GoShieldCheck } from "react-icons/go";
+import { LuListTodo } from "react-icons/lu";
+import { MdDragHandle } from "react-icons/md";
+import { TbMessage2Plus } from "react-icons/tb";
+import { TiFlowSwitch } from "react-icons/ti";
+import {
+	createGuardrail as createGuardrailApi,
+	deleteGuardrail as deleteGuardrailApi,
+	updateGuardrail as updateGuardrailApi,
+} from "@/api/guardrail-services";
+import {
+	createMode as createModeApi,
+	deleteMode as deleteModeApi,
+	updateMode as updateModeApi,
+	updateModeGuardrails as updateModeGuardrailsApi,
+} from "@/api/mode-services";
+import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
+import { ServerPicker } from "@/components/ServerPicker";
+import { useDependantState } from "@/hooks/useDependantState";
+import type { IExtractedSlashCommand } from "@/pages/Chat/assistant-ui/docToString";
+import type { TDropdownItem } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown";
+import { parseGuardrailValue } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails";
+import { parseToolValue } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector";
+import { useStore } from "@/store";
+import type { TUiSpaceComponentDef } from "@/store/slices/uiSpaces";
+import { EUISpaceLoc } from "@/store/slices/uiSpaces";
+import type { IAppletAPIFE } from "../lib/types";
+import { GuardrailBadge, ModeGuardrailPicker } from "../ui/GuardrailBadge";
+import { ModeTabs } from "../ui/ModeTabs";
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
 const EMPTY_ARRAY: Array<any> = [];
 const EMPTY_OBJ: Record<any, any> = {};
 
-const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
-	const mcpServers = useStore(s => s.mcpServers);
-	const [isOpen, setIsOpen] = useState(false);
-	const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
-	const dropdownRef = useRef<HTMLDivElement | null>(null);
-	const triggerRef = useRef<HTMLDivElement | null>(null);
+const GuardrailToolPicker = React.memo(
+	({
+		value,
+		onChange,
+		onClick,
+	}: {
+		value: IToolAttachment[];
+		onChange: (tools: IToolAttachment[]) => void;
+		onClick?: (e: React.MouseEvent) => void;
+	}) => {
+		const mcpServers = useStore((s) => s.mcpServers);
+		const [isOpen, setIsOpen] = useState(false);
+		const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
+		const dropdownRef = useRef<HTMLDivElement | null>(null);
+		const triggerRef = useRef<HTMLDivElement | null>(null);
 
-	const connectedServers = useMemo(() => {
-		const entries = Object.entries(mcpServers).filter(([, s]) => s.status === EMcpServerStatus.CONNECTED);
-		return entries as [string, { status: EMcpServerStatus; tools: { name: string; description: string }[] }][];
-	}, [mcpServers]);
+		const connectedServers = useMemo(() => {
+			const entries = Object.entries(mcpServers).filter(
+				([, s]) => s.status === EMcpServerStatus.CONNECTED,
+			);
+			return entries as [
+				string,
+				{ status: EMcpServerStatus; tools: { name: string; description: string }[] },
+			][];
+		}, [mcpServers]);
 
-	const selectedSet = useMemo(() => {
-		const s = new Set<string>();
-		for (const t of value) s.add(`${t.serverName}:${t.toolName}`);
-		return s;
-	}, [value]);
+		const selectedSet = useMemo(() => {
+			const s = new Set<string>();
+			for (const t of value) s.add(`${t.serverName}:${t.toolName}`);
+			return s;
+		}, [value]);
 
-	const handleToggle = (serverName: string, toolName: string) => {
-		const key = `${serverName}:${toolName}`;
-		const next = new Set(selectedSet);
-		if (next.has(key)) {
-			next.delete(key);
-		} else {
-			next.add(key);
-		}
-		const result: IToolAttachment[] = [];
-		for (const k of next) {
-			const idx = k.indexOf(':');
-			if (idx > 0) result.push({ serverName: k.slice(0, idx), toolName: k.slice(idx + 1) });
-		}
-		onChange(result);
-	};
-
-	useEffect(() => {
-		if (!isOpen) return;
-		const handler = (e: MouseEvent) => {
-			if (dropdownRef.current?.contains(e.target as Node) || triggerRef.current?.contains(e.target as Node)) return;
-			setIsOpen(false);
+		const handleToggle = (serverName: string, toolName: string) => {
+			const key = `${serverName}:${toolName}`;
+			const next = new Set(selectedSet);
+			if (next.has(key)) {
+				next.delete(key);
+			} else {
+				next.add(key);
+			}
+			const result: IToolAttachment[] = [];
+			for (const k of next) {
+				const idx = k.indexOf(":");
+				if (idx > 0)
+					result.push({ serverName: k.slice(0, idx), toolName: k.slice(idx + 1) });
+			}
+			onChange(result);
 		};
-		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [isOpen]);
 
-	const totalSelected = value.length;
+		useEffect(() => {
+			if (!isOpen) return;
+			const handler = (e: MouseEvent) => {
+				if (
+					dropdownRef.current?.contains(e.target as Node) ||
+					triggerRef.current?.contains(e.target as Node)
+				)
+					return;
+				setIsOpen(false);
+			};
+			document.addEventListener("mousedown", handler);
+			return () => document.removeEventListener("mousedown", handler);
+		}, [isOpen]);
 
-	return (
-		<Box position="relative">
-			<Box
-				ref={triggerRef}
-				borderWidth="1px"
-				borderColor="var(--wc-border-default)"
-				borderRadius="md"
-				bg="var(--wc-bg-subtle)"
-				px="2.5"
-				py="1.5"
-				cursor="pointer"
-				minH="32px"
-				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
-			>
-				<Text fontSize="xs" color={totalSelected > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
-					{totalSelected > 0 ? `${totalSelected} tool(s)` : 'All tool calls'}
-				</Text>
-			</Box>
-			{isOpen && (
+		const totalSelected = value.length;
+
+		return (
+			<Box position="relative">
 				<Box
-					ref={dropdownRef}
-					position="absolute"
-					top="100%"
-					left={0}
-					zIndex={10000}
-					minW="220px"
-					maxW="280px"
-					maxH="250px"
-					overflowY="auto"
+					ref={triggerRef}
 					borderWidth="1px"
-					borderColor="var(--wc-border-overlay)"
-					borderRadius="lg"
-					bg="var(--wc-bg-elevated)"
-					shadow="lg"
-					p="2"
+					borderColor="var(--wc-border-default)"
+					borderRadius="md"
+					bg="var(--wc-bg-subtle)"
+					px="2.5"
+					py="1.5"
+					cursor="pointer"
+					minH="32px"
+					onClick={(e) => {
+						onClick?.(e);
+						setIsOpen(!isOpen);
+					}}
 				>
-					{connectedServers.map(([serverName, state]) => {
-						const isExpanded = expandedServers.has(serverName);
-						const activeCount = state.tools.filter(t => selectedSet.has(`${serverName}:${t.name}`)).length;
-						return (
-							<Box key={serverName}>
-								<Box
-									display="flex"
-									alignItems="center"
-									justifyContent="space-between"
-									p="1.5"
-									borderRadius="md"
-									cursor="pointer"
-									fontSize="9px"
-									fontWeight="600"
-									color={activeCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'}
-									textTransform="uppercase"
-									letterSpacing="0.05em"
-									_hover={{ bg: 'var(--wc-bg-card)' }}
-									onClick={(e) => { e.stopPropagation(); setExpandedServers(prev => { const n = new Set(prev); isExpanded ? n.delete(serverName) : n.add(serverName); return n; })}}
-								>
-									<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-										{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-										{serverName}
-									</span>
-									<span fontSize="8px" fontWeight={400} color="var(--wc-text-faint)">
-										{state.tools.length}{activeCount ? ` (${activeCount})` : ''}
-									</span>
-								</Box>
-								{isExpanded && (
-									<Box pl="2">
-										{state.tools.map(tool => {
-											const isSelected = selectedSet.has(`${serverName}:${tool.name}`);
-											return (
-												<Box
-													key={tool.name}
-													display="flex"
-													alignItems="center"
-													gap="6px"
-													p="1"
-													borderRadius="md"
-													cursor="pointer"
-													fontSize="11px"
-													color="var(--wc-text-primary)"
-													bg={isSelected ? 'var(--wc-bg-selected)' : 'transparent'}
-													_hover={{ bg: isSelected ? 'var(--wc-bg-selected)' : 'var(--wc-bg-card)' }}
-													onClick={() => handleToggle(serverName, tool.name)}
-												>
-													{isSelected && <Check size={10} color="var(--wc-accent-blue)" />}
-													<span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">{tool.name}</span>
-												</Box>
-											);
-										})}
-									</Box>
-								)}
-							</Box>
-						);
-					})}
+					<Text
+						fontSize="xs"
+						color={
+							totalSelected > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"
+						}
+					>
+						{totalSelected > 0 ? `${totalSelected} tool(s)` : "All tool calls"}
+					</Text>
 				</Box>
-			)}
-		</Box>
-	);
-});
+				{isOpen && (
+					<Box
+						ref={dropdownRef}
+						position="absolute"
+						top="100%"
+						left={0}
+						zIndex={10000}
+						minW="220px"
+						maxW="280px"
+						maxH="250px"
+						overflowY="auto"
+						borderWidth="1px"
+						borderColor="var(--wc-border-overlay)"
+						borderRadius="lg"
+						bg="var(--wc-bg-elevated)"
+						shadow="lg"
+						p="2"
+					>
+						{connectedServers.map(([serverName, state]) => {
+							const isExpanded = expandedServers.has(serverName);
+							const activeCount = state.tools.filter((t) =>
+								selectedSet.has(`${serverName}:${t.name}`),
+							).length;
+							return (
+								<Box key={serverName}>
+									<Box
+										display="flex"
+										alignItems="center"
+										justifyContent="space-between"
+										p="1.5"
+										borderRadius="md"
+										cursor="pointer"
+										fontSize="9px"
+										fontWeight="600"
+										color={
+											activeCount > 0
+												? "var(--wc-accent-blue)"
+												: "var(--wc-text-muted)"
+										}
+										textTransform="uppercase"
+										letterSpacing="0.05em"
+										_hover={{ bg: "var(--wc-bg-card)" }}
+										onClick={(e) => {
+											e.stopPropagation();
+											setExpandedServers((prev) => {
+												const n = new Set(prev);
+												isExpanded
+													? n.delete(serverName)
+													: n.add(serverName);
+												return n;
+											});
+										}}
+									>
+										<span
+											style={{
+												display: "flex",
+												alignItems: "center",
+												gap: "4px",
+											}}
+										>
+											{isExpanded ? (
+												<ChevronDown size={10} />
+											) : (
+												<ChevronRight size={10} />
+											)}
+											{serverName}
+										</span>
+										<span
+											fontSize="8px"
+											fontWeight={400}
+											color="var(--wc-text-faint)"
+										>
+											{state.tools.length}
+											{activeCount ? ` (${activeCount})` : ""}
+										</span>
+									</Box>
+									{isExpanded && (
+										<Box pl="2">
+											{state.tools.map((tool) => {
+												const isSelected = selectedSet.has(
+													`${serverName}:${tool.name}`,
+												);
+												return (
+													<Box
+														key={tool.name}
+														display="flex"
+														alignItems="center"
+														gap="6px"
+														p="1"
+														borderRadius="md"
+														cursor="pointer"
+														fontSize="11px"
+														color="var(--wc-text-primary)"
+														bg={
+															isSelected
+																? "var(--wc-bg-selected)"
+																: "transparent"
+														}
+														_hover={{
+															bg: isSelected
+																? "var(--wc-bg-selected)"
+																: "var(--wc-bg-card)",
+														}}
+														onClick={() =>
+															handleToggle(serverName, tool.name)
+														}
+													>
+														{isSelected && (
+															<Check
+																size={10}
+																color="var(--wc-accent-blue)"
+															/>
+														)}
+														<span
+															overflow="hidden"
+															textOverflow="ellipsis"
+															whiteSpace="nowrap"
+														>
+															{tool.name}
+														</span>
+													</Box>
+												);
+											})}
+										</Box>
+									)}
+								</Box>
+							);
+						})}
+					</Box>
+				)}
+			</Box>
+		);
+	},
+);
 
 function useGuardrailItems(): TDropdownItem[] {
-  const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
-  return useMemo(() => Object.values(guardrails).map(g => ({ label: g.name, value: g.id })), [guardrails]);
+	const guardrails = useStore((s) => s.guardrails) || EMPTY_GUARDRAILS;
+	return useMemo(
+		() => Object.values(guardrails).map((g) => ({ label: g.name, value: g.id })),
+		[guardrails],
+	);
 }
 
 function useModeItems(): TDropdownItem[] {
-  const modes = useStore(s => s.modes);
-  const currentThreadId = useStore(s => s.currentThreadId);
-  const threads = useStore(s => s.threads);
-  const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-  return useMemo(() => {
-    const scope = folderId || 'global';
-    return Object.values(modes)
-      .filter((m: IMode) => m.scope === 'global' || m.scope === scope)
-      .map((m: IMode) => ({ label: m.name, value: m.id }));
-  }, [modes, scope]);
+	const modes = useStore((s) => s.modes);
+	const currentThreadId = useStore((s) => s.currentThreadId);
+	const threads = useStore((s) => s.threads);
+	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
+	return useMemo(() => {
+		const scope = folderId || "global";
+		return Object.values(modes)
+			.filter((m: IMode) => m.scope === "global" || m.scope === scope)
+			.map((m: IMode) => ({ label: m.name, value: m.id }));
+	}, [modes, scope]);
 }
 
 const TodoPanel = React.memo(() => {
-	const threadId = useStore(s => s.currentThreadId);
-	const todos = useStore(s => {
+	const threadId = useStore((s) => s.currentThreadId);
+	const todos = useStore((s) => {
 		if (!threadId) return EMPTY_TODOS;
 		return (s.getCurrentThreadState(s)?.todos as ITodoItem[]) || EMPTY_TODOS;
 	});
-	const setThreadState = useStore(s => s.setThreadState);
-	const annotations = useStore(s => s.annotations);
-	const addAnnotation = useStore(s => s.addAnnotation);
-	const removeAnnotation = useStore(s => s.removeAnnotation);
+	const setThreadState = useStore((s) => s.setThreadState);
+	const annotations = useStore((s) => s.annotations);
+	const addAnnotation = useStore((s) => s.addAnnotation);
+	const removeAnnotation = useStore((s) => s.removeAnnotation);
 
 	const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
 	const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-	const [addText, setAddText] = useState('');
-	const [draftText, setDraftText] = useState('');
+	const [addText, setAddText] = useState("");
+	const [draftText, setDraftText] = useState("");
 	const editRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		if (editingIndex !== null) {
-			setDraftText(todos[editingIndex]?.text || '');
+			setDraftText(todos[editingIndex]?.text || "");
 		}
 	}, [editingIndex, todos]);
 
-	const addTodoAnnotation = useCallback((updatedTodos: ITodoItem[]) => {
-		// const existing = annotations.find(a => a.selectedText.startsWith('<todos>'));
-		// if (existing) removeAnnotation(existing.id);
-		// const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\\n');
-		// addAnnotation(`<todos>\\n${formatted}\\n</todos>`, 'Updated Todos');
-	}, [annotations, addAnnotation, removeAnnotation]);
+	const addTodoAnnotation = useCallback(
+		(updatedTodos: ITodoItem[]) => {
+			// const existing = annotations.find(a => a.selectedText.startsWith('<todos>'));
+			// if (existing) removeAnnotation(existing.id);
+			// const formatted = updatedTodos.map((t, i) => `${i + 1}. ${t.text} ${t.status === 'done' ? '[DONE]' : '[PENDING]'}`).join('\\n');
+			// addAnnotation(`<todos>\\n${formatted}\\n</todos>`, 'Updated Todos');
+		},
+		[annotations, addAnnotation, removeAnnotation],
+	);
 
-	const toggleDone = useCallback((index: number) => {
-		const updated = todos.map((t, j) =>
-			j === index ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t
-		);
-		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
-		addTodoAnnotation(updated);
-	}, [todos, setThreadState, threadId, addTodoAnnotation]);
+	const toggleDone = useCallback(
+		(index: number) => {
+			const updated = todos.map((t, j) =>
+				j === index ? { ...t, status: t.status === "done" ? "pending" : "done" } : t,
+			);
+			setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
+			addTodoAnnotation(updated);
+		},
+		[todos, setThreadState, threadId, addTodoAnnotation],
+	);
 
 	const startEdit = useCallback((index: number) => {
 		setEditingIndex(index);
@@ -250,9 +386,7 @@ const TodoPanel = React.memo(() => {
 			setEditingIndex(null);
 			return;
 		}
-		const updated = todos.map((t, j) =>
-			j === editingIndex ? { ...t, text: trimmed } : t
-		);
+		const updated = todos.map((t, j) => (j === editingIndex ? { ...t, text: trimmed } : t));
 		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 		setEditingIndex(null);
 		addTodoAnnotation(updated);
@@ -262,51 +396,57 @@ const TodoPanel = React.memo(() => {
 		setEditingIndex(null);
 	}, []);
 
-	const deleteTodo = useCallback((index: number) => {
-		const updated = todos.filter((_, j) => j !== index);
-		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
-		setDeleteConfirm(null);
-		addTodoAnnotation(updated);
-	}, [todos, setThreadState, threadId, addTodoAnnotation]);
+	const deleteTodo = useCallback(
+		(index: number) => {
+			const updated = todos.filter((_, j) => j !== index);
+			setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
+			setDeleteConfirm(null);
+			addTodoAnnotation(updated);
+		},
+		[todos, setThreadState, threadId, addTodoAnnotation],
+	);
 
 	const addTodo = useCallback(() => {
 		const trimmed = addText.trim();
 		if (!trimmed) return;
-		const newTodos = [...todos, { text: trimmed, status: 'pending' }];
+		const newTodos = [...todos, { text: trimmed, status: "pending" }];
 		setThreadState(threadId, { todos: newTodos, todoEtag: nanoid(6) });
-		setAddText('');
+		setAddText("");
 		addTodoAnnotation(newTodos);
 	}, [addText, todos, setThreadState, threadId, addTodoAnnotation]);
 
 	const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
 		setDraggingIndex(index);
-		e.dataTransfer.setData('index', String(index));
-		e.dataTransfer.effectAllowed = 'move';
+		e.dataTransfer.setData("index", String(index));
+		e.dataTransfer.effectAllowed = "move";
 	}, []);
 
 	const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
 		e.preventDefault();
-		e.dataTransfer.dropEffect = 'move';
+		e.dataTransfer.dropEffect = "move";
 		setDragOverIndex(index);
 	}, []);
 
-	const handleDrop = useCallback((e: React.DragEvent) => {
-		e.preventDefault();
-		const fromIndex = parseInt(e.dataTransfer.getData('index'), 10);
-		if (draggingIndex === null || isNaN(fromIndex)) {
+	const handleDrop = useCallback(
+		(e: React.DragEvent) => {
+			e.preventDefault();
+			const fromIndex = parseInt(e.dataTransfer.getData("index"), 10);
+			if (draggingIndex === null || isNaN(fromIndex)) {
+				setDraggingIndex(null);
+				setDragOverIndex(null);
+				return;
+			}
+			const toIndex = dragOverIndex !== null ? dragOverIndex : todos.length;
+			const updated = [...todos];
+			const [item] = updated.splice(fromIndex, 1);
+			updated.splice(toIndex, 0, item);
+			setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 			setDraggingIndex(null);
 			setDragOverIndex(null);
-			return;
-		}
-		const toIndex = dragOverIndex !== null ? dragOverIndex : todos.length;
-		const updated = [...todos];
-		const [item] = updated.splice(fromIndex, 1);
-		updated.splice(toIndex, 0, item);
-		setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
-		setDraggingIndex(null);
-		setDragOverIndex(null);
-		addTodoAnnotation(updated);
-	}, [draggingIndex, dragOverIndex, todos, setThreadState, threadId, addTodoAnnotation]);
+			addTodoAnnotation(updated);
+		},
+		[draggingIndex, dragOverIndex, todos, setThreadState, threadId, addTodoAnnotation],
+	);
 
 	const handleDragEnd = useCallback(() => {
 		setDraggingIndex(null);
@@ -324,7 +464,9 @@ const TodoPanel = React.memo(() => {
 					fontSize="xs"
 					value={addText}
 					onChange={(e) => setAddText(e.target.value)}
-					onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") addTodo();
+					}}
 					placeholder="Add todo..."
 				/>
 			</Box>
@@ -337,7 +479,9 @@ const TodoPanel = React.memo(() => {
 				<Box
 					key={i}
 					borderWidth="2px"
-					borderColor={dragOverIndex === i ? 'var(--wc-accent-blue-border)' : 'transparent'}
+					borderColor={
+						dragOverIndex === i ? "var(--wc-accent-blue-border)" : "transparent"
+					}
 					// borderRadius="md"
 					// p="2"
 					// py="1"
@@ -360,16 +504,27 @@ const TodoPanel = React.memo(() => {
 							w="14px"
 							h="14px"
 							borderWidth="1px"
-							borderColor={todo.status === 'done' ? 'var(--wc-accent-green)' : 'var(--wc-border-default)'}
+							borderColor={
+								todo.status === "done"
+									? "var(--wc-accent-green)"
+									: "var(--wc-border-default)"
+							}
 							borderRadius="sm"
 							bg="transparent"
 							mr="1"
 							onClick={() => toggleDone(i)}
 						>
-							{todo.status === 'done' && <Check size={12} strokeWidth={3} color="var(--wc-accent-green)" />}
+							{todo.status === "done" && (
+								<Check size={12} strokeWidth={3} color="var(--wc-accent-green)" />
+							)}
 						</Box>
 
-						<Text fontSize="xs" fontWeight="600" color="var(--wc-text-faint)" flexShrink={0}>
+						<Text
+							fontSize="xs"
+							fontWeight="600"
+							color="var(--wc-text-faint)"
+							flexShrink={0}
+						>
 							{i}.
 						</Text>
 
@@ -384,8 +539,8 @@ const TodoPanel = React.memo(() => {
 									value={draftText}
 									onChange={(e) => setDraftText(e.target.value)}
 									onKeyDown={(e) => {
-										if (e.key === 'Enter') saveEdit();
-										if (e.key === 'Escape') cancelEdit();
+										if (e.key === "Enter") saveEdit();
+										if (e.key === "Escape") cancelEdit();
 									}}
 									onBlur={saveEdit}
 								/>
@@ -400,8 +555,14 @@ const TodoPanel = React.memo(() => {
 							<>
 								<Text
 									fontSize="xs"
-									color={todo.status === 'done' ? 'var(--wc-text-muted)' : 'var(--wc-text-primary)'}
-									textDecoration={todo.status === 'done' ? 'line-through' : 'none'}
+									color={
+										todo.status === "done"
+											? "var(--wc-text-muted)"
+											: "var(--wc-text-primary)"
+									}
+									textDecoration={
+										todo.status === "done" ? "line-through" : "none"
+									}
 									flex="1"
 									minW="0"
 									overflow="hidden"
@@ -412,7 +573,7 @@ const TodoPanel = React.memo(() => {
 								</Text>
 								<Box
 									cursor="grab"
-									_hover={{ color: 'var(--wc-text-primary)' }}
+									_hover={{ color: "var(--wc-text-primary)" }}
 									flexShrink={0}
 									display="flex"
 									alignItems="center"
@@ -429,14 +590,14 @@ const TodoPanel = React.memo(() => {
 								/>
 								<Box
 									cursor="pointer"
-									_hover={{ color: 'var(--wc-text-primary)' }}
+									_hover={{ color: "var(--wc-text-primary)" }}
 									onClick={() => startEdit(i)}
 								>
 									<Edit2 size={12} color="var(--wc-text-muted)" />
 								</Box>
 								<Box
 									cursor="pointer"
-									_hover={{ color: 'var(--wc-accent-red)' }}
+									_hover={{ color: "var(--wc-accent-red)" }}
 									onClick={() => setDeleteConfirm(i)}
 									ml="2"
 								>
@@ -453,7 +614,9 @@ const TodoPanel = React.memo(() => {
 				fontSize="xs"
 				value={addText}
 				onChange={(e) => setAddText(e.target.value)}
-				onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") addTodo();
+				}}
 				placeholder="Add todo..."
 			/>
 
@@ -471,50 +634,64 @@ const TodoPanel = React.memo(() => {
 	);
 });
 
-const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
-	const messageId = useAuiState(s => s.message.id);
-	const slashCommands = useStore(s => s.messageStates[messageId]?.slashCommands);
-	const hasCompact = (slashCommands as Array<IExtractedSlashCommand> | undefined)?.some(cmd => cmd.name === 'compact');
+const CompactIndicator = React.memo(
+	({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
+		const messageId = useAuiState((s) => s.message.id);
+		const slashCommands = useStore((s) => s.messageStates[messageId]?.slashCommands);
+		const hasCompact = (slashCommands as Array<IExtractedSlashCommand> | undefined)?.some(
+			(cmd) => cmd.name === "compact",
+		);
 
-	if (!hasCompact) return children;
-	return (
-		<>
-			<Box display="flex" alignItems="center" gap="2" mb="2">
-				<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
-				<Text fontSize="xs" fontWeight="600" color="var(--wc-accent-yellow-glow)" letterSpacing="0.1em">
-					COMPACTION
-				</Text>
-				<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
-			</Box>
-			{children}
-		</>
-	);
-});
+		if (!hasCompact) return children;
+		return (
+			<>
+				<Box display="flex" alignItems="center" gap="2" mb="2">
+					<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
+					<Text
+						fontSize="xs"
+						fontWeight="600"
+						color="var(--wc-accent-yellow-glow)"
+						letterSpacing="0.1em"
+					>
+						COMPACTION
+					</Text>
+					<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
+				</Box>
+				{children}
+			</>
+		);
+	},
+);
 
 const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinition }) => {
 	const [expanded, setExpanded] = useState(false);
 	const [editingName, setEditingName] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [draftName, setDraftName] = useDependantState(guardrail.name);
-	const [draftPrompt, setDraftPrompt] = useDependantState(guardrail.prompt || '');
-	const [draftMessagesCount, setDraftMessagesCount] = useDependantState(guardrail.messagesCount ?? 0);
+	const [draftPrompt, setDraftPrompt] = useDependantState(guardrail.prompt || "");
+	const [draftMessagesCount, setDraftMessagesCount] = useDependantState(
+		guardrail.messagesCount ?? 0,
+	);
 	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const updateGuardrail = useCallback(async (patch: Partial<IGuardrailDefinition>) => {
-		try {
-			await updateGuardrailApi(guardrail.id, { ...guardrail, ...patch });
-		} catch (e) {
-			console.error('Failed to update guardrail:', e);
-		}
-	}, [guardrail]);
+	const updateGuardrail = useCallback(
+		async (patch: Partial<IGuardrailDefinition>) => {
+			try {
+				await updateGuardrailApi(guardrail.id, { ...guardrail, ...patch });
+			} catch (e) {
+				console.error("Failed to update guardrail:", e);
+			}
+		},
+		[guardrail],
+	);
 
 	const flushName = useCallback(async () => {
 		if (draftName === guardrail.name) return;
 		try {
 			await updateGuardrailApi(guardrail.id, { ...guardrail, name: draftName });
 		} catch (e) {
-			console.error('Failed to rename guardrail:', e);
+			console.error("Failed to rename guardrail:", e);
 		}
 	}, [draftName, guardrail]);
 
@@ -544,14 +721,30 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 		try {
 			await deleteGuardrailApi(guardrail.id);
 		} catch (e) {
-			console.error('Failed to delete guardrail:', e);
+			console.error("Failed to delete guardrail:", e);
 		}
 	};
 
 	return (
-		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
-			<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
-				{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
+		<Box
+			borderWidth="1px"
+			borderColor="var(--wc-border-subtle)"
+			borderRadius="md"
+			bg="var(--wc-bg-subtle)"
+			overflow="visible"
+		>
+			<Flex
+				align="center"
+				gap="2"
+				p="2.5"
+				cursor="pointer"
+				onClick={() => setExpanded(!expanded)}
+			>
+				{expanded ? (
+					<ChevronDown size={14} color="var(--wc-text-muted)" />
+				) : (
+					<ChevronRight size={14} color="var(--wc-text-muted)" />
+				)}
 				{editingName ? (
 					<Input
 						size="xs"
@@ -560,38 +753,66 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 						value={draftName}
 						onChange={(e) => setDraftName(e.target.value)}
 						onBlur={handleNameBlur}
-						onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); }}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") handleNameBlur();
+						}}
 						onClick={(e) => e.stopPropagation()}
 						flex="1"
 						minW="0"
 					/>
 				) : (
 					<Flex align="center" gap="1.5" flex="1" minW="0">
-						<Text fontSize="xs" fontWeight="600" color="var(--wc-text-primary)" textOverflow="ellipsis" overflow="hidden">
+						<Text
+							fontSize="xs"
+							fontWeight="600"
+							color="var(--wc-text-primary)"
+							textOverflow="ellipsis"
+							overflow="hidden"
+						>
 							{draftName}
 						</Text>
 
 						<Edit2
 							size={10}
 							color="var(--wc-text-faint)"
-							style={{ cursor: 'pointer', flexShrink: 0 }}
-							onClick={(e) => { e.stopPropagation(); setEditingName(true); }}
+							style={{ cursor: "pointer", flexShrink: 0 }}
+							onClick={(e) => {
+								e.stopPropagation();
+								setEditingName(true);
+							}}
 						/>
 					</Flex>
 				)}
-				</Flex>
+			</Flex>
 
 			{expanded && (
 				<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
 					<Box>
-						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+						<Text
+							fontSize="9px"
+							fontWeight="600"
+							color="var(--wc-text-muted)"
+							textTransform="uppercase"
+							letterSpacing="0.04em"
+							mb="1"
+						>
 							Server
 						</Text>
-						<ServerPicker value={guardrail.serverId} onChange={(id) => updateGuardrail({ serverId: id })} />
+						<ServerPicker
+							value={guardrail.serverId}
+							onChange={(id) => updateGuardrail({ serverId: id })}
+						/>
 					</Box>
 
 					<Box>
-						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+						<Text
+							fontSize="9px"
+							fontWeight="600"
+							color="var(--wc-text-muted)"
+							textTransform="uppercase"
+							letterSpacing="0.04em"
+							mb="1"
+						>
 							Trigger only on tool calls
 						</Text>
 						<GuardrailToolPicker
@@ -606,28 +827,55 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 							size="sm"
 							checked={guardrail.inferenceParams?.enableThinking as boolean}
 							onCheckedChange={(details) => {
-								const newParams = { ...(guardrail.inferenceParams || {}), enableThinking: details.checked };
+								const newParams = {
+									...(guardrail.inferenceParams || {}),
+									enableThinking: details.checked,
+								};
 								updateGuardrail({ inferenceParams: newParams });
 							}}
 							onClick={(e) => e.stopPropagation()}
 						>
 							<Switch.HiddenInput />
-							<Switch.Control css={{ bg: (guardrail.inferenceParams?.enableThinking as boolean) ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
-								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+							<Switch.Control
+								css={{
+									bg: (guardrail.inferenceParams?.enableThinking as boolean)
+										? "var(--wc-switch-active)"
+										: "var(--wc-bg-active)",
+								}}
+							>
+								<Switch.Thumb css={{ bg: "var(--wc-special-switch-thumb)" }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Enable thinking</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">
+							Enable thinking
+						</Text>
 					</Flex>
 
 					{!!guardrail.inferenceParams?.enableThinking && (
 						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Reasoning effort
 							</Text>
-							<SegmentGroup.Root value={guardrail.inferenceParams?.reasoningEffort as string || 'medium'} onValueChange={(details) => {
-								const newParams = { ...(guardrail.inferenceParams || {}), reasoningEffort: details.value };
-								updateGuardrail({ inferenceParams: newParams });
-							}}>
+							<SegmentGroup.Root
+								value={
+									(guardrail.inferenceParams?.reasoningEffort as string) ||
+									"medium"
+								}
+								onValueChange={(details) => {
+									const newParams = {
+										...(guardrail.inferenceParams || {}),
+										reasoningEffort: details.value,
+									};
+									updateGuardrail({ inferenceParams: newParams });
+								}}
+							>
 								<SegmentGroup.Indicator />
 								<SegmentGroup.Items items={["low", "medium", "high"]} />
 							</SegmentGroup.Root>
@@ -638,19 +886,37 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 						<Switch.Root
 							size="sm"
 							checked={guardrail.includeBaseMessage ?? false}
-							onCheckedChange={(details) => updateGuardrail({ includeBaseMessage: details.checked })}
+							onCheckedChange={(details) =>
+								updateGuardrail({ includeBaseMessage: details.checked })
+							}
 							onClick={(e) => e.stopPropagation()}
 						>
 							<Switch.HiddenInput />
-							<Switch.Control css={{ bg: (guardrail.includeBaseMessage ?? false) ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
-								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+							<Switch.Control
+								css={{
+									bg:
+										(guardrail.includeBaseMessage ?? false)
+											? "var(--wc-switch-active)"
+											: "var(--wc-bg-active)",
+								}}
+							>
+								<Switch.Thumb css={{ bg: "var(--wc-special-switch-thumb)" }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Include root message</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">
+							Include root message
+						</Text>
 					</Flex>
 
 					<Box>
-						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+						<Text
+							fontSize="9px"
+							fontWeight="600"
+							color="var(--wc-text-muted)"
+							textTransform="uppercase"
+							letterSpacing="0.04em"
+							mb="1"
+						>
 							Include previous n messages
 						</Text>
 						<Input
@@ -665,7 +931,14 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 					</Box>
 
 					<Box>
-						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+						<Text
+							fontSize="9px"
+							fontWeight="600"
+							color="var(--wc-text-muted)"
+							textTransform="uppercase"
+							letterSpacing="0.04em"
+							mb="1"
+						>
 							Custom Prompt
 						</Text>
 						<Textarea
@@ -691,10 +964,10 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 							color="var(--wc-accent-red)"
 							borderWidth="1px"
 							borderColor="var(--wc-accent-red-border)"
-							_hover={{ bg: 'var(--wc-accent-red-hover)' }}
+							_hover={{ bg: "var(--wc-accent-red-hover)" }}
 							onClick={() => setDeleteConfirmOpen(true)}
 						>
-							<Trash2 size={10} style={{ marginRight: '4px' }} />
+							<Trash2 size={10} style={{ marginRight: "4px" }} />
 							Delete
 						</Button>
 					</Flex>
@@ -716,7 +989,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 });
 
 const GuardrailsPanel = React.memo(() => {
-	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
+	const guardrails = useStore((s) => s.guardrails) || EMPTY_GUARDRAILS;
 	const items = Object.values(guardrails);
 
 	if (!items.length) {
@@ -731,7 +1004,7 @@ const GuardrailsPanel = React.memo(() => {
 
 	return (
 		<VStack gap="2" p="3" align="stretch">
-			{items.map(g => (
+			{items.map((g) => (
 				<GuardrailRow key={g.name} guardrail={g} />
 			))}
 		</VStack>
@@ -742,25 +1015,28 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 	const [expanded, setExpanded] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [draftName, setDraftName] = useDependantState(mode.name);
-	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || '');
-	const [draftColor, setDraftColor] = useDependantState(mode.color || '#a78bfa');
+	const [draftPrompt, setDraftPrompt] = useDependantState(mode.prompt || "");
+	const [draftColor, setDraftColor] = useDependantState(mode.color || "#a78bfa");
 	const [draftTools, setDraftTools] = useDependantState(mode.allowedTools);
 	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const promptSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const updateMode = useCallback(async (patch: Partial<IMode>) => {
-		try {
-			await updateModeApi(mode.id, patch);
-		} catch (e) {
-			console.error('Failed to update mode:', e);
-		}
-	}, [mode.id]);
+	const updateMode = useCallback(
+		async (patch: Partial<IMode>) => {
+			try {
+				await updateModeApi(mode.id, patch);
+			} catch (e) {
+				console.error("Failed to update mode:", e);
+			}
+		},
+		[mode.id],
+	);
 
 	const handleNameBlur = useCallback(() => {
 		if (nameSaveTimerRef.current) clearTimeout(nameSaveTimerRef.current);
 		nameSaveTimerRef.current = setTimeout(() => {
 			if (draftName !== mode.name) {
-				updateMode({ name: draftName || '' });
+				updateMode({ name: draftName || "" });
 			}
 		}, 200);
 	}, [draftName, mode.name, updateMode]);
@@ -768,7 +1044,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 	const handlePromptBlur = useCallback(() => {
 		if (promptSaveTimerRef.current) clearTimeout(promptSaveTimerRef.current);
 		promptSaveTimerRef.current = setTimeout(() => {
-			if (draftPrompt !== (mode.prompt || '')) {
+			if (draftPrompt !== (mode.prompt || "")) {
 				updateMode({ prompt: draftPrompt || undefined });
 			}
 		}, 200);
@@ -785,22 +1061,34 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 		try {
 			await deleteModeApi(mode.id);
 		} catch (e) {
-			console.error('Failed to delete mode:', e);
+			console.error("Failed to delete mode:", e);
 		}
 		setDeleteConfirmOpen(false);
 	};
 
-	const mc = mode.color || '#a78bfa';
+	const mc = mode.color || "#a78bfa";
 
 	return (
 		<>
-			<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="md" bg="var(--wc-bg-subtle)" overflow="visible">
-				<Flex align="center" gap="2" p="2.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
+			<Box
+				borderWidth="1px"
+				borderColor="var(--wc-border-subtle)"
+				borderRadius="md"
+				bg="var(--wc-bg-subtle)"
+				overflow="visible"
+			>
+				<Flex
+					align="center"
+					gap="2"
+					p="2.5"
+					cursor="pointer"
+					onClick={() => setExpanded(!expanded)}
+				>
 					<Box
 						style={{
-							width: '10px',
-							height: '10px',
-							borderRadius: '3px',
+							width: "10px",
+							height: "10px",
+							borderRadius: "3px",
 							background: mc,
 							flexShrink: 0,
 						}}
@@ -813,7 +1101,9 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 						value={draftName}
 						onChange={(e) => setDraftName(e.target.value)}
 						onBlur={handleNameBlur}
-						onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); }}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") handleNameBlur();
+						}}
 						onClick={(e) => e.stopPropagation()}
 						flex="1"
 						minW="0"
@@ -821,22 +1111,36 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 						borderColor="var(--wc-border-subtle)"
 						borderWidth="1px"
 						borderRadius="sm"
-						_focus={{ borderColor: 'var(--wc-border-active)' }}
+						_focus={{ borderColor: "var(--wc-border-active)" }}
 					/>
-					{expanded ? <ChevronDown size={14} color="var(--wc-text-muted)" /> : <ChevronRight size={14} color="var(--wc-text-muted)" />}
+					{expanded ? (
+						<ChevronDown size={14} color="var(--wc-text-muted)" />
+					) : (
+						<ChevronRight size={14} color="var(--wc-text-muted)" />
+					)}
 				</Flex>
 
 				{expanded && (
 					<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
 						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Color
 							</Text>
-							<ColorPicker.Root defaultValue={parseColor(draftColor)} onValueChange={(details) => {
-								const hex = details.value.toString('hex');
-								setDraftColor(hex);
-								updateMode({ color: hex });
-							}}>
+							<ColorPicker.Root
+								defaultValue={parseColor(draftColor)}
+								onValueChange={(details) => {
+									const hex = details.value.toString("hex");
+									setDraftColor(hex);
+									updateMode({ color: hex });
+								}}
+							>
 								<ColorPicker.HiddenInput />
 								<ColorPicker.Control>
 									<ColorPicker.Input />
@@ -852,18 +1156,35 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 						</Box>
 
 						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Allowed tools
 							</Text>
 							<GuardrailToolPicker
 								value={draftTools}
-								onChange={(tools) => { setDraftTools(tools); updateMode({ allowedTools: tools }); }}
+								onChange={(tools) => {
+									setDraftTools(tools);
+									updateMode({ allowedTools: tools });
+								}}
 								onClick={(e) => e.stopPropagation()}
 							/>
 						</Box>
 
 						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Active guardrails
 							</Text>
 							<ModeGuardrailPicker
@@ -874,7 +1195,14 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 						</Box>
 
 						<Box>
-							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Tail prompt
 							</Text>
 							<Textarea
@@ -899,7 +1227,10 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								color="var(--wc-accent-red)"
 								bg="var(--wc-accent-red-bg-8)"
 								leftIcon={<Trash2 size={12} />}
-								onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
+								onClick={(e) => {
+									e.stopPropagation();
+									setDeleteConfirmOpen(true);
+								}}
 							>
 								Delete
 							</Button>
@@ -923,15 +1254,15 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 });
 
 const ModesPanel = React.memo(() => {
-	const modes = useStore(s => s.modes);
-	const threads = useStore(s => s.threads);
-	const currentThreadId = useStore(s => s.currentThreadId);
+	const modes = useStore((s) => s.modes);
+	const threads = useStore((s) => s.threads);
+	const currentThreadId = useStore((s) => s.currentThreadId);
 
 	const folderId = currentThreadId ? threads[currentThreadId]?.folderId : null;
-	const scope = folderId || 'global';
+	const scope = folderId || "global";
 
 	const availableModes = useMemo(() => {
-		return Object.values(modes).filter(m => m.scope === 'global' || m.scope === scope);
+		return Object.values(modes).filter((m) => m.scope === "global" || m.scope === scope);
 	}, [modes, scope]);
 
 	if (!availableModes.length) {
@@ -946,285 +1277,498 @@ const ModesPanel = React.memo(() => {
 
 	return (
 		<VStack gap="2" p="3" align="stretch" height="100%">
-			{availableModes.map(m => (
+			{availableModes.map((m) => (
 				<ModeRow key={m.id} mode={m} />
 			))}
 		</VStack>
 	);
 });
 
-const TGuardrailIssueEntry = { guardrailName: '', issue: {} as IGuardrailIssue };
+const TGuardrailIssueEntry = { guardrailName: "", issue: {} as IGuardrailIssue };
 type TGuardrailIssueEntry = typeof TGuardrailIssueEntry;
 
-const GuardrailErrorItem = React.memo(({ guardrailName, error }: { guardrailName: string; error: IGuardrailError }) => {
-	return (
-		<Box p="2" borderRadius="md" bg="var(--wc-bg-subtle)" borderWidth="1px" borderColor="var(--wc-accent-red-border)">
-			<Flex justifyContent="space-between" align="flex-start" mb="0.5">
-				<HStack gap="2" flex="1" minW="0" align="flex-start">
-					<XCircle size={18} color="var(--wc-accent-red)" style={{ marginTop: "3px" }} />
-					<Badge px="1.5" py="0.5" mt="0.5" fontSize="sm" color="var(--wc-text-secondary)" bg="var(--wc-bg-active)">
-						{guardrailName}
-					</Badge>
-					<Text fontSize="md" color="var(--wc-accent-red)">Parse Error</Text>
-				</HStack>
-			</Flex>
-			<Text color="var(--wc-text-muted)" fontFamily="mono" fontSize="xs" pl="6" mb="1">
-				{error.message}
-			</Text>
-			{error.rawResponse && (
-				<Text color="var(--wc-text-faint)" fontFamily="mono" fontSize="xs" pl="6" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-					Raw: {error.rawResponse.substring(0, 200)}{error.rawResponse.length > 200 ? '...' : ''}
+const GuardrailErrorItem = React.memo(
+	({ guardrailName, error }: { guardrailName: string; error: IGuardrailError }) => {
+		return (
+			<Box
+				p="2"
+				borderRadius="md"
+				bg="var(--wc-bg-subtle)"
+				borderWidth="1px"
+				borderColor="var(--wc-accent-red-border)"
+			>
+				<Flex justifyContent="space-between" align="flex-start" mb="0.5">
+					<HStack gap="2" flex="1" minW="0" align="flex-start">
+						<XCircle
+							size={18}
+							color="var(--wc-accent-red)"
+							style={{ marginTop: "3px" }}
+						/>
+						<Badge
+							px="1.5"
+							py="0.5"
+							mt="0.5"
+							fontSize="sm"
+							color="var(--wc-text-secondary)"
+							bg="var(--wc-bg-active)"
+						>
+							{guardrailName}
+						</Badge>
+						<Text fontSize="md" color="var(--wc-accent-red)">
+							Parse Error
+						</Text>
+					</HStack>
+				</Flex>
+				<Text color="var(--wc-text-muted)" fontFamily="mono" fontSize="xs" pl="6" mb="1">
+					{error.message}
 				</Text>
-			)}
-		</Box>
-	);
-});
+				{error.rawResponse && (
+					<Text
+						color="var(--wc-text-faint)"
+						fontFamily="mono"
+						fontSize="xs"
+						pl="6"
+						overflow="hidden"
+						textOverflow="ellipsis"
+						whiteSpace="nowrap"
+					>
+						Raw: {error.rawResponse.substring(0, 200)}
+						{error.rawResponse.length > 200 ? "..." : ""}
+					</Text>
+				)}
+			</Box>
+		);
+	},
+);
 
-const GuardrailAccordion = React.memo(({ children, issues, isProcessing, processingNames, errorEntries }: {
-	children: React.ReactNode;
-	issues: TGuardrailIssueEntry[];
-	isProcessing: boolean;
-	processingNames: string[];
+const GuardrailAccordion = React.memo(
+	({
+		children,
+		issues,
+		isProcessing,
+		processingNames,
+		errorEntries,
+	}: {
+		children: React.ReactNode;
+		issues: TGuardrailIssueEntry[];
+		isProcessing: boolean;
+		processingNames: string[];
 		errorEntries?: Array<[string, IGuardrailError]>;
 	}) => {
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
-	const totalViolations = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).length, [issues]);
-	const totalWarnings = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).length, [issues]);
-	const totalErrors = (errorEntries || []).length;
-	const allClear = !isProcessing && issues.length === 0 && totalErrors === 0;
+		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
+		const totalViolations = useMemo(
+			() => issues.filter((i) => i.issue.type === EGuardrailIssueType.VIOLATION).length,
+			[issues],
+		);
+		const totalWarnings = useMemo(
+			() => issues.filter((i) => i.issue.type === EGuardrailIssueType.WARNING).length,
+			[issues],
+		);
+		const totalErrors = (errorEntries || []).length;
+		const allClear = !isProcessing && issues.length === 0 && totalErrors === 0;
 
-	return (
-		<>
-			{children}
-			<Box mx="15px" mt="1" mb="2">
-				<AccordionRoot collapsible>
-					<AccordionItemComp value="guardrails" borderRadius="10px" borderWidth="1px" borderColor="var(--wc-border-subtle)">
-						<AccordionItemTrigger
-							style={{
-								borderRadius: '10px 10px 0 0',
-								background: 'var(--wc-bg-card)',
-								border: 'none',
-								cursor: 'pointer',
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'center',
-								width: '100%',
-							}}
-							px="2.5"
-							py="1.5"
-							_hover={{ bg: 'var(--wc-bg-subtle)' }}
-							css={{ '&[data-state=open] .chevron': { transform: 'rotate(180deg)' } }}
+		return (
+			<>
+				{children}
+				<Box mx="15px" mt="1" mb="2">
+					<AccordionRoot collapsible>
+						<AccordionItemComp
+							value="guardrails"
+							borderRadius="10px"
+							borderWidth="1px"
+							borderColor="var(--wc-border-subtle)"
 						>
-							<HStack gap="2">
-								{(totalViolations > 0 || totalErrors > 0) && (
-									<GoShield size={chatFontSize} color="var(--wc-accent-red)" />
-								)}
-								{!totalViolations && !totalErrors && totalWarnings > 0 && (
-									<GoShield size={chatFontSize} color="var(--wc-accent-yellow)" />
-								)}
-								{isProcessing && <Spinner size="xs" color="var(--wc-text-muted)" />}
-								{allClear && <GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />}
-								{(totalViolations > 0 || totalErrors > 0) && (
-									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">
-										{totalViolations + totalErrors} Issue{totalViolations + totalErrors !== 1 ? 's' : ''}
-									</Badge>
-								)}
-								{totalWarnings > 0 && (
-									<Badge color="var(--wc-accent-yellow)" bg="var(--wc-accent-yellow-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalWarnings} Warnings</Badge>
-								)}
-							</HStack>
-							<HStack gap="2" align="center">
-								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" css={{ transition: 'transform 0.15s ease' }} />
-							</HStack>
-						</AccordionItemTrigger>
-						<AccordionItemContent>
-							<Box p="2.5">
-								{allClear
-									? <Text fontSize="sm" color="var(--wc-accent-green)">All clear</Text>
-									: <VStack gap="2" align="stretch">
-										{processingNames.map(name => (
-											<HStack key={name} gap="2">
-												<Spinner size="sm" />
-												<Text fontSize="sm" color="var(--wc-text-muted)">Processing {name}...</Text>
-											</HStack>
-										))}
-																{errorEntries?.map(([name, error], i) => (
-											<GuardrailErrorItem key={`error-${i}`} guardrailName={name} error={error} />
-										))}
-										{issues.map(({ guardrailName, issue }, i) => (
-											<GuardrailIssueItem key={i} guardrailName={guardrailName} item={issue} />
-										))}
-									</VStack>
-								}
-							</Box>
-						</AccordionItemContent>
-					</AccordionItemComp>
-				</AccordionRoot>
-			</Box>
-		</>
-	);
-});
+							<AccordionItemTrigger
+								style={{
+									borderRadius: "10px 10px 0 0",
+									background: "var(--wc-bg-card)",
+									border: "none",
+									cursor: "pointer",
+									display: "flex",
+									justifyContent: "space-between",
+									alignItems: "center",
+									width: "100%",
+								}}
+								px="2.5"
+								py="1.5"
+								_hover={{ bg: "var(--wc-bg-subtle)" }}
+								css={{
+									"&[data-state=open] .chevron": { transform: "rotate(180deg)" },
+								}}
+							>
+								<HStack gap="2">
+									{(totalViolations > 0 || totalErrors > 0) && (
+										<GoShield
+											size={chatFontSize}
+											color="var(--wc-accent-red)"
+										/>
+									)}
+									{!totalViolations && !totalErrors && totalWarnings > 0 && (
+										<GoShield
+											size={chatFontSize}
+											color="var(--wc-accent-yellow)"
+										/>
+									)}
+									{isProcessing && (
+										<Spinner size="xs" color="var(--wc-text-muted)" />
+									)}
+									{allClear && (
+										<GoShieldCheck
+											size={chatFontSize}
+											color="var(--wc-accent-green-icon)"
+											opacity={0.8}
+										/>
+									)}
+									{(totalViolations > 0 || totalErrors > 0) && (
+										<Badge
+											color="var(--wc-accent-red)"
+											bg="var(--wc-accent-red-bg-8)"
+											px="1.5"
+											py="0.5"
+											fontSize="11px"
+										>
+											{totalViolations + totalErrors} Issue
+											{totalViolations + totalErrors !== 1 ? "s" : ""}
+										</Badge>
+									)}
+									{totalWarnings > 0 && (
+										<Badge
+											color="var(--wc-accent-yellow)"
+											bg="var(--wc-accent-yellow-bg-8)"
+											px="1.5"
+											py="0.5"
+											fontSize="11px"
+										>
+											{totalWarnings} Warnings
+										</Badge>
+									)}
+								</HStack>
+								<HStack gap="2" align="center">
+									<ChevronDown
+										size={16}
+										color="var(--wc-text-muted)"
+										className="chevron"
+										css={{ transition: "transform 0.15s ease" }}
+									/>
+								</HStack>
+							</AccordionItemTrigger>
+							<AccordionItemContent>
+								<Box p="2.5">
+									{allClear ? (
+										<Text fontSize="sm" color="var(--wc-accent-green)">
+											All clear
+										</Text>
+									) : (
+										<VStack gap="2" align="stretch">
+											{processingNames.map((name) => (
+												<HStack key={name} gap="2">
+													<Spinner size="sm" />
+													<Text
+														fontSize="sm"
+														color="var(--wc-text-muted)"
+													>
+														Processing {name}...
+													</Text>
+												</HStack>
+											))}
+											{errorEntries?.map(([name, error], i) => (
+												<GuardrailErrorItem
+													key={`error-${i}`}
+													guardrailName={name}
+													error={error}
+												/>
+											))}
+											{issues.map(({ guardrailName, issue }, i) => (
+												<GuardrailIssueItem
+													key={i}
+													guardrailName={guardrailName}
+													item={issue}
+												/>
+											))}
+										</VStack>
+									)}
+								</Box>
+							</AccordionItemContent>
+						</AccordionItemComp>
+					</AccordionRoot>
+				</Box>
+			</>
+		);
+	},
+);
 
-const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
-	const messageId = useAuiState(s => s.message.id);
-	const role = useAuiState(s => s.message.role);
-	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
-	const errors = useStore(s => s.messageStates[messageId]?.guardrailErrors) as Record<string, IGuardrailError>;
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+const GuardrailResults = React.memo(
+	({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
+		const messageId = useAuiState((s) => s.message.id);
+		const role = useAuiState((s) => s.message.role);
+		const results = useStore((s) => s.messageStates[messageId]?.guardrailResults) as Record<
+			string,
+			IGuardrailIssue[] | boolean
+		>;
+		const errors = useStore((s) => s.messageStates[messageId]?.guardrailErrors) as Record<
+			string,
+			IGuardrailError
+		>;
+		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 
-	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
-	const processingNames = useMemo(() => entries.filter(([, v]) => v === false).map(([name]) => name), [entries]);
-	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
-	const isProcessing = processingNames.length > 0;
+		const entries = useMemo(() => (results ? Object.entries(results) : EMPTY_ARRAY), [results]);
+		const processingNames = useMemo(
+			() => entries.filter(([, v]) => v === false).map(([name]) => name),
+			[entries],
+		);
+		const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+		const isProcessing = processingNames.length > 0;
 
-	const errorEntries = useMemo(() => {
-		if (!errors) return EMPTY_ARRAY;
-		return Object.entries(errors).filter(([name]) => {
-			// Only include errors for guardrails that are in the results (meaning they were active)
-			return results && name in results;
-		});
-	}, [errors, results]);
+		const errorEntries = useMemo(() => {
+			if (!errors) return EMPTY_ARRAY;
+			return Object.entries(errors).filter(([name]) => {
+				// Only include errors for guardrails that are in the results (meaning they were active)
+				return results && name in results;
+			});
+		}, [errors, results]);
 
-	const allIssues = useMemo(() => {
-		const collected: TGuardrailIssueEntry[] = [];
-		for (const [name, result] of doneEntries) {
-			for (const item of result as IGuardrailIssue[]) {
-				collected.push({ guardrailName: name, issue: item });
-			}
-		}
-		const violations = collected.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-		const warnings = collected.filter(i => i.issue.type === EGuardrailIssueType.WARNING).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-		return [...violations, ...warnings];
-	}, [doneEntries]);
-
-	if (role !== 'assistant' || !results) return children;
-	else if (allIssues.length === 0 && errorEntries.length === 0) return children;
-
-	return <GuardrailAccordion issues={allIssues} isProcessing={isProcessing} processingNames={processingNames} errorEntries={errorEntries}>{children}</GuardrailAccordion>;
-});
-
-const ToolCallGuardrailIssues = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
-	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
-
-	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
-	const processingNames = useMemo(() => entries.filter(([, v]) => v === false).map(([name]) => name), [entries]);
-	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
-	const isProcessing = processingNames.length > 0;
-
-	const issues = useMemo(() => {
-		const collected: TGuardrailIssueEntry[] = [];
-		for (const [name, result] of doneEntries) {
-			for (const item of result as IGuardrailIssue[]) {
-				if (item.toolCallId === toolCallId) {
+		const allIssues = useMemo(() => {
+			const collected: TGuardrailIssueEntry[] = [];
+			for (const [name, result] of doneEntries) {
+				for (const item of result as IGuardrailIssue[]) {
 					collected.push({ guardrailName: name, issue: item });
 				}
 			}
-		}
-		const violations = collected.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-		const warnings = collected.filter(i => i.issue.type === EGuardrailIssueType.WARNING).sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
-		return [...violations, ...warnings];
-	}, [doneEntries, toolCallId]);
+			const violations = collected
+				.filter((i) => i.issue.type === EGuardrailIssueType.VIOLATION)
+				.sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+			const warnings = collected
+				.filter((i) => i.issue.type === EGuardrailIssueType.WARNING)
+				.sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+			return [...violations, ...warnings];
+		}, [doneEntries]);
 
-	if (!results) return children;
+		if (role !== "assistant" || !results) return children;
+		else if (allIssues.length === 0 && errorEntries.length === 0) return children;
 
-	return <GuardrailAccordion issues={issues} isProcessing={isProcessing} processingNames={processingNames}>{children}</GuardrailAccordion>;
-});
+		return (
+			<GuardrailAccordion
+				issues={allIssues}
+				isProcessing={isProcessing}
+				processingNames={processingNames}
+				errorEntries={errorEntries}
+			>
+				{children}
+			</GuardrailAccordion>
+		);
+	},
+);
 
-const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messageId }: { children: React.ReactNode; toolCallId: string; messageId: string }) => {
-	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+const ToolCallGuardrailIssues = React.memo(
+	({
+		children,
+		toolCallId,
+		messageId,
+	}: {
+		children: React.ReactNode;
+		toolCallId: string;
+		messageId: string;
+	}) => {
+		const results = useStore((s) => s.messageStates[messageId]?.guardrailResults) as Record<
+			string,
+			IGuardrailIssue[] | boolean
+		>;
 
-	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
-	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
-	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+		const entries = useMemo(() => (results ? Object.entries(results) : EMPTY_ARRAY), [results]);
+		const processingNames = useMemo(
+			() => entries.filter(([, v]) => v === false).map(([name]) => name),
+			[entries],
+		);
+		const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+		const isProcessing = processingNames.length > 0;
 
-	const violationCount = useMemo(() => {
-		let count = 0;
-		for (const [, result] of doneEntries) {
-			for (const item of result as IGuardrailIssue[]) {
-				if (item.toolCallId === toolCallId && item.type === EGuardrailIssueType.VIOLATION) count++;
+		const issues = useMemo(() => {
+			const collected: TGuardrailIssueEntry[] = [];
+			for (const [name, result] of doneEntries) {
+				for (const item of result as IGuardrailIssue[]) {
+					if (item.toolCallId === toolCallId) {
+						collected.push({ guardrailName: name, issue: item });
+					}
+				}
 			}
-		}
-		return count;
-	}, [doneEntries, toolCallId]);
+			const violations = collected
+				.filter((i) => i.issue.type === EGuardrailIssueType.VIOLATION)
+				.sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+			const warnings = collected
+				.filter((i) => i.issue.type === EGuardrailIssueType.WARNING)
+				.sort((a, b) => a.guardrailName.localeCompare(b.guardrailName));
+			return [...violations, ...warnings];
+		}, [doneEntries, toolCallId]);
 
-	const warningCount = useMemo(() => {
-		let count = 0;
-		for (const [, result] of doneEntries) {
-			for (const item of result as IGuardrailIssue[]) {
-				if (item.toolCallId === toolCallId && item.type === EGuardrailIssueType.WARNING) count++;
+		if (!results) return children;
+
+		return (
+			<GuardrailAccordion
+				issues={issues}
+				isProcessing={isProcessing}
+				processingNames={processingNames}
+			>
+				{children}
+			</GuardrailAccordion>
+		);
+	},
+);
+
+const MiniToolCallGuardrailIndicator = React.memo(
+	({
+		children,
+		toolCallId,
+		messageId,
+	}: {
+		children: React.ReactNode;
+		toolCallId: string;
+		messageId: string;
+	}) => {
+		const results = useStore((s) => s.messageStates[messageId]?.guardrailResults) as Record<
+			string,
+			IGuardrailIssue[] | boolean
+		>;
+		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
+
+		const entries = useMemo(() => (results ? Object.entries(results) : EMPTY_ARRAY), [results]);
+		const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
+		const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
+
+		const violationCount = useMemo(() => {
+			let count = 0;
+			for (const [, result] of doneEntries) {
+				for (const item of result as IGuardrailIssue[]) {
+					if (
+						item.toolCallId === toolCallId &&
+						item.type === EGuardrailIssueType.VIOLATION
+					)
+						count++;
+				}
 			}
-		}
-		return count;
-	}, [doneEntries, toolCallId]);
+			return count;
+		}, [doneEntries, toolCallId]);
 
-	if (!results) return children;
+		const warningCount = useMemo(() => {
+			let count = 0;
+			for (const [, result] of doneEntries) {
+				for (const item of result as IGuardrailIssue[]) {
+					if (item.toolCallId === toolCallId && item.type === EGuardrailIssueType.WARNING)
+						count++;
+				}
+			}
+			return count;
+		}, [doneEntries, toolCallId]);
 
-	return (
-		<HStack gap="1" align="center" whiteSpace="nowrap">
-			{children}
-			{violationCount > 0 && (
-				<GoShield size={chatFontSize} color="var(--wc-accent-red)" />
-			)}
-			{!violationCount && warningCount > 0 && (
-				<GoShield size={chatFontSize} color="var(--wc-accent-yellow)" />
-			)}
-			{!isProcessing && !violationCount && !warningCount && (
-				<GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />
-			)}
-		</HStack>
-	);
-});
+		if (!results) return children;
 
-const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
-	const addAnnotation = useStore(s => s.addAnnotation);
-	const isViolation = item.type === EGuardrailIssueType.VIOLATION;
+		return (
+			<HStack gap="1" align="center" whiteSpace="nowrap">
+				{children}
+				{violationCount > 0 && (
+					<GoShield size={chatFontSize} color="var(--wc-accent-red)" />
+				)}
+				{!violationCount && warningCount > 0 && (
+					<GoShield size={chatFontSize} color="var(--wc-accent-yellow)" />
+				)}
+				{!isProcessing && !violationCount && !warningCount && (
+					<GoShieldCheck
+						size={chatFontSize}
+						color="var(--wc-accent-green-icon)"
+						opacity={0.8}
+					/>
+				)}
+			</HStack>
+		);
+	},
+);
 
-	return (
-		<Box p="2" borderRadius="md" bg="var(--wc-bg-subtle)" borderWidth="1px"
-			borderColor={isViolation ? 'var(--wc-accent-red-border)' : 'var(--wc-accent-yellow-border)'}>
-			<Flex justifyContent="space-between" align="flex-start" mb={"0.5"}>
-				<HStack gap="2" flex="1" minW="0" align={"flex-start"}>
-					{isViolation
-						? <XCircle size={18} color="var(--wc-accent-red)" style={{ marginTop: "3px" }}/>
-						: <AlertTriangle size={18} color="var(--wc-accent-yellow)" style={{ marginTop: "3px" }} />}
-					<Badge px="1.5" py="0.5" mt="0.5" fontSize="sm" color="var(--wc-text-secondary)" bg="var(--wc-bg-active)">
-						{guardrailName}
-					</Badge>
-					<Text fontSize="md" color="var(--wc-text-primary)" textOverflow="ellipsis">{item.issue}</Text>
-				</HStack>
-				<Box
-					as="button"
-					onClick={() => addAnnotation(item.quote, item.issue)}
-					title="Add to annotations"
-					flexShrink={0}
-					ml="2"
-					p="1"
-					borderRadius="4px"
-					border="none"
-					bg="transparent"
-					cursor="pointer"
+const GuardrailIssueItem = React.memo(
+	({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
+		const addAnnotation = useStore((s) => s.addAnnotation);
+		const isViolation = item.type === EGuardrailIssueType.VIOLATION;
+
+		return (
+			<Box
+				p="2"
+				borderRadius="md"
+				bg="var(--wc-bg-subtle)"
+				borderWidth="1px"
+				borderColor={
+					isViolation ? "var(--wc-accent-red-border)" : "var(--wc-accent-yellow-border)"
+				}
+			>
+				<Flex justifyContent="space-between" align="flex-start" mb={"0.5"}>
+					<HStack gap="2" flex="1" minW="0" align={"flex-start"}>
+						{isViolation ? (
+							<XCircle
+								size={18}
+								color="var(--wc-accent-red)"
+								style={{ marginTop: "3px" }}
+							/>
+						) : (
+							<AlertTriangle
+								size={18}
+								color="var(--wc-accent-yellow)"
+								style={{ marginTop: "3px" }}
+							/>
+						)}
+						<Badge
+							px="1.5"
+							py="0.5"
+							mt="0.5"
+							fontSize="sm"
+							color="var(--wc-text-secondary)"
+							bg="var(--wc-bg-active)"
+						>
+							{guardrailName}
+						</Badge>
+						<Text fontSize="md" color="var(--wc-text-primary)" textOverflow="ellipsis">
+							{item.issue}
+						</Text>
+					</HStack>
+					<Box
+						as="button"
+						onClick={() => addAnnotation(item.quote, item.issue)}
+						title="Add to annotations"
+						flexShrink={0}
+						ml="2"
+						p="1"
+						borderRadius="4px"
+						border="none"
+						bg="transparent"
+						cursor="pointer"
+						color="var(--wc-text-muted)"
+						_hover={{ bg: "var(--wc-bg-subtle)", color: "var(--wc-text-primary)" }}
+					>
+						<TbMessage2Plus size={18} />
+					</Box>
+				</Flex>
+				<Text
 					color="var(--wc-text-muted)"
-					_hover={{ bg: 'var(--wc-bg-subtle)', color: 'var(--wc-text-primary)' }}
+					fontFamily="mono"
+					fontStyle="italic"
+					textOverflow="ellipsis"
+					overflow="hidden"
+					pl="6"
 				>
-					<TbMessage2Plus size={18} />
-				</Box>
-			</Flex>
-			<Text color="var(--wc-text-muted)" fontFamily="mono" fontStyle="italic" textOverflow="ellipsis" overflow="hidden" pl="6">
-				{item.quote}
-			</Text>
-		</Box>
-	);
-});
+					{item.quote}
+				</Text>
+			</Box>
+		);
+	},
+);
 
 const GuardrailShieldCheck = React.memo(() => {
-	const messageId = useAuiState(s => s.message.id);
-	const role = useAuiState(s => s.message.role);
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+	const messageId = useAuiState((s) => s.message.id);
+	const role = useAuiState((s) => s.message.role);
+	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 
-	const results = useStore(s => s.messageStates[messageId]?.guardrailResults) as Record<string, IGuardrailIssue[] | boolean>;
+	const results = useStore((s) => s.messageStates[messageId]?.guardrailResults) as Record<
+		string,
+		IGuardrailIssue[] | boolean
+	>;
 
-	const entries = useMemo(() => results ? Object.entries(results) : EMPTY_ARRAY, [results]);
+	const entries = useMemo(() => (results ? Object.entries(results) : EMPTY_ARRAY), [results]);
 	const isProcessing = useMemo(() => entries.some(([, v]) => v === false), [entries]);
 	const doneEntries = useMemo(() => entries.filter(([, v]) => Array.isArray(v)), [entries]);
 
@@ -1232,101 +1776,123 @@ const GuardrailShieldCheck = React.memo(() => {
 		let count = 0;
 		for (const [, result] of doneEntries) {
 			for (const item of result as IGuardrailIssue[]) {
-				if (item.type === EGuardrailIssueType.VIOLATION || item.type === EGuardrailIssueType.WARNING) count++;
+				if (
+					item.type === EGuardrailIssueType.VIOLATION ||
+					item.type === EGuardrailIssueType.WARNING
+				)
+					count++;
 			}
 		}
 		return count;
-
 	}, [doneEntries]);
 
 	const allClear = !isProcessing && doneEntries.length > 0 && totalIssues === 0;
 
-	if (role !== 'assistant' || !results || !allClear) return null;
+	if (role !== "assistant" || !results || !allClear) return null;
 	return <GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />;
-
 });
 
-
 const toggleActiveGuardrail = (guardrailName: string, activate: boolean) => {
-
 	const state = useStore.getState();
 	const threadId = state.currentThreadId;
 	const ts = state.getCurrentThreadState(state);
 	const modeId = ts?.modeId as string | undefined;
-	const activeNames = (modeId
-		? state.modes[modeId]?.activeGuardrails
-		: ts?.activeGuardrails) as string[] || [];
+	const activeNames =
+		((modeId ? state.modes[modeId]?.activeGuardrails : ts?.activeGuardrails) as string[]) || [];
 
 	const newNames = activate
 		? [...activeNames, guardrailName]
-		: activeNames.filter(n => n !== guardrailName);
+		: activeNames.filter((n) => n !== guardrailName);
 
 	if (modeId && state.modes[modeId]) {
 		updateModeGuardrailsApi(modeId, newNames);
 	} else {
 		state.setThreadState(threadId, { activeGuardrails: newNames });
 	}
-
 };
 
 const fn: IAppletFn<IAppletAPIFE> = async (api) => {
-	console.log('[FEApplet] Started!');
+	console.log("[FEApplet] Started!");
 
 	api.onReady(() => {
 		console.log("[FEApplet] OnReady!");
 
 		api.registerSlashCommand({
-			name: 'compact',
-			description: 'Compact the conversation thread. Add a message in chat for custom instructions.',
+			name: "compact",
+			description:
+				"Compact the conversation thread. Add a message in chat for custom instructions.",
 			params: {},
 			consumesInput: true,
-			inputPlaceholder: 'Compact instructions...',
-			execute: async (api, params) => { console.log('[FEApplet] /compact executed'); },
+			inputPlaceholder: "Compact instructions...",
+			execute: async (api, params) => {
+				console.log("[FEApplet] /compact executed");
+			},
 		});
 
 		api.registerSlashCommand({
-			name: 'create_guardrail',
-			description: 'Create a custom guardrail',
+			name: "create_guardrail",
+			description: "Create a custom guardrail",
 			params: {
-				name: { type: 'string', description: 'Guardrail name', index: 0 },
-				tools: { type: 'message_type', description: 'Trigger only on specific tool calls (empty = all messages)', index: 1 },
-				server: { type: 'server', description: 'Server used for processing (empty = same as chat server)', index: 2 },
+				name: { type: "string", description: "Guardrail name", index: 0 },
+				tools: {
+					type: "message_type",
+					description: "Trigger only on specific tool calls (empty = all messages)",
+					index: 1,
+				},
+				server: {
+					type: "server",
+					description: "Server used for processing (empty = same as chat server)",
+					index: 2,
+				},
 			},
 			consumesInput: true,
-			inputPlaceholder: 'Guardrail prompt...',
+			inputPlaceholder: "Guardrail prompt...",
 			execute: async (_api, params, extraParams) => {
 				const created = await createGuardrailApi({
 					name: params.name!,
-					serverId: params.server || '',
+					serverId: params.server || "",
 					prompt: extraParams?.prompt,
-					triggerOnTools: parseToolValue(params.tools || ''),
+					triggerOnTools: parseToolValue(params.tools || ""),
 				});
 				toggleActiveGuardrail(created.id, true);
 			},
 		});
 
 		api.registerSlashCommand({
-			name: 'guardrail',
-			description: 'Activate or deactivate a guardrail',
+			name: "guardrail",
+			description: "Activate or deactivate a guardrail",
 			params: {
-				name: { type: 'dropdown', description: 'Guardrail name', index: 0, props: {
-					items: useGuardrailItems,
-				}},
-				action: { type: 'dropdown', description: 'on/off', index: 1, props: {
-					items: [{ label: 'on', value: 'on' }, { label: 'off', value: 'off' }],
-				}},
+				name: {
+					type: "dropdown",
+					description: "Guardrail name",
+					index: 0,
+					props: {
+						items: useGuardrailItems,
+					},
+				},
+				action: {
+					type: "dropdown",
+					description: "on/off",
+					index: 1,
+					props: {
+						items: [
+							{ label: "on", value: "on" },
+							{ label: "off", value: "off" },
+						],
+					},
+				},
 			},
 			execute: async (_api, params) => {
-				toggleActiveGuardrail(params.name!, params.action === 'on');
+				toggleActiveGuardrail(params.name!, params.action === "on");
 			},
 		});
 
 		api.registerSlashCommand({
-			name: 'todo',
-			description: 'Add a new todo item',
+			name: "todo",
+			description: "Add a new todo item",
 			params: {},
 			consumesInput: true,
-			inputPlaceholder: 'Todo item text...',
+			inputPlaceholder: "Todo item text...",
 			execute: async (_api, _params, extraParams) => {
 				const text = extraParams?.prompt;
 				if (!text) return;
@@ -1334,15 +1900,22 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				const threadId = state.currentThreadId;
 				const ts = state.getCurrentThreadState(state);
 				const todos = (ts?.todos || EMPTY_TODOS) as ITodoItem[];
-				state.setThreadState(threadId, { todos: [...todos, { text, status: 'pending' }], todoEtag: nanoid(6) });
+				state.setThreadState(threadId, {
+					todos: [...todos, { text, status: "pending" }],
+					todoEtag: nanoid(6),
+				});
 			},
 		});
 
 		api.registerSlashCommand({
-			name: 'set_project_root',
-			description: 'Set the project root directory for this thread',
+			name: "set_project_root",
+			description: "Set the project root directory for this thread",
 			params: {
-				path: { type: 'directory', description: 'Path to project root directory', index: 0 },
+				path: {
+					type: "directory",
+					description: "Path to project root directory",
+					index: 0,
+				},
 			},
 			execute: async (_api, params) => {
 				const state = api.useStore.getState();
@@ -1353,44 +1926,57 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		});
 
 		api.registerSlashCommand({
-			name: 'create_mode',
-			description: 'Create a new mode with allowed tools and optional tail prompt',
+			name: "create_mode",
+			description: "Create a new mode with allowed tools and optional tail prompt",
 			params: {
-				name: { type: 'string', description: 'Mode name', index: 0 },
-				color: { type: 'color', description: 'Mode color', index: 1 },
-				tools: { type: 'tools', description: 'Allowed tools', index: 2 },
-				guardrails: { type: 'guardrails', description: 'Active guardrails', index: 3 },
+				name: { type: "string", description: "Mode name", index: 0 },
+				color: { type: "color", description: "Mode color", index: 1 },
+				tools: { type: "tools", description: "Allowed tools", index: 2 },
+				guardrails: { type: "guardrails", description: "Active guardrails", index: 3 },
 			},
 			consumesInput: true,
-			inputPlaceholder: 'More instructions.',
+			inputPlaceholder: "More instructions.",
 			execute: async (_api, params, extraParams) => {
 				await createModeApi({
 					id: nanoid(6),
 					name: params.name!,
-					scope: 'global',
-					color: params.color || '#a78bfa',
+					scope: "global",
+					color: params.color || "#a78bfa",
 					prompt: extraParams?.prompt || undefined,
-					allowedTools: parseToolValue(params.tools || ''),
-					activeGuardrails: parseGuardrailValue(params.guardrails || ''),
+					allowedTools: parseToolValue(params.tools || ""),
+					activeGuardrails: parseGuardrailValue(params.guardrails || ""),
 				});
 			},
 		});
 
 		api.registerSlashCommand({
-			name: 'mode',
-			description: 'Set or clear a mode for this thread',
+			name: "mode",
+			description: "Set or clear a mode for this thread",
 			params: {
-				action: { type: 'dropdown', description: 'set or clear', index: 0, props: {
-					items: [{ label: 'set', value: 'set' }, { label: 'clear', value: 'clear' }],
-				}},
-				name: { type: 'dropdown', description: 'Mode name', index: 1, props: {
-					items: useModeItems,
-				}},
+				action: {
+					type: "dropdown",
+					description: "set or clear",
+					index: 0,
+					props: {
+						items: [
+							{ label: "set", value: "set" },
+							{ label: "clear", value: "clear" },
+						],
+					},
+				},
+				name: {
+					type: "dropdown",
+					description: "Mode name",
+					index: 1,
+					props: {
+						items: useModeItems,
+					},
+				},
 			},
 			execute: async (_api, params) => {
 				const state = api.useStore.getState();
 				const threadId = state.currentThreadId;
-				if (params.action === 'clear') {
+				if (params.action === "clear") {
 					state.setThreadState(threadId, { modeId: null });
 				} else {
 					state.setThreadState(threadId, { modeId: params.name });
@@ -1398,38 +1984,81 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			},
 		});
 
-		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, { label: 'To-Do', icon: LuListTodo });
-		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, { label: 'Guardrails', icon: FaShieldAlt });
-		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, { label: 'Modes', icon: TiFlowSwitch });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, { label: 'Compact Indicator' });
-		api.registerUiSpaceComponent(EUISpaceLoc.TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
-		api.registerUiSpaceComponent(EUISpaceLoc.PENDING_TOOL_CALL, ToolCallGuardrailIssues, { label: 'ToolCallGuardrailIssues' });
-		api.registerUiSpaceComponent(EUISpaceLoc.MINI_TOOL_CALL, MiniToolCallGuardrailIndicator, { label: 'MiniToolCallGuardrailIndicator' });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, { label: 'GuardrailResults' });
-		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, { label: 'GuardrailShieldCheck' });
-				api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, { label: 'Mode' });
-		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: 'Guardrails' });
+		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, {
+			label: "To-Do",
+			icon: LuListTodo,
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.GUARDRAILS_PANEL, GuardrailsPanel, {
+			label: "Guardrails",
+			icon: FaShieldAlt,
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MODES_PANEL, ModesPanel, {
+			label: "Modes",
+			icon: TiFlowSwitch,
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, CompactIndicator, {
+			label: "Compact Indicator",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.TOOL_CALL, ToolCallGuardrailIssues, {
+			label: "ToolCallGuardrailIssues",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.PENDING_TOOL_CALL, ToolCallGuardrailIssues, {
+			label: "ToolCallGuardrailIssues",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MINI_TOOL_CALL, MiniToolCallGuardrailIndicator, {
+			label: "MiniToolCallGuardrailIndicator",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, {
+			label: "GuardrailResults",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, {
+			label: "GuardrailShieldCheck",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, { label: "Mode" });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: "Guardrails" });
 
-		const blockingSlashCommands = ['guardrail', 'create_guardrail', 'todo', 'create_mode', 'mode', 'set_project_root'];
+		const blockingSlashCommands = [
+			"guardrail",
+			"create_guardrail",
+			"todo",
+			"create_mode",
+			"mode",
+			"set_project_root",
+		];
 
-		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
-			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };
-			const hasCompact = payload.slashCommands.some(cmd => cmd.name === 'compact');
+		api.eventNode.hook("..", "bridge.preCompletion", async (eventApi) => {
+			const payload = eventApi.payload as {
+				slashCommands: Array<{ name: string }>;
+				body: { userMessage: { content: string } };
+			};
+			const hasCompact = payload.slashCommands.some((cmd) => cmd.name === "compact");
 			if (hasCompact && !payload.body.userMessage.content.trim()) {
-				payload.body.userMessage.content = 'Continue';
+				payload.body.userMessage.content = "Continue";
 			}
 			return eventApi.result;
 		});
 
-		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
-			const payload = eventApi.payload as { slashCommands: Array<{ name: string }>; body: { userMessage: { content: string } } };
-			const hasBlocking = payload.slashCommands.some(cmd => blockingSlashCommands.includes(cmd.name));
+		api.eventNode.hook("..", "bridge.preCompletion", async (eventApi) => {
+			const payload = eventApi.payload as {
+				slashCommands: Array<{ name: string }>;
+				body: { userMessage: { content: string } };
+			};
+			const hasBlocking = payload.slashCommands.some((cmd) =>
+				blockingSlashCommands.includes(cmd.name),
+			);
 			if (!hasBlocking) {
 				const state = useStore.getState();
 				const annotations = state.annotations;
 				if (annotations.length > 0) {
-					const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-					const fullText = (lines.join('\n\n') + (payload.body.userMessage.content.trim() ? '\n\n' + payload.body.userMessage.content : '')).trim();
+					const lines = annotations.map(
+						(a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`,
+					);
+					const fullText = (
+						lines.join("\n\n") +
+						(payload.body.userMessage.content.trim()
+							? "\n\n" + payload.body.userMessage.content
+							: "")
+					).trim();
 					payload.body.userMessage.content = fullText;
 					state.clearAnnotations();
 				}
@@ -1437,7 +2066,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			return eventApi.result;
 		});
 
-		api.eventNode.hook('..', 'bridge.preCompletion', async (eventApi) => {
+		api.eventNode.hook("..", "bridge.preCompletion", async (eventApi) => {
 			const payload = eventApi.payload as { slashCommands: Array<{ name: string }> };
 			for (const cmd of payload.slashCommands) {
 				if (blockingSlashCommands.includes(cmd.name)) {
@@ -1447,13 +2076,12 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			}
 			return eventApi.result;
 		});
-
 	});
 };
 
 export const FEApplet: TAppletDefinition<IAppletAPIFE> = {
-	name: 'FEApplet',
-	description: 'Frontend applet',
+	name: "FEApplet",
+	description: "Frontend applet",
 	fn,
 	hostType: EAppletHostType.FE,
 	scope: EAppletScope.THREAD,

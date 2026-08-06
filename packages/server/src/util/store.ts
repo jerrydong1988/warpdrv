@@ -1,24 +1,25 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 function getDataDir(): string {
 	const platform = os.platform();
-	if (platform === 'win32') return path.join(os.homedir(), 'AppData', 'Roaming', 'warpcore');
-	if (platform === 'darwin') return path.join(os.homedir(), 'Library', 'Application Support', 'warpcore');
-	return path.join(os.homedir(), '.config', 'warpcore');
+	if (platform === "win32") return path.join(os.homedir(), "AppData", "Roaming", "warpcore");
+	if (platform === "darwin")
+		return path.join(os.homedir(), "Library", "Application Support", "warpcore");
+	return path.join(os.homedir(), ".config", "warpcore");
 }
 
 const DATA_DIR = getDataDir();
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-const DB_FILE = path.join(DATA_DIR, 'warpcore-data.json');
+const DB_FILE = path.join(DATA_DIR, "warpcore-data.json");
 let data: Record<string, string> = {};
 
 // Load from disk on startup
 function load(): void {
 	try {
 		if (fs.existsSync(DB_FILE)) {
-			data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+			data = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
 		}
 	} catch {
 		data = {};
@@ -26,7 +27,7 @@ function load(): void {
 }
 
 function save(): void {
-	fs.writeFileSync(DB_FILE, JSON.stringify(data, null, '\t'), 'utf8');
+	fs.writeFileSync(DB_FILE, JSON.stringify(data, null, "\t"), "utf8");
 }
 
 // Init
@@ -56,6 +57,6 @@ export const store = {
 	},
 
 	async keys(prefix: string): Promise<string[]> {
-		return Object.keys(data).filter(key => key.startsWith(prefix));
+		return Object.keys(data).filter((key) => key.startsWith(prefix));
 	},
 };

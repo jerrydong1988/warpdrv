@@ -1,17 +1,22 @@
-import { Router } from 'express';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
-import { store } from '../util/store';
-import type { IAccessToken, IAccessTokenInfo, IAccessTokenCreatePayload, IAccessTokenUpdatePayload } from '@warpcore/shared';
+import type {
+	IAccessToken,
+	IAccessTokenCreatePayload,
+	IAccessTokenInfo,
+	IAccessTokenUpdatePayload,
+} from "@warpcore/shared";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { Router } from "express";
+import { store } from "../util/store";
 
 export const tokensRouter = Router();
 
-const TOKEN_PREFIX = 'tokens:';
+const TOKEN_PREFIX = "tokens:";
 const SALT_ROUNDS = 10;
 
 // Generate a random token string with wc_ prefix
 function generateToken(): string {
-	return 'wc_' + crypto.randomBytes(32).toString('hex');
+	return "wc_" + crypto.randomBytes(32).toString("hex");
 }
 
 // Strip tokenHash from stored token before returning to client
@@ -29,17 +34,17 @@ function toInfo(token: IAccessToken): IAccessTokenInfo {
 }
 
 // GET /api/tokens - list all tokens (without hashes)
-tokensRouter.get('/', async (_req, res) => {
+tokensRouter.get("/", async (_req, res) => {
 	const tokens = await store.list<IAccessToken>(TOKEN_PREFIX);
 	const infos = tokens.map(toInfo);
 	res.json({ ok: true, data: infos, total: infos.length, error: null });
 });
 
 // POST /api/tokens - create a new token
-tokensRouter.post('/', async (req, res) => {
+tokensRouter.post("/", async (req, res) => {
 	const body = req.body as IAccessTokenCreatePayload;
 	if (!body.name || body.name.trim().length === 0) {
-		res.status(400).json({ ok: false, data: null, error: 'Token name is required' });
+		res.status(400).json({ ok: false, data: null, error: "Token name is required" });
 		return;
 	}
 
@@ -61,9 +66,9 @@ tokensRouter.post('/', async (req, res) => {
 		tokenHash,
 		tokenPrefix: rawToken.substring(0, 11), // "wc_" + 8 hex chars
 		admin: body.admin ?? false,
-		inference: body.admin ? true : (body.inference ?? false as unknown as true | string[]),
-		mcp_labelled: body.admin ? true : (mcpLabelled ?? false as unknown as true | string[]),
-		mcp_inline: body.admin ? true : (mcpInline ?? false as unknown as true | string[]),
+		inference: body.admin ? true : (body.inference ?? (false as unknown as true | string[])),
+		mcp_labelled: body.admin ? true : (mcpLabelled ?? (false as unknown as true | string[])),
+		mcp_inline: body.admin ? true : (mcpInline ?? (false as unknown as true | string[])),
 		createdAt: Date.now(),
 	};
 
@@ -80,10 +85,10 @@ tokensRouter.post('/', async (req, res) => {
 });
 
 // PUT /api/tokens/:id - update token permissions (not the token string itself)
-tokensRouter.put('/:id', async (req, res) => {
+tokensRouter.put("/:id", async (req, res) => {
 	const existing = await store.get<IAccessToken>(`${TOKEN_PREFIX}${req.params.id}`);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(404).json({ ok: false, data: null, error: "Token not found" });
 		return;
 	}
 
@@ -102,10 +107,10 @@ tokensRouter.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/tokens/:id - revoke a token
-tokensRouter.delete('/:id', async (req, res) => {
+tokensRouter.delete("/:id", async (req, res) => {
 	const existing = await store.get<IAccessToken>(`${TOKEN_PREFIX}${req.params.id}`);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(404).json({ ok: false, data: null, error: "Token not found" });
 		return;
 	}
 
@@ -117,8 +122,10 @@ tokensRouter.delete('/:id', async (req, res) => {
 // Token validation utility (for use by other middleware)
 // ============================================================
 
-export async function validateBearerToken(authHeader: string | undefined): Promise<IAccessToken | null> {
-	if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+export async function validateBearerToken(
+	authHeader: string | undefined,
+): Promise<IAccessToken | null> {
+	if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
 	const rawToken = authHeader.substring(7);
 	if (!rawToken) return null;
 

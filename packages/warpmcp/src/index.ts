@@ -1,36 +1,45 @@
-import express from 'express';
-import type { Server } from 'http';
-import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
-import { randomUUID } from 'crypto';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { authorizeAccess, authorizeToolCall } from './auth';
-import type { IStartArgs, IStartResult, IWarpmcpDeps } from './types';
-import { fileReadDefinition, fileReadHandler } from './tools/file_read';
-import { fileWriteDefinition, fileWriteHandler } from './tools/file_write';
-import { filePatchDefinition, filePatchHandler } from './tools/file_patch';
-import { dirListDefinition, dirListHandler } from './tools/dir_list';
-import { shellExecDefinition, shellExecHandler } from './tools/shell_exec';
-import { fetchDefinition, fetchHandler } from './tools/fetch';
-import { embeddingSearchDefinition, embeddingSearchHandler } from './tools/embedding_search';
-import { todoReadDefinition, todoReadHandler } from './tools/todo';
-import { todoAddDefinition, todoAddHandler } from './tools/todo';
-import { todoRemoveDefinition, todoRemoveHandler } from './tools/todo';
-import { todoUpdateDefinition, todoUpdateHandler } from './tools/todo';
-import { todoClearDefinition, todoClearHandler } from './tools/todo';
-import { todoWriteDefinition, todoWriteHandler } from './tools/todo';
-import { rgDefinition, rgHandler } from './tools/rg';
-	// import { getProjectRootDefinition, getProjectRootHandler } from './tools/get_project_root';
-import { codeGraphIngestDefinition, codeGraphIngestHandler } from './tools/code_graph_ingest';
-import { codeGraphSearchDefinition, codeGraphSearchHandler } from './tools/code_graph_search';
-import { codeGraphSymbolDefinition, codeGraphSymbolHandler } from './tools/code_graph_symbol';
-import { codeGraphCallersDefinition, codeGraphCallersHandler } from './tools/code_graph_callers';
-import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from './tools/code_graph_callees';
-import { codeGraphListDefinition, codeGraphListHandler } from './tools/code_graph_list';
-import { codeGraphClearDefinition, codeGraphClearHandler } from './tools/code_graph_clear';
-import { chatSearchDefinition, chatSearchHandler } from './tools/chat_search';
-import { chatGetMessageDefinition, chatGetMessageHandler } from './tools/chat_get_message';
-const SERVER_NAME = 'warpmcp';
+import { Server as McpServer } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { randomUUID } from "crypto";
+import express from "express";
+import type { Server } from "http";
+import { authorizeAccess, authorizeToolCall } from "./auth";
+import { chatGetMessageDefinition, chatGetMessageHandler } from "./tools/chat_get_message";
+import { chatSearchDefinition, chatSearchHandler } from "./tools/chat_search";
+import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from "./tools/code_graph_callees";
+import { codeGraphCallersDefinition, codeGraphCallersHandler } from "./tools/code_graph_callers";
+import { codeGraphClearDefinition, codeGraphClearHandler } from "./tools/code_graph_clear";
+// import { getProjectRootDefinition, getProjectRootHandler } from './tools/get_project_root';
+import { codeGraphIngestDefinition, codeGraphIngestHandler } from "./tools/code_graph_ingest";
+import { codeGraphListDefinition, codeGraphListHandler } from "./tools/code_graph_list";
+import { codeGraphSearchDefinition, codeGraphSearchHandler } from "./tools/code_graph_search";
+import { codeGraphSymbolDefinition, codeGraphSymbolHandler } from "./tools/code_graph_symbol";
+import { dirListDefinition, dirListHandler } from "./tools/dir_list";
+import { embeddingSearchDefinition, embeddingSearchHandler } from "./tools/embedding_search";
+import { fetchDefinition, fetchHandler } from "./tools/fetch";
+import { filePatchDefinition, filePatchHandler } from "./tools/file_patch";
+import { fileReadDefinition, fileReadHandler } from "./tools/file_read";
+import { fileWriteDefinition, fileWriteHandler } from "./tools/file_write";
+import { rgDefinition, rgHandler } from "./tools/rg";
+import { shellExecDefinition, shellExecHandler } from "./tools/shell_exec";
+import {
+	todoAddDefinition,
+	todoAddHandler,
+	todoClearDefinition,
+	todoClearHandler,
+	todoReadDefinition,
+	todoReadHandler,
+	todoRemoveDefinition,
+	todoRemoveHandler,
+	todoUpdateDefinition,
+	todoUpdateHandler,
+	todoWriteDefinition,
+	todoWriteHandler,
+} from "./tools/todo";
+import type { IStartArgs, IStartResult, IWarpmcpDeps } from "./types";
+
+const SERVER_NAME = "warpmcp";
 let httpServer: Server | null = null;
 let currentPort: number | null = null;
 let currentBindHost: string | null = null;
@@ -57,25 +66,32 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: codeGraphCallersDefinition, handler: (a: any) => codeGraphCallersHandler(deps, a) },
 		{ def: codeGraphCalleesDefinition, handler: (a: any) => codeGraphCalleesHandler(deps, a) },
 		{ def: codeGraphListDefinition, handler: (a: any) => codeGraphListHandler(deps, a) },
-			{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
-			{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
-			{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
-		];
-	const server = new McpServer({ name: SERVER_NAME, version: '0.1.0' }, { capabilities: { tools: {} } });
-	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
+		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
+		{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
+		{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
+	];
+	const server = new McpServer(
+		{ name: SERVER_NAME, version: "0.1.0" },
+		{ capabilities: { tools: {} } },
+	);
+	server.setRequestHandler(ListToolsRequestSchema, async () => ({
+		tools: tools.map((t) => t.def),
+	}));
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;
-		const tool = tools.find(t => t.def.name === name);
+		const tool = tools.find((t) => t.def.name === name);
 		if (!tool) throw new Error(`Unknown tool: ${name}`);
 		const result = await tool.handler(args as any);
 		const json = JSON.stringify(result);
-		const bytes = Buffer.byteLength(json, 'utf8');
+		const bytes = Buffer.byteLength(json, "utf8");
 		const limit = (tool.def as any).resultLimit;
 		if (limit !== undefined && bytes > limit) {
-			throw new Error(`[tool:${name}] Result too large: ${bytes} bytes exceeds ${limit} byte limit.`);
+			throw new Error(
+				`[tool:${name}] Result too large: ${bytes} bytes exceeds ${limit} byte limit.`,
+			);
 		}
 		//console.log('[warpmcp] Tool', name, 'result:', json.slice(0, 200));
-		return { content: [{ type: 'text', text: json }] };
+		return { content: [{ type: "text", text: json }] };
 	});
 	return server;
 }
@@ -105,30 +121,40 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 		chatGetMessage: args.chatGetMessage,
 	};
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
-	const bindHost = exposeExternal ? '0.0.0.0' : '127.0.0.1';
+	const bindHost = exposeExternal ? "0.0.0.0" : "127.0.0.1";
 	const app = express();
 	app.use(express.json());
 	const transports: Record<string, StreamableHTTPServerTransport> = {};
-	app.all('/mcp', async (req, res) => {
-		const isToolCall = req.method === 'POST' && req.body?.method === 'tools/call';
+	app.all("/mcp", async (req, res) => {
+		const isToolCall = req.method === "POST" && req.body?.method === "tools/call";
 		const toolName = req.body?.params?.name;
-		if (isToolCall && typeof toolName === 'string') {
+		if (isToolCall && typeof toolName === "string") {
 			const authz = await authorizeToolCall(deps, req, toolName);
-			if (!authz.ok) { res.status(401).json({ error: authz.reason }); return; }
+			if (!authz.ok) {
+				res.status(401).json({ error: authz.reason });
+				return;
+			}
 		} else {
 			const authz = await authorizeAccess(deps, req);
-			if (!authz.ok) { res.status(401).json({ error: authz.reason }); return; }
+			if (!authz.ok) {
+				res.status(401).json({ error: authz.reason });
+				return;
+			}
 		}
-		const sessionId = req.headers['mcp-session-id'] as string | undefined;
+		const sessionId = req.headers["mcp-session-id"] as string | undefined;
 		let transport = sessionId ? transports[sessionId] : undefined;
 		if (!transport) {
 			transport = new StreamableHTTPServerTransport({
 				sessionIdGenerator: () => randomUUID(),
-				onsessioninitialized: (sid) => { transports[sid] = transport!; },
+				onsessioninitialized: (sid) => {
+					transports[sid] = transport!;
+				},
 			});
 			const server = buildMcpServer(deps);
 			await server.connect(transport);
-			transport.onclose = () => { if (transport!.sessionId) delete transports[transport!.sessionId]; };
+			transport.onclose = () => {
+				if (transport!.sessionId) delete transports[transport!.sessionId];
+			};
 		}
 		await transport.handleRequest(req, res, req.body);
 	});
@@ -140,7 +166,7 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 			console.log(`[warpmcp] Built-in MCP server listening on ${bindHost}:${port}`);
 			resolve({ port, bindHost });
 		});
-		srv.on('error', reject);
+		srv.on("error", reject);
 	});
 }
 export async function stopServer(): Promise<void> {
@@ -160,4 +186,4 @@ export function getStatus(): { running: boolean; port: number | null; bindHost: 
 	return { running: httpServer !== null, port: currentPort, bindHost: currentBindHost };
 }
 export const SERVER_NAME_CONST = SERVER_NAME;
-export type { IStartArgs, IStartResult, IWarpmcpDeps, IEmbeddingSearchResult } from './types';
+export type { IEmbeddingSearchResult, IStartArgs, IStartResult, IWarpmcpDeps } from "./types";

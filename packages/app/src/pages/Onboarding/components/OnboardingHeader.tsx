@@ -1,4 +1,4 @@
-import { Box, Text, HStack } from '@chakra-ui/react';
+import { Box, HStack, Text } from "@chakra-ui/react";
 
 interface IOnboardingHeaderProps {
 	title: string;
@@ -8,8 +8,13 @@ interface IOnboardingHeaderProps {
 
 export function OnboardingHeader({ title, step, totalSteps }: IOnboardingHeaderProps) {
 	return (
-		<Box textAlign="center" pb="6" className='drag'>
-			<Text fontSize="24px" fontWeight="600" color="var(--wc-text-heading)" letterSpacing="-0.02em">
+		<Box textAlign="center" pb="6" className="drag">
+			<Text
+				fontSize="24px"
+				fontWeight="600"
+				color="var(--wc-text-heading)"
+				letterSpacing="-0.02em"
+			>
 				{title}
 			</Text>
 			<HStack gap="2" justifyContent="center" mt="4">
@@ -19,11 +24,17 @@ export function OnboardingHeader({ title, step, totalSteps }: IOnboardingHeaderP
 					return (
 						<Box
 							key={i}
-							w={isCurrent ? '24px' : '8px'}
+							w={isCurrent ? "24px" : "8px"}
 							h="8px"
 							borderRadius="full"
 							transition="all 0.2s ease"
-							bg={isCompleted ? 'var(--wc-accent-blue)' : isCurrent ? 'var(--wc-accent-blue)' : 'var(--wc-bg-selected)'}
+							bg={
+								isCompleted
+									? "var(--wc-accent-blue)"
+									: isCurrent
+										? "var(--wc-accent-blue)"
+										: "var(--wc-bg-selected)"
+							}
 						/>
 					);
 				})}

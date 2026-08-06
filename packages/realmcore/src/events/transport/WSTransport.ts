@@ -1,4 +1,4 @@
-import { IMessageTransport, TRemoteHandler } from "../RemoteNode";
+import type { IMessageTransport, TRemoteHandler } from "../RemoteNode";
 
 // a Socket.IO socket exposes emit and on. emitWithAck sends a message and
 // resolves with the peer's ack response, which gives request/response

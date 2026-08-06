@@ -1,18 +1,18 @@
-import { useEffect } from 'react';
-import { useStore } from '@/store';
+import { useEffect } from "react";
+import { useStore } from "@/store";
 
 export function useEventSource() {
 	useEffect(() => {
-		console.log('[SSE] Creating EventSource connection to /api/events');
+		console.log("[SSE] Creating EventSource connection to /api/events");
 		const port = (import.meta as any).env.DEV
-			// @ts-ignore
-			? __CONTROL_API_PORT__
-			: window.location.port || '4400';
+			? // @ts-expect-error
+				__CONTROL_API_PORT__
+			: window.location.port || "4400";
 		const eventSource = new EventSource(`/api/events`);
 
 		eventSource.onopen = () => {
 			useStore.getState().setSseConnected(true);
-			console.log('[SSE] ✅ Connection opened successfully');
+			console.log("[SSE] ✅ Connection opened successfully");
 		};
 
 		eventSource.onmessage = (event) => {
@@ -23,17 +23,17 @@ export function useEventSource() {
 				if (handler) handler(data);
 				else console.error(`[SSE] ❌ No handler registered for channel '${channel}'`);
 			} catch (err) {
-				console.error('[SSE] Failed to parse event:', err, 'Raw data:', event.data);
+				console.error("[SSE] Failed to parse event:", err, "Raw data:", event.data);
 			}
 		};
 
 		eventSource.onerror = (error) => {
-			console.error('[SSE] ❌ Connection error:', error);
+			console.error("[SSE] ❌ Connection error:", error);
 			useStore.getState().setSseConnected(false);
 		};
 
 		return () => {
-			console.log('[SSE] Cleaning up EventSource connection');
+			console.log("[SSE] Cleaning up EventSource connection");
 			eventSource.close();
 		};
 	}, []);

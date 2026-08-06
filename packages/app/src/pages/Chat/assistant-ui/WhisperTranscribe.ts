@@ -1,13 +1,13 @@
-import { float32ToWavBlob } from './VADManager';
+import { float32ToWavBlob } from "./VADManager";
 
 export { float32ToWavBlob };
 
 export async function transcribeAudio(serverId: string, audioBlob: Blob): Promise<string | null> {
 	const formData = new FormData();
-	formData.append('file', audioBlob, 'audio.webm');
+	formData.append("file", audioBlob, "audio.webm");
 
 	const response = await fetch(`/api/whisper-servers/${serverId}/transcribe`, {
-		method: 'POST',
+		method: "POST",
 		body: formData,
 	});
 

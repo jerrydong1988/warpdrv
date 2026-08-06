@@ -1,69 +1,69 @@
-import { api, login, logout, fetchAuthCheck, fetchAuthMe } from './client';
-import { useStore } from '../store';
 import type {
-	IHardwareInfo,
-	IBackendAsset,
-	IKokoroStatus,
-	IRecipe,
-	IRecipeCreatePayload,
-	IRecipeUpdatePayload,
-	IRecipeRunRequest,
-	IRecipeRunResponse,
-	IRecipeState,
-	IRecipeRunState,
-	ISettings,
+	IFolder as IChatFolder,
+	IChatMessage,
+	IChatThread,
+	ISearchResult,
+	ISearchThreadResult,
+	IWorkspace,
+} from "@warpcore/bridge";
+import type {
+	IAccessTokenCreatePayload,
+	IAccessTokenCreateResult,
+	IAccessTokenInfo,
+	IAccessTokenUpdatePayload,
 	IBackend,
+	IBackendAsset,
 	IBackendCreatePayload,
-	IBackendUpdatePayload,
 	IBackendGroup,
 	IBackendGroupCreatePayload,
 	IBackendGroupUpdatePayload,
-	IModel,
-	IWhisperModel,
-	IServer,
-	IServerCreatePayload,
-	IPreset,
-	IPresetCreatePayload,
-	IHubModel,
-	IHubModelDetail,
-	IDownload,
-	IDownloadRequestPayload,
+	IBackendUpdatePayload,
+	IChatMessageCreatePayload,
 	IChatPreset,
 	IChatPresetCreatePayload,
-	IThreadConfig,
 	IChatThreadCreatePayload,
-	IChatMessageCreatePayload,
-	IAccessTokenInfo,
-	IAccessTokenCreatePayload,
-	IAccessTokenUpdatePayload,
-	IAccessTokenCreateResult,
 	ICheckpoint,
-	ISaveCheckpointRequest,
-	ISaveCheckpointResponse,
+	IDownload,
+	IDownloadRequestPayload,
+	IHardwareInfo,
+	IHubModel,
+	IHubModelDetail,
+	IKokoroStatus,
+	IModel,
+	IPreset,
+	IPresetCreatePayload,
+	IRecipe,
+	IRecipeCreatePayload,
+	IRecipeRunRequest,
+	IRecipeRunResponse,
+	IRecipeRunState,
+	IRecipeState,
+	IRecipeUpdatePayload,
 	IRestoreCheckpointRequest,
 	IRestoreCheckpointResponse,
 	IRestoreCheckpointsMappedRequest,
+	ISaveCheckpointRequest,
+	ISaveCheckpointResponse,
+	IServer,
+	IServerCreatePayload,
+	ISettings,
+	IThreadConfig,
+	IWhisperModel,
 	TCheckpointId,
-} from '@warpcore/shared';
-import type {
-	IChatThread,
-	IChatMessage,
-	IFolder as IChatFolder,
-	IWorkspace,
-	ISearchResult,
-	ISearchThreadResult,
-} from '@warpcore/bridge';
+} from "@warpcore/shared";
+import { useStore } from "../store";
+import { api, fetchAuthCheck, fetchAuthMe, login, logout } from "./client";
 
 // ============================================================
 // Settings
 // ============================================================
 
 export async function fetchSettings() {
-	return api.get<ISettings>('/settings');
+	return api.get<ISettings>("/settings");
 }
 
 export async function updateSettings(data: Partial<ISettings>) {
-	return api.put<ISettings>('/settings', data);
+	return api.put<ISettings>("/settings", data);
 }
 
 // ============================================================
@@ -71,7 +71,7 @@ export async function updateSettings(data: Partial<ISettings>) {
 // ============================================================
 
 export async function fetchBackends() {
-	return api.getList<IBackend>('/backends');
+	return api.getList<IBackend>("/backends");
 }
 
 export async function fetchBackend(id: string) {
@@ -79,7 +79,7 @@ export async function fetchBackend(id: string) {
 }
 
 export async function createBackend(data: IBackendCreatePayload) {
-	return api.post<IBackend>('/backends', data);
+	return api.post<IBackend>("/backends", data);
 }
 
 export async function updateBackend(id: string, data: IBackendUpdatePayload) {
@@ -94,29 +94,29 @@ export async function validateBackend(id: string) {
 	return api.post<IBackend>(`/backends/${id}/validate`);
 }
 export async function installBackend(assetKey: string, installRoot?: string) {
-	return api.post<IDownload>('/backends/install', { assetKey, installRoot });
+	return api.post<IDownload>("/backends/install", { assetKey, installRoot });
 }
 export async function installWhisperBackend(assetKey: string, installRoot?: string) {
-	return api.post<IDownload>('/whisper-backends/install', { assetKey, installRoot });
+	return api.post<IDownload>("/whisper-backends/install", { assetKey, installRoot });
 }
 export async function fetchHardware() {
-	return api.get<IHardwareInfo>('/hardware');
+	return api.get<IHardwareInfo>("/hardware");
 }
 export async function fetchLlamaReleases(targetOs?: string) {
-	const qs = targetOs ? `?os=${encodeURIComponent(targetOs)}` : '';
+	const qs = targetOs ? `?os=${encodeURIComponent(targetOs)}` : "";
 	return api.getList<IBackendAsset>(`/releases/llama${qs}`);
 }
 export async function fetchWhisperReleases(targetOs?: string) {
-	const qs = targetOs ? `?os=${encodeURIComponent(targetOs)}` : '';
+	const qs = targetOs ? `?os=${encodeURIComponent(targetOs)}` : "";
 	return api.getList<IBackendAsset>(`/releases/whisper${qs}`);
 }
 export async function fetchKokoroStatus() {
-	const res = await api.get<IKokoroStatus>('/kokoro/status');
+	const res = await api.get<IKokoroStatus>("/kokoro/status");
 	useStore.getState().setKokoroStatus(res.ok ? res.data : null);
 	return res.ok ? res.data : null;
 }
 export async function installKokoro() {
-	return api.post<{ groupKey: string; downloads: IDownload[] }>('/kokoro/install');
+	return api.post<{ groupKey: string; downloads: IDownload[] }>("/kokoro/install");
 }
 
 // ============================================================
@@ -124,7 +124,7 @@ export async function installKokoro() {
 // ============================================================
 
 export async function fetchBackendGroups() {
-	return api.getList<IBackendGroup>('/backend-groups');
+	return api.getList<IBackendGroup>("/backend-groups");
 }
 
 export async function fetchBackendGroup(id: string) {
@@ -132,7 +132,7 @@ export async function fetchBackendGroup(id: string) {
 }
 
 export async function createBackendGroup(data: IBackendGroupCreatePayload) {
-	return api.post<IBackendGroup>('/backend-groups', data);
+	return api.post<IBackendGroup>("/backend-groups", data);
 }
 
 export async function updateBackendGroup(id: string, data: IBackendGroupUpdatePayload) {
@@ -152,19 +152,19 @@ export async function activateBackendInGroup(id: string, backendId: string) {
 // ============================================================
 
 export async function fetchModels() {
-	return api.getList<IModel>('/models');
+	return api.getList<IModel>("/models");
 }
 
 export async function scanModels() {
-	return api.post<IModel[]>('/models/scan');
+	return api.post<IModel[]>("/models/scan");
 }
 
 export async function scanWhisperModels() {
-	return api.post<IWhisperModel[]>('/whisper-models/scan');
+	return api.post<IWhisperModel[]>("/whisper-models/scan");
 }
 
 export async function fetchScanStatus() {
-	return api.get<{ modelCount: number; lastScanAt: number }>('/models/scan-status');
+	return api.get<{ modelCount: number; lastScanAt: number }>("/models/scan-status");
 }
 
 export async function updateModel(id: string, data: { recommendedInferenceParams?: string }) {
@@ -180,7 +180,7 @@ export async function reparseModel(id: string) {
 // ============================================================
 
 export async function fetchServers() {
-	return api.getList<IServer>('/servers');
+	return api.getList<IServer>("/servers");
 }
 
 export async function fetchServer(id: string) {
@@ -188,7 +188,7 @@ export async function fetchServer(id: string) {
 }
 
 export async function launchServer(data: IServerCreatePayload) {
-	return api.post<IServer>('/servers', data);
+	return api.post<IServer>("/servers", data);
 }
 
 export async function stopServer(id: string) {
@@ -199,7 +199,26 @@ export async function restartServer(id: string) {
 	return api.post<IServer>(`/servers/${id}/restart`);
 }
 
-export async function updateServer(id: string, data: Partial<Pick<IServer, 'backendId' | 'backendGroupId' | 'modelPath' | 'serverName' | 'params' | 'serverAlias' | 'autoLaunch' | 'useRecommendedInferenceParams' | 'autoSaveCheckpointOnStop' | 'autoLoadCheckpointOnStart' | 'useMultiModal'>>, relaunch = true) {
+export async function updateServer(
+	id: string,
+	data: Partial<
+		Pick<
+			IServer,
+			| "backendId"
+			| "backendGroupId"
+			| "modelPath"
+			| "serverName"
+			| "params"
+			| "serverAlias"
+			| "autoLaunch"
+			| "useRecommendedInferenceParams"
+			| "autoSaveCheckpointOnStop"
+			| "autoLoadCheckpointOnStart"
+			| "useMultiModal"
+		>
+	>,
+	relaunch = true,
+) {
 	return api.put<IServer>(`/servers/${id}`, { ...data, relaunch });
 }
 
@@ -220,11 +239,11 @@ export async function clearServerLogs(id: string) {
 // ============================================================
 
 export async function fetchPresets() {
-	return api.getList<IPreset>('/presets');
+	return api.getList<IPreset>("/presets");
 }
 
 export async function createPreset(data: IPresetCreatePayload) {
-	return api.post<IPreset>('/presets', data);
+	return api.post<IPreset>("/presets", data);
 }
 
 export async function deletePreset(id: string) {
@@ -250,11 +269,11 @@ export interface IStickyRouteInfo {
 }
 
 export async function fetchProxyStatus() {
-	return api.get<IProxyStatus>('/proxy/status');
+	return api.get<IProxyStatus>("/proxy/status");
 }
 
 export async function fetchStickyRoutes() {
-	return api.getList<IStickyRouteInfo>('/proxy/routes');
+	return api.getList<IStickyRouteInfo>("/proxy/routes");
 }
 
 export async function clearStickyRoute(alias: string) {
@@ -262,18 +281,18 @@ export async function clearStickyRoute(alias: string) {
 }
 
 export async function clearAllStickyRoutes() {
-	return api.del<null>('/proxy/routes');
+	return api.del<null>("/proxy/routes");
 }
 
 export async function startProxy() {
-	return api.post<null>('/proxy/start');
+	return api.post<null>("/proxy/start");
 }
 
 export async function stopProxy() {
-	return api.post<null>('/proxy/stop');
+	return api.post<null>("/proxy/stop");
 }
 
-export * from './hub-services';
+export * from "./hub-services";
 
 // Chat
 export async function fetchThreads(options?: { query?: string; folderId?: string | null }) {
@@ -284,7 +303,7 @@ export async function fetchThreads(options?: { query?: string; folderId?: string
 	return api.getList<IChatThread>(`/chat/threads?${queryString}`);
 }
 export async function createThread(data?: IChatThreadCreatePayload) {
-	return api.post<IChatThread>('/chat/threads', data ?? {});
+	return api.post<IChatThread>("/chat/threads", data ?? {});
 }
 export async function fetchThread(id: string) {
 	return api.get<IChatThread & { messages: IChatMessage[] }>(`/chat/threads/${id}`);
@@ -301,10 +320,10 @@ export async function appendMessages(threadId: string, messages: IChatMessageCre
 
 // Chat Presets
 export async function fetchChatPresets() {
-	return api.getList<IChatPreset>('/chat/presets');
+	return api.getList<IChatPreset>("/chat/presets");
 }
 export async function createChatPreset(data: IChatPresetCreatePayload) {
-	return api.post<IChatPreset>('/chat/presets', data);
+	return api.post<IChatPreset>("/chat/presets", data);
 }
 export async function updateChatPreset(id: string, data: Partial<IChatPresetCreatePayload>) {
 	return api.put<IChatPreset>(`/chat/presets/${id}`, data);
@@ -315,20 +334,28 @@ export async function deleteChatPreset(id: string) {
 
 // Thread Config
 export async function fetchThreadConfig(threadId: string) {
-	return api.get<Omit<IThreadConfig, "params"> & { params: string }>(`/chat/threads/${threadId}/config`);
+	return api.get<Omit<IThreadConfig, "params"> & { params: string }>(
+		`/chat/threads/${threadId}/config`,
+	);
 }
-export async function updateThreadConfig(threadId: string, data: { presetId?: string | null; systemPrompt?: string; params?: string }) {
+export async function updateThreadConfig(
+	threadId: string,
+	data: { presetId?: string | null; systemPrompt?: string; params?: string },
+) {
 	return api.put<IThreadConfig>(`/chat/threads/${threadId}/config`, data);
 }
 
 // Folders
 export async function fetchFolders() {
-	return api.getList<IChatFolder>('/chat/folders');
+	return api.getList<IChatFolder>("/chat/folders");
 }
 export async function createFolder(name: string, parentId?: string | null) {
-	return api.post<IChatFolder>('/chat/folders', { name, parentId: parentId ?? null });
+	return api.post<IChatFolder>("/chat/folders", { name, parentId: parentId ?? null });
 }
-export async function updateFolder(id: string, data: Partial<{ name: string; parentId: string | null; sortOrder: number }>) {
+export async function updateFolder(
+	id: string,
+	data: Partial<{ name: string; parentId: string | null; sortOrder: number }>,
+) {
 	return api.put<IChatFolder>(`/chat/folders/${id}`, data);
 }
 export async function deleteFolder(id: string) {
@@ -363,25 +390,25 @@ export async function deleteMessage(messageId: string) {
 
 // Folder reordering
 export async function reorderFolders(updates: Array<{ id: string; sortOrder: number }>) {
-	return api.put<null>('/chat/folders/reorder', { updates });
+	return api.put<null>("/chat/folders/reorder", { updates });
 }
 
 // ============================================================
 // Authentication
 // ============================================================
 
-export { login, logout, fetchAuthCheck, fetchAuthMe };
+export { fetchAuthCheck, fetchAuthMe, login, logout };
 
 // ============================================================
 // Access Tokens
 // ============================================================
 
 export async function fetchTokens() {
-	return api.getList<IAccessTokenInfo>('/tokens');
+	return api.getList<IAccessTokenInfo>("/tokens");
 }
 
 export async function createToken(data: IAccessTokenCreatePayload) {
-	return api.post<IAccessTokenCreateResult>('/tokens', data);
+	return api.post<IAccessTokenCreateResult>("/tokens", data);
 }
 
 export async function updateToken(id: string, data: IAccessTokenUpdatePayload) {
@@ -397,7 +424,7 @@ export async function deleteToken(id: string) {
 // ============================================================
 
 export async function fetchRecipes() {
-	return api.getList<IRecipe>('/recipes');
+	return api.getList<IRecipe>("/recipes");
 }
 
 export async function fetchRecipe(id: string) {
@@ -409,7 +436,7 @@ export async function fetchRecipeState(id: string) {
 }
 
 export async function createRecipe(data: IRecipeCreatePayload) {
-	return api.post<IRecipe>('/recipes', data);
+	return api.post<IRecipe>("/recipes", data);
 }
 
 export async function updateRecipe(id: string, data: IRecipeUpdatePayload) {
@@ -425,29 +452,32 @@ export async function runRecipe(id: string, data: IRecipeRunRequest) {
 }
 
 export async function cancelRecipeRun() {
-	return api.post<{ cancelled: boolean }>('/recipes/runs/cancel');
+	return api.post<{ cancelled: boolean }>("/recipes/runs/cancel");
 }
 
 export async function fetchActiveRecipeRun() {
-	return api.get<IRecipeRunState | null>('/recipes/runs/active');
+	return api.get<IRecipeRunState | null>("/recipes/runs/active");
 }
 // ============================================================
 // Checkpoints
 // ============================================================
 export async function fetchCheckpoints(serverId?: string) {
-	const query = serverId ? `?serverId=${encodeURIComponent(serverId)}` : '';
+	const query = serverId ? `?serverId=${encodeURIComponent(serverId)}` : "";
 	return api.getList<ICheckpoint>(`/checkpoints${query}`);
 }
 export async function saveCheckpoint(data: ISaveCheckpointRequest) {
-	return api.post<ISaveCheckpointResponse>('/checkpoints', data);
+	return api.post<ISaveCheckpointResponse>("/checkpoints", data);
 }
 export async function restoreCheckpoint(data: IRestoreCheckpointRequest) {
-	return api.post<IRestoreCheckpointResponse>('/checkpoints/restore', data);
+	return api.post<IRestoreCheckpointResponse>("/checkpoints/restore", data);
 }
 export async function restoreCheckpointsMapped(data: IRestoreCheckpointsMappedRequest) {
-	return api.post<IRestoreCheckpointResponse>('/checkpoints/restore-mapped', data);
+	return api.post<IRestoreCheckpointResponse>("/checkpoints/restore-mapped", data);
 }
-export async function updateCheckpoint(id: TCheckpointId, data: { name?: string; notes?: string | null }) {
+export async function updateCheckpoint(
+	id: TCheckpointId,
+	data: { name?: string; notes?: string | null },
+) {
 	return api.put<ICheckpoint>(`/checkpoints/${id}`, data);
 }
 export async function deleteCheckpoint(id: TCheckpointId) {
@@ -457,11 +487,15 @@ export async function deleteCheckpoint(id: TCheckpointId) {
 // ============================================================
 // FTS Search
 // ============================================================
-export async function searchChatMessages(q: string, mode: string, options?: { threadId?: string; limit?: number; offset?: number }) {
+export async function searchChatMessages(
+	q: string,
+	mode: string,
+	options?: { threadId?: string; limit?: number; offset?: number },
+) {
 	const params = new URLSearchParams({ q, mode });
-	if (options?.threadId) params.set('threadId', options.threadId);
-	if (options?.limit) params.set('limit', String(options.limit));
-	if (options?.offset) params.set('offset', String(options.offset));
+	if (options?.threadId) params.set("threadId", options.threadId);
+	if (options?.limit) params.set("limit", String(options.limit));
+	if (options?.offset) params.set("offset", String(options.offset));
 	return api.getList<ISearchResult | ISearchThreadResult>(`/chat/search?${params}`);
 }
 
@@ -487,5 +521,7 @@ export async function updateMessageState(messageId: string, data: Record<string,
 	return api.put<null>(`/chat/messages/${messageId}/state`, { data });
 }
 export async function fetchMessageStatesByThread(threadId: string) {
-	return api.getList<{ messageId: string; data: Record<string, unknown> }>(`/chat/threads/${threadId}/message-states`);
+	return api.getList<{ messageId: string; data: Record<string, unknown> }>(
+		`/chat/threads/${threadId}/message-states`,
+	);
 }

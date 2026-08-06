@@ -1,14 +1,14 @@
-import { spawn, type ChildProcess } from 'child_process';
-import net from 'net';
-import type { IWhisperServer, IWhisperLaunchParams, IWhisperBackend } from '@warpcore/shared';
-import { EWhisperServerStatus, DEFAULT_WHISPER_LAUNCH_PARAMS } from '@warpcore/shared';
-import { parse as shellParse } from 'shell-quote';
-import { store } from '../util/store';
-import { sseManager } from './sseManagerInstance';
-import { killProcessTree } from './processManager';
+import type { IWhisperBackend, IWhisperLaunchParams, IWhisperServer } from "@warpcore/shared";
+import { DEFAULT_WHISPER_LAUNCH_PARAMS, EWhisperServerStatus } from "@warpcore/shared";
+import { type ChildProcess, spawn } from "child_process";
+import net from "net";
+import { parse as shellParse } from "shell-quote";
+import { store } from "../util/store";
+import { killProcessTree } from "./processManager";
+import { sseManager } from "./sseManagerInstance";
 
-export const WHISPER_SERVERS_PREFIX = 'whisperServers:';
-const SETTINGS_KEY = 'settings:general';
+export const WHISPER_SERVERS_PREFIX = "whisperServers:";
+const SETTINGS_KEY = "settings:general";
 
 const processes = new Map<string, ChildProcess>();
 const logBuffers = new Map<string, string[]>();
@@ -19,22 +19,26 @@ export function getTrackedWhisperServerIds(): string[] {
 }
 
 // Poll port for TCP connectivity
-function pollWhisperHealth(port: number, onReady: () => void, onFail: (err: string) => void): ReturnType<typeof setInterval> {
+function pollWhisperHealth(
+	port: number,
+	onReady: () => void,
+	onFail: (err: string) => void,
+): ReturnType<typeof setInterval> {
 	let attempts = 0;
 	const maxAttempts = 150; // 30s at 200ms intervals
 	const interval = setInterval(() => {
 		attempts++;
 		if (attempts > maxAttempts) {
 			clearInterval(interval);
-			onFail('Server did not become ready within 30 seconds');
+			onFail("Server did not become ready within 30 seconds");
 			return;
 		}
-		const socket = net.createConnection({ port, host: '127.0.0.1' }, () => {
+		const socket = net.createConnection({ port, host: "127.0.0.1" }, () => {
 			clearInterval(interval);
 			socket.destroy();
 			onReady();
 		});
-		socket.on('error', () => {
+		socket.on("error", () => {
 			socket.destroy();
 		});
 		socket.setTimeout(1000, () => {
@@ -44,7 +48,13 @@ function pollWhisperHealth(port: number, onReady: () => void, onFail: (err: stri
 	return interval;
 }
 
-async function emitWhisperServerUpdate(serverId: string, status: EWhisperServerStatus, error: string | null, startedAt: number | null, launchCommand?: string | null): Promise<void> {
+async function emitWhisperServerUpdate(
+	serverId: string,
+	status: EWhisperServerStatus,
+	error: string | null,
+	startedAt: number | null,
+	launchCommand?: string | null,
+): Promise<void> {
 	try {
 		const server = await store.get<IWhisperServer>(`${WHISPER_SERVERS_PREFIX}${serverId}`);
 		if (server) {
@@ -55,7 +65,7 @@ async function emitWhisperServerUpdate(serverId: string, status: EWhisperServerS
 				...(startedAt != null && { startedAt }),
 				...(launchCommand !== undefined && { launchCommand }),
 			};
-			sseManager.emit('whisperServers:update', { [serverId]: updated });
+			sseManager.emit("whisperServers:update", { [serverId]: updated });
 		}
 	} catch {
 		// Ignore SSE errors
@@ -68,24 +78,26 @@ export function buildWhisperArgs(
 	defaultArgs: string[],
 ): string[] {
 	const args: string[] = [...defaultArgs];
-	args.push('-m', modelPath);
+	args.push("-m", modelPath);
 
-	if (params.threads > 0) args.push('-t', String(params.threads));
-	if (params.processors > 0) args.push('-p', String(params.processors));
-	if (params.noGpu) args.push('--no-gpu');
-	if (params.flashAttn) args.push('--flash-attn');
-	if (params.language) args.push('-l', params.language);
-	if (params.translate) args.push('--translate');
-	if (params.beamSize > 0) args.push('-bs', String(params.beamSize));
-	if (params.temperature > 0) args.push('-tp', String(params.temperature));
-	if (params.prompt) args.push('--prompt', params.prompt);
-	if (params.convert) args.push('--convert');
-	if (params.inferencePath) args.push('--inference-path', params.inferencePath);
-	args.push('--host', '0.0.0.0');
-	args.push('--port', String(params.port));
+	if (params.threads > 0) args.push("-t", String(params.threads));
+	if (params.processors > 0) args.push("-p", String(params.processors));
+	if (params.noGpu) args.push("--no-gpu");
+	if (params.flashAttn) args.push("--flash-attn");
+	if (params.language) args.push("-l", params.language);
+	if (params.translate) args.push("--translate");
+	if (params.beamSize > 0) args.push("-bs", String(params.beamSize));
+	if (params.temperature > 0) args.push("-tp", String(params.temperature));
+	if (params.prompt) args.push("--prompt", params.prompt);
+	if (params.convert) args.push("--convert");
+	if (params.inferencePath) args.push("--inference-path", params.inferencePath);
+	args.push("--host", "0.0.0.0");
+	args.push("--port", String(params.port));
 
 	if (params.extraArgs.trim()) {
-		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
+		const tokens = shellParse(params.extraArgs).filter(
+			(t): t is string => typeof t === "string",
+		);
 		args.push(...tokens);
 	}
 
@@ -99,10 +111,10 @@ export function spawnWhisperServer(
 	onStatusChange: (status: EWhisperServerStatus, error?: string) => void,
 ): number | null {
 	try {
-		const launchCommand = [binaryPath, ...args].join(' ');
+		const launchCommand = [binaryPath, ...args].join(" ");
 		const child = spawn(binaryPath, args, {
 			detached: true,
-			stdio: ['ignore', 'pipe', 'pipe'],
+			stdio: ["ignore", "pipe", "pipe"],
 		});
 		child.unref();
 		processes.set(serverId, child);
@@ -116,24 +128,24 @@ export function spawnWhisperServer(
 			}
 		};
 
-		child.stdout?.on('data', (data: Buffer) => {
-			const lines = data.toString().split('\n').filter(Boolean);
+		child.stdout?.on("data", (data: Buffer) => {
+			const lines = data.toString().split("\n").filter(Boolean);
 			for (const line of lines) {
 				appendLog(line);
-				sseManager.emit('whisperServers:logs', { [serverId]: [line] });
+				sseManager.emit("whisperServers:logs", { [serverId]: [line] });
 			}
 		});
 
-		child.stderr?.on('data', (data: Buffer) => {
-			const lines = data.toString().split('\n').filter(Boolean);
+		child.stderr?.on("data", (data: Buffer) => {
+			const lines = data.toString().split("\n").filter(Boolean);
 			for (const line of lines) {
 				appendLog(line);
-				sseManager.emit('whisperServers:logs', { [serverId]: [line] });
+				sseManager.emit("whisperServers:logs", { [serverId]: [line] });
 			}
 		});
 
-		const portIdx = args.indexOf('--port');
-		const port = portIdx !== -1 ? parseInt(args[portIdx + 1] ?? '0', 10) : 0;
+		const portIdx = args.indexOf("--port");
+		const port = portIdx !== -1 ? parseInt(args[portIdx + 1] ?? "0", 10) : 0;
 
 		let healthInterval: ReturnType<typeof setInterval> | null = null;
 		if (port > 0) {
@@ -141,7 +153,12 @@ export function spawnWhisperServer(
 				port,
 				async () => {
 					onStatusChange(EWhisperServerStatus.RUNNING);
-					await emitWhisperServerUpdate(serverId, EWhisperServerStatus.RUNNING, null, Date.now());
+					await emitWhisperServerUpdate(
+						serverId,
+						EWhisperServerStatus.RUNNING,
+						null,
+						Date.now(),
+					);
 				},
 				async (err) => {
 					onStatusChange(EWhisperServerStatus.ERROR, err);
@@ -150,30 +167,45 @@ export function spawnWhisperServer(
 			);
 		}
 
-		child.on('error', async (err) => {
+		child.on("error", async (err) => {
 			if (healthInterval) clearInterval(healthInterval);
 			onStatusChange(EWhisperServerStatus.ERROR, err.message);
 			await emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, err.message, null);
 		});
 
-		child.on('exit', (code) => {
+		child.on("exit", (code) => {
 			if (healthInterval) clearInterval(healthInterval);
 			processes.delete(serverId);
 			if (code !== 0 && code !== null) {
 				onStatusChange(EWhisperServerStatus.ERROR, `Process exited with code ${code}`);
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, `Process exited with code ${code}`, null).catch(() => {});
+				emitWhisperServerUpdate(
+					serverId,
+					EWhisperServerStatus.ERROR,
+					`Process exited with code ${code}`,
+					null,
+				).catch(() => {});
 			} else {
 				onStatusChange(EWhisperServerStatus.STOPPED);
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(() => {});
+				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(
+					() => {},
+				);
 			}
 		});
 
 		onStatusChange(EWhisperServerStatus.LOADING);
-		emitWhisperServerUpdate(serverId, EWhisperServerStatus.LOADING, null, null, launchCommand).catch(() => {});
+		emitWhisperServerUpdate(
+			serverId,
+			EWhisperServerStatus.LOADING,
+			null,
+			null,
+			launchCommand,
+		).catch(() => {});
 		return child.pid ?? null;
 	} catch (err) {
 		onStatusChange(EWhisperServerStatus.ERROR, String(err));
-		emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, String(err), null).catch(() => {});
+		emitWhisperServerUpdate(serverId, EWhisperServerStatus.ERROR, String(err), null).catch(
+			() => {},
+		);
 		return null;
 	}
 }
@@ -181,11 +213,11 @@ export function spawnWhisperServer(
 async function isPortFree(port: number): Promise<boolean> {
 	return new Promise((resolve) => {
 		const server = net.createServer();
-		server.listen(port, '127.0.0.1', () => {
+		server.listen(port, "127.0.0.1", () => {
 			server.close();
 			resolve(true);
 		});
-		server.on('error', () => resolve(false));
+		server.on("error", () => resolve(false));
 	});
 }
 
@@ -204,8 +236,10 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 				}
 			};
 
-			child.once('exit', async () => {
-				const server = await store.get<IWhisperServer>(`${WHISPER_SERVERS_PREFIX}${serverId}`).catch(() => null);
+			child.once("exit", async () => {
+				const server = await store
+					.get<IWhisperServer>(`${WHISPER_SERVERS_PREFIX}${serverId}`)
+					.catch(() => null);
 				const port = server?.port || 0;
 
 				if (port > 0) {
@@ -226,23 +260,25 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 					finish(true);
 				}
 
-				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(() => {});
+				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(
+					() => {},
+				);
 			});
 
-	try {
-			killProcessTree(pidToUse, 'SIGTERM');
-		} catch {
-			finish(false);
-			return;
-		}
-
-		setTimeout(() => {
 			try {
-				killProcessTree(pidToUse, 'SIGKILL');
-			} catch {}
-			setTimeout(() => finish(true), 200);
-		}, 5000);
-	});
+				killProcessTree(pidToUse, "SIGTERM");
+			} catch {
+				finish(false);
+				return;
+			}
+
+			setTimeout(() => {
+				try {
+					killProcessTree(pidToUse, "SIGKILL");
+				} catch {}
+				setTimeout(() => finish(true), 200);
+			}, 5000);
+		});
 	}
 
 	if (pid) {
@@ -253,7 +289,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		}
 
 		try {
-			killProcessTree(pid, 'SIGTERM');
+			killProcessTree(pid, "SIGTERM");
 		} catch {}
 
 		return new Promise((resolve) => {
@@ -268,7 +304,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 			setTimeout(() => {
 				clearInterval(check);
 				try {
-					killProcessTree(pid, 'SIGKILL');
+					killProcessTree(pid, "SIGKILL");
 				} catch {}
 				setTimeout(() => resolve(true), 200);
 			}, 5000);
@@ -298,7 +334,10 @@ function isProcessAlive(pid: number): boolean {
 export async function reconcileWhisperServers(): Promise<void> {
 	const servers = await store.list<IWhisperServer>(WHISPER_SERVERS_PREFIX);
 	for (const server of servers) {
-		if (server.status === EWhisperServerStatus.RUNNING || server.status === EWhisperServerStatus.LOADING) {
+		if (
+			server.status === EWhisperServerStatus.RUNNING ||
+			server.status === EWhisperServerStatus.LOADING
+		) {
 			if (server.pid && isProcessAlive(server.pid)) {
 				// alive
 			} else {
@@ -318,17 +357,19 @@ export async function launchAutoStartWhisperServers(): Promise<void> {
 				await launchWhisperServer(server);
 				console.log(`[WarpCore] Auto-launching whisper server: ${server.serverName}`);
 			} catch (err) {
-				console.log(`[WarpCore] Skipping auto-launch for whisper server ${server.serverName}: ${err}`);
+				console.log(
+					`[WarpCore] Skipping auto-launch for whisper server ${server.serverName}: ${err}`,
+				);
 			}
 		}
 	}
 }
 
-import { usedPorts, findRandomAvailablePort } from './processManager';
+import { findRandomAvailablePort, usedPorts } from "./processManager";
 
 export async function launchWhisperServer(server: IWhisperServer): Promise<void> {
-	const backend = await store.get<IWhisperBackend>('whisperBackends:' + server.backendId);
-	if (!backend) throw new Error('Whisper backend not found');
+	const backend = await store.get<IWhisperBackend>("whisperBackends:" + server.backendId);
+	if (!backend) throw new Error("Whisper backend not found");
 
 	if (server.params.port === 0) {
 		if (server.port > 0) {
@@ -344,23 +385,14 @@ export async function launchWhisperServer(server: IWhisperServer): Promise<void>
 		usedPorts.add(server.port);
 	}
 
-	const args = buildWhisperArgs(
-		server.modelPath,
-		launchParams,
-		backend.defaultArgs,
-	);
+	const args = buildWhisperArgs(server.modelPath, launchParams, backend.defaultArgs);
 
-	const pid = spawnWhisperServer(
-		server.id,
-		backend.path,
-		args,
-		async (status, error) => {
-			server.status = status;
-			if (error) server.error = error;
-			if (status === EWhisperServerStatus.RUNNING) server.startedAt = Date.now();
-			await store.put(WHISPER_SERVERS_PREFIX + server.id, server);
-		},
-	);
+	const pid = spawnWhisperServer(server.id, backend.path, args, async (status, error) => {
+		server.status = status;
+		if (error) server.error = error;
+		if (status === EWhisperServerStatus.RUNNING) server.startedAt = Date.now();
+		await store.put(WHISPER_SERVERS_PREFIX + server.id, server);
+	});
 
 	server.pid = pid || undefined;
 	server.status = EWhisperServerStatus.LOADING;

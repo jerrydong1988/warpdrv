@@ -1,6 +1,6 @@
-import { Extension } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Extension } from "@tiptap/react";
 
 export interface IComposerPlaceholderOptions {
 	placeholder: string;
@@ -35,7 +35,11 @@ export const ComposerPlaceholder = Extension.create<IComposerPlaceholderOptions>
 				props: {
 					decorations: (state) => {
 						const doc = state.doc;
-						if (doc.childCount === 1 && doc.firstChild && doc.firstChild.content.size === 0) {
+						if (
+							doc.childCount === 1 &&
+							doc.firstChild &&
+							doc.firstChild.content.size === 0
+						) {
 							if (!options.placeholder) return null;
 							return DecorationSet.create(doc, [
 								Decoration.widget(1, makeHint(options.placeholder), { side: 1 }),
@@ -45,7 +49,9 @@ export const ComposerPlaceholder = Extension.create<IComposerPlaceholderOptions>
 						doc.descendants((node, pos) => {
 							if (decoration) return false;
 							if (node.type.name !== "slashCommand") return true;
-							const text = options.resolveCommandPlaceholder(node.attrs.name as string);
+							const text = options.resolveCommandPlaceholder(
+								node.attrs.name as string,
+							);
 							if (!text) return false;
 							const endOfNode = pos + node.nodeSize;
 							const endOfBlock = doc.resolve(pos).end();

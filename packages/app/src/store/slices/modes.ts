@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { IMode, TModeId } from '@warpcore/shared';
+import type { IMode, TModeId } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 export const modesSlice = (
 	setState: ImmerSet<AppState>,

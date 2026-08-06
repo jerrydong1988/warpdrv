@@ -1,24 +1,27 @@
-import { Box, Text } from '@chakra-ui/react';
-import { ImageCarousel } from '../components/ImageCarousel';
-import { OnboardingHeader } from '../components/OnboardingHeader';
-import { OnboardingFooter } from '../components/OnboardingFooter';
-import type { IStepProps } from '../OnboardingPage';
+import { Box, Text } from "@chakra-ui/react";
+import { ImageCarousel } from "../components/ImageCarousel";
+import { OnboardingFooter } from "../components/OnboardingFooter";
+import { OnboardingHeader } from "../components/OnboardingHeader";
+import type { IStepProps } from "../OnboardingPage";
 
 const GUIDE_SLIDES = [
 	{
-		title: 'Download Models from the Hub',
-		description: 'Browse the Hub page to search for GGUF models from HuggingFace. Filter by parameters, sort by downloads, and download directly to your model folders.',
-		image: '/screenshots/hub.png',
+		title: "Download Models from the Hub",
+		description:
+			"Browse the Hub page to search for GGUF models from HuggingFace. Filter by parameters, sort by downloads, and download directly to your model folders.",
+		image: "/screenshots/hub.png",
 	},
 	{
-		title: 'Add a Backend',
-		description: 'Register your llama.cpp builds on the Backends page. WarpCore validates the binary and detects available GPU devices for each backend.',
-		image: '/screenshots/backends.png',
+		title: "Add a Backend",
+		description:
+			"Register your llama.cpp builds on the Backends page. WarpCore validates the binary and detects available GPU devices for each backend.",
+		image: "/screenshots/backends.png",
 	},
 	{
-		title: 'Launch a Server',
-		description: 'Click the launch button on the Servers page. Pick a backend, select a model, configure GPU layers and context size, then start your inference server.',
-		image: '/screenshots/launch.png',
+		title: "Launch a Server",
+		description:
+			"Click the launch button on the Servers page. Pick a backend, select a model, configure GPU layers and context size, then start your inference server.",
+		image: "/screenshots/launch.png",
 	},
 ];
 

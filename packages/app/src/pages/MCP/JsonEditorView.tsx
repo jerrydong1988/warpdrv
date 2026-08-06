@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Box, VStack, Text, Textarea, HStack } from '@chakra-ui/react';
-import type { IMcpConfigFile } from '@warpcore/shared';
+import { Box, HStack, Text, Textarea, VStack } from "@chakra-ui/react";
+import type { IMcpConfigFile } from "@warpcore/shared";
+import { useEffect, useState } from "react";
 
-export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onSave: (config: IMcpConfigFile) => void }) {
-	const [text, setText] = useState(JSON.stringify(config, null, '\t'));
+export function JsonEditorView({
+	config,
+	onSave,
+}: {
+	config: IMcpConfigFile;
+	onSave: (config: IMcpConfigFile) => void;
+}) {
+	const [text, setText] = useState(JSON.stringify(config, null, "\t"));
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		setText(JSON.stringify(config, null, '\t'));
+		setText(JSON.stringify(config, null, "\t"));
 	}, [config]);
 
 	function handleSave() {
@@ -20,7 +26,7 @@ export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onS
 			setError(null);
 			onSave(parsed);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Invalid JSON');
+			setError(err instanceof Error ? err.message : "Invalid JSON");
 		}
 	}
 
@@ -28,7 +34,10 @@ export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onS
 		<VStack gap="2" align="stretch" flex="1">
 			<Textarea
 				value={text}
-				onChange={(e) => { setText(e.target.value); setError(null); }}
+				onChange={(e) => {
+					setText(e.target.value);
+					setError(null);
+				}}
 				fontFamily="mono"
 				fontSize="12px"
 				bg="var(--wc-bg-interactive)"
@@ -39,7 +48,9 @@ export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onS
 				resize="vertical"
 			/>
 			{error && (
-				<Text fontSize="11px" color="var(--wc-accent-red-alt)">{error}</Text>
+				<Text fontSize="11px" color="var(--wc-accent-red-alt)">
+					{error}
+				</Text>
 			)}
 			<HStack justify="flex-end">
 				<Box
@@ -50,7 +61,7 @@ export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onS
 					borderRadius="sm"
 					bg="var(--wc-bg-selected)"
 					color="var(--wc-text-heading)"
-					_hover={{ bg: 'var(--wc-bg-active)' }}
+					_hover={{ bg: "var(--wc-bg-active)" }}
 					onClick={handleSave}
 				>
 					Save & Reload

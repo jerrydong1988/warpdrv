@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { Box, Text, HStack, VStack, Input } from '@chakra-ui/react';
-import type { IMcpServerEntry } from '@warpcore/shared';
+import { Box, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import type { IMcpServerEntry } from "@warpcore/shared";
+import React, { useState } from "react";
 
-export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry: IMcpServerEntry) => void; onCancel: () => void }) {
-	const [name, setName] = useState('');
-	const [type, setType] = useState<'stdio' | 'http'>('stdio');
-	const [command, setCommand] = useState('');
-	const [args, setArgs] = useState('');
-	const [url, setUrl] = useState('');
+export function AddServerForm({
+	onAdd,
+	onCancel,
+}: {
+	onAdd: (name: string, entry: IMcpServerEntry) => void;
+	onCancel: () => void;
+}) {
+	const [name, setName] = useState("");
+	const [type, setType] = useState<"stdio" | "http">("stdio");
+	const [command, setCommand] = useState("");
+	const [args, setArgs] = useState("");
+	const [url, setUrl] = useState("");
 
 	function handleSubmit() {
 		if (!name.trim()) return;
-		const entry: IMcpServerEntry = type === 'stdio'
-			? { command: command.trim(), args: args.trim() ? args.split(/\s+/) : [] }
-			: { url: url.trim() };
+		const entry: IMcpServerEntry =
+			type === "stdio"
+				? { command: command.trim(), args: args.trim() ? args.split(/\s+/) : [] }
+				: { url: url.trim() };
 		onAdd(name.trim(), entry);
 	}
 
@@ -37,7 +44,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 					fontSize="13px"
 				/>
 				<HStack gap="2">
-					{(['stdio', 'http'] as const).map(t => (
+					{(["stdio", "http"] as const).map((t) => (
 						<Box
 							key={t}
 							as="button"
@@ -45,15 +52,15 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 							py="1"
 							fontSize="12px"
 							borderRadius="sm"
-							bg={type === t ? 'var(--wc-bg-selected)' : 'transparent'}
-							color={type === t ? 'var(--wc-text-heading)' : 'var(--wc-text-muted)'}
+							bg={type === t ? "var(--wc-bg-selected)" : "transparent"}
+							color={type === t ? "var(--wc-text-heading)" : "var(--wc-text-muted)"}
 							onClick={() => setType(t)}
 						>
 							{t.toUpperCase()}
 						</Box>
 					))}
 				</HStack>
-				{type === 'stdio' ? (
+				{type === "stdio" ? (
 					<>
 						<Input
 							placeholder="Command (e.g. npx, uvx, node)"
@@ -80,13 +87,20 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 						value={url}
 						onChange={(e) => setUrl(e.target.value)}
 						size="sm"
-					bg="var(--wc-bg-page)"
-							borderColor="var(--wc-border-overlay)"
+						bg="var(--wc-bg-page)"
+						borderColor="var(--wc-border-overlay)"
 						fontSize="13px"
 					/>
 				)}
 				<HStack gap="2" justify="flex-end">
-					<Box as="button" px="3" py="1" fontSize="12px" color="var(--wc-text-tertiary)" onClick={onCancel}>
+					<Box
+						as="button"
+						px="3"
+						py="1"
+						fontSize="12px"
+						color="var(--wc-text-tertiary)"
+						onClick={onCancel}
+					>
 						Cancel
 					</Box>
 					<Box
@@ -97,7 +111,7 @@ export function AddServerForm({ onAdd, onCancel }: { onAdd: (name: string, entry
 						borderRadius="sm"
 						bg="var(--wc-bg-selected)"
 						color="var(--wc-text-heading)"
-						_hover={{ bg: 'var(--wc-bg-active)' }}
+						_hover={{ bg: "var(--wc-bg-active)" }}
 						onClick={handleSubmit}
 					>
 						Add

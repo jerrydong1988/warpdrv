@@ -1,54 +1,58 @@
-import React, { useState, useContext, useCallback, useMemo } from 'react';
-import { Box, Text, HStack } from '@chakra-ui/react';
-import { Wrench, Check, Loader, X, Lock } from 'lucide-react';
-import { ToolCallBlock } from '@/pages/Chat/assistant-ui/ToolCallBlock';
-import { useStore } from '@/store';
-import { EToolCallStatus, EToolApprovalMode, EChatRole, EMessagePartType } from '@warpcore/bridge';
-import type { IMessagePartToolCall, IToolCall, TMessageId } from '@warpcore/bridge';
-import type { IToolAttachment } from '@warpcore/shared';
-import { ServerStatusContext } from './thread';
-import { autoResolveRenderer, autoResolveMiniRenderer } from './tool-renderers/resolver';
-import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
-import { PendingToolCallUiSpace } from '../ui-space/PendingToolCallUiSpace';
-import { MiniToolCallUiSpace } from '../ui-space/MiniToolCallUiSpace';
-import { useToast } from '@/components/ToastProvider';
-import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
-import { useDependantState } from '@/hooks/useDependantState';
-import { computeModeUnionTools } from '@/lib/toolUtils';
+import { Box, HStack, Text } from "@chakra-ui/react";
+import type { IMessagePartToolCall, IToolCall, TMessageId } from "@warpcore/bridge";
+import { EChatRole, EMessagePartType, EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
+import type { IToolAttachment } from "@warpcore/shared";
+import { Check, Loader, Lock, Wrench, X } from "lucide-react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
+import {
+	decideMcpToolCall,
+	fetchThreadPermissions,
+	setThreadToolPermission,
+} from "@/api/mcpServices";
+import { useToast } from "@/components/ToastProvider";
+import { useDependantState } from "@/hooks/useDependantState";
+import { computeModeUnionTools } from "@/lib/toolUtils";
+import { ToolCallBlock } from "@/pages/Chat/assistant-ui/ToolCallBlock";
+import { useStore } from "@/store";
+import { WithErrorBoundary } from "../../../components/WithErrorBoundary";
+import { MiniToolCallUiSpace } from "../ui-space/MiniToolCallUiSpace";
+import { PendingToolCallUiSpace } from "../ui-space/PendingToolCallUiSpace";
+import { ServerStatusContext } from "./thread";
+import { autoResolveMiniRenderer, autoResolveRenderer } from "./tool-renderers/resolver";
 
 const statusColors: Record<EToolCallStatus, string> = {
-	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
-	[EToolCallStatus.DENIED]: 'var(--wc-accent-red)',
-	[EToolCallStatus.EXECUTING]: 'var(--wc-accent-blue)',
-	[EToolCallStatus.COMPLETED]: 'var(--wc-accent-green-icon)',
-	[EToolCallStatus.ERROR]: 'var(--wc-accent-red)',
+	[EToolCallStatus.PENDING]: "var(--wc-accent-yellow-strong)",
+	[EToolCallStatus.DENIED]: "var(--wc-accent-red)",
+	[EToolCallStatus.EXECUTING]: "var(--wc-accent-blue)",
+	[EToolCallStatus.COMPLETED]: "var(--wc-accent-green-icon)",
+	[EToolCallStatus.ERROR]: "var(--wc-accent-red)",
 };
 
 const statusLabels: Record<EToolCallStatus, string> = {
-	[EToolCallStatus.PENDING]: 'Awaiting approval',
-	[EToolCallStatus.DENIED]: 'Denied',
-	[EToolCallStatus.EXECUTING]: 'Running',
-	[EToolCallStatus.COMPLETED]: 'Completed',
-	[EToolCallStatus.ERROR]: 'Error',
+	[EToolCallStatus.PENDING]: "Awaiting approval",
+	[EToolCallStatus.DENIED]: "Denied",
+	[EToolCallStatus.EXECUTING]: "Running",
+	[EToolCallStatus.COMPLETED]: "Completed",
+	[EToolCallStatus.ERROR]: "Error",
 };
 
 export const PendingToolCallsBox = React.memo(() => {
 	// ===== All hooks first, unconditionally =====
-	const currentThreadId = useStore(s => s.currentThreadId);
-	const headMessageIdByThread = useStore(s => s.headMessageIdByThread);
-	const messagesByThread = useStore(s => s.messagesByThread);
-	const toolCallsById = useStore(s => s.toolCallsById);
+	const currentThreadId = useStore((s) => s.currentThreadId);
+	const headMessageIdByThread = useStore((s) => s.headMessageIdByThread);
+	const messagesByThread = useStore((s) => s.messagesByThread);
+	const toolCallsById = useStore((s) => s.toolCallsById);
 	const { currentServerId } = useContext(ServerStatusContext);
-	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
-	const currentInferenceParams = useStore(s => s.currentInferenceParams);
-	const toolCallRenderers = useStore(s => s.toolCallRenderers);
-	const attachAllTools = useStore(s => s.attachAllTools);
-	const attachedTools = useStore(s => s.attachedTools);
-	const modes = useStore(s => s.modes);
-	const threads = useStore(s => s.threads);
-	const threadState = useStore(s => s.getCurrentThreadState(s));
-	const mcpServers = useStore(s => s.mcpServers);
-	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+	const currentSystemPrompt = useStore((s) => s.currentSystemPrompt);
+	const currentInferenceParams = useStore((s) => s.currentInferenceParams);
+	const toolCallRenderers = useStore((s) => s.toolCallRenderers);
+	const attachAllTools = useStore((s) => s.attachAllTools);
+	const attachedTools = useStore((s) => s.attachedTools);
+	const modes = useStore((s) => s.modes);
+	const threads = useStore((s) => s.threads);
+	const threadState = useStore((s) => s.getCurrentThreadState(s));
+	const mcpServers = useStore((s) => s.mcpServers);
+	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 	const toast = useToast();
 	const [deciding, setDeciding] = useState(false);
 
@@ -59,7 +63,7 @@ export const PendingToolCallsBox = React.memo(() => {
 
 	const modeUnionTools = useMemo(
 		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
-		[isModeActive, modes, currentThreadId, threads]
+		[isModeActive, modes, currentThreadId, threads],
 	);
 
 	// Filter tool calls for the head message of the current thread
@@ -83,7 +87,7 @@ export const PendingToolCallsBox = React.memo(() => {
 		if (!msg) return [];
 		return msg.content
 			.filter((p): p is IMessagePartToolCall => p.type === EMessagePartType.TOOL_CALL)
-			.map(p => toolCallsById[p.toolCallId])
+			.map((p) => toolCallsById[p.toolCallId])
 			.filter((tc): tc is IToolCall => !!tc);
 	}, [currentThreadId, anchorMessageId, messagesByThread, toolCallsById]);
 
@@ -94,17 +98,17 @@ export const PendingToolCallsBox = React.memo(() => {
 	// Get pending tool calls (sorted by creation time)
 	const pendingCalls = useMemo(() => {
 		return headMessageToolCalls
-			.filter(tc => tc.status === EToolCallStatus.PENDING)
+			.filter((tc) => tc.status === EToolCallStatus.PENDING)
 			.sort((a, b) => a.createdAt - b.createdAt);
 	}, [headMessageToolCalls]);
 
 	// Hide the entire box if any tool call was denied
-	const hasDenied = headMessageToolCalls.some(tc => tc.status === EToolCallStatus.DENIED);
+	const hasDenied = headMessageToolCalls.some((tc) => tc.status === EToolCallStatus.DENIED);
 
 	// Safe to access currentCall for hooks - use first pending or a dummy
 	const currentCall = pendingCalls[0] ?? null;
-	const serverName = currentCall?.serverName ?? '';
-	const toolName = currentCall?.toolName ?? '';
+	const serverName = currentCall?.serverName ?? "";
+	const toolName = currentCall?.toolName ?? "";
 
 	// All hooks that depend on currentCall must be here, before early return
 	const args = useMemo(() => {
@@ -118,50 +122,72 @@ export const PendingToolCallsBox = React.memo(() => {
 
 	const serverState = useMemo(
 		() => (serverName ? mcpServers[serverName] : undefined),
-		[serverName, mcpServers]
+		[serverName, mcpServers],
 	);
 
 	const MiniComponent = useMemo(() => {
 		return autoResolveMiniRenderer(toolName, args, currentCall?.result, toolCallRenderers);
 	}, [toolName, args, currentCall?.result, toolCallRenderers]);
 
-	const handleDecision = useCallback(async (decision: 'approve' | 'deny') => {
-		if (!currentCall || !currentThreadId || !currentServerId) return;
-		setDeciding(true);
-		try {
-			const tools = isModeActive
-				? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true }
-				: { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
-			await decideMcpToolCall(
-				currentCall.id,
-				decision,
-				currentThreadId,
-				currentServerId,
-				currentSystemPrompt,
-				currentInferenceParams,
-				undefined,
-				tools.attachAllTools,
-				tools.attachedTools,
-				tools.skipToolsSave
-			);
-		} finally {
-			setDeciding(false);
-		}
-	}, [currentCall?.id, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools]);
+	const handleDecision = useCallback(
+		async (decision: "approve" | "deny") => {
+			if (!currentCall || !currentThreadId || !currentServerId) return;
+			setDeciding(true);
+			try {
+				const tools = isModeActive
+					? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true }
+					: { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
+				await decideMcpToolCall(
+					currentCall.id,
+					decision,
+					currentThreadId,
+					currentServerId,
+					currentSystemPrompt,
+					currentInferenceParams,
+					undefined,
+					tools.attachAllTools,
+					tools.attachedTools,
+					tools.skipToolsSave,
+				);
+			} finally {
+				setDeciding(false);
+			}
+		},
+		[
+			currentCall?.id,
+			currentThreadId,
+			currentServerId,
+			currentSystemPrompt,
+			currentInferenceParams,
+			attachAllTools,
+			attachedTools,
+			isModeActive,
+			modeUnionTools,
+		],
+	);
 
 	const handleAlwaysApprove = useCallback(async () => {
 		if (!currentCall || !currentThreadId || !currentServerId || !serverName) return;
 		setDeciding(true);
 		try {
-			await setThreadToolPermission(currentThreadId, serverName, toolName, true, EToolApprovalMode.ALLOWED);
+			await setThreadToolPermission(
+				currentThreadId,
+				serverName,
+				toolName,
+				true,
+				EToolApprovalMode.ALLOWED,
+			);
 			const res = await fetchThreadPermissions(currentThreadId);
-			if (res.ok) useStore.getState().setThreadToolPermissions(currentThreadId, res.data.threadOverrides);
+			if (res.ok)
+				useStore
+					.getState()
+					.setThreadToolPermissions(currentThreadId, res.data.threadOverrides);
 			const tools = isModeActive
 				? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true }
 				: { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
 			await decideMcpToolCall(
 				currentCall.id,
-				'approve',
+				"approve",
 				currentThreadId,
 				currentServerId,
 				currentSystemPrompt,
@@ -169,21 +195,42 @@ export const PendingToolCallsBox = React.memo(() => {
 				undefined,
 				tools.attachAllTools,
 				tools.attachedTools,
-				tools.skipToolsSave
+				tools.skipToolsSave,
 			);
-			toast({ title: `"${toolName}" will always be approved for this thread`, status: 'success', duration: 3000 });
+			toast({
+				title: `"${toolName}" will always be approved for this thread`,
+				status: "success",
+				duration: 3000,
+			});
 		} finally {
 			setDeciding(false);
 		}
-	}, [currentCall?.id, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools, toast]);
+	}, [
+		currentCall?.id,
+		toolName,
+		serverName,
+		currentThreadId,
+		currentServerId,
+		currentSystemPrompt,
+		currentInferenceParams,
+		attachAllTools,
+		attachedTools,
+		isModeActive,
+		modeUnionTools,
+		toast,
+	]);
 
 	// Render the tool call body using the same logic as ToolCallBlockWrapper
 	const body = useMemo(() => {
 		if (!currentCall) return null;
-		const fallback = <ToolCallBlock args={currentCall.arguments} result={currentCall.result ?? undefined} />;
+		const fallback = (
+			<ToolCallBlock args={currentCall.arguments} result={currentCall.result ?? undefined} />
+		);
 		// Priority 1: explicit mcp.json renderer config
 		const rendererCfg = serverState?.warpdrv?.renderers?.[toolName];
-		const ExplicitComponent = rendererCfg ? toolCallRenderers[rendererCfg.component]?.component : undefined;
+		const ExplicitComponent = rendererCfg
+			? toolCallRenderers[rendererCfg.component]?.component
+			: undefined;
 		if (rendererCfg && ExplicitComponent) {
 			const mappedArgs: Record<string, unknown> = {};
 			for (const [k, v] of Object.entries(args)) {
@@ -192,7 +239,11 @@ export const PendingToolCallsBox = React.memo(() => {
 			}
 			return (
 				<WithErrorBoundary fallback={fallback}>
-					<ExplicitComponent {...mappedArgs} {...(rendererCfg.props ?? {})} result={currentCall.result} />
+					<ExplicitComponent
+						{...mappedArgs}
+						{...(rendererCfg.props ?? {})}
+						result={currentCall.result}
+					/>
 				</WithErrorBoundary>
 			);
 		}
@@ -208,12 +259,26 @@ export const PendingToolCallsBox = React.memo(() => {
 		}
 		// Priority 3: default fallback
 		return fallback;
-	}, [serverState, toolName, toolCallRenderers, args, currentCall?.arguments, currentCall?.result]);
+	}, [
+		serverState,
+		toolName,
+		toolCallRenderers,
+		args,
+		currentCall?.arguments,
+		currentCall?.result,
+	]);
 
 	// Nothing to show - early return AFTER all hooks
-	if (hasDenied || pendingCalls.length === 0 || !currentThreadId || !anchorMessageId || isDismissed) return null;
+	if (
+		hasDenied ||
+		pendingCalls.length === 0 ||
+		!currentThreadId ||
+		!anchorMessageId ||
+		isDismissed
+	)
+		return null;
 
-		return (
+	return (
 		<Box
 			data-role="assistant"
 			minW="52rem"
@@ -226,10 +291,20 @@ export const PendingToolCallsBox = React.memo(() => {
 			overflow="hidden"
 		>
 			{/* Header */}
-			<HStack gap="2" px="3" py="2" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
+			<HStack
+				gap="2"
+				px="3"
+				py="2"
+				borderBottomWidth={1}
+				borderBottomColor="var(--wc-border-subtle)"
+			>
 				<Wrench size={13} color="var(--wc-text-tertiary)" />
-				<Text fontSize="calc(var(--chat-font-size) - 3px)" fontWeight="600" color="var(--wc-text-primary)">
-						Tool Calls ({pendingCalls.length} Pending)
+				<Text
+					fontSize="calc(var(--chat-font-size) - 3px)"
+					fontWeight="600"
+					color="var(--wc-text-primary)"
+				>
+					Tool Calls ({pendingCalls.length} Pending)
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -241,7 +316,7 @@ export const PendingToolCallsBox = React.memo(() => {
 					height="20px"
 					borderRadius="sm"
 					color="var(--wc-text-muted)"
-					_hover={{ bg: 'var(--wc-bg-hover)', color: 'var(--wc-accent-red)' }}
+					_hover={{ bg: "var(--wc-bg-hover)", color: "var(--wc-accent-red)" }}
 					onClick={() => setDismissedAnchorKey(null)}
 					title="Dismiss"
 				>
@@ -250,16 +325,28 @@ export const PendingToolCallsBox = React.memo(() => {
 			</HStack>
 
 			{/* Tool call row — mini renderer */}
-			<HStack gap="3" px="3" py="2.5" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
+			<HStack
+				gap="3"
+				px="3"
+				py="2.5"
+				borderBottomWidth={1}
+				borderBottomColor="var(--wc-border-subtle)"
+			>
 				<MiniToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
 					{MiniComponent ? (
 						<MiniComponent args={args} result={currentCall?.result} />
 					) : (
 						<HStack gap="1" align="center">
-													<Wrench size={chatFontSize} color="var(--wc-text-muted)" />
+							<Wrench size={chatFontSize} color="var(--wc-text-muted)" />
 							<Text whiteSpace="nowrap">
-								{serverName && <Text as="span" color="var(--wc-text-muted)">{serverName}/</Text>}
-								<Text as="span" color="var(--wc-text-primary)">{toolName}</Text>
+								{serverName && (
+									<Text as="span" color="var(--wc-text-muted)">
+										{serverName}/
+									</Text>
+								)}
+								<Text as="span" color="var(--wc-text-primary)">
+									{toolName}
+								</Text>
 							</Text>
 						</HStack>
 					)}
@@ -270,7 +357,11 @@ export const PendingToolCallsBox = React.memo(() => {
 						<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
 					)}
 					{!deciding && (
-						<Loader size={11} color={statusColors[EToolCallStatus.PENDING]} className="animate-spin" />
+						<Loader
+							size={11}
+							color={statusColors[EToolCallStatus.PENDING]}
+							className="animate-spin"
+						/>
 					)}
 				</HStack>
 			</HStack>
@@ -278,27 +369,33 @@ export const PendingToolCallsBox = React.memo(() => {
 			{/* Tool call body */}
 			<Box maxH="700px" overflowY="auto" overflowX="hidden" maxW="100%">
 				<PendingToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
-						<Box maxH={"500px"} overflowY="auto" overflowX="auto" maxW="100%">
-							{body}
-						</Box>
+					<Box maxH={"500px"} overflowY="auto" overflowX="auto" maxW="100%">
+						{body}
+					</Box>
 				</PendingToolCallUiSpace>
 			</Box>
 
 			{/* Action buttons */}
-			<HStack gap="2" px="3" py="2.5" borderTopWidth={1} borderTopColor="var(--wc-border-subtle)">
+			<HStack
+				gap="2"
+				px="3"
+				py="2.5"
+				borderTopWidth={1}
+				borderTopColor="var(--wc-border-subtle)"
+			>
 				<Box
 					as="button"
 					disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
-					cursor={deciding ? 'not-allowed' : 'pointer'}
+					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
 					py="1"
 					fontSize="calc(var(--chat-font-size) - 2px)"
 					borderRadius="sm"
 					bg="var(--wc-accent-green-bg-15)"
 					color="var(--wc-accent-green)"
-					_hover={{ bg: deciding ? undefined : 'var(--wc-accent-green-hover)' }}
-					onClick={() => handleDecision('approve')}
+					_hover={{ bg: deciding ? undefined : "var(--wc-accent-green-hover)" }}
+					onClick={() => handleDecision("approve")}
 				>
 					<HStack gap="1">
 						<Check size={12} />
@@ -309,14 +406,14 @@ export const PendingToolCallsBox = React.memo(() => {
 					as="button"
 					disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
-					cursor={deciding ? 'not-allowed' : 'pointer'}
+					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
 					py="1"
 					fontSize="calc(var(--chat-font-size) - 2px)"
 					borderRadius="sm"
 					bg="var(--wc-accent-yellow-bg-8)"
 					color="var(--wc-accent-yellow-strong)"
-					_hover={{ bg: deciding ? undefined : 'var(--wc-accent-yellow-hover-bg)' }}
+					_hover={{ bg: deciding ? undefined : "var(--wc-accent-yellow-hover-bg)" }}
 					onClick={() => handleAlwaysApprove()}
 				>
 					<HStack gap="1">
@@ -328,15 +425,15 @@ export const PendingToolCallsBox = React.memo(() => {
 					as="button"
 					disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
-					cursor={deciding ? 'not-allowed' : 'pointer'}
+					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
 					py="1"
 					fontSize="calc(var(--chat-font-size) - 2px)"
 					borderRadius="sm"
 					bg="var(--wc-accent-red-bg-12)"
 					color="var(--wc-accent-red-alt)"
-					_hover={{ bg: deciding ? undefined : 'var(--wc-accent-red-hover)' }}
-					onClick={() => handleDecision('deny')}
+					_hover={{ bg: deciding ? undefined : "var(--wc-accent-red-hover)" }}
+					onClick={() => handleDecision("deny")}
 				>
 					<HStack gap="1">
 						<X size={12} />

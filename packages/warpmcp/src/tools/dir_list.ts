@@ -1,15 +1,15 @@
-import fs from 'fs/promises';
-import fsSync from 'fs';
-import path from 'path';
-import { minimatch } from 'minimatch';
-import ignore from 'ignore';
-import { assertPathAllowed } from '../util/sandbox';
-import type { IWarpmcpDeps } from '../types';
+import fsSync from "fs";
+import fs from "fs/promises";
+import ignore from "ignore";
+import { minimatch } from "minimatch";
+import path from "path";
+import type { IWarpmcpDeps } from "../types";
+import { assertPathAllowed } from "../util/sandbox";
 
 export interface IDirEntry {
 	name: string;
 	path: string;
-	type: 'file' | 'dir' | 'symlink' | 'other';
+	type: "file" | "dir" | "symlink" | "other";
 	size?: number;
 }
 
@@ -21,14 +21,22 @@ export interface IDirListResult {
 }
 
 export const dirListDefinition = {
-	name: 'dir_list',
-	description: 'List directory contents with optional glob filtering and recursion. Path defaults to thread projectRoot.',
+	name: "dir_list",
+	description:
+		"List directory contents with optional glob filtering and recursion. Path defaults to thread projectRoot.",
 	inputSchema: {
-		type: 'object',
+		type: "object",
 		properties: {
-			path: { type: 'string', description: 'Absolute path. Defaults to thread projectRoot.' },
-			pattern: { type: 'string', description: 'Minimatch glob pattern (e.g. "*.ts", "src/**/*.test.*").' },
-			depth: { type: 'integer', description: 'Recursion depth. 0 = current dir only, 1 = one level deep, etc. (default 0).' },
+			path: { type: "string", description: "Absolute path. Defaults to thread projectRoot." },
+			pattern: {
+				type: "string",
+				description: 'Minimatch glob pattern (e.g. "*.ts", "src/**/*.test.*").',
+			},
+			depth: {
+				type: "integer",
+				description:
+					"Recursion depth. 0 = current dir only, 1 = one level deep, etc. (default 0).",
+			},
 		},
 		required: [],
 	},
@@ -38,10 +46,10 @@ export const dirListDefinition = {
 function loadGitignore(dirPath: string): string[] {
 	const patterns: string[] = [];
 	try {
-		const raw = fsSync.readFileSync(path.join(dirPath, '.gitignore'), 'utf8');
-		for (const line of raw.split('\n')) {
+		const raw = fsSync.readFileSync(path.join(dirPath, ".gitignore"), "utf8");
+		for (const line of raw.split("\n")) {
 			const trimmed = line.trim();
-			if (trimmed && !trimmed.startsWith('#')) {
+			if (trimmed && !trimmed.startsWith("#")) {
 				patterns.push(trimmed);
 			}
 		}
@@ -66,20 +74,20 @@ async function walk(
 	const dirPatterns = loadGitignore(dirPath);
 	const cumulativePatterns = [...allPatterns, ...dirPatterns];
 	const ig = ignore();
-	cumulativePatterns.forEach(p => ig.add(p));
+	cumulativePatterns.forEach((p) => ig.add(p));
 
 	for (const item of items) {
-		if (item.name === '.gitignore') continue;
+		if (item.name === ".gitignore") continue;
 
 		const entryRel = relPrefix ? `${relPrefix}/${item.name}` : item.name;
 
 		if (ig.ignores(entryRel)) continue;
 		if (pattern && !minimatch(entryRel, pattern)) continue;
 
-		let type: IDirEntry['type'] = 'other';
-		if (item.isFile()) type = 'file';
-		else if (item.isDirectory()) type = 'dir';
-		else if (item.isSymbolicLink()) type = 'symlink';
+		let type: IDirEntry["type"] = "other";
+		if (item.isFile()) type = "file";
+		else if (item.isDirectory()) type = "dir";
+		else if (item.isSymbolicLink()) type = "symlink";
 
 		const subPath = path.join(dirPath, item.name);
 
@@ -90,15 +98,23 @@ async function walk(
 		}
 
 		let size: number | undefined;
-		if (type === 'file') {
+		if (type === "file") {
 			try {
 				const stat = await fs.stat(subPath);
 				size = stat.size;
 			} catch {}
 		}
 
-		if (type === 'dir' && currentDepth < maxDepth) {
-			const childEntries = await walk(deps, subPath, entryRel, currentDepth + 1, maxDepth, cumulativePatterns, pattern);
+		if (type === "dir" && currentDepth < maxDepth) {
+			const childEntries = await walk(
+				deps,
+				subPath,
+				entryRel,
+				currentDepth + 1,
+				maxDepth,
+				cumulativePatterns,
+				pattern,
+			);
 			entries.push({ name: item.name, path: entryRel, type });
 			entries.push(...childEntries);
 		} else {
@@ -125,13 +141,13 @@ export async function dirListHandler(
 	}
 
 	if (!rootPath) {
-		throw new Error('No path provided. Pass path explicitly or set thread projectRoot.');
+		throw new Error("No path provided. Pass path explicitly or set thread projectRoot.");
 	}
 
 	const depth = args.depth ?? 0;
 	const pattern = args.pattern ?? null;
 
-	const entries = await walk(deps, rootPath, '', 0, depth, [], pattern);
+	const entries = await walk(deps, rootPath, "", 0, depth, [], pattern);
 
 	return { path: rootPath, entries, pattern, depth };
 }

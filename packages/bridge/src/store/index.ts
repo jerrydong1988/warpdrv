@@ -5,26 +5,26 @@
 // Uses Immer pattern for mutable-like state updates.
 // ============================================================
 
+import type { WritableDraft } from "immer";
 import type {
-	IChatThread,
 	IChatMessage,
-	IToolCall,
-	IToolAttachment,
+	IChatThread,
+	IElicitationRequest,
+	IMcpServerState,
 	IMessagePatch,
-	TThreadId,
+	IServerPermission,
+	IThreadPatch,
+	IThreadToolPermission,
+	IToolAttachment,
+	IToolCall,
+	IToolPermission,
+	TFolderId,
 	TMessageId,
 	TMessagePartId,
+	TThreadId,
 	TToolCallId,
-	TFolderId,
-	IMcpServerState,
-	IServerPermission,
-	IToolPermission,
-	IThreadToolPermission,
-	IThreadPatch,
-	IElicitationRequest,
-} from '../types';
-import { EMessagePartType } from '../types';
-import type { WritableDraft } from 'immer';
+} from "../types";
+import { EMessagePartType } from "../types";
 
 // ============================================================
 // Immer-compatible set/get types (matches WarpCore pattern)
@@ -41,11 +41,14 @@ export interface IChatStoreState {
 
 	// Messages - nested map: threadId -> messageId -> IChatMessage
 	messagesByThread: Record<TThreadId, Record<TMessageId, IChatMessage>>;
-	chunksByMessageId: Record<string, {
-		partId: string,
-		chunk: string,
-		lastUpdate: number,
-	}>;
+	chunksByMessageId: Record<
+		string,
+		{
+			partId: string;
+			chunk: string;
+			lastUpdate: number;
+		}
+	>;
 
 	// In-memory head tracking (NOT persisted to DB)
 	// Updated automatically on message.created
@@ -96,9 +99,18 @@ export interface IChatStoreState {
 	applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) => void;
 	applyThreadDeleted: (threadId: TThreadId) => void;
 	applyMessageCreated: (message: IChatMessage) => void;
-	applyMessagePatched: (messageId: TMessageId, threadId: TThreadId, updates: IMessagePatch) => void;
+	applyMessagePatched: (
+		messageId: TMessageId,
+		threadId: TThreadId,
+		updates: IMessagePatch,
+	) => void;
 	applyMessageDeleted: (messageId: TMessageId, threadId: TThreadId) => void;
-	applyMessageChunk: (messageId: TMessageId, threadId: TThreadId, partId: TMessagePartId, deltaText: string) => void;
+	applyMessageChunk: (
+		messageId: TMessageId,
+		threadId: TThreadId,
+		partId: TMessagePartId,
+		deltaText: string,
+	) => void;
 	applyToolCallStarting: (messageId: TMessageId, name: string) => void;
 	applyToolCallCreated: (toolCall: IToolCall) => void;
 	applyToolCallUpdated: (toolCall: IToolCall) => void;
@@ -138,7 +150,9 @@ export interface IChatStoreState {
 	setMessageState: (messageId: TMessageId, data: Record<string, unknown>) => void;
 	initWorkspaceState: (folderId: TFolderId, data: Record<string, unknown>) => void;
 	initThreadState: (threadId: TThreadId, data: Record<string, unknown>) => void;
-	initMessageStates: (states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>) => void;
+	initMessageStates: (
+		states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>,
+	) => void;
 	applyWorkspaceStateUpdated: (folderId: TFolderId, data: Record<string, unknown>) => void;
 	applyThreadStateUpdated: (threadId: TThreadId, data: Record<string, unknown>) => void;
 	applyMessageStateUpdated: (messageId: TMessageId, data: Record<string, unknown>) => void;
@@ -171,7 +185,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		toolPermissions: [] as IToolPermission[],
 		threadToolPermissions: {} as Record<TThreadId, IThreadToolPermission[]>,
 		currentThreadId: null as TThreadId | null,
-		currentSystemPrompt: '',
+		currentSystemPrompt: "",
 		currentInferenceParams: {} as Record<string, unknown>,
 		tempThreadServerId: null,
 		tempAutoEmbed: false,
@@ -199,12 +213,18 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				const thread = draft.threads[threadId];
 				if (thread) {
 					if (updates.title !== undefined) draft.threads[threadId]!.title = updates.title;
-							if (updates.folderId !== undefined) draft.threads[threadId]!.folderId = updates.folderId;
-							if (updates.parentId !== undefined) draft.threads[threadId]!.parentId = updates.parentId;
-							if (updates.systemPrompt !== undefined) draft.threads[threadId]!.systemPrompt = updates.systemPrompt;
+					if (updates.folderId !== undefined)
+						draft.threads[threadId]!.folderId = updates.folderId;
+					if (updates.parentId !== undefined)
+						draft.threads[threadId]!.parentId = updates.parentId;
+					if (updates.systemPrompt !== undefined)
+						draft.threads[threadId]!.systemPrompt = updates.systemPrompt;
 					if (updates.meta !== undefined) draft.threads[threadId]!.meta = updates.meta;
-					if (updates.totalPromptTokens !== undefined) draft.threads[threadId]!.totalPromptTokens = updates.totalPromptTokens;
-					if (updates.totalCompletionTokens !== undefined) draft.threads[threadId]!.totalCompletionTokens = updates.totalCompletionTokens;
+					if (updates.totalPromptTokens !== undefined)
+						draft.threads[threadId]!.totalPromptTokens = updates.totalPromptTokens;
+					if (updates.totalCompletionTokens !== undefined)
+						draft.threads[threadId]!.totalCompletionTokens =
+							updates.totalCompletionTokens;
 				}
 			}),
 
@@ -253,8 +273,12 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				// Flush and remove chunks
 				const buffer = draft.chunksByMessageId[msg.id];
 				if (buffer && buffer.chunk.length > 0) {
-					const part = msg.content.find(p => p.id === buffer.partId);
-					if (part && (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING)) {
+					const part = msg.content.find((p) => p.id === buffer.partId);
+					if (
+						part &&
+						(part.type === EMessagePartType.TEXT ||
+							part.type === EMessagePartType.REASONING)
+					) {
 						part.text += buffer.chunk;
 					} else {
 					}
@@ -275,10 +299,11 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				// Handle addParts — upsert by part id
 				if (updates.addParts !== undefined) {
 					for (const part of updates.addParts) {
-						const existingIndex = msg.content.findIndex(p => p.id === part.id);
+						const existingIndex = msg.content.findIndex((p) => p.id === part.id);
 						if (existingIndex >= 0) {
 							// Replace existing part
-							draft.messagesByThread[threadId]![messageId]!.content[existingIndex]! = part;
+							draft.messagesByThread[threadId]![messageId]!.content[existingIndex]! =
+								part;
 						} else {
 							// Add new part
 							msg.content.push(part);
@@ -328,19 +353,28 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				delete draft.messageStates[messageId];
 			}),
 
-		applyMessageChunk: (messageId: TMessageId, threadId: TThreadId, partId: TMessagePartId, deltaText: string) =>
+		applyMessageChunk: (
+			messageId: TMessageId,
+			threadId: TThreadId,
+			partId: TMessagePartId,
+			deltaText: string,
+		) =>
 			set((draft) => {
 				const msg = draft.messagesByThread[threadId]?.[messageId];
 				if (!msg) return;
 
 				const buffer = draft.chunksByMessageId[messageId];
 				const now = Date.now();
-				const part = msg.content.find(p => p.id === partId);
+				const part = msg.content.find((p) => p.id === partId);
 
 				// Helper to flush buffer to part (creates part if needed)
 				const flushBuffer = (buf: { partId: string; chunk: string }) => {
-					const existingPart = msg.content.find(p => p.id === buf.partId);
-					if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
+					const existingPart = msg.content.find((p) => p.id === buf.partId);
+					if (
+						existingPart &&
+						(existingPart.type === EMessagePartType.TEXT ||
+							existingPart.type === EMessagePartType.REASONING)
+					) {
 						existingPart.text += buf.chunk;
 					} else {
 						const newPart = {
@@ -364,7 +398,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 						} as any;
 						msg.content.push(newPart);
 					} else {
-						if (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING) {
+						if (
+							part.type === EMessagePartType.TEXT ||
+							part.type === EMessagePartType.REASONING
+						) {
 							part.text += deltaText;
 						}
 					}
@@ -376,7 +413,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					// Create empty buffer for future chunks
 					draft.chunksByMessageId[messageId] = {
 						partId,
-						chunk: '',
+						chunk: "",
 						lastUpdate: now,
 					};
 					return;
@@ -391,7 +428,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					// Create empty buffer for new part
 					draft.chunksByMessageId[messageId] = {
 						partId,
-						chunk: '',
+						chunk: "",
 						lastUpdate: now,
 					};
 					return;
@@ -402,7 +439,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				buffer.chunk += deltaText;
 				if (timeDelta > 150) {
 					flushBuffer(buffer);
-					buffer.chunk = '';
+					buffer.chunk = "";
 					buffer.lastUpdate = now;
 				}
 			}),
@@ -439,7 +476,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				delete draft.startingToolsByMessage[messageId];
 			}),
 
-	applyInferenceError: (threadId: TThreadId, messageId: TMessageId, error: string) =>
+		applyInferenceError: (threadId: TThreadId, messageId: TMessageId, error: string) =>
 			set((draft) => {
 				draft.isRunningByThread[threadId] = false;
 				draft.inferenceError = { threadId, messageId, error };
@@ -496,8 +533,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					let headMsg = messages[0]!;
 					for (let i = 1; i < messages.length; i++) {
 						const candidate = messages[i]!;
-						if (candidate.createdAt > headMsg.createdAt ||
-							(candidate.createdAt === headMsg.createdAt && candidate.id > headMsg.id)) {
+						if (
+							candidate.createdAt > headMsg.createdAt ||
+							(candidate.createdAt === headMsg.createdAt && candidate.id > headMsg.id)
+						) {
 							headMsg = candidate;
 						}
 					}
@@ -577,7 +616,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		// Persisted state actions
 		setWorkspaceState: (folderId: TFolderId, data: Record<string, unknown>) => {
 			set((draft) => {
-				draft.workspaceStates[folderId] = { ...(draft.workspaceStates[folderId] || {}), ...data };
+				draft.workspaceStates[folderId] = {
+					...(draft.workspaceStates[folderId] || {}),
+					...data,
+				};
 			});
 		},
 		getCurrentThreadState: (s) => {
@@ -588,14 +630,21 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		},
 		setThreadState: (threadId: TThreadId | null, data: Record<string, unknown>) => {
 			set((draft) => {
-				const threadInStore = threadId  && draft.threads[threadId];
-				if (threadId && threadInStore) draft.threadStates[threadId] = { ...(draft.threadStates[threadId] || {}), ...data };
+				const threadInStore = threadId && draft.threads[threadId];
+				if (threadId && threadInStore)
+					draft.threadStates[threadId] = {
+						...(draft.threadStates[threadId] || {}),
+						...data,
+					};
 				else draft.tempThreadState = { ...draft.tempThreadState, ...data };
 			});
 		},
 		setMessageState: (messageId: TMessageId, data: Record<string, unknown>) => {
 			set((draft) => {
-				draft.messageStates[messageId] = { ...(draft.messageStates[messageId] || {}), ...data };
+				draft.messageStates[messageId] = {
+					...(draft.messageStates[messageId] || {}),
+					...data,
+				};
 			});
 		},
 		initWorkspaceState: (folderId: TFolderId, data: Record<string, unknown>) =>
@@ -606,7 +655,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			set((draft) => {
 				draft.threadStates[threadId] = data;
 			}),
-		initMessageStates: (states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>) =>
+		initMessageStates: (
+			states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>,
+		) =>
 			set((draft) => {
 				for (const { messageId, data } of states) {
 					draft.messageStates[messageId] = data;
@@ -614,7 +665,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			}),
 		applyWorkspaceStateUpdated: (folderId: TFolderId, data: Record<string, unknown>) =>
 			set((draft) => {
-				draft.workspaceStates[folderId] = { ...(draft.workspaceStates[folderId] || {}), ...data };
+				draft.workspaceStates[folderId] = {
+					...(draft.workspaceStates[folderId] || {}),
+					...data,
+				};
 			}),
 		applyThreadStateUpdated: (threadId: TThreadId, data: Record<string, unknown>) =>
 			set((draft) => {
@@ -622,11 +676,13 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			}),
 		applyMessageStateUpdated: (messageId: TMessageId, data: Record<string, unknown>) =>
 			set((draft) => {
-				draft.messageStates[messageId] = { ...(draft.messageStates[messageId] || {}), ...data };
+				draft.messageStates[messageId] = {
+					...(draft.messageStates[messageId] || {}),
+					...data,
+				};
 			}),
 
 		// Reset
-		reset: () =>
-			set(() => ({ ...initialState })),
+		reset: () => set(() => ({ ...initialState })),
 	};
 }

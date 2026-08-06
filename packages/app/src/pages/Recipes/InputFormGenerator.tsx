@@ -1,5 +1,5 @@
-import { Box, Text, VStack, Input, NativeSelect, Switch, HStack } from '@chakra-ui/react';
-import { ERecipeInputType, type IRecipeInputDef, type TRecipeInputValues } from '@warpcore/shared';
+import { Box, HStack, Input, NativeSelect, Switch, Text, VStack } from "@chakra-ui/react";
+import { ERecipeInputType, type IRecipeInputDef, type TRecipeInputValues } from "@warpcore/shared";
 
 interface IInputFormGeneratorProps {
 	inputs: IRecipeInputDef[];
@@ -8,11 +8,18 @@ interface IInputFormGeneratorProps {
 	disabled?: boolean;
 }
 
-export function InputFormGenerator({ inputs, values, onChange, disabled = false }: IInputFormGeneratorProps) {
+export function InputFormGenerator({
+	inputs,
+	values,
+	onChange,
+	disabled = false,
+}: IInputFormGeneratorProps) {
 	if (inputs.length === 0) {
 		return (
 			<Box px="3" py="4" textAlign="center">
-				<Text fontSize="12px" color="var(--wc-text-faint)">This recipe has no inputs.</Text>
+				<Text fontSize="12px" color="var(--wc-text-faint)">
+					This recipe has no inputs.
+				</Text>
 			</Box>
 		);
 	}
@@ -20,17 +27,33 @@ export function InputFormGenerator({ inputs, values, onChange, disabled = false 
 	return (
 		<VStack align="stretch" gap="3">
 			{inputs.map((input) => {
-				const value = values[input.name] ?? input.defaultValue ?? '';
+				const value = values[input.name] ?? input.defaultValue ?? "";
 
 				return (
 					<Box key={input.name}>
 						<HStack gap="2" mb="1.5">
-							<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)" fontFamily='"Geist Mono", monospace'>{input.name}</Text>
-							<Text fontSize="10px" color="var(--wc-text-faint)" textTransform="uppercase" letterSpacing="0.05em">{input.type.toLowerCase()}</Text>
+							<Text
+								fontSize="12px"
+								fontWeight="600"
+								color="var(--wc-text-secondary)"
+								fontFamily='"Geist Mono", monospace'
+							>
+								{input.name}
+							</Text>
+							<Text
+								fontSize="10px"
+								color="var(--wc-text-faint)"
+								textTransform="uppercase"
+								letterSpacing="0.05em"
+							>
+								{input.type.toLowerCase()}
+							</Text>
 						</HStack>
 
 						{input.description && (
-							<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">{input.description}</Text>
+							<Text fontSize="11px" color="var(--wc-text-muted)" mb="1.5">
+								{input.description}
+							</Text>
 						)}
 
 						{input.type === ERecipeInputType.STRING && (
@@ -39,14 +62,14 @@ export function InputFormGenerator({ inputs, values, onChange, disabled = false 
 								value={String(value)}
 								onChange={(e) => onChange(input.name, e.target.value)}
 								disabled={disabled}
-			bg="var(--wc-bg-interactive)"
-				borderColor="var(--wc-border-default)"
-				color="var(--wc-text-primary)"
-				fontSize="13px"
-				fontFamily='"Geist Mono", monospace'
-				_hover={{ borderColor: 'var(--wc-border-hover)' }}
-				_focus={{ borderColor: 'var(--wc-accent-blue)' }}
-			/>
+								bg="var(--wc-bg-interactive)"
+								borderColor="var(--wc-border-default)"
+								color="var(--wc-text-primary)"
+								fontSize="13px"
+								fontFamily='"Geist Mono", monospace'
+								_hover={{ borderColor: "var(--wc-border-hover)" }}
+								_focus={{ borderColor: "var(--wc-accent-blue)" }}
+							/>
 						)}
 
 						{input.type === ERecipeInputType.NUMBER && (
@@ -64,28 +87,49 @@ export function InputFormGenerator({ inputs, values, onChange, disabled = false 
 								color="var(--wc-text-primary)"
 								fontSize="13px"
 								fontFamily='"Geist Mono", monospace'
-								_hover={{ borderColor: 'var(--wc-border-hover)' }}
-								_focus={{ borderColor: 'var(--wc-accent-blue)' }}
+								_hover={{ borderColor: "var(--wc-border-hover)" }}
+								_focus={{ borderColor: "var(--wc-accent-blue)" }}
 							/>
 						)}
 
 						{input.type === ERecipeInputType.BOOL && (
-							<HStack gap="2" alignItems="center" opacity={disabled ? 0.5 : 1} pointerEvents={disabled ? 'none' : 'auto'}>
+							<HStack
+								gap="2"
+								alignItems="center"
+								opacity={disabled ? 0.5 : 1}
+								pointerEvents={disabled ? "none" : "auto"}
+							>
 								<Switch.Root
 									checked={Boolean(value)}
-									onCheckedChange={(d: { checked: boolean }) => onChange(input.name, !!d.checked)}
+									onCheckedChange={(d: { checked: boolean }) =>
+										onChange(input.name, !!d.checked)
+									}
 								>
 									<Switch.HiddenInput />
-									<Switch.Control css={{ bg: Boolean(value) ? 'var(--wc-accent-blue)' : 'var(--wc-bg-surface)' }}>
-										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+									<Switch.Control
+										css={{
+											bg: value
+												? "var(--wc-accent-blue)"
+												: "var(--wc-bg-surface)",
+										}}
+									>
+										<Switch.Thumb
+											css={{ bg: "var(--wc-special-switch-thumb)" }}
+										/>
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-secondary)">{Boolean(value) ? 'true' : 'false'}</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)">
+									{value ? "true" : "false"}
+								</Text>
 							</HStack>
 						)}
 
 						{input.type === ERecipeInputType.CHOICE && input.options && (
-							<NativeSelect.Root size="sm" opacity={disabled ? 0.5 : 1} pointerEvents={disabled ? 'none' : 'auto'}>
+							<NativeSelect.Root
+								size="sm"
+								opacity={disabled ? 0.5 : 1}
+								pointerEvents={disabled ? "none" : "auto"}
+							>
 								<NativeSelect.Field
 									value={String(value)}
 									onChange={(e) => onChange(input.name, e.target.value)}
@@ -96,7 +140,13 @@ export function InputFormGenerator({ inputs, values, onChange, disabled = false 
 									fontFamily='"Geist Mono", monospace'
 								>
 									{input.options.map((opt) => (
-										<option key={opt} value={opt} style={{ background: 'var(--wc-bg-dialog)' }}>{opt}</option>
+										<option
+											key={opt}
+											value={opt}
+											style={{ background: "var(--wc-bg-dialog)" }}
+										>
+											{opt}
+										</option>
 									))}
 								</NativeSelect.Field>
 								<NativeSelect.Indicator />

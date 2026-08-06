@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Box, Text, HStack, Flex, Button } from '@chakra-ui/react';
-import { ArrowUpCircle, X, ExternalLink } from 'lucide-react';
-import { openExternal } from '../utils/openExternal';
-import { useStore } from '@/store';
+import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { ArrowUpCircle, ExternalLink, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useStore } from "@/store";
+import { openExternal } from "../utils/openExternal";
 
 interface IUpdateInfo {
 	currentVersion: string;
@@ -10,7 +10,7 @@ interface IUpdateInfo {
 	updateAvailable: boolean;
 	downloadUrl: string;
 	notes: string;
-};
+}
 
 export function UpdateBanner() {
 	const [update, setUpdate] = useState<IUpdateInfo | null>(null);
@@ -26,7 +26,7 @@ export function UpdateBanner() {
 
 	async function checkForUpdate() {
 		try {
-			const res = await fetch('/api/update/check');
+			const res = await fetch("/api/update/check");
 			const json = await res.json();
 			if (json.ok && json.data?.updateAvailable) {
 				setUpdate(json.data);
@@ -40,38 +40,58 @@ export function UpdateBanner() {
 
 	return (
 		<Flex
-			px="4" py="2.5"
+			px="4"
+			py="2.5"
 			position={"absolute"}
 			bottom="0px"
 			right="0px"
-			left={ collapsed ? "60px" : "220px" }
+			left={collapsed ? "60px" : "220px"}
 			bg="rgba(51, 129, 255, 0.06)"
-			borderBottomWidth="1px" borderColor="rgba(51, 129, 255, 0.15)"
-			align="center" justify="space-between"
+			borderBottomWidth="1px"
+			borderColor="rgba(51, 129, 255, 0.15)"
+			align="center"
+			justify="space-between"
 		>
 			<HStack gap="3">
 				<ArrowUpCircle size={16} color="#3381ff" />
 				<Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
-					WarpCore <Text as="span" fontWeight="600" color="#3381ff">v{update.latestVersion}</Text> is available
+					WarpCore{" "}
+					<Text as="span" fontWeight="600" color="#3381ff">
+						v{update.latestVersion}
+					</Text>{" "}
+					is available
 					{update.notes && (
-						<Text as="span" color="rgba(255, 255, 255, 0.35)"> — {update.notes}</Text>
+						<Text as="span" color="rgba(255, 255, 255, 0.35)">
+							{" "}
+							— {update.notes}
+						</Text>
 					)}
 				</Text>
 			</HStack>
 			<HStack gap="2">
 				<Button
-					size="xs" px="3" borderRadius="lg" fontSize="11px" fontWeight="500"
-					bg="rgba(51, 129, 255, 0.12)" color="#3381ff"
-					borderWidth="1px" borderColor="rgba(51, 129, 255, 0.25)"
-					_hover={{ bg: 'rgba(51, 129, 255, 0.2)' }}
+					size="xs"
+					px="3"
+					borderRadius="lg"
+					fontSize="11px"
+					fontWeight="500"
+					bg="rgba(51, 129, 255, 0.12)"
+					color="#3381ff"
+					borderWidth="1px"
+					borderColor="rgba(51, 129, 255, 0.25)"
+					_hover={{ bg: "rgba(51, 129, 255, 0.2)" }}
 					onClick={() => openExternal(update.downloadUrl)}
 				>
 					<ExternalLink size={11} /> Download
 				</Button>
 				<Button
-					size="xs" variant="ghost" color="rgba(255, 255, 255, 0.25)"
-					_hover={{ color: 'rgba(255, 255, 255, 0.5)', bg: 'rgba(255, 255, 255, 0.04)' }}
-					borderRadius="md" minW="6" px="0"
+					size="xs"
+					variant="ghost"
+					color="rgba(255, 255, 255, 0.25)"
+					_hover={{ color: "rgba(255, 255, 255, 0.5)", bg: "rgba(255, 255, 255, 0.04)" }}
+					borderRadius="md"
+					minW="6"
+					px="0"
 					onClick={() => setDismissed(true)}
 				>
 					<X size={12} />

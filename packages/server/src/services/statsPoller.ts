@@ -1,5 +1,5 @@
-import http from 'http';
-import type { IServerStats, ISlotStats, IServer } from '@warpcore/shared';
+import type { IServer, IServerStats, ISlotStats } from "@warpcore/shared";
+import http from "http";
 
 const statsMap = new Map<string, IServerStats>();
 const pollers = new Map<string, ReturnType<typeof setInterval>>();
@@ -7,16 +7,27 @@ const pollers = new Map<string, ReturnType<typeof setInterval>>();
 function fetchJson<T>(url: string): Promise<T | null> {
 	return new Promise((resolve) => {
 		const req = http.get(url, { timeout: 2000 }, (res) => {
-			if (res.statusCode !== 200) { resolve(null); return; }
-			let body = '';
-			res.on('data', (chunk) => { body += chunk; });
-			res.on('end', () => {
-				try { resolve(JSON.parse(body) as T); }
-				catch { resolve(null); }
+			if (res.statusCode !== 200) {
+				resolve(null);
+				return;
+			}
+			let body = "";
+			res.on("data", (chunk) => {
+				body += chunk;
+			});
+			res.on("end", () => {
+				try {
+					resolve(JSON.parse(body) as T);
+				} catch {
+					resolve(null);
+				}
 			});
 		});
-		req.on('error', () => resolve(null));
-		req.on('timeout', () => { req.destroy(); resolve(null); });
+		req.on("error", () => resolve(null));
+		req.on("timeout", () => {
+			req.destroy();
+			resolve(null);
+		});
 	});
 }
 
@@ -61,15 +72,15 @@ export function startStatsPolling(serverId: string, port: number): void {
 
 			return {
 				id: s.id,
-				state: s.is_processing ? 'processing' as const : 'idle' as const,
+				state: s.is_processing ? ("processing" as const) : ("idle" as const),
 				tokensGenerated: nDecoded,
 				tokensRemaining: nRemain > 0 ? nRemain : 0,
 			};
 		});
 
 		const totalGenerated = slotStats.reduce((sum, s) => sum + s.tokensGenerated, 0);
-		const processingCount = slotStats.filter(s => s.state === 'processing').length;
-		const idleCount = slotStats.filter(s => s.state === 'idle').length;
+		const processingCount = slotStats.filter((s) => s.state === "processing").length;
+		const idleCount = slotStats.filter((s) => s.state === "idle").length;
 
 		const stats: IServerStats = {
 			slotsIdle: health.slots_idle ?? idleCount,

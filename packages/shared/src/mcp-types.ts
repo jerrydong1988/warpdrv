@@ -25,9 +25,9 @@ export interface IRendererConfig {
 }
 
 export enum ERendererComponent {
-	DIFF = 'diff',
-	BASH = 'bash',
-	FETCH = 'fetch',
+	DIFF = "diff",
+	BASH = "bash",
+	FETCH = "fetch",
 }
 
 // The mcp.json file shape (Cursor-compatible)

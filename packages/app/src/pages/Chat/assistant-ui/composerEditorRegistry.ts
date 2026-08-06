@@ -20,7 +20,11 @@ export const insertComposerText = (text: string): void => {
 	if (!activeEditor) return;
 	if (activeEditor.isDestroyed) return;
 	const needsSpace = activeEditor.getText().length > 0 && !activeEditor.getText().endsWith(" ");
-	activeEditor.chain().focus().insertContent((needsSpace ? " " : "") + text).run();
+	activeEditor
+		.chain()
+		.focus()
+		.insertContent((needsSpace ? " " : "") + text)
+		.run();
 };
 
 export const clearComposerEditor = (): void => {

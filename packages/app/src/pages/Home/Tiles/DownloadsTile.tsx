@@ -1,9 +1,9 @@
-import { Download } from 'lucide-react';
-import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '@/store';
-import { EDownloadStatus } from '@warpcore/shared';
-import { TileContainer } from '../TileContainer';
+import { EDownloadStatus } from "@warpcore/shared";
+import { Download } from "lucide-react";
+import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useStore } from "@/store";
+import { TileContainer } from "../TileContainer";
 
 export const DownloadsTile = React.memo(() => {
 	const navigate = useNavigate();
@@ -12,7 +12,8 @@ export const DownloadsTile = React.memo(() => {
 	const { ongoing, total, completedBytes, totalBytes, percentage } = useMemo(() => {
 		const all = Object.values(downloads);
 		const ongoingCount = all.filter(
-			(d) => d.status === EDownloadStatus.DOWNLOADING || d.status === EDownloadStatus.INSTALLING,
+			(d) =>
+				d.status === EDownloadStatus.DOWNLOADING || d.status === EDownloadStatus.INSTALLING,
 		).length;
 		const completedBytesSum = all
 			.filter((d) => d.status === EDownloadStatus.COMPLETED)
@@ -29,28 +30,30 @@ export const DownloadsTile = React.memo(() => {
 		};
 	}, [downloads]);
 
-	const state: 'online' | 'loading' | 'offline' =
-		total === 0
-			? 'offline'
-			: ongoing > 0
-				? 'loading'
-				: 'online';
+	const state: "online" | "loading" | "offline" =
+		total === 0 ? "offline" : ongoing > 0 ? "loading" : "online";
 
 	return (
 		<TileContainer
 			icon={<Download size={18} />}
 			label="Downloads"
 			statusDot={state}
-			onClick={() => navigate('/hub')}
+			onClick={() => navigate("/hub")}
 		>
 			{total === 0 ? (
-				<span style={{ color: 'var(--wc-text-faint)', fontSize: '12px' }}>—</span>
+				<span style={{ color: "var(--wc-text-faint)", fontSize: "12px" }}>—</span>
 			) : (
 				<>
-					<span style={{ color: 'var(--wc-special-mono-gray)', fontSize: '12px' }}>
+					<span style={{ color: "var(--wc-special-mono-gray)", fontSize: "12px" }}>
 						{ongoing} / {total}
 					</span>
-					<span style={{ fontSize: '24px', fontWeight: '600', color: 'var(--wc-text-primary)' }}>
+					<span
+						style={{
+							fontSize: "24px",
+							fontWeight: "600",
+							color: "var(--wc-text-primary)",
+						}}
+					>
 						{percentage}%
 					</span>
 				</>

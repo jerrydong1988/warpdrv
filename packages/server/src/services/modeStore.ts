@@ -1,12 +1,12 @@
-import { persistence } from '../index';
-import type { IMode, TModeId } from '@warpcore/shared';
+import type { IMode, TModeId } from "@warpcore/shared";
+import { persistence } from "../index";
 
 export async function listModes(): Promise<IMode[]> {
 	const rows = await persistence.listModes();
-	return rows.map(r => ({
+	return rows.map((r) => ({
 		id: r.id,
 		name: r.name,
-		scope: r.scope as 'global' | string,
+		scope: r.scope as "global" | string,
 		color: r.color,
 		prompt: r.prompt,
 		allowedTools: r.allowedTools,
@@ -16,8 +16,8 @@ export async function listModes(): Promise<IMode[]> {
 
 export async function listModesByScope(scope: string): Promise<IMode[]> {
 	const all = await listModes();
-	if (scope === 'global') return all;
-	return all.filter(m => m.scope === scope || m.scope === 'global');
+	if (scope === "global") return all;
+	return all.filter((m) => m.scope === scope || m.scope === "global");
 }
 
 export async function getMode(id: TModeId): Promise<IMode | null> {
@@ -26,7 +26,7 @@ export async function getMode(id: TModeId): Promise<IMode | null> {
 	return {
 		id: row.id,
 		name: row.name,
-		scope: row.scope as 'global' | string,
+		scope: row.scope as "global" | string,
 		color: row.color,
 		prompt: row.prompt,
 		allowedTools: row.allowedTools,

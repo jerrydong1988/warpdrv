@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { nanoid } from 'nanoid';
-import { EventNode, RemoteNode, WSTransport } from '@warpcore/realmcore';
-import { AppletManager, EAppletHostType, EAppletScope } from '@warpcore/realmcore';
-import { feApplets, AppletHostFE } from '@/applets';
+import {
+	AppletManager,
+	EAppletHostType,
+	EAppletScope,
+	EventNode,
+	RemoteNode,
+	WSTransport,
+} from "@warpcore/realmcore";
+import { nanoid } from "nanoid";
+import { useEffect, useRef, useState } from "react";
+import { io, type Socket } from "socket.io-client";
+import { AppletHostFE, feApplets } from "@/applets";
 
 export function useRealm(currentThreadId: string | null) {
-	const realmRef = useRef<{ 
-		eventNode: EventNode; 
+	const realmRef = useRef<{
+		eventNode: EventNode;
 		remoteNode: RemoteNode;
-		nodeId: string; 
+		nodeId: string;
 		socket: Socket;
 		appletMgr: AppletManager;
 	}>(null);
@@ -33,31 +39,31 @@ export function useRealm(currentThreadId: string | null) {
 		);
 
 		const socket = io({
-			path: '/api/realm/',
+			path: "/api/realm/",
 			query: { nodeId },
-			transports: ['websocket'],
+			transports: ["websocket"],
 			upgrade: false,
 		});
-		
-		const remoteNode = new RemoteNode('warpcore', chatNode, new WSTransport(socket));
 
-		socket.on('connect', () => {
+		const remoteNode = new RemoteNode("warpcore", chatNode, new WSTransport(socket));
+
+		socket.on("connect", () => {
 			console.log(`[Realm] ✅ Connected as ${nodeId}.`);
 		});
 
-		socket.on('disconnect', () => {
+		socket.on("disconnect", () => {
 			console.error(`[Realm] Disconnected!`);
 			setParentAttached(false);
 		});
 
-		socket.io.on('error', (err) => {
+		socket.io.on("error", (err) => {
 			console.error(`[Realm] Manager error:`, err.message);
 		});
 
-		realmRef.current = { 
-			eventNode: chatNode, 
+		realmRef.current = {
+			eventNode: chatNode,
 			remoteNode,
-			nodeId, 
+			nodeId,
 			socket,
 			appletMgr,
 		};

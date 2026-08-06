@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { FolderInput } from "lucide-react";
+import { useState } from "react";
 import { useToast } from "@/components/ToastProvider";
 
 type SlashCmdDirectoryPickerProps = {
@@ -34,10 +34,14 @@ export const SlashCmdDirectoryPicker: React.FC<SlashCmdDirectoryPickerProps> = (
 				const handle = await (window as any).showDirectoryPicker();
 				if (handle) onChange(handle.name);
 			} catch (err: any) {
-				if (err.name !== "AbortError") console.error("[SlashCmdDirectoryPicker] Failed:", err);
+				if (err.name !== "AbortError")
+					console.error("[SlashCmdDirectoryPicker] Failed:", err);
 			}
 		} else {
-			toast("error", "Directory picker not supported in this browser. Type the path manually.");
+			toast(
+				"error",
+				"Directory picker not supported in this browser. Type the path manually.",
+			);
 		}
 	};
 
@@ -55,15 +59,19 @@ export const SlashCmdDirectoryPicker: React.FC<SlashCmdDirectoryPickerProps> = (
 				cursor: "pointer",
 				minWidth: "8ch",
 				maxWidth: "14ch",
-				background: isHovered ? "var(--wc-bg-hover, rgba(255,255,255,0.06))" : "transparent",
+				background: isHovered
+					? "var(--wc-bg-hover, rgba(255,255,255,0.06))"
+					: "transparent",
 			}}
 		>
-			<span style={{
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap",
-				color: value ? "var(--wc-text-secondary)" : "var(--wc-text-faint)",
-			}}>
+			<span
+				style={{
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+					color: value ? "var(--wc-text-secondary)" : "var(--wc-text-faint)",
+				}}
+			>
 				{value || placeholder}
 			</span>
 			<span
