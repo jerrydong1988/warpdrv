@@ -385,6 +385,18 @@ fn main() {
 
  #[tauri::command]
 fn type_text(text: String) {
+    // Reject excessively long input and control characters to prevent injection abuse
+    if text.is_empty() || text.len() > 10_000 {
+        eprintln!("[WarpCore] type_text: input rejected (length={})", text.len());
+        return;
+    }
+    for ch in text.chars() {
+        // Allow printable ASCII, common Unicode, and whitespace — reject control characters except tab/newline
+        if ch.is_control() && ch != '\t' && ch != '\n' && ch != '\r' {
+            eprintln!("[WarpCore] type_text: rejected control character U+{:04X}", ch as u32);
+            return;
+        }
+    }
     use enigo::{Enigo, Keyboard, Settings};
     match Enigo::new(&Settings::default()) {
         Ok(mut enigo) => {

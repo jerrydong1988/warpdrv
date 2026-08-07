@@ -136,15 +136,22 @@ function proxyRequest(
 	req: express.Request,
 	res: express.Response,
 ): void {
+	// Only forward safe headers — strip client-originated auth, forwarded-addrs, etc.
+	const SAFE_PROXY_HEADERS = new Set(['content-type', 'accept', 'authorization', 'cache-control', 'pragma', 'user-agent', 'accept-language', 'origin', 'referer']);
+	const forwardedHeaders: Record<string, string> = {};
+	for (const [key, value] of Object.entries(req.headers)) {
+		if (value === undefined) continue;
+		const lk = key.toLowerCase();
+		if (SAFE_PROXY_HEADERS.has(lk)) forwardedHeaders[key] = Array.isArray(value) ? value.join(', ') : value;
+	}
+	forwardedHeaders['host'] = `127.0.0.1:${targetPort}`;
+
 	const options: http.RequestOptions = {
 		hostname: '127.0.0.1',
 		port: targetPort,
 		path: req.originalUrl,
 		method: req.method,
-		headers: {
-			...req.headers,
-			host: `127.0.0.1:${targetPort}`,
-		},
+		headers: forwardedHeaders,
 	};
 
 	const proxyReq = http.request(options, (proxyRes) => {

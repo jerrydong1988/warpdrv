@@ -42,6 +42,7 @@ export interface IOrchestratorConfig {
 	broadcaster: IBridgeBroadcaster;
 	eventNode: EventNode;
 	onMcpServersChanged?: (servers: Record<string, unknown>) => void;
+	inferenceAuthHeader?: string; // Authorization header value for inference calls (e.g. 'Bearer <token>')
 }
 
 interface ITurnState {
@@ -75,6 +76,7 @@ export class Orchestrator {
 	private broadcaster: IBridgeBroadcaster;
 	private eventNode: EventNode;
 	private pureCompletionControllers: Record<string, AbortController> = {};
+	private inferenceAuthHeader?: string;
 
 	constructor(config: IOrchestratorConfig) {
 		this.mcpClient = config.mcpClient;
@@ -82,6 +84,7 @@ export class Orchestrator {
 		this.persistence = config.persistence;
 		this.broadcaster = config.broadcaster;
 		this.eventNode = config.eventNode;
+		this.inferenceAuthHeader = config.inferenceAuthHeader;
 		this.installStateHandlers();
 	}
 
@@ -409,8 +412,15 @@ export class Orchestrator {
 		messages: Array<TOpenAIMessage>,
 		enabledTools: IToolDefinition[],
 		abortSignal: AbortSignal,
+		passCount: number = 0,
 	): Promise<void> {
 		if (abortSignal.aborted) return;
+
+		// Enforce max pass depth to prevent infinite recursion from misbehaving models
+		if (passCount >= MAX_PASSES) {
+			console.warn(`[Orchestrator] Max passes (${MAX_PASSES}) exceeded, stopping tool call loop`);
+			return;
+		}
 
 		// Create new assistant message for this pass
 		const assistantMsg = await this.createAssistantMessage(request.threadId, parentId);
@@ -482,6 +492,7 @@ export class Orchestrator {
 			messages,
 			enabledTools,
 			abortSignal,
+			passCount + 1,
 		);
 	}
 
@@ -550,7 +561,7 @@ export class Orchestrator {
 
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
+			headers: { 'Content-Type': 'application/json', ...(this.inferenceAuthHeader ? { Authorization: this.inferenceAuthHeader } : {}) },
 			body: JSON.stringify(body),
 			signal: abortSignal,
 		});
@@ -763,9 +774,13 @@ export class Orchestrator {
 			const serverName = enabledTool?.serverName ?? this.mcpClient.findToolServer(tc.name);
 			//console.log('[Orch] tool call:', { toolName: tc.name, serverName, threadId: request.threadId });
 			let args: Record<string, unknown> = {};
-			try { args = JSON.parse(tc.arguments || '{}'); } catch { /* empty */ }
-
 			let validationError: string | null = null;
+			try { args = JSON.parse(tc.arguments || '{}'); } catch (parseErr) {
+				// Malformed tool arguments — treat as validation error instead of silently using {}
+				console.warn(`[Orchestrator] Failed to parse tool arguments for '${tc.name}':`, parseErr);
+				validationError = `Malformed tool arguments: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`;
+			}
+
 			if (!serverName) {
 				validationError = `No MCP server for tool '${tc.name}'`;
 			} else {
@@ -1148,7 +1163,7 @@ export class Orchestrator {
 	private generateTitle(inferenceUrl: string, userContent: string): Promise<string> {
 		return fetch(`${inferenceUrl}/v1/chat/completions`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
+			headers: { 'Content-Type': 'application/json', ...(this.inferenceAuthHeader ? { Authorization: this.inferenceAuthHeader } : {}) },
 			body: JSON.stringify({
 				model: 'model',
 				messages: [
@@ -1192,7 +1207,7 @@ export class Orchestrator {
 
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
+			headers: { 'Content-Type': 'application/json', ...(this.inferenceAuthHeader ? { Authorization: this.inferenceAuthHeader } : {}) },
 			body: JSON.stringify(body),
 			signal: abortSignal,
 		});

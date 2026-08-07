@@ -26,7 +26,7 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: fileReadDefinition, handler: (a: any) => fileReadHandler(deps, a) },
 		{ def: fileWriteDefinition, handler: (a: any) => fileWriteHandler(deps, a) },
 		{ def: dirListDefinition, handler: (a: any) => dirListHandler(deps, a) },
-		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a) },
+		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a, deps.getFsAllowedRoots()) },
 		{ def: fetchDefinition, handler: (a: any) => fetchHandler(a) },
 		{ def: embeddingSearchDefinition, handler: (a: any) => embeddingSearchHandler(deps, a) },
 		{ def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
@@ -49,7 +49,7 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 }
 export async function startServer(args: IStartArgs): Promise<IStartResult> {
 	const { port, exposeExternal } = args;
-	const deps: IWarpmcpDeps = { isRemote: args.isRemote, validateBearerToken: args.validateBearerToken, getFsAllowedRoots: args.getFsAllowedRoots, embeddingSearch: args.embeddingSearch, todoRead: args.todoRead, todoAdd: args.todoAdd, todoRemove: args.todoRemove, todoUpdate: args.todoUpdate, todoClear: args.todoClear };
+	const deps: IWarpmcpDeps = { isRemote: args.isRemote, validateBearerToken: args.validateBearerToken, getFsAllowedRoots: args.getFsAllowedRoots, exposeExternal: args.exposeExternal, embeddingSearch: args.embeddingSearch, todoRead: args.todoRead, todoAdd: args.todoAdd, todoRemove: args.todoRemove, todoUpdate: args.todoUpdate, todoClear: args.todoClear };
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? '0.0.0.0' : '127.0.0.1';
 	const app = express();

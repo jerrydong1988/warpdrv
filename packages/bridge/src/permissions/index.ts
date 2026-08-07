@@ -15,9 +15,9 @@ export class PermissionManager implements IPermissions {
 		this.persistence = persistence;
 	}
 
-	async isServerEnabled(serverName: string): Promise<boolean> {
+  async isServerEnabled(serverName: string): Promise<boolean> {
 		const perm = await this.persistence.getServerPermission(serverName);
-		return perm?.enabled ?? true; // default enabled
+		return perm?.enabled ?? false; // default disabled — require explicit opt-in
 	}
 
 	async getToolApprovalMode(threadId: TThreadId | undefined, serverName: string, toolName: string): Promise<EToolApprovalMode> {
@@ -51,7 +51,7 @@ export class PermissionManager implements IPermissions {
 		const threadPermMap = new Map(threadPerms.map(p => [`${p.serverName}:${p.toolName}`, p]));
 
 		return allTools.filter(tool => {
-			const serverEnabled = serverPermMap.get(tool.serverName) ?? true;
+			const serverEnabled = serverPermMap.get(tool.serverName) ?? false;
 			if (!serverEnabled) return false;
 
 			// Thread override takes precedence over global

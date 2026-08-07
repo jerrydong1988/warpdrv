@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState, type FC } from "react";
 import mermaid from "mermaid";
+import DOMPurify from "dompurify";
 import { useAuiState } from "@assistant-ui/react";
 import { useStore } from "@/store";
 
@@ -21,7 +22,8 @@ export const MermaidDiagram: FC<{ code: string; language: string }> = ({ code })
       .render(idRef.current, code)
       .then(({ svg }) => {
         if (!cancelled) {
-          setSvg(svg);
+          // Sanitize SVG to strip any injected script/event handlers from model output
+          setSvg(DOMPurify.sanitize(svg, { USE_PROSE: true, ADD_ATTR: ['target'] }));
           setError(null);
         }
       })
@@ -48,7 +50,7 @@ export const MermaidDiagram: FC<{ code: string; language: string }> = ({ code })
   return (
     <div
       className="mermaid-diagram my-2.5 overflow-auto rounded-lg border border-border/50 bg-muted/30 p-3"
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: svg ?? '' }}
     />
   );
 };

@@ -838,9 +838,13 @@ export class SqlitePersistence implements IPersistence {
 	// FTS Search
 	// ============================================================
 
-	private preprocessQuery(q: string): string {
-		// Strip FTS5 special chars, split whitespace, append * for prefix matching
-		const stripped = q.replace(/[\"\(\)\:\^\-\*]/g, ' ');
+  private preprocessQuery(q: string): string {
+		// Strip FTS5 special chars and SQL logical operators to prevent query injection
+		const stripped = q.replace(/[\"\(\)\:\^\-\*]/g, ' ')
+			// Remove logical operators that could alter FTS semantics
+			.replace(/\bAND\b|\bOR\b|\bNOT\b/gi, ' ')
+			// Strip unbalanced parens
+			.replace(/[()]/g, ' ');
 		return stripped
 			.split(/\s+/)
 			.map(t => t.trim().toLowerCase())

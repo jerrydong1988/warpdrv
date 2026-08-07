@@ -314,8 +314,10 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 	const controlPort = process.env.CONTROL_API_PORT;
 	if (controlPort !== undefined) env.CONTROL_API_PORT = controlPort;
 
-	for (const [name, value] of Object.entries(activeRun.state.inputs)) {
-		env[name] = String(value);
+	// Sanitize recipe inputs: only safe env key names, reject dangerous overrides
+	const safeInputs = sanitizeRecipeInputs(activeRun.state.inputs);
+	for (const [name, value] of Object.entries(safeInputs)) {
+		env[name] = value;
 	}
 
 	let runStatus: ERecipeRunStatus = ERecipeRunStatus.OK;
@@ -455,6 +457,29 @@ function sanitizeEnv(env: NodeJS.ProcessEnv): Record<string, string> {
 	const out: Record<string, string> = {};
 	for (const [k, v] of Object.entries(env)) {
 		if (v !== undefined) out[k] = v;
+	}
+	return out;
+}
+
+// Only allow recipe input names that are safe env var keys and not dangerous overrides
+const SAFE_INPUT_KEY_RE = /^[A-Z_][A-Z0-9_]{0,127}$/i;
+const DANGEROUS_ENV_KEYS = new Set([
+	'PATH','LD_PRELOAD','LD_LIBRARY_PATH','PYTHONPATH','NODE_PATH',
+	'HOME','USER','LOGNAME','SHELL','TMP','TEMP','TMPDIR',
+	'DISPLAY','XAUTHORITY',
+	'HOME','USERPROFILE','APPDATA','LOCALAPPDATA',
+	'HTTP_PROXY','HTTPS_PROXY','NO_PROXY','http_proxy','https_proxy','no_proxy',
+	'AGENT_NAME','AGENT_TOKEN','GITHUB_TOKEN','API_KEY','SECRET','PASSWORD',
+]);
+
+function sanitizeRecipeInputs(inputs: TRecipeInputValues): Record<string, string> {
+	const out: Record<string, string> = {};
+	for (const [name, value] of Object.entries(inputs)) {
+		if (!SAFE_INPUT_KEY_RE.test(name)) continue;
+		if (DANGEROUS_ENV_KEYS.has(name.toUpperCase())) continue;
+		const strVal = String(value);
+		if (strVal.length > 4096) continue;
+		out[name] = strVal;
 	}
 	return out;
 }

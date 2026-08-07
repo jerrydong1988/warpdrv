@@ -438,11 +438,11 @@ export interface IChatThreadCreatePayload {
 	totalCompletionTokens?: number;
 }
 
-import type { IMessagePart, TMessageId } from '@warpcore/bridge';
+import type { IMessagePart, TMessageId, EChatRole } from '@warpcore/bridge';
 
 export interface IChatMessageCreatePayload {
 	id?: TMessageId,
-	role: string;
+	role: EChatRole;
 	parentId?: string | null;
 	content: IMessagePart[];
 	stats?: string;

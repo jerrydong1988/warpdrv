@@ -14,10 +14,19 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const DB_FILE = path.join(DATA_DIR, 'warpcore-data.json');
 let data: Record<string, string> = {};
 
+// Max database file size: 50 MB — larger files indicate corruption or abuse
+const MAX_DB_BYTES = 50 * 1024 * 1024;
+
 // Load from disk on startup
 function load(): void {
 	try {
 		if (fs.existsSync(DB_FILE)) {
+			const stats = fs.statSync(DB_FILE);
+			if (stats.size > MAX_DB_BYTES) {
+				console.error(`[store] DB file too large (${stats.size} bytes), resetting`);
+				data = {};
+				return;
+			}
 			data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 		}
 	} catch {

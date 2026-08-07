@@ -1,7 +1,14 @@
 import type { Request } from 'express';
 import type { IWarpmcpDeps } from './types';
+
+// Only bypass auth for local requests when server is NOT exposed externally
+function isAuthRequired(deps: IWarpmcpDeps, req: Request): boolean {
+	if (deps.exposeExternal) return true;
+	return deps.isRemote(req as any);
+}
+
 export async function authorizeToolCall(deps: IWarpmcpDeps, req: Request, toolName: string): Promise<{ ok: boolean; reason?: string }> {
-	if (!deps.isRemote(req as any)) {
+	if (!isAuthRequired(deps, req)) {
 		return { ok: true };
 	}
 	const token = await deps.validateBearerToken(req.headers.authorization);
@@ -20,8 +27,9 @@ export async function authorizeToolCall(deps: IWarpmcpDeps, req: Request, toolNa
 	}
 	return { ok: false, reason: `Token lacks mcp_labelled scope for tool: ${toolName}` };
 }
+
 export async function authorizeAccess(deps: IWarpmcpDeps, req: Request): Promise<{ ok: boolean; reason?: string }> {
-	if (!deps.isRemote(req as any)) {
+	if (!isAuthRequired(deps, req)) {
 		return { ok: true };
 	}
 	const token = await deps.validateBearerToken(req.headers.authorization);

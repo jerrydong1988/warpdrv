@@ -39,8 +39,13 @@ import "./theme/theme-kimbie-dark.scss";
 import "./theme/theme-everforest-hard.scss";
 import "./theme/theme-solarized-light.scss";
 
-// Global error reporting to server
+// Global error reporting to server (throttled to prevent log flooding)
+let lastReportTime = 0;
+const REPORT_COOLDOWN_MS = 5000;
 const reportError = (payload: Record<string, unknown>) => {
+	const now = Date.now();
+	if (now - lastReportTime < REPORT_COOLDOWN_MS) return;
+	lastReportTime = now;
 	try {
 		fetch('/api/client-log', {
 			method: 'POST',
