@@ -299,7 +299,7 @@ export function useDerivedMsgsForUI(
 
 		// done
 		return sortedMessages;
-	}, [msgs, convertMessage, toolCallsById, currentThreadId, isRunning, headMessageId]);
+	}, [msgs, convertMessage, toolCallsById, currentThreadId, isRunning, updateCachedMessage]);
 
 	// Update thread ref
 	lastThreadIdRef.current = currentThreadId;
@@ -347,7 +347,7 @@ export function useDerivedMsgsForUI(
 				return tokenCount;
 			})(),
 		};
-	}, [sortedMsgs, headMessageId, isRunning, toolCallsById]);
+	}, [sortedMsgs, headMessageId, toolCallsById]);
 }
 
 // Select tool calls for a thread

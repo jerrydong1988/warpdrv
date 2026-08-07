@@ -441,6 +441,7 @@ export interface IChatThreadCreatePayload {
 	enableAutoEmbed?: boolean;
 	totalPromptTokens?: number;
 	totalCompletionTokens?: number;
+	starred?: boolean;
 }
 
 import type { IMessagePart, TMessageId } from "@warpcore/bridge";

@@ -260,7 +260,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				}
 				const threadMessages = draft.messagesByThread[message.threadId]!;
 				// Insert message
-				threadMessages[message.id] = message;
+				if (!threadMessages[message.id]) threadMessages[message.id] = message;
 				// Update head — new message is always the new head
 				draft.headMessageIdByThread[message.threadId] = message.id;
 			}),
@@ -268,7 +268,12 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		applyMessagePatched: (messageId: TMessageId, threadId: TThreadId, updates: IMessagePatch) =>
 			set((draft) => {
 				const msg = draft.messagesByThread[threadId]?.[messageId];
-				if (!msg) return;
+				if (!msg) {
+					console.error(
+						"[applyMessagePatched] Message to be patched not found! Aborting patch..",
+					);
+					return;
+				}
 
 				// Flush and remove chunks
 				const buffer = draft.chunksByMessageId[msg.id];
@@ -280,7 +285,6 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 							part.type === EMessagePartType.REASONING)
 					) {
 						part.text += buffer.chunk;
-					} else {
 					}
 				}
 				delete draft.chunksByMessageId[msg.id];
@@ -522,6 +526,13 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				if (!draft.messagesByThread[threadId]) {
 					draft.messagesByThread[threadId] = {};
 				}
+				const existingCount = Object.keys(draft.messagesByThread[threadId]).length;
+				if (existingCount >= messages.length) {
+					console.warn(
+						"[seedThreadMessages] Store has more messages than API response!, Aborting..",
+					);
+					return;
+				}
 
 				// Bulk insert all messages
 				for (const msg of messages) {
@@ -529,14 +540,11 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				}
 
 				// Calculate initial head: newest by createdAt, tie-break by id
-				if (messages.length > 0) {
+				if (messages.length > 0 && !draft.headMessageIdByThread[threadId]) {
 					let headMsg = messages[0]!;
 					for (let i = 1; i < messages.length; i++) {
 						const candidate = messages[i]!;
-						if (
-							candidate.createdAt > headMsg.createdAt ||
-							(candidate.createdAt === headMsg.createdAt && candidate.id > headMsg.id)
-						) {
+						if (candidate.createdAt > headMsg.createdAt) {
 							headMsg = candidate;
 						}
 					}

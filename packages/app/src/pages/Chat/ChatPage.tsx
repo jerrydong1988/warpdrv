@@ -327,6 +327,7 @@ const ChatInner = React.memo(
 			headMessageId,
 			isRunning,
 		);
+		(window as any).msgRepo = msgRepo;
 
 		// Check if thread exists in store (distinguishes new vs existing thread)
 		const threadInStore = useStore((s) =>
@@ -729,7 +730,7 @@ const ChatInner = React.memo(
 			onCancel,
 			isDisabled: false,
 			// Called by assistant-ui when messages update (including branch switches)
-			setMessages: (newMessages: any) => {
+			setMessages: (newMessages: readonly ThreadMessage[]) => {
 				// Extract the last message ID from the new messages
 				const lastMessage = newMessages[newMessages.length - 1] as any;
 				if (currentThreadId && lastMessage && !isRunning) {

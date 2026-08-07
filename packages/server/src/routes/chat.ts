@@ -47,8 +47,9 @@ chatRouter.post("/threads", async (req, res) => {
 	try {
 		const body = req.body as IChatThreadCreatePayload;
 		const now = Date.now();
-		const thread = await persistence.createThread({
-			id: body.id ?? crypto.randomUUID(),
+		const id = body.id ?? crypto.randomUUID();
+		await persistence.createThread({
+			id,
 			title: body.title ?? "New Chat",
 			folderId: body.folderId ?? null,
 			parentId: body.parentId ?? null,
@@ -64,7 +65,8 @@ chatRouter.post("/threads", async (req, res) => {
 			createdAt: now,
 			updatedAt: now,
 		});
-		broadcaster.emit({ type: "thread.created", thread });
+		const thread = await persistence.getThread(id);
+		if (thread) broadcaster.emit({ type: "thread.created", thread });
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });

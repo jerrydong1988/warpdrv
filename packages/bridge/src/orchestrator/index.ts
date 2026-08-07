@@ -315,7 +315,7 @@ export class Orchestrator {
 					title,
 					folderId: request.folderId ?? null,
 					parentId: request.threadParentId ?? null,
-					systemPrompt: "",
+					systemPrompt: request.systemPrompt ?? "",
 					meta: JSON.stringify({
 						serverId: request.serverId ?? null,
 						whisperServerId: request.whisperServerId ?? null,

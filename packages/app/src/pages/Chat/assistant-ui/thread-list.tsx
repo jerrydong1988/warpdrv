@@ -350,7 +350,7 @@ const ThreadNode = React.memo(({ node }: { node: TreeEntry }) => {
 									>
 										<MoreHorizontalIcon
 											size={13}
-											style={{ color: "var(--wc-text-muted)" }}
+											style={{ color: "var(--wc-text-secondary)" }}
 										/>
 									</Box>
 								</Menu.Trigger>
@@ -602,7 +602,7 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 						<Box
 							ref={triggerRef as any}
 							as="button"
-							opacity={0.4}
+							opacity={0.6}
 							cursor="pointer"
 							p="0.5"
 							className="group-hover:!opacity-100"
