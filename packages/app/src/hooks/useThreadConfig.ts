@@ -2,7 +2,7 @@ import { EReasoningEffort, type IChatInferenceParams, IThreadConfig } from "@war
 import { useCallback, useEffect, useRef } from "react";
 import { fetchThreadConfig, updateThreadConfig } from "@/api";
 import { fetchWorkspaceState } from "@/api/services";
-import { DEFAULT_INFERENCE_PARAMS } from "@/pages/Chat/ChatConfigSidebar";
+//import { DEFAULT_INFERENCE_PARAMS } from "@/pages/Chat/ChatConfigSidebar";
 import { useStore } from "../store";
 
 export function useThreadConfig(selectedPresetId: string | null) {
@@ -11,7 +11,7 @@ export function useThreadConfig(selectedPresetId: string | null) {
 	const currentInferenceParams = useStore(
 		(s) => s.currentInferenceParams as unknown as IChatInferenceParams,
 	);
-	const activeWorkspaceId = useStore((s) => s.activeWorkspaceId);
+	//const activeWorkspaceId = useStore((s) => s.activeWorkspaceId);
 
 	// Actions
 	const setCurrentSystemPrompt = useStore((s) => s.setCurrentSystemPrompt);
@@ -29,7 +29,7 @@ export function useThreadConfig(selectedPresetId: string | null) {
 	const flushChanges = useCallback(() => {
 		const { currentThreadId, ...saveObj } = saveValuesRef.current!;
 		updateThreadConfig(currentThreadId, saveObj);
-	}, [updateThreadConfig]);
+	}, []);
 
 	const debounceChange = useCallback(
 		(newParams?: any, newPrompt?: any) => {

@@ -363,6 +363,7 @@ const ChatInner = React.memo(
 				})
 				.catch(() => clearEmbeddingStatuses());
 		}, [currentThreadId, selectedEmbeddingServerId]);
+
 		useEffect(() => {
 			if (!currentThreadId) {
 				setIsLoadingThread(false);
@@ -428,6 +429,7 @@ const ChatInner = React.memo(
 				}
 				setIsLoadingThread(false);
 			}
+
 			loadThread();
 		}, [
 			currentThreadId,

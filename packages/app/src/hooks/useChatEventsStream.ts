@@ -298,5 +298,9 @@ export function useChatEventsStream() {
 		applyWorkspaceStateUpdated,
 		applyThreadStateUpdated,
 		applyMessageStateUpdated,
+		applyFolderCreated,
+		applyFolderDeleted,
+		applyFolderReordered,
+		applyFolderUpdated,
 	]);
 }
