@@ -522,7 +522,7 @@ const Composer: FC = () => {
 					/>
 					<ComposerAction onStreamChange={setWaveformStream} />
 					{waveformStream ? (
-						<VoiceWaveform stream={waveformStream} width={680} />
+						<VoiceWaveform stream={waveformStream} />
 					) : (
 						<ContextUsageBar />
 					)}
