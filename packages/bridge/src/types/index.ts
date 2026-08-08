@@ -264,6 +264,7 @@ export interface IChatMessageStats {
 	predictedPerSecond?: number;
 	promptMs?: number;
 	predictedMs?: number;
+	finishReason?: string;
 }
 
 // ============================================================

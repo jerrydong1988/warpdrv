@@ -1049,26 +1049,27 @@ const MessageError: FC = () => {
 	);
 };
 
-const StatsTooltip: FC = () => {
+const StatsTooltip = React.memo((): React.ReactNode => {
 	const custom = useAuiState((s) => (s.message.metadata as any)?.custom);
 	if (!custom) return null;
 
-	const { promptPerSecond, predictedPerSecond, predictedMs, actualTokens } = custom;
-	const hasStats =
-		promptPerSecond > 0 ||
-		predictedPerSecond > 0 ||
-		(actualTokens != null && actualTokens > 0) ||
-		predictedMs > 0;
-	if (!hasStats) return null;
+	const { promptPerSecond, predictedPerSecond, predictedMs, actualTokens, finishReason } = custom;
 
-	const stats: { label: string; value: string }[] = [];
-	if (promptPerSecond > 0)
-		stats.push({ label: "pp", value: `${promptPerSecond.toFixed(1)} t/s` });
-	if (predictedPerSecond > 0)
-		stats.push({ label: "tg", value: `${predictedPerSecond.toFixed(1)} t/s` });
-	if (actualTokens != null && actualTokens > 0)
-		stats.push({ label: "c", value: `${actualTokens} tks` });
-	if (predictedMs > 0) stats.push({ label: "tt", value: `${(predictedMs / 1000).toFixed(1)} s` });
+	const stats = useMemo(() => {
+		const arr: { label: string; value: string }[] = [];
+		if (promptPerSecond > 0)
+			arr.push({ label: "pp", value: `${promptPerSecond.toFixed(1)} t/s` });
+		if (predictedPerSecond > 0)
+			arr.push({ label: "tg", value: `${predictedPerSecond.toFixed(1)} t/s` });
+		if (actualTokens != null && actualTokens > 0)
+			arr.push({ label: "c", value: `${actualTokens} tks` });
+		if (predictedMs > 0)
+			arr.push({ label: "tt", value: `${(predictedMs / 1000).toFixed(1)} s` });
+		if (finishReason) arr.push({ label: "fr", value: finishReason });
+		return arr;
+	}, [promptPerSecond, predictedPerSecond, actualTokens, predictedMs, finishReason]);
+
+	if (stats.length === 0) return null;
 
 	return (
 		<Tooltip>
@@ -1080,12 +1081,12 @@ const StatsTooltip: FC = () => {
 					<Timer size={16} style={{ color: "var(--wc-text-muted)" }} />
 				</div>
 			</TooltipTrigger>
-			<TooltipContent align="start" sideOffset={4} side={"bottom"}>
+			<TooltipContent align="start" sideOffset={4} side="bottom">
 				<div
 					className="text-sm"
 					style={{ color: "var(--wc-special-white)", boxShadow: "0 0 10px black" }}
 				>
-					{stats.map((s, i) => (
+					{stats.map((s) => (
 						<span key={s.label}>
 							<span style={{ color: "var(--wc-text-muted)" }}>{s.label}</span>&nbsp;
 							{s.value}&nbsp;&nbsp;
@@ -1095,7 +1096,7 @@ const StatsTooltip: FC = () => {
 			</TooltipContent>
 		</Tooltip>
 	);
-};
+});
 
 const EmbeddingStatus: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);

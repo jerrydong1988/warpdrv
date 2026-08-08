@@ -7,11 +7,14 @@ const DEFAULT_MODES: IMode[] = [
 		name: "Plan",
 		scope: "global",
 		color: "#FF9F38",
-		prompt: `You are in PLAN mode. Do not attempt to write files. Conduct proper investigation and research as the user requests. Then come up with a plan. Wait for the user to approve the plan.
+		prompt: `When in PLAN mode, do not attempt to write files. Conduct proper investigation and research as the user requests. Then come up with a plan. Wait for the user to approve the plan.
 
-For reading files, first start with reading CLAUDE.md from the project root. Then use codegraph or rg to get matches, then use those obtained line numbers to read parts of relevant files.
+For reading files, first start with reading CLAUDE.md, AGENTS.md from the project root. Then use codegraph or rg to get matches, then use those obtained line numbers to read parts of relevant files.
 
-Remember: Do not read entire files, always read using line ranges only. Do not execute broad grep/rg. Do not read the same code block multiple times, always re-use past context.`,
+Remember: Do not read entire files, always read using line ranges only. Do not execute broad grep/rg. Do not read the same code block multiple times, always re-use past context.
+
+Follow mode restriction on tools - see allowed tools list for this mode.
+`,
 		allowedTools: [
 			{ serverName: "warpmcp", toolName: "file_read" },
 			{ serverName: "warpmcp", toolName: "dir_list" },
@@ -33,9 +36,12 @@ Remember: Do not read entire files, always read using line ranges only. Do not e
 		name: "Build",
 		scope: "global",
 		color: "#00B7FF",
-		prompt: `You are in BUILD mode. Strictly follow the plan the user agreed upon and proceed with the exact implementation. Do not add anything that's out of scope or not agreed upon. If any new conflicts or issues are discovered, stop and ask the user for confirmation first.
+		prompt: `When in BUILD mode, strictly follow the plan the user agreed upon and proceed with the exact implementation. Do not add anything that's out of scope or not agreed upon. If any new conflicts or issues are discovered, stop and ask the user for confirmation first.
 
-  For writing files, use the project root. For navigating the codebase, use codegraph and rg to get matches, then use line ranges to read parts of files. Do not read entire files at once, always read using line ranges only. Do not read the same section of a file multiple times, conserve context and tokens. Do not execute broad grep/rg or use generic-sounding terms for greps.`,
+  For writing files, use the project root. For navigating the codebase, use codegraph and rg to get matches, then use line ranges to read parts of files. Do not read entire files at once, always read using line ranges only. Do not read the same section of a file multiple times, conserve context and tokens. Do not execute broad grep/rg or use generic-sounding terms for greps.
+  
+ Follow mode restriction on tools - see allowed tools list for this mode.
+  `,
 		allowedTools: [
 			{ serverName: "warpmcp", toolName: "file_read" },
 			{ serverName: "warpmcp", toolName: "file_patch" },

@@ -86,13 +86,13 @@ export async function rgHandler(
 	const maxResults = args.maxResults ?? 200;
 	const contextLines = args.contextLines ?? 0;
 
-	const rgArgs: string[] = ["--json", "--no-heading", "-e", pattern, "--"];
+	const rgArgs: string[] = ["--json", "--no-heading", "-e", pattern];
 
 	if (type) rgArgs.push("-t", type);
 	if (caseSensitive) rgArgs.push("--smart-case");
 	if (contextLines > 0) rgArgs.push(`-C${contextLines}`);
 
-	rgArgs.push(safePath);
+	rgArgs.push("--", safePath);
 
 	return await new Promise((resolve, reject) => {
 		const child = spawn(rgPath, rgArgs);

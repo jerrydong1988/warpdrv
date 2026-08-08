@@ -818,6 +818,7 @@ export class Orchestrator {
 				predictedPerSecond: timings?.predicted_per_second ?? 0,
 				promptMs: timings?.prompt_ms ?? 0,
 				predictedMs: timings?.predicted_ms ?? 0,
+				finishReason,
 			};
 			await this.persistence.updateMessage(turn.assistantMessageId, { stats });
 			this.broadcaster.emit({
