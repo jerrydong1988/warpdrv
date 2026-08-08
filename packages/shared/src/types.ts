@@ -522,6 +522,25 @@ export interface IChatPresetCreatePayload {
 }
 
 // ============================================================
+// Chat Prompts — lightweight saved text snippets (stored in SQLite)
+// ============================================================
+
+export interface IChatPrompt {
+	id: string;
+	name: string;
+	content: string;
+	meta: Record<string, unknown> | null;
+	createdAt: number;
+	updatedAt: number;
+}
+
+export interface IChatPromptCreatePayload {
+	name: string;
+	content: string;
+	meta?: Record<string, unknown>;
+}
+
+// ============================================================
 // Access Tokens
 // ============================================================
 

@@ -3,6 +3,7 @@ import type {
 	IBackend,
 	IBackendGroup,
 	IChatPreset,
+	IChatPrompt,
 	ICheckpoint,
 	IDownload,
 	IGuardrailDefinition,
@@ -400,6 +401,22 @@ export const sseHandlersSlice = (
 		"chatPresets:delete": (data: { id: string }) =>
 			setState((state) => {
 				state.chatPresets = state.chatPresets.filter((p) => p.id !== data.id);
+			}),
+
+		// Chat Prompts
+		"prompts:init": (data: IChatPrompt[]) =>
+			setState((state) => {
+				state.chatPrompts = data;
+			}),
+		"prompts:update": (data: IChatPrompt) =>
+			setState((state) => {
+				const idx = state.chatPrompts.findIndex((p) => p.id === data.id);
+				if (idx >= 0) state.chatPrompts[idx] = data;
+				else state.chatPrompts.push(data);
+			}),
+		"prompts:delete": (data: { id: string }) =>
+			setState((state) => {
+				state.chatPrompts = state.chatPrompts.filter((p) => p.id !== data.id);
 			}),
 
 		// Modes

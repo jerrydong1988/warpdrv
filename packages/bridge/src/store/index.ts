@@ -296,7 +296,31 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 
 				// Handle replaceParts — full replacement
 				if (updates.replaceParts !== undefined) {
+					const existingTextLen = msg.content.reduce(
+						(acc, p) =>
+							acc +
+							(p.type === EMessagePartType.TEXT ||
+							p.type === EMessagePartType.REASONING
+								? ((p as any).text?.length ?? 0)
+								: 0),
+						0,
+					);
+					const incomingTextLen = updates.replaceParts.reduce(
+						(acc, p) =>
+							acc +
+							(p.type === EMessagePartType.TEXT ||
+							p.type === EMessagePartType.REASONING
+								? ((p as any).text?.length ?? 0)
+								: 0),
+						0,
+					);
 					msg.content = [...updates.replaceParts];
+					// Diagnostic: detect if replaceParts lost content
+					if (existingTextLen > incomingTextLen) {
+						console.warn(
+							`[applyMessagePatched] replaceParts replaced ${existingTextLen} chars with ${incomingTextLen} chars for messageId=${messageId}`,
+						);
+					}
 					return;
 				}
 
@@ -305,6 +329,27 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					for (const part of updates.addParts) {
 						const existingIndex = msg.content.findIndex((p) => p.id === part.id);
 						if (existingIndex >= 0) {
+							const existing = msg.content[existingIndex];
+							// Race guard: if existing part has more text than incoming,
+							// the incoming part is a stale scaffold (e.g. text: "") that
+							// arrived after chunks already accumulated real content.
+							// Only replace if incoming text is longer (or for non-text parts).
+							if (
+								existing &&
+								(existing.type === EMessagePartType.TEXT ||
+									existing.type === EMessagePartType.REASONING) &&
+								part.type === existing.type
+							) {
+								const existingLen = (existing as any).text?.length ?? 0;
+								const incomingLen = (part as any).text?.length ?? 0;
+								if (existingLen > incomingLen) {
+									console.warn(
+										`[applyMessagePatched] addParts race: part ${part.id} already has ` +
+											`${existingLen} chars but incoming has ${incomingLen}. Skipping replace. messageId=${messageId}`,
+									);
+									continue;
+								}
+							}
 							// Replace existing part
 							draft.messagesByThread[threadId]![messageId]!.content[existingIndex]! =
 								part;

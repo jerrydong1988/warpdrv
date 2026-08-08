@@ -47,6 +47,7 @@ import { mcpRouter } from "./routes/mcp";
 import { getCachedModels, loadCachedModels, modelsRouter } from "./routes/models";
 import { modesRouter } from "./routes/modes";
 import { presetsRouter } from "./routes/presets";
+import { promptsRouter } from "./routes/prompts";
 import { proxyRouter } from "./routes/proxy";
 import { recipesRouter } from "./routes/recipes";
 import { releasesRouter } from "./routes/releases";
@@ -233,6 +234,7 @@ async function main() {
 	app.use("/api/models", authMiddleware, modelsRouter);
 	app.use("/api/servers", authMiddleware, serversRouter);
 	app.use("/api/presets", authMiddleware, presetsRouter);
+	app.use("/api/prompts", authMiddleware, promptsRouter);
 	app.use("/api/hub", authMiddleware, hubRouter);
 	app.use("/api/update", authMiddleware, updateRouter);
 	app.use("/api/proxy", authMiddleware, proxyRouter);
@@ -498,6 +500,10 @@ async function main() {
 
 	sseManager.onConnect("chatPresets:init", async () => {
 		return listChatPresets();
+	});
+
+	sseManager.onConnect("prompts:init", async () => {
+		return persistence.listChatPrompts();
 	});
 
 	sseManager.onConnect("threads:init", async () => {

@@ -1379,6 +1379,14 @@
 		background: transparent;
 	}
 
+	@media (max-width: 768px) {
+		.thread-title,
+		.new-chat,
+		.titlebar-inner > .grow ~ .win-btn {
+			display: none !important;
+		}
+	}
+
 	@media (max-width: 900px) {
 		.app {
 			transform: scale(0.82);

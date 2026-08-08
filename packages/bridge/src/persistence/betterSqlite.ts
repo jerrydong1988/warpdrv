@@ -77,6 +77,7 @@ function buildTableNames(prefix: string) {
 		codeGraphNodesFts: `${prefix}code_graph_nodes_fts`,
 		guardrails: `${prefix}guardrails`,
 		modes: `${prefix}modes`,
+		prompts: `${prefix}prompts`,
 	};
 }
 
@@ -308,16 +309,25 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 			includeBaseMessage INTEGER DEFAULT 0
 		);
 
-		CREATE TABLE IF NOT EXISTS ${t.modes} (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			scope TEXT NOT NULL DEFAULT 'global',
-			color TEXT NOT NULL DEFAULT '#a78bfa',
-			prompt TEXT,
-			allowedTools TEXT NOT NULL DEFAULT '[]',
-			activeGuardrails TEXT NOT NULL DEFAULT '[]'
-		);
-	`;
+				CREATE TABLE IF NOT EXISTS ${t.modes} (
+					id TEXT PRIMARY KEY,
+					name TEXT NOT NULL,
+					scope TEXT NOT NULL DEFAULT 'global',
+					color TEXT NOT NULL DEFAULT '#a78bfa',
+					prompt TEXT,
+					allowedTools TEXT NOT NULL DEFAULT '[]',
+					activeGuardrails TEXT NOT NULL DEFAULT '[]'
+				);
+
+				CREATE TABLE IF NOT EXISTS ${t.prompts} (
+					id TEXT PRIMARY KEY,
+					name TEXT NOT NULL,
+					content TEXT NOT NULL,
+					meta TEXT DEFAULT NULL,
+					created_at INTEGER NOT NULL,
+					updated_at INTEGER NOT NULL
+				);
+			`;
 }
 
 // ============================================================
@@ -1952,5 +1962,126 @@ export class SqlitePersistence implements IPersistence {
 
 	async deleteMode(id: string): Promise<void> {
 		this.db!.prepare(`DELETE FROM ${this.t.modes} WHERE id = ?`).run(id);
+	}
+
+	// ============================================================
+	// Chat Prompts
+	// ============================================================
+
+	async listChatPrompts(): Promise<
+		Array<{
+			id: string;
+			name: string;
+			content: string;
+			meta: Record<string, unknown> | null;
+			createdAt: number;
+			updatedAt: number;
+		}>
+	> {
+		const rows = this.db!.prepare(
+			`SELECT id, name, content, meta, created_at, updated_at FROM ${this.t.prompts} ORDER BY updated_at DESC`,
+		).all() as Array<{
+			id: string;
+			name: string;
+			content: string;
+			meta: string | null;
+			created_at: number;
+			updated_at: number;
+		}>;
+		return rows.map((r) => ({
+			id: r.id,
+			name: r.name,
+			content: r.content,
+			meta: r.meta ? JSON.parse(r.meta) : null,
+			createdAt: r.created_at,
+			updatedAt: r.updated_at,
+		}));
+	}
+
+	async getChatPrompt(id: string): Promise<{
+		id: string;
+		name: string;
+		content: string;
+		meta: Record<string, unknown> | null;
+		createdAt: number;
+		updatedAt: number;
+	} | null> {
+		const row = this.db!.prepare(
+			`SELECT id, name, content, meta, created_at, updated_at FROM ${this.t.prompts} WHERE id = ?`,
+		).get(id) as
+			| {
+					id: string;
+					name: string;
+					content: string;
+					meta: string | null;
+					created_at: number;
+					updated_at: number;
+			  }
+			| undefined;
+		if (!row) return null;
+		return {
+			id: row.id,
+			name: row.name,
+			content: row.content,
+			meta: row.meta ? JSON.parse(row.meta) : null,
+			createdAt: row.created_at,
+			updatedAt: row.updated_at,
+		};
+	}
+
+	async createChatPrompt(prompt: {
+		id: string;
+		name: string;
+		content: string;
+		meta?: Record<string, unknown>;
+		createdAt: number;
+		updatedAt: number;
+	}): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.prompts} (id, name, content, meta, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		).run(
+			prompt.id,
+			prompt.name,
+			prompt.content,
+			prompt.meta ? JSON.stringify(prompt.meta) : null,
+			prompt.createdAt,
+			prompt.updatedAt,
+		);
+	}
+
+	async updateChatPrompt(
+		id: string,
+		updates: {
+			name?: string;
+			content?: string;
+			meta?: Record<string, unknown> | null;
+		},
+	): Promise<void> {
+		const sets: string[] = [];
+		const values: unknown[] = [];
+		if (updates.name !== undefined) {
+			sets.push("name = ?");
+			values.push(updates.name);
+		}
+		if (updates.content !== undefined) {
+			sets.push("content = ?");
+			values.push(updates.content);
+		}
+		if (updates.meta !== undefined) {
+			sets.push("meta = ?");
+			values.push(updates.meta ? JSON.stringify(updates.meta) : null);
+		}
+		if (sets.length > 0) {
+			sets.push("updated_at = ?");
+			values.push(Date.now());
+			this.db!.prepare(`UPDATE ${this.t.prompts} SET ${sets.join(", ")} WHERE id = ?`).run(
+				...values,
+				id,
+			);
+		}
+	}
+
+	async deleteChatPrompt(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.prompts} WHERE id = ?`).run(id);
 	}
 }

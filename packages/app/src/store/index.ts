@@ -27,6 +27,7 @@ import {
 import { annotationsSlice } from "./slices/annotations";
 import { backendsSlice } from "./slices/backends";
 import { chatPresetsSlice } from "./slices/chatPresets";
+import { chatPromptsSlice } from "./slices/prompts";
 import { chatSidebarSlice } from "./slices/chatSidebar";
 import { checkpointsSlice } from "./slices/checkpoints";
 import { devicesSlice } from "./slices/devices";
@@ -74,6 +75,7 @@ export const useStore = create<AppState>()(
 			const tts = ttsSlice(set, get);
 			const annotations = annotationsSlice(set, get);
 			const chatPresets = chatPresetsSlice(set, get);
+			const chatPrompts = chatPromptsSlice(set, get);
 			const embedding = embeddingSlice(set, get);
 			const chatSidebar = chatSidebarSlice(set, get);
 			const slashCommands = slashCommandsSlice(set, get);
@@ -255,6 +257,12 @@ export const useStore = create<AppState>()(
 				setChatPresets: chatPresets.setChatPresets!,
 				addChatPreset: chatPresets.addChatPreset!,
 				removeChatPreset: chatPresets.removeChatPreset!,
+
+				// Chat Prompts
+				chatPrompts: chatPrompts.chatPrompts!,
+				setChatPrompts: chatPrompts.setChatPrompts!,
+				addChatPrompt: chatPrompts.addChatPrompt!,
+				removeChatPrompt: chatPrompts.removeChatPrompt!,
 
 				// Chat Folders
 				folders: [],

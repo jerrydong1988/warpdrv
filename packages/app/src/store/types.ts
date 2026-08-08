@@ -4,6 +4,8 @@ import type {
 	IBackendGroup,
 	IChatPreset,
 	IChatPresetCreatePayload,
+	IChatPrompt,
+	IChatPromptCreatePayload,
 	ICheckpoint,
 	IDevice,
 	IDownload,
@@ -274,6 +276,12 @@ export interface AppState extends IChatStoreState {
 	setChatPresets: (presets: IChatPreset[]) => void;
 	addChatPreset: (payload: IChatPresetCreatePayload) => Promise<void>;
 	removeChatPreset: (id: string) => Promise<void>;
+
+	// Chat Prompts
+	chatPrompts: IChatPrompt[];
+	setChatPrompts: (prompts: IChatPrompt[]) => void;
+	addChatPrompt: (payload: IChatPromptCreatePayload) => Promise<void>;
+	removeChatPrompt: (id: string) => Promise<void>;
 
 	// Chat Folders
 	folders: IFolder[];

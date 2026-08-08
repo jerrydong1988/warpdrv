@@ -262,6 +262,43 @@ export interface IPersistence {
 		activeGuardrails: string[];
 	}): Promise<void>;
 	deleteMode(id: string): Promise<void>;
+
+	// Chat Prompts
+	listChatPrompts(): Promise<
+		Array<{
+			id: string;
+			name: string;
+			content: string;
+			meta: Record<string, unknown> | null;
+			createdAt: number;
+			updatedAt: number;
+		}>
+	>;
+	getChatPrompt(id: string): Promise<{
+		id: string;
+		name: string;
+		content: string;
+		meta: Record<string, unknown> | null;
+		createdAt: number;
+		updatedAt: number;
+	} | null>;
+	createChatPrompt(prompt: {
+		id: string;
+		name: string;
+		content: string;
+		meta?: Record<string, unknown>;
+		createdAt: number;
+		updatedAt: number;
+	}): Promise<void>;
+	updateChatPrompt(
+		id: string,
+		updates: {
+			name?: string;
+			content?: string;
+			meta?: Record<string, unknown> | null;
+		},
+	): Promise<void>;
+	deleteChatPrompt(id: string): Promise<void>;
 }
 
 // ============================================================

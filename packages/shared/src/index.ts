@@ -20,6 +20,8 @@ export type {
 	IChatInferenceParams,
 	IChatPreset,
 	IChatPresetCreatePayload,
+	IChatPrompt,
+	IChatPromptCreatePayload,
 	IThreadConfig,
 } from "./types";
 export * from "./types";

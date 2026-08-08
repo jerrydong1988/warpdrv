@@ -2052,6 +2052,47 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			},
 		});
 
+		// Chat Prompts
+		function usePromptItems(): TDropdownItem[] {
+			const prompts = useStore((s) => s.chatPrompts);
+			return useMemo(() => prompts.map((p) => ({ label: p.name, value: p.name })), [prompts]);
+		}
+
+		api.registerSlashCommand({
+			name: "prompt",
+			description: "Inject a saved prompt into your message",
+			params: {
+				name: {
+					type: "dropdown",
+					description: "Prompt name",
+					index: 0,
+					props: {
+						items: usePromptItems,
+					},
+				},
+			},
+			consumesInput: true,
+			inputPlaceholder: "Additional context...",
+			execute: async (_api, _params) => {
+				// Injection happens in bridge.preCompletion hook
+			},
+		});
+
+		api.registerSlashCommand({
+			name: "create_prompt",
+			description: "Create a saved prompt",
+			params: {
+				name: { type: "string", description: "Prompt name", index: 0 },
+			},
+			consumesInput: true,
+			inputPlaceholder: "Prompt content...",
+			execute: async (_api, params, extraParams) => {
+				const content = extraParams?.prompt;
+				if (!content) return;
+				await api.useStore.getState().addChatPrompt({ name: params.name!, content });
+			},
+		});
+
 		api.registerUiSpaceComponent(EUISpaceLoc.TODOS_PANEL, TodoPanel, {
 			label: "To-Do",
 			icon: LuListTodo,
@@ -2095,8 +2136,36 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			"create_mode",
 			"mode",
 			"set_project_root",
+			"create_prompt",
 		];
 
+		// Prompt injection hook: /prompt <name> prepends saved prompt content to message
+		api.eventNode.hook("..", "bridge.preCompletion", async (eventApi) => {
+			const payload = eventApi.payload as {
+				slashCommands: Array<{ name: string; params: Record<string, string> }>;
+				body: { userMessage: { content: string } };
+			};
+			const promptCmd = payload.slashCommands.find((cmd) => cmd.name === "prompt");
+			if (promptCmd) {
+				const state = useStore.getState();
+				const prompt = state.chatPrompts.find((p) => p.name === promptCmd.params.name);
+				if (prompt) {
+					const existing = payload.body.userMessage.content.trim();
+					if (existing) {
+						payload.body.userMessage.content = prompt.content + "\n\n" + existing;
+					} else {
+						payload.body.userMessage.content = prompt.content;
+					}
+					// Remove processed /prompt commands so duplicate hook copies don't re-inject
+					payload.slashCommands = payload.slashCommands.filter(
+						(cmd) => cmd.name !== "prompt",
+					);
+				}
+			}
+			return eventApi.result;
+		});
+
+		// Compact hook
 		api.eventNode.hook("..", "bridge.preCompletion", async (eventApi) => {
 			const payload = eventApi.payload as {
 				slashCommands: Array<{ name: string }>;

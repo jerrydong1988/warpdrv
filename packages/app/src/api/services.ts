@@ -21,6 +21,8 @@ import type {
 	IChatMessageCreatePayload,
 	IChatPreset,
 	IChatPresetCreatePayload,
+	IChatPrompt,
+	IChatPromptCreatePayload,
 	IChatThreadCreatePayload,
 	ICheckpoint,
 	IDownload,
@@ -330,6 +332,20 @@ export async function updateChatPreset(id: string, data: Partial<IChatPresetCrea
 }
 export async function deleteChatPreset(id: string) {
 	return api.del<null>(`/chat/presets/${id}`);
+}
+
+// Chat Prompts
+export async function fetchChatPrompts() {
+	return api.getList<IChatPrompt>("/prompts");
+}
+export async function createChatPrompt(data: IChatPromptCreatePayload) {
+	return api.post<IChatPrompt>("/prompts", data);
+}
+export async function updateChatPrompt(id: string, data: Partial<IChatPromptCreatePayload>) {
+	return api.put<IChatPrompt>(`/prompts/${id}`, data);
+}
+export async function deleteChatPrompt(id: string) {
+	return api.del<null>(`/prompts/${id}`);
 }
 
 // Thread Config
