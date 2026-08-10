@@ -405,6 +405,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			const toolNames =
 				lastAssistant?.tool_calls?.map((tc) => tc.function.name.toLowerCase()) || [];
 
+			// Collect tool call IDs from the current assistant message
+			const currentToolCallIds = new Set(lastAssistant?.tool_calls?.map((tc) => tc.id) || []);
+
 			// Filter guardrails by triggerOnTools
 			const applicableGuardrails = activeGuardrails.filter((g) => {
 				if (!g.triggerOnTools) return true;
@@ -549,10 +552,24 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					const currentErrors =
 						(existing?.guardrailErrors as Record<string, IGuardrailError>) || {};
 
+					// Strip toolCallId from issues that don't belong to this message's tool calls
+					const filteredIssues = parsed.map((item: IGuardrailIssue) => {
+						if (
+							item.toolCallId !== undefined &&
+							!currentToolCallIds.has(item.toolCallId)
+						) {
+							return { ...item, toolCallId: undefined as undefined };
+						}
+						return item;
+					});
+
 					await api.eventNode.invoke("/warpcore", "bridge.updateMessageState", {
 						messageId,
 						data: {
-							guardrailResults: { ...currentResults, [guardrail.name]: parsed },
+							guardrailResults: {
+								...currentResults,
+								[guardrail.name]: filteredIssues,
+							},
 							guardrailErrors: { ...currentErrors },
 						},
 					});

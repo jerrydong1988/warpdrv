@@ -11,6 +11,7 @@
 
 import type { EventNode } from "@warpcore/realmcore";
 import crypto from "crypto";
+import { isDeepStrictEqual } from "util";
 import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";
 import {
 	accumulateToolCallDelta,
@@ -78,6 +79,7 @@ export type TPureCompletionChunkHandler = (partType: string, deltaText: string) 
 
 // Track in-flight inference URLs per thread so resume can continue
 const threadInferenceUrls: Map<TThreadId, string> = new Map();
+const threadInferenceMessageCache: Record<TThreadId, TOpenAIMessage[]> = {};
 
 export class Orchestrator {
 	private mcpClient: IMcpClient;
@@ -622,6 +624,8 @@ export class Orchestrator {
 			finalMessages,
 		)) as Array<TOpenAIMessage>;
 
+		this.checkMessageDivergence(request.threadId, finalMessages);
+
 		const body: Record<string, unknown> = {
 			model: "model",
 			messages: finalMessages,
@@ -1062,6 +1066,42 @@ export class Orchestrator {
 		}
 
 		return { hadToolCalls: true, needsAsk, lastToolMessageId };
+	}
+
+	private checkMessageDivergence(threadId: TThreadId, currentMessages: TOpenAIMessage[]): void {
+		try {
+			const cachedMessages = threadInferenceMessageCache[threadId];
+			if (!cachedMessages) {
+				threadInferenceMessageCache[threadId] = currentMessages;
+				return;
+			}
+
+			const maxLen = Math.max(cachedMessages.length, currentMessages.length);
+			for (let i = 0; i < maxLen; i++) {
+				const oldMsg = cachedMessages[i];
+				const newMsg = currentMessages[i];
+				if (!isDeepStrictEqual(oldMsg, newMsg)) {
+					console.warn(
+						"inference_message_divergence",
+						JSON.stringify(oldMsg),
+						JSON.stringify(newMsg),
+					);
+					this.eventNode.broadcast("console-log", {
+						type: "inference_message_divergence",
+						threadId,
+						divergentIndex: i,
+						cachedThread: cachedMessages,
+						currentThread: currentMessages,
+						divergentCachedMessage: oldMsg,
+						divergentCurrentMessage: newMsg,
+					});
+					break;
+				}
+			}
+			threadInferenceMessageCache[threadId] = currentMessages;
+		} catch {
+			// non-fatal, do not interrupt inference
+		}
 	}
 
 	private async flushTextPart(turn: ITurnState): Promise<void> {

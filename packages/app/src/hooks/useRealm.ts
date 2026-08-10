@@ -49,6 +49,13 @@ export function useRealm(currentThreadId: string | null) {
 
 		socket.on("connect", () => {
 			console.log(`[Realm] ✅ Connected as ${nodeId}.`);
+			setTimeout(
+				() =>
+					chatNode.sub("../", "console-log", (api) => {
+						console.log("[console-log]", api.payload);
+					}),
+				100,
+			);
 		});
 
 		socket.on("disconnect", () => {

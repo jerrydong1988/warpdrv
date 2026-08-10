@@ -27,3 +27,13 @@ export type {
 export * from "./types";
 export * from "./vram";
 export * from "./whisper-types";
+export {
+	genThreadId,
+	genMessageId,
+	genPartId,
+	genToolCallId,
+	genFolderId,
+	genPresetId,
+	genTokenId,
+	genPromptId,
+} from "./id-utils";

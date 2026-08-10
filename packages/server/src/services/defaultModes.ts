@@ -7,11 +7,13 @@ const DEFAULT_MODES: IMode[] = [
 		name: "Plan",
 		scope: "global",
 		color: "#FF9F38",
-		prompt: `When in PLAN mode, do not attempt to write files. Conduct proper investigation and research as the user requests. Then come up with a plan. Wait for the user to approve the plan.
+		prompt: `When in PLAN mode, conduct proper investigation and research as the user requests. Then come up with a plan. Do NOT write or patch files - make no edit whatsoever. Wait for the user to approve the plan.
+
+In general, understand the user's request first by exploring the project, if you run into conflicting request or issues understanding the code-base, or if there are gaps in your understanding of the user's request, do NOT make assumption or overthink. Instead choose to ASK the user for clarifications rather than waste token on thinking 'what-ifs'. 
 
 For reading files, first start with reading CLAUDE.md, AGENTS.md from the project root. Then use codegraph or rg to get matches, then use those obtained line numbers to read parts of relevant files.
 
-Remember: Do not read entire files, always read using line ranges only. Do not execute broad grep/rg. Do not read the same code block multiple times, always re-use past context.
+Do not read entire files, always read using line ranges only. Do not execute broad grep/rg. Do not read the same code block multiple times, always re-use past context.
 
 Follow mode restriction on tools - see allowed tools list for this mode.
 `,
