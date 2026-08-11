@@ -10,7 +10,7 @@ import type {
 	IChatThreadCreatePayload,
 	IServer,
 } from "@warpcore/shared";
-import { EServerStatus } from "@warpcore/shared";
+import { EServerStatus, genFolderId, genMessageId, genThreadId } from "@warpcore/shared";
 import { createSession } from "better-sse";
 import crypto from "crypto";
 import { Router } from "express";
@@ -47,7 +47,7 @@ chatRouter.post("/threads", async (req, res) => {
 	try {
 		const body = req.body as IChatThreadCreatePayload;
 		const now = Date.now();
-		const id = body.id ?? crypto.randomUUID();
+		const id = body.id ?? genThreadId();
 		await persistence.createThread({
 			id,
 			title: body.title ?? "New Chat",
@@ -262,7 +262,7 @@ chatRouter.post("/threads/:id/messages", async (req, res) => {
 			: [req.body];
 		const now = Date.now();
 		const messages = payloads.map((p, i) => ({
-			id: p.id ?? crypto.randomUUID(),
+			id: p.id ?? genMessageId(),
 			parentId: p.parentId ?? null,
 			threadId,
 			role: p.role as EChatRole,
@@ -355,7 +355,7 @@ chatRouter.post("/folders", async (req, res) => {
 				.json({ ok: false, data: null, error: `Topic "${topic}" already exists` });
 		}
 		const folder: IFolder = {
-			id: crypto.randomUUID(),
+			id: genFolderId(),
 			name: folderName,
 			topic,
 			parentId: parentId ?? null,

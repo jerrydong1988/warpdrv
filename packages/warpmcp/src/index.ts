@@ -4,6 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { randomUUID } from "crypto";
 import express from "express";
 import type { Server } from "http";
+import { stableStringify } from "@warpcore/shared";
 import { authorizeAccess, authorizeToolCall } from "./auth";
 import { chatGetMessageDefinition, chatGetMessageHandler } from "./tools/chat_get_message";
 import { chatSearchDefinition, chatSearchHandler } from "./tools/chat_search";
@@ -82,7 +83,7 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		const tool = tools.find((t) => t.def.name === name);
 		if (!tool) throw new Error(`Unknown tool: ${name}`);
 		const result = await tool.handler(args as any);
-		const json = JSON.stringify(result);
+		const json = stableStringify(result);
 		const bytes = Buffer.byteLength(json, "utf8");
 		const limit = (tool.def as any).resultLimit;
 		if (limit !== undefined && bytes > limit) {

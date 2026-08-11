@@ -1,4 +1,5 @@
 import type { IChatPreset, IChatPresetCreatePayload } from "@warpcore/shared";
+import { genPresetId } from "@warpcore/shared";
 import crypto from "crypto";
 import fs from "fs";
 import os from "os";
@@ -49,7 +50,7 @@ export function createChatPreset(payload: IChatPresetCreatePayload): IChatPreset
 	const dir = ensureDir();
 	const now = Date.now();
 	const preset: IChatPreset = {
-		id: crypto.randomUUID(),
+		id: genPresetId(),
 		name: payload.name,
 		systemPrompt: payload.systemPrompt,
 		params: payload.params,

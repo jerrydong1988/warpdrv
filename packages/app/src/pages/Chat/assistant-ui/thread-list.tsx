@@ -1,6 +1,7 @@
 import { ThreadListPrimitive } from "@assistant-ui/react";
 import { Box, HStack, Input, Menu, Portal, Text, VStack } from "@chakra-ui/react";
 import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from "@warpcore/bridge";
+import { genThreadId } from "@warpcore/shared";
 import {
 	CheckIcon,
 	ChevronDownIcon,
@@ -476,7 +477,7 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 				if (res.ok && res.data) setWorkspace(res.data);
 			});
 			setActiveWorkspaceId(folder.id);
-			setCurrentThreadId(globalThis.crypto.randomUUID());
+			setCurrentThreadId(genThreadId());
 		}
 		setExpanded(!expanded);
 	}, [folder.id, expanded, setExpanded, setWorkspace, setActiveWorkspaceId, setCurrentThreadId]);

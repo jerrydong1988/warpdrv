@@ -6,6 +6,7 @@
 // ============================================================
 
 import type { WritableDraft } from "immer";
+import { genThreadId } from "@warpcore/shared";
 import type {
 	IChatMessage,
 	IChatThread,
@@ -247,7 +248,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				delete draft.messagesByThread[threadId];
 				// Clear current thread if it was the deleted one
 				if (draft.currentThreadId === threadId) {
-					draft.currentThreadId = crypto.randomUUID();
+					draft.currentThreadId = genThreadId();
 				}
 			}),
 

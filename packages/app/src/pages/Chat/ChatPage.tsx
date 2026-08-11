@@ -19,7 +19,7 @@ import {
 	VStack,
 } from "@chakra-ui/react";
 import type { IChatPreset, IToolAttachment } from "@warpcore/shared";
-import { EReasoningEffort, EServerStatus } from "@warpcore/shared";
+import { EReasoningEffort, EServerStatus, genPartId } from "@warpcore/shared";
 import { ChevronDown, MessageSquare, Plus } from "lucide-react";
 import { nanoid } from "nanoid";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -485,7 +485,7 @@ const ChatInner = React.memo(
 								reader.readAsDataURL(att.file);
 							});
 							attachmentParts.push({
-								id: att.id || crypto.randomUUID(),
+								id: att.id || genPartId(),
 								type: "attachment",
 								orderIndex: 0,
 								data: base64,
@@ -506,7 +506,7 @@ const ChatInner = React.memo(
 							}
 							if (extractedText) {
 								attachmentParts.push({
-									id: att.id || crypto.randomUUID(),
+									id: att.id || genPartId(),
 									type: "attachment",
 									orderIndex: 0,
 									data: "",
@@ -524,7 +524,7 @@ const ChatInner = React.memo(
 								? imagePart.image.split(",")[1]
 								: imagePart.image;
 							attachmentParts.push({
-								id: att.id || crypto.randomUUID(),
+								id: att.id || genPartId(),
 								type: "attachment",
 								orderIndex: 0,
 								data: base64,
@@ -705,7 +705,7 @@ const ChatInner = React.memo(
 
 				const parts = [
 					{
-						id: globalThis.crypto.randomUUID(),
+						id: genPartId(),
 						type: "text" as const,
 						orderIndex: 0,
 						text,

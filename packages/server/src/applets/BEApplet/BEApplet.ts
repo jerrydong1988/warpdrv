@@ -223,7 +223,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							: mode.allowedTools.map((t: any) => t.toolName);
 
 					if (toolNames.length)
-						content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.join(", ")}\n`;
+						content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.sort().join(", ")}\n`;
 					else
 						content +=
 							"ALLOWED TOOLS: CURRENTLY ALL TOOLS ARE STRICTLY NOT ALLOWED! DO NOT CALL ANY TOOLS!";
@@ -234,6 +234,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						messages,
 						`${MODE_SYSTEM_PROMPT}\n${modesArr
 							.filter((mode) => mode.prompt?.length)
+							.sort((a, b) => a.name.localeCompare(b.name))
 							.map((mode, i) => {
 								let toolMessage = "";
 								const toolNames =
@@ -241,7 +242,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 										? mode.allowedTools
 										: mode.allowedTools.map((t: any) => t.toolName);
 
-								if (toolNames.length) toolMessage += toolNames.join(", ");
+								if (toolNames.length)
+									toolMessage += [...toolNames].sort().join(", ");
 								else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!";
 
 								return `--- MODE ${mode.name} ---\n\n ${mode.prompt}\n\nALLOWED TOOLS: ${toolMessage}\n---`;

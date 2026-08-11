@@ -1,4 +1,5 @@
 import type { IChatPrompt, IChatPromptCreatePayload } from "@warpcore/shared";
+import { genPromptId } from "@warpcore/shared";
 import crypto from "crypto";
 import { Router } from "express";
 import { persistence } from "../index";
@@ -40,7 +41,7 @@ promptsRouter.post("/", async (req, res) => {
 			return;
 		}
 
-		const id = crypto.randomUUID();
+		const id = genPromptId();
 		const now = Date.now();
 		const prompt: IChatPrompt = {
 			id,

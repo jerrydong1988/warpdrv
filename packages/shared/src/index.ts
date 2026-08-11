@@ -27,6 +27,7 @@ export type {
 export * from "./types";
 export * from "./vram";
 export * from "./whisper-types";
+export { stableStringify } from "./stableStringify";
 export {
 	genThreadId,
 	genMessageId,

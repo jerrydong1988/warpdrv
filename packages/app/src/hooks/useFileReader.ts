@@ -1,5 +1,6 @@
 import type { IMessagePartAttachment } from "@warpcore/bridge";
 import { EMessagePartType } from "@warpcore/bridge";
+import { genPartId } from "@warpcore/shared";
 import * as pdfjsLib from "pdfjs-dist";
 import { useCallback } from "react";
 
@@ -157,7 +158,7 @@ export function useFileReader() {
 			reader.onload = (e) => {
 				const base64 = e.target?.result as string;
 				resolve({
-					id: crypto.randomUUID(),
+					id: genPartId(),
 					type: EMessagePartType.ATTACHMENT,
 					orderIndex: 0,
 					data: base64,

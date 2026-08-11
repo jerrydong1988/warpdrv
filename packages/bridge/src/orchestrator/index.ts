@@ -11,6 +11,7 @@
 
 import type { EventNode } from "@warpcore/realmcore";
 import crypto from "crypto";
+import { genMessageId, genPartId, stableStringify } from "@warpcore/shared";
 import { isDeepStrictEqual } from "util";
 import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";
 import {
@@ -350,10 +351,10 @@ export class Orchestrator {
 			// If userMessage content provided, bridge generates ID and saves
 			let userMsg: IChatMessage | null = null;
 			if (request.userMessage) {
-				const userMessageId = crypto.randomUUID();
+				const userMessageId = genMessageId();
 				const content: IMessagePart[] = [
 					{
-						id: crypto.randomUUID(),
+						id: genPartId(),
 						type: EMessagePartType.TEXT,
 						orderIndex: 0,
 						text: request.userMessage.content,
@@ -363,7 +364,7 @@ export class Orchestrator {
 				if (request.attachments?.length) {
 					for (const att of request.attachments) {
 						content.push({
-							id: crypto.randomUUID(),
+							id: genPartId(),
 							type: EMessagePartType.ATTACHMENT,
 							orderIndex: content.length,
 							data: att.data,
@@ -456,14 +457,14 @@ export class Orchestrator {
 				this.broadcaster.emit({
 					type: "inference.ended",
 					threadId: request.threadId,
-					messageId: request.parentId ?? crypto.randomUUID(),
+					messageId: request.parentId ?? genMessageId(),
 				});
 			} else {
 				console.error("[Orchestrator] handleCompletionV2 error:", errorMsg);
 				this.broadcaster.emit({
 					type: "inference.error",
 					threadId: request.threadId,
-					messageId: request.parentId ?? crypto.randomUUID(),
+					messageId: request.parentId ?? genMessageId(),
 					error: errorMsg,
 				});
 			}
@@ -557,7 +558,7 @@ export class Orchestrator {
 		parentId: TMessageId | null,
 	): Promise<IChatMessage> {
 		const msg: IChatMessage = {
-			id: crypto.randomUUID(),
+			id: genMessageId(),
 			parentId,
 			threadId,
 			role: EChatRole.ASSISTANT,
@@ -576,13 +577,13 @@ export class Orchestrator {
 		toolCallId: string,
 	): Promise<IChatMessage> {
 		const msg: IChatMessage = {
-			id: crypto.randomUUID(),
+			id: genMessageId(),
 			parentId,
 			threadId,
 			role: EChatRole.TOOL,
 			content: [
 				{
-					id: crypto.randomUUID(),
+					id: genPartId(),
 					type: EMessagePartType.TOOL_CALL,
 					orderIndex: 0,
 					toolCallId,
@@ -637,7 +638,7 @@ export class Orchestrator {
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Authorization: "Bearer warpcore" },
-			body: JSON.stringify(body),
+			body: stableStringify(body),
 			signal: abortSignal,
 		});
 
@@ -696,7 +697,7 @@ export class Orchestrator {
 							await this.flushReasoningPart(turn);
 						}
 						if (!turn.currentTextPart) {
-							turn.currentTextPart = { id: crypto.randomUUID(), text: "" };
+							turn.currentTextPart = { id: genPartId(), text: "" };
 							this.broadcaster.emit({
 								type: "message.patched",
 								messageId: turn.assistantMessageId,
@@ -737,7 +738,7 @@ export class Orchestrator {
 							await this.flushTextPart(turn);
 						}
 						if (!turn.currentReasoningPart) {
-							turn.currentReasoningPart = { id: crypto.randomUUID(), text: "" };
+							turn.currentReasoningPart = { id: genPartId(), text: "" };
 							this.broadcaster.emit({
 								type: "message.patched",
 								messageId: turn.assistantMessageId,
@@ -886,7 +887,7 @@ export class Orchestrator {
 
 			// Use model's raw tool call ID for correlation with guardrails
 			const toolCallId = tc.id;
-			const toolMessageId = crypto.randomUUID();
+			const toolMessageId = genMessageId();
 
 			const toolCallRecord: IToolCall = {
 				id: toolCallId,
@@ -907,7 +908,7 @@ export class Orchestrator {
 			this.broadcaster.emit({ type: "tool_call.created", toolCall: toolCallRecord });
 
 			const toolPart: IMessagePart = {
-				id: crypto.randomUUID(),
+				id: genPartId(),
 				type: EMessagePartType.TOOL_CALL,
 				orderIndex: turn.partOrderCounter++,
 				toolCallId,
@@ -928,7 +929,7 @@ export class Orchestrator {
 				role: EChatRole.TOOL,
 				content: [
 					{
-						id: crypto.randomUUID(),
+						id: genPartId(),
 						type: EMessagePartType.TOOL_CALL,
 						orderIndex: 0,
 						toolCallId,
@@ -1002,24 +1003,24 @@ export class Orchestrator {
 					wsVars,
 					tsVars,
 				);
-				console.log(
-					"[orchestrator] tool call:",
-					serverName,
-					tc.name,
-					"wsVars:",
-					wsVars,
-					"tsVars:",
-					tsVars,
-					"finalArgs:",
-					JSON.stringify(finalArgs),
-				);
+				// console.log(
+				// 	"[orchestrator] tool call:",
+				// 	serverName,
+				// 	tc.name,
+				// 	"wsVars:",
+				// 	wsVars,
+				// 	"tsVars:",
+				// 	tsVars,
+				// 	"finalArgs:",
+				// 	JSON.stringify(finalArgs),
+				// );
 				const mcpResult = await this.mcpClient.executeToolCall(
 					serverName!,
 					tc.name,
 					finalArgs,
 					request.threadId,
 				);
-				const resultStr = JSON.stringify(mcpResult.content);
+				const resultStr = stableStringify(mcpResult.content);
 				const finalStatus = mcpResult.isError
 					? EToolCallStatus.ERROR
 					: EToolCallStatus.COMPLETED;
@@ -1177,7 +1178,7 @@ export class Orchestrator {
 					finalArgs,
 					tc.threadId,
 				);
-				const resultStr = JSON.stringify(mcpResult.content);
+				const resultStr = stableStringify(mcpResult.content);
 				const finalStatus = mcpResult.isError
 					? EToolCallStatus.ERROR
 					: EToolCallStatus.COMPLETED;
@@ -1421,7 +1422,7 @@ export class Orchestrator {
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Authorization: "Bearer warpcore" },
-			body: JSON.stringify(body),
+			body: stableStringify(body),
 			signal: abortSignal,
 		});
 
@@ -1492,7 +1493,7 @@ export class Orchestrator {
 						fullText += delta.content;
 						if (currentReasoningPart) flushReasoning();
 						if (!currentTextPart) {
-							currentTextPart = { id: crypto.randomUUID(), text: "" };
+							currentTextPart = { id: genPartId(), text: "" };
 						}
 						currentTextPart.text += delta.content;
 						onChunk?.("text", delta.content);
@@ -1502,7 +1503,7 @@ export class Orchestrator {
 						reasoningText += delta.reasoning_content;
 						if (currentTextPart) flushText();
 						if (!currentReasoningPart) {
-							currentReasoningPart = { id: crypto.randomUUID(), text: "" };
+							currentReasoningPart = { id: genPartId(), text: "" };
 						}
 						currentReasoningPart.text += delta.reasoning_content;
 						onChunk?.("reasoning", delta.reasoning_content);

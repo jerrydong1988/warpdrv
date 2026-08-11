@@ -4,6 +4,7 @@ import type {
 	IAccessTokenInfo,
 	IAccessTokenUpdatePayload,
 } from "@warpcore/shared";
+import { genTokenId } from "@warpcore/shared";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Router } from "express";
@@ -50,7 +51,7 @@ tokensRouter.post("/", async (req, res) => {
 
 	const rawToken = generateToken();
 	const tokenHash = await bcrypt.hash(rawToken, SALT_ROUNDS);
-	const id = crypto.randomUUID();
+	const id = genTokenId();
 
 	// Validate: mcp only valid if inference is set
 	let mcpLabelled = body.mcp_labelled;
