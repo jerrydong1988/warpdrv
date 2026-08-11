@@ -342,6 +342,9 @@ export class Orchestrator {
 				this.broadcaster.emit({ type: "thread.created", thread });
 			}
 
+			// Normalize folderId from thread (request.folderId may be stale from frontend)
+			request.folderId = thread.folderId;
+
 			// Stash inference URL for post-approval resume
 			threadInferenceUrls.set(request.threadId, inferenceUrl);
 
@@ -1139,6 +1142,10 @@ export class Orchestrator {
 		if (!tc) throw new Error("Tool call not found");
 		if (tc.status !== EToolCallStatus.PENDING)
 			throw new Error(`Tool call is ${tc.status}, not PENDING`);
+
+		// Normalize folderId from thread
+		const thread = await this.persistence.getThread(request.threadId);
+		if (thread) request.folderId = thread.folderId;
 
 		if (decision === "deny") {
 			const deniedTc: IToolCall = {

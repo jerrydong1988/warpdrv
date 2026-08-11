@@ -471,16 +471,18 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 	const setCurrentThreadId = useStore((s) => s.setCurrentThreadId);
 	const setWorkspace = useStore((s) => s.setWorkspace);
 
-	const handleToggle = useCallback(() => {
-		if (!expanded) {
-			fetchWorkspace(folder.id).then((res) => {
-				if (res.ok && res.data) setWorkspace(res.data);
-			});
-			setActiveWorkspaceId(folder.id);
-			setCurrentThreadId(genThreadId());
-		}
+	const handleExpandToggle = useCallback(() => {
 		setExpanded(!expanded);
-	}, [folder.id, expanded, setExpanded, setWorkspace, setActiveWorkspaceId, setCurrentThreadId]);
+	}, [expanded, setExpanded]);
+
+	const handleOpenFolder = useCallback(() => {
+		fetchWorkspace(folder.id).then((res) => {
+			if (res.ok && res.data) setWorkspace(res.data);
+		});
+		setActiveWorkspaceId(folder.id);
+		setCurrentThreadId(genThreadId());
+		setExpanded(true);
+	}, [folder.id, setWorkspace, setActiveWorkspaceId, setCurrentThreadId]);
 
 	const threadCount = useMemo(() => {
 		const allThreads = Object.values(useStore.getState().threads) as IChatThread[];
@@ -542,24 +544,30 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 				borderRadius="md"
 				position="relative"
 				_hover={{ bg: "var(--wc-bg-card)" }}
-				onClick={handleToggle}
+				onClick={handleOpenFolder}
 				draggable
 				onDragStart={handleFolderDragStart}
 				onDragOver={handleFolderDragOver}
 				onDrop={handleFolderDrop}
 				data-foldertype="folder"
 			>
-				{expanded ? (
-					<ChevronDownIcon
-						size={12}
-						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-					/>
-				) : (
-					<ChevronRightIcon
-						size={12}
-						style={{ flexShrink: 0, color: "var(--wc-text-muted)" }}
-					/>
-				)}
+				<Box
+					as="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						handleExpandToggle();
+					}}
+					style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+					p="0.5"
+					_hover={{ bg: "var(--wc-bg-hover)" }}
+					borderRadius="sm"
+				>
+					{expanded ? (
+						<ChevronDownIcon size={12} style={{ color: "var(--wc-text-muted)" }} />
+					) : (
+						<ChevronRightIcon size={12} style={{ color: "var(--wc-text-muted)" }} />
+					)}
+				</Box>
 				{expanded ? (
 					<FolderOpenIcon
 						size={14}

@@ -542,7 +542,7 @@ const ChatInner = React.memo(
 					parentId: headMessageId,
 					serverId: currentServerId,
 					whisperServerId: currentWhisperServerId,
-					folderId: useStore.getState().activeWorkspaceId ?? null,
+					folderId: state.threads[threadId]?.folderId ?? state.activeWorkspaceId ?? null,
 					enableAutoEmbed: currentAutoEmbed,
 					systemPrompt: currentSystemPrompt,
 					inferenceParams: currentInferenceParams,
@@ -645,7 +645,8 @@ const ChatInner = React.memo(
 					body: JSON.stringify({
 						threadId: currentThreadId,
 						parentId,
-						folderId: useStore.getState().activeWorkspaceId ?? null,
+						folderId:
+							st.threads[currentThreadId]?.folderId ?? st.activeWorkspaceId ?? null,
 						serverId: currentServerId,
 						whisperServerId: currentWhisperServerId,
 						enableAutoEmbed: currentAutoEmbed,

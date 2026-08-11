@@ -207,25 +207,31 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 		applyThreadCreated: (thread: IChatThread) =>
 			set((draft) => {
 				draft.threads[thread.id] = thread;
+				// Sync activeWorkspaceId if this is the current thread
+				if (thread.id === draft.currentThreadId && thread.folderId) {
+					draft.activeWorkspaceId = thread.folderId;
+				}
 			}),
 
 		applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) =>
 			set((draft) => {
 				const thread = draft.threads[threadId];
 				if (thread) {
-					if (updates.title !== undefined) draft.threads[threadId]!.title = updates.title;
-					if (updates.folderId !== undefined)
-						draft.threads[threadId]!.folderId = updates.folderId;
-					if (updates.parentId !== undefined)
-						draft.threads[threadId]!.parentId = updates.parentId;
+					if (updates.title !== undefined) thread.title = updates.title;
+					if (updates.folderId !== undefined) {
+						thread.folderId = updates.folderId;
+						// Sync activeWorkspaceId if this is the current thread
+						if (threadId === draft.currentThreadId)
+							draft.activeWorkspaceId = updates.folderId;
+					}
+					if (updates.parentId !== undefined) thread.parentId = updates.parentId;
 					if (updates.systemPrompt !== undefined)
-						draft.threads[threadId]!.systemPrompt = updates.systemPrompt;
-					if (updates.meta !== undefined) draft.threads[threadId]!.meta = updates.meta;
+						thread.systemPrompt = updates.systemPrompt;
+					if (updates.meta !== undefined) thread.meta = updates.meta;
 					if (updates.totalPromptTokens !== undefined)
-						draft.threads[threadId]!.totalPromptTokens = updates.totalPromptTokens;
+						thread.totalPromptTokens = updates.totalPromptTokens;
 					if (updates.totalCompletionTokens !== undefined)
-						draft.threads[threadId]!.totalCompletionTokens =
-							updates.totalCompletionTokens;
+						thread.totalCompletionTokens = updates.totalCompletionTokens;
 				}
 			}),
 
