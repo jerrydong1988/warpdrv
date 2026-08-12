@@ -481,13 +481,14 @@ export class SqlitePersistence implements IPersistence {
 			const cols = this.db!.prepare(
 				`PRAGMA table_info(${this.t.guardrails})`,
 			).all() as Array<{ name: string }>;
-			if (cols.some((c) => c.name === "id")) return; // Already migrated
-
-			const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<
-				Record<string, unknown>
-			>;
-			this.db!.exec(`DROP TABLE ${this.t.guardrails}`);
-			this.db!.exec(`
+			if (cols.some((c) => c.name === "id")) {
+				// Already migrated
+			} else {
+				const rows = this.db!.prepare(`SELECT * FROM ${this.t.guardrails}`).all() as Array<
+					Record<string, unknown>
+				>;
+				this.db!.exec(`DROP TABLE ${this.t.guardrails}`);
+				this.db!.exec(`
 					CREATE TABLE ${this.t.guardrails} (
 						id TEXT PRIMARY KEY,
 						name TEXT NOT NULL,
@@ -499,21 +500,24 @@ export class SqlitePersistence implements IPersistence {
 						includeBaseMessage INTEGER DEFAULT 0
 					)
 				`);
-			for (const r of rows) {
-				this.db!.prepare(
-					`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				).run(
-					r.name as string,
-					r.name as string,
-					r.serverId as string,
-					(r.prompt as string) ?? null,
-					r.triggerOnTools as string,
-					r.inferenceParams as string,
-					r.messagesCount as number,
-					(r.includeBaseMessage as number) ?? 0,
+				for (const r of rows) {
+					this.db!.prepare(
+						`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+					).run(
+						r.name as string,
+						r.name as string,
+						r.serverId as string,
+						(r.prompt as string) ?? null,
+						r.triggerOnTools as string,
+						r.inferenceParams as string,
+						r.messagesCount as number,
+						(r.includeBaseMessage as number) ?? 0,
+					);
+				}
+				console.log(
+					`[migration] guardrails: added id column, migrated ${rows.length} rows`,
 				);
 			}
-			console.log(`[migration] guardrails: added id column, migrated ${rows.length} rows`);
 		} catch (err) {
 			console.error("[migration] guardrails id migration failed:", err);
 		}
@@ -529,8 +533,8 @@ export class SqlitePersistence implements IPersistence {
 				);
 				console.log("[migration] Added promptId to guardrails table");
 			}
-		} catch {
-			// Column already exists
+		} catch (err) {
+			console.error("[migration] Failed to add promptId to guardrails table:", err);
 		}
 
 		try {
@@ -541,8 +545,8 @@ export class SqlitePersistence implements IPersistence {
 				this.db!.exec(`ALTER TABLE ${this.t.modes} ADD COLUMN promptId TEXT DEFAULT NULL`);
 				console.log("[migration] Added promptId to modes table");
 			}
-		} catch {
-			// Column already exists
+		} catch (err) {
+			console.error("[migration] Failed to add promptId to modes table:", err);
 		}
 	}
 

@@ -19,7 +19,7 @@ export const ComposerUiSpace = React.memo(() => {
 			w="calc(100% + var(--chakra-spacing-1\.5) * 2.5)"
 			overflowX="auto"
 			minWidth="0"
-			bg="linear-gradient(to bottom, color-mix(in srgb, transparent, var(--wc-fg-absolute) 3%), transparent)"
+			// bg="linear-gradient(to bottom, color-mix(in srgb, transparent, var(--wc-fg-absolute) 3%), transparent)"
 			color="var(--wc-fg-absolute)"
 			borderRadius="10px 10px 0 0"
 			//borderBottom="1px solid color-mix(in srgb, var(--wc-border-subtle) 35%, transparent)"
