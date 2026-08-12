@@ -195,7 +195,10 @@ export interface ILaunchParams {
 	gpuSplitValues?: number[]; // per-GPU proportions, zeros exclude devices
 	mainGpu?: number; // -1 = default, >=0 = explicit GPU index
 	useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
-	preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
+	preserveThinking?: boolean; // enables --chat-template-kwargs {\"preserve_thinking\":true}
+	cacheRam?: number; // MiB: -1=unlimited, 0=disabled, undefined=auto (llama-server default)
+	ctxCheckpoints?: number; // per-slot checkpoint cap, undefined=auto
+	slotPromptSimilarity?: number; // 0-1 float: 0=disabled, undefined=auto
 }
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {

@@ -353,6 +353,42 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			return userMsg;
 		});
 
+		api.eventNode.hook("/warpcore", "bridge.tool.pre", async (eventApi) => {
+			const payload = eventApi.payload as {
+				threadId: string;
+				messageId: string;
+				toolName: string;
+			};
+
+			const threadState = (await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.getThreadState",
+				payload.threadId,
+			)) as Record<string, unknown> | null;
+
+			if (!threadState?.modeId) return false;
+
+			const mode = await getMode(threadState.modeId as string);
+			if (!mode) return false;
+
+			const toolNames =
+				mode.allowedTools.length > 0 && typeof mode.allowedTools[0] === "string"
+					? mode.allowedTools
+					: mode.allowedTools.map((t) => t.toolName);
+
+			if (toolNames.length === 0 || !toolNames.includes(payload.toolName)) {
+				await api.eventNode.invoke("/warpcore", "bridge.updateMessageState", {
+					messageId: payload.messageId,
+					data: {
+						blockedToolName: payload.toolName,
+					},
+				});
+				return true;
+			}
+
+			return false;
+		});
+
 		api.eventNode.on("/warpcore", "bridge.inference.finish", async (eventApi) => {
 			const payload = eventApi.payload as {
 				threadId: string;

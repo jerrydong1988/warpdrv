@@ -200,6 +200,75 @@ export function NumberField({
 }
 
 // ============================================================
+// OptionalNumberField
+// ============================================================
+export function OptionalNumberField({
+	label,
+	value,
+	onChange,
+	suffix,
+	suffixFn,
+	min,
+	max,
+	step,
+}: {
+	label: string;
+	value: number | undefined;
+	onChange: (v: number | undefined) => void;
+	suffix?: string;
+	suffixFn?: (value: number | undefined) => string;
+	min?: number;
+	max?: number;
+	step?: number;
+}) {
+	const displaySuffix = suffixFn ? suffixFn(value) : suffix;
+	return (
+		<Box flex="1">
+			<Text
+				fontSize="11px"
+				color="var(--wc-text-tertiary)"
+				textTransform="uppercase"
+				letterSpacing="0.05em"
+				mb="1.5"
+			>
+				{label}
+			</Text>
+			<HStack gap="1.5">
+				<Input
+					type="number"
+					value={value ?? ""}
+					onChange={(e) => {
+						const raw = e.target.value;
+						if (raw === "") {
+							onChange(undefined);
+						} else {
+							const num = Number(raw);
+							onChange(isNaN(num) ? undefined : num);
+						}
+					}}
+					size="sm"
+					bg="var(--wc-bg-subtle)"
+					borderColor="var(--wc-border-default)"
+					color="var(--wc-text-primary)"
+					fontFamily='"Geist Mono", monospace'
+					fontSize="13px"
+					borderRadius="lg"
+					_focus={{ borderColor: "var(--wc-accent-blue)", outline: "none" }}
+					min={min}
+					max={max}
+					step={step}
+				/>
+				{displaySuffix && (
+					<Text fontSize="11px" color="var(--wc-text-faint)" flexShrink={0}>
+						{displaySuffix}
+					</Text>
+				)}
+			</HStack>
+		</Box>
+	);
+}
+
+// ============================================================
 // SliderNumberField
 // ============================================================
 function sqrtSliderToValue(position: number, minVal: number, maxVal: number): number {

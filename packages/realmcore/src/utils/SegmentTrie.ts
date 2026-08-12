@@ -81,6 +81,54 @@ export class SegmentTrie<T> {
 			.map((e) => e.value);
 	}
 
+	// gather every value stored at the prefix node and anywhere beneath it, in
+	// install order. the prefix is treated as literal segments (no glob); *
+	// and ** in the prefix address their literal edges. used to collect all
+	// concrete subscriber addrs under a detaching branch in one walk.
+	public retrieveBranch(prefix: string): Array<T> {
+		const segs = this.split(prefix);
+		let node: ITrieNode<T> | undefined = this.root;
+		for (const seg of segs) {
+			if (!node) return [];
+			node = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
+		}
+		if (!node) return [];
+		const found: Array<ITrieEntry<T>> = [];
+		this.gather(node, found);
+		found.sort((a, b) => a.seq - b.seq);
+		return found.map((e) => e.value);
+	}
+
+	// recurse a node collecting terminals from it and all descendants, across
+	// named, star, and starstar edges.
+	private gather(node: ITrieNode<T>, found: Array<ITrieEntry<T>>): void {
+		if (node.terminal) for (const e of node.terminal) found.push(e);
+		for (const key in node.named) this.gather(node.named[key], found);
+		if (node.star) this.gather(node.star, found);
+		if (node.starstar) this.gather(node.starstar, found);
+	}
+
+	// remove the entire branch at the prefix node and beneath it, pruning the
+	// path down to the prefix. the prefix is treated as literal segments.
+	public removeBranch(prefix: string): void {
+		const segs = this.split(prefix);
+		this.removeBranchAt(this.root, segs, 0);
+	}
+
+	private removeBranchAt(node: ITrieNode<T>, segs: Array<string>, i: number): boolean {
+		if (i >= segs.length) return true;
+		const seg = segs[i];
+		const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
+		if (!child) return false;
+		const cut = this.removeBranchAt(child, segs, i + 1);
+		if (cut) {
+			if (seg === STARSTAR) delete node.starstar;
+			else if (seg === STAR) delete node.star;
+			else delete node.named[seg];
+		}
+		return this.isEmpty(node);
+	}
+
 	// match a concrete (wildcard-free) key, returning values whose pattern matches,
 	// in install order. dedup guards against a value reached more than once via
 	// overlapping ** paths.

@@ -29,6 +29,7 @@ export enum EUISpaceLoc {
 	GUARDRAILS_PANEL = "guardrails_panel",
 	TODOS_PANEL = "todos_panel",
 	MODES_PANEL = "modes_panel",
+	PROMPTS_PANEL = "prompts_panel",
 }
 
 interface UiSpacesSlice {

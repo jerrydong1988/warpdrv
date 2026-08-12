@@ -1,8 +1,8 @@
-import { Flex, Text, VStack } from "@chakra-ui/react";
+import { Box, Flex, Text, VStack } from "@chakra-ui/react";
 import { EKvQuantType, type ILaunchParams } from "@warpcore/shared";
 import React from "react";
 import { Card } from "@/components/Card";
-import { NumberField, SelectField, SliderNumberField } from "./Helpers";
+import { NumberField, OptionalNumberField, SelectField, SliderNumberField } from "./Helpers";
 
 const KV_QUANT_OPTIONS = Object.values(EKvQuantType);
 
@@ -80,6 +80,60 @@ export const ContextKVCard = React.memo(
 						min={0}
 						suffix="0 = server default"
 					/>
+					<Box borderTopWidth="1px" borderColor="var(--wc-border-subtle)" pt="5" mt="2">
+						<Text
+							fontSize="11px"
+							color="var(--wc-text-tertiary)"
+							textTransform="uppercase"
+							letterSpacing="0.05em"
+							mb="1.5"
+						>
+							Advanced Cache
+						</Text>
+						<VStack align="stretch" gap="4">
+							<Flex gap="4">
+								<OptionalNumberField
+									label="Cache RAM"
+									value={params.cacheRam}
+									onChange={(v) => onParamChange("cacheRam", v)}
+									min={-1}
+									step={1024}
+									suffixFn={(v) =>
+										v === undefined
+											? "auto"
+											: v === -1
+												? "unlimited"
+												: v === 0
+													? "disabled"
+													: "MiB"
+									}
+								/>
+								<OptionalNumberField
+									label="Ctx Checkpoints"
+									value={params.ctxCheckpoints}
+									onChange={(v) => onParamChange("ctxCheckpoints", v)}
+									min={0}
+									step={4}
+									suffix={
+										params.ctxCheckpoints === undefined
+											? "auto"
+											: "per-slot cap"
+									}
+								/>
+							</Flex>
+							<OptionalNumberField
+								label="Slot Prompt Similarity"
+								value={params.slotPromptSimilarity}
+								onChange={(v) => onParamChange("slotPromptSimilarity", v)}
+								min={0}
+								max={1}
+								step={0.05}
+								suffixFn={(v) =>
+									v === undefined ? "auto" : v === 0 ? "disabled" : "0-1 range"
+								}
+							/>
+						</VStack>
+					</Box>
 				</VStack>
 			</Card>
 		);

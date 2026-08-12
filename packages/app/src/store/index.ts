@@ -262,6 +262,7 @@ export const useStore = create<AppState>()(
 				chatPrompts: chatPrompts.chatPrompts!,
 				setChatPrompts: chatPrompts.setChatPrompts!,
 				addChatPrompt: chatPrompts.addChatPrompt!,
+				updateChatPrompt: chatPrompts.updateChatPrompt!,
 				removeChatPrompt: chatPrompts.removeChatPrompt!,
 
 				// Chat Folders

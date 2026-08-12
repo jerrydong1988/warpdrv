@@ -281,6 +281,7 @@ export interface AppState extends IChatStoreState {
 	chatPrompts: IChatPrompt[];
 	setChatPrompts: (prompts: IChatPrompt[]) => void;
 	addChatPrompt: (payload: IChatPromptCreatePayload) => Promise<void>;
+	updateChatPrompt: (id: string, payload: Partial<IChatPromptCreatePayload>) => Promise<void>;
 	removeChatPrompt: (id: string) => Promise<void>;
 
 	// Chat Folders

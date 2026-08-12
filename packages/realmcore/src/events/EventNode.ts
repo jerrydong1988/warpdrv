@@ -193,9 +193,7 @@ export class EventNode implements IExternalNode {
 	// without scanning the trees. subs install relay listeners keyed by a shared
 	// id, and unsub removes them through this.
 	public mapCallbackToListener: Record<TCallbackId, { source: TSourceAddr; name: TEventName }>;
-	// relay listener ids grouped by the subscriber they forward to, so all relays
-	// for a dropped subscriber can be purged in O(1).
-	public mapSubscriberToIds: Record<TSubscriberAddr, Set<TCallbackId>>;
+	// relay listener ids grouped by the subscriber they forward to, keyed by	// concrete subscriber addr in a trie so all relays under a detaching branch	// (the subscriber and every nested descendant) can be gathered in one walk.	public mapSubscriberToIds: SegmentTrie<Record<TCallbackId, true>>;
 
 	constructor(
 		public readonly nodeId: TNodeId,
@@ -210,7 +208,7 @@ export class EventNode implements IExternalNode {
 		this.callbacks = {};
 		this.listeners = new SegmentTrie<SegmentTrie<TCallbackId>>(SEP);
 		this.mapCallbackToListener = {};
-		this.mapSubscriberToIds = {};
+		this.mapSubscriberToIds = new SegmentTrie<Record<TCallbackId, true>>(SEP);
 		this.setupInternalEvents();
 	}
 
@@ -227,6 +225,14 @@ export class EventNode implements IExternalNode {
 	public async removeChild(nodeId: TNodeId): Promise<void> {
 		const node = this.children[nodeId];
 		if (!node) return;
+		// purge every relay listener whose subscriber is the departing child or
+		// any node nested beneath it. the child's addr is derived locally from
+		// this node's addr and the child id, so this never reaches into the
+		// child, which may already be unreachable (e.g. a network disconnect).
+		const childAddr = this.nodeAddr + SEP + nodeId;
+		const buckets = this.mapSubscriberToIds.retrieveBranch(childAddr);
+		for (const ids of buckets) for (const id in ids) this.removeListener(id);
+		this.mapSubscriberToIds.removeBranch(childAddr);
 		delete this.children[nodeId];
 		await node.removeParent();
 	}
@@ -239,8 +245,17 @@ export class EventNode implements IExternalNode {
 	}
 
 	public async removeParent(): Promise<void> {
+		// drop this node's own dangling state, then recurse so every node in the
+		// detached subtree clears its references. relay listeners live in the
+		// listeners trie and are cleared with it; the reverse maps go too.
+		this.listeners = new SegmentTrie<SegmentTrie<TCallbackId>>(SEP);
+		this.callbacks = {};
+		this.mapCallbackToListener = {};
+		this.mapSubscriberToIds = new SegmentTrie<Record<TCallbackId, true>>(SEP);
+		for (const id in this.children) await this.children[id].removeParent();
 		this.parent = null;
 		this.nodeAddr = "";
+		this.setupInternalEvents();
 	}
 
 	// callbacks
@@ -356,10 +371,10 @@ export class EventNode implements IExternalNode {
 	// used when a subscriber disconnects.
 
 	public purgeSubscriber(subscriber: TSubscriberAddr): void {
-		const ids = this.mapSubscriberToIds[subscriber];
-		if (!ids) return;
-		for (const id of ids) this.removeListener(id);
-		delete this.mapSubscriberToIds[subscriber];
+		const buckets = this.mapSubscriberToIds.retrieve(subscriber);
+		if (buckets.length === 0) return;
+		for (const id in buckets[0]) this.removeListener(id);
+		this.mapSubscriberToIds.remove(subscriber, buckets[0]);
 	}
 
 	// emit wrappers over pub. broadcast fans out in parallel and ignores returns;
@@ -483,8 +498,13 @@ export class EventNode implements IExternalNode {
 			},
 			p.id,
 		);
-		if (!this.mapSubscriberToIds[subscriber]) this.mapSubscriberToIds[subscriber] = new Set();
-		this.mapSubscriberToIds[subscriber].add(p.id);
+		const existingSubs = this.mapSubscriberToIds.retrieve(subscriber);
+		if (existingSubs.length > 0) existingSubs[0][p.id] = true;
+		else {
+			const ids: Record<TCallbackId, true> = {};
+			ids[p.id] = true;
+			this.mapSubscriberToIds.insert(subscriber, ids);
+		}
 	}
 
 	// sys.unsub: remove the relay listener by its shared id.

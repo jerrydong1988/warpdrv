@@ -776,6 +776,30 @@ export class Orchestrator {
 							if (!hadName) {
 								const name = toolCallAccumulators[tc.index]?.name;
 								if (name) {
+									// Allow hooks to block tool calls based on mode restrictions
+									const shouldAbort = await this.eventNode.pipe(
+										"bridge.tool.pre",
+										{
+											request,
+											threadId: request.threadId,
+											messageId: turn.assistantMessageId,
+											toolName: name,
+											toolIndex: tc.index,
+											toolCallId: toolCallAccumulators[tc.index]?.id ?? "",
+										},
+										".",
+										false,
+									);
+									if (shouldAbort) {
+										await this.flushReasoningPart(turn);
+										await this.flushTextPart(turn);
+										return {
+											hadToolCalls: false,
+											needsAsk: false,
+											lastToolMessageId: null,
+										};
+									}
+
 									this.broadcaster.emit({
 										type: "tool_call.starting",
 										threadId: request.threadId,

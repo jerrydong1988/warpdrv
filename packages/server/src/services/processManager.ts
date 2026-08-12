@@ -284,6 +284,12 @@ export function buildArgs(
 			args.push("-fa", "on");
 		}
 	}
+	// Cache RAM, context checkpoints, slot prompt similarity
+	if (params.cacheRam != null) args.push("--cache-ram", String(params.cacheRam));
+	if (params.ctxCheckpoints != null)
+		args.push("--ctx-checkpoints", String(params.ctxCheckpoints));
+	if (params.slotPromptSimilarity != null)
+		args.push("--slot-prompt-similarity", String(params.slotPromptSimilarity));
 	args.push("--host", "0.0.0.0");
 	args.push("--port", String(params.port));
 	// Injected extra args (e.g., --slot-save-path)
