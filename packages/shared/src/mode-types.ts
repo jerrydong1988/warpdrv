@@ -7,6 +7,7 @@ export interface IMode {
 	name: string;
 	scope: "global" | string;
 	color: string;
+	promptId?: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
 	activeGuardrails: string[];
@@ -16,6 +17,7 @@ export interface IModeCreatePayload {
 	name: string;
 	scope: "global" | string;
 	color: string;
+	promptId?: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
 	activeGuardrails?: string[];

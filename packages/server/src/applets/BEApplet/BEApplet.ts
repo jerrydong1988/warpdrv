@@ -21,8 +21,6 @@ import { getMode, listModes } from "../../services/modeStore";
 import { store } from "../../util/store";
 import type { IAppletAPIBE } from "../lib/types";
 import {
-	ALLOWED_TOOLS_PROMPT,
-	ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT,
 	COMPACTION_PROMPT,
 	GUARDRAIL_PROMPT,
 	GUARDRAIL_RULESET_GENERIC_PROMPT,
@@ -212,49 +210,56 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			if (modeId) mode = await getMode(modeId);
 
 			if (mode) {
-				if (USE_MODE_DEF_TAIL) {
-					injectSystemPrompt(messages, ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT);
+				const modesArr = await listModes();
 
-					if (mode.prompt) content += `ACTIVE MODE: ${mode.name}\n${mode.prompt}\n`;
-
-					const toolNames =
-						typeof mode.allowedTools[0] === "string"
-							? mode.allowedTools
-							: mode.allowedTools.map((t: any) => t.toolName);
-
-					if (toolNames.length)
-						content += `\n${ALLOWED_TOOLS_PROMPT}\nALLOWED TOOLS: ${toolNames.sort().join(", ")}\n`;
-					else
-						content +=
-							"ALLOWED TOOLS: CURRENTLY ALL TOOLS ARE STRICTLY NOT ALLOWED! DO NOT CALL ANY TOOLS!";
-				} else {
-					const modesArr = await listModes();
-
-					injectSystemPrompt(
-						messages,
-						`${MODE_SYSTEM_PROMPT}\n${modesArr
-							.filter((mode) => mode.prompt?.length)
-							.sort((a, b) => a.name.localeCompare(b.name))
-							.map((mode, i) => {
-								let toolMessage = "";
-								const toolNames =
-									typeof mode.allowedTools[0] === "string"
-										? mode.allowedTools
-										: mode.allowedTools.map((t: any) => t.toolName);
-
-								if (toolNames.length)
-									toolMessage += [...toolNames].sort().join(", ");
-								else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!";
-
-								return `--- MODE ${mode.name} ---\n\n ${mode.prompt}\n\nALLOWED TOOLS: ${toolMessage}\n---`;
-							})
-							.join(`\n\n`)}\n`,
+				// Fetch all unique saved prompts referenced by modes
+				const promptIds = [
+					...new Set(
+						modesArr.map((m) => m.promptId).filter((id): id is string => Boolean(id)),
+					),
+				];
+				const promptMap = new Map<string, string>();
+				if (promptIds.length > 0) {
+					const fetchedPrompts = await Promise.all(
+						promptIds.map(async (id) => {
+							const p = (await api.eventNode.invoke(
+								"/warpcore",
+								"bridge.getChatPrompt",
+								id,
+							)) as { content: string } | null;
+							return p ? [id, p.content] : [];
+						}),
 					);
-
-					if (mode.prompt) {
-						if (USE_MODE_CURRENT_TAIL) content += `ACTIVE MODE: ${mode.name}\n`;
+					for (const entry of fetchedPrompts) {
+						if (entry.length === 2) promptMap.set(entry[0], entry[1]);
 					}
 				}
+
+				injectSystemPrompt(
+					messages,
+					`${MODE_SYSTEM_PROMPT}\n${modesArr
+						.filter((mode) => mode.prompt?.length || mode.promptId)
+						.sort((a, b) => a.name.localeCompare(b.name))
+						.map((mode, i) => {
+							let toolMessage = "";
+							const toolNames =
+								typeof mode.allowedTools[0] === "string"
+									? mode.allowedTools
+									: mode.allowedTools.map((t: any) => t.toolName);
+
+							if (toolNames.length) toolMessage += [...toolNames].sort().join(", ");
+							else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!";
+
+							// Build prompt text: saved prompt first, then custom prompt
+							const savedContent = mode.promptId
+								? promptMap.get(mode.promptId) || ""
+								: "";
+							const promptText = savedContent + (mode.prompt || "");
+
+							return `--- MODE ${mode.name} ---\n\n ${promptText}\n\nALLOWED TOOLS: ${toolMessage}\n---`;
+						})
+						.join(`\n\n`)}\n`,
+				);
 
 				if (content.length) {
 					console.log("[BEApplet: Appending Tail Prompt]");
@@ -539,9 +544,22 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						return true;
 					});
 					const contextTexts = context.map(toText);
+
+					// Fetch saved prompt if promptId is set
+					let savedPromptContent = "";
+					if (guardrail.promptId) {
+						const savedPrompt = (await api.eventNode.invoke(
+							"/warpcore",
+							"bridge.getChatPrompt",
+							guardrail.promptId,
+						)) as { content: string } | null;
+						if (savedPrompt) savedPromptContent = savedPrompt.content + "\n";
+					}
+
 					const grSysPrompt =
 						GUARDRAIL_PROMPT +
 						"\n" +
+						savedPromptContent +
 						(guardrail.prompt || GUARDRAIL_RULESET_GENERIC_PROMPT) +
 						"Conversation/Message is below as given by the user.";
 					const prompt = contextTexts.join("\n");

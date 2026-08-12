@@ -139,6 +139,11 @@ export class Orchestrator {
 			return await this.persistence.getMode(id);
 		});
 
+		this.eventNode.fn("bridge.getChatPrompt", async (api) => {
+			const id = api.payload as string;
+			return await this.persistence.getChatPrompt(id);
+		});
+
 		this.eventNode.fn("bridge.handlePureCompletion", async (api) => {
 			const payload = api.payload as {
 				inferenceRequestId: string;
@@ -537,6 +542,9 @@ export class Orchestrator {
 				messages,
 				message: finalMessage,
 			});
+			// Update divergence cache with post-inference messages (including assistant response)
+			// so the next turn does not falsely detect divergence.
+			this.updateDivergenceCache(request.threadId, messages);
 		}
 
 		// Stop conditions: waiting for approval, or no tool calls fired
@@ -1130,6 +1138,12 @@ export class Orchestrator {
 		} catch {
 			// non-fatal, do not interrupt inference
 		}
+	}
+
+	// Update the divergence cache with the post-inference messages (including the
+	// assistant response) so the next turn does not falsely detect divergence.
+	private updateDivergenceCache(threadId: TThreadId, currentMessages: TOpenAIMessage[]): void {
+		threadInferenceMessageCache[threadId] = currentMessages;
 	}
 
 	private async flushTextPart(turn: ITurnState): Promise<void> {

@@ -66,6 +66,7 @@ import {
 	updateModeGuardrails as updateModeGuardrailsApi,
 } from "@/api/mode-services";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
+import { PromptPicker } from "@/components/PromptPicker";
 import { ServerPicker } from "@/components/ServerPicker";
 import { WithErrorBoundary } from "@/components/WithErrorBoundary";
 import { useDependantState } from "@/hooks/useDependantState";
@@ -977,6 +978,25 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 							letterSpacing="0.04em"
 							mb="1"
 						>
+							Saved Prompt
+						</Text>
+						<PromptPicker
+							value={guardrail.promptId || ""}
+							onChange={(promptId) =>
+								updateGuardrail({ promptId: promptId || undefined })
+							}
+						/>
+					</Box>
+
+					<Box>
+						<Text
+							fontSize="9px"
+							fontWeight="600"
+							color="var(--wc-text-muted)"
+							textTransform="uppercase"
+							letterSpacing="0.04em"
+							mb="1"
+						>
 							Custom Prompt
 						</Text>
 						<Textarea
@@ -1231,6 +1251,25 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								modeId={mode.id}
 								value={mode.activeGuardrails || []}
 								onClick={(e) => e.stopPropagation()}
+							/>
+						</Box>
+
+						<Box>
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
+								Saved Prompt
+							</Text>
+							<PromptPicker
+								value={mode.promptId || ""}
+								onChange={(promptId) =>
+									updateMode({ promptId: promptId || undefined })
+								}
 							/>
 						</Box>
 
@@ -2135,6 +2174,14 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					description: "Server used for processing (empty = same as chat server)",
 					index: 2,
 				},
+				prompt: {
+					type: "dropdown",
+					description: "Saved prompt to use (optional)",
+					index: 3,
+					props: {
+						items: usePromptIdItems,
+					},
+				},
 			},
 			consumesInput: true,
 			inputPlaceholder: "Guardrail prompt...",
@@ -2142,6 +2189,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				const created = await createGuardrailApi({
 					name: params.name!,
 					serverId: params.server || "",
+					promptId: params.prompt || undefined,
 					prompt: extraParams?.prompt,
 					triggerOnTools: parseToolValue(params.tools || ""),
 				});
@@ -2224,6 +2272,14 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				color: { type: "color", description: "Mode color", index: 1 },
 				tools: { type: "tools", description: "Allowed tools", index: 2 },
 				guardrails: { type: "guardrails", description: "Active guardrails", index: 3 },
+				prompt: {
+					type: "dropdown",
+					description: "Saved prompt to use (optional)",
+					index: 4,
+					props: {
+						items: usePromptIdItems,
+					},
+				},
 			},
 			consumesInput: true,
 			inputPlaceholder: "More instructions.",
@@ -2233,6 +2289,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					name: params.name!,
 					scope: "global",
 					color: params.color || "#a78bfa",
+					promptId: params.prompt || undefined,
 					prompt: extraParams?.prompt || undefined,
 					allowedTools: parseToolValue(params.tools || ""),
 					activeGuardrails: parseGuardrailValue(params.guardrails || ""),
@@ -2279,6 +2336,11 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		function usePromptItems(): TDropdownItem[] {
 			const prompts = useStore((s) => s.chatPrompts);
 			return useMemo(() => prompts.map((p) => ({ label: p.name, value: p.name })), [prompts]);
+		}
+
+		function usePromptIdItems(): TDropdownItem[] {
+			const prompts = useStore((s) => s.chatPrompts);
+			return useMemo(() => prompts.map((p) => ({ label: p.name, value: p.id })), [prompts]);
 		}
 
 		api.registerSlashCommand({

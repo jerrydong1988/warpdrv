@@ -302,6 +302,7 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			serverId TEXT NOT NULL DEFAULT '',
+			promptId TEXT,
 			prompt TEXT,
 			triggerOnTools TEXT NOT NULL DEFAULT '[]',
 			inferenceParams TEXT NOT NULL DEFAULT '{}',
@@ -309,15 +310,16 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 			includeBaseMessage INTEGER DEFAULT 0
 		);
 
-				CREATE TABLE IF NOT EXISTS ${t.modes} (
-					id TEXT PRIMARY KEY,
-					name TEXT NOT NULL,
-					scope TEXT NOT NULL DEFAULT 'global',
-					color TEXT NOT NULL DEFAULT '#a78bfa',
-					prompt TEXT,
-					allowedTools TEXT NOT NULL DEFAULT '[]',
-					activeGuardrails TEXT NOT NULL DEFAULT '[]'
-				);
+			CREATE TABLE IF NOT EXISTS ${t.modes} (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				scope TEXT NOT NULL DEFAULT 'global',
+				color TEXT NOT NULL DEFAULT '#a78bfa',
+				promptId TEXT,
+				prompt TEXT,
+				allowedTools TEXT NOT NULL DEFAULT '[]',
+				activeGuardrails TEXT NOT NULL DEFAULT '[]'
+			);
 
 				CREATE TABLE IF NOT EXISTS ${t.prompts} (
 					id TEXT PRIMARY KEY,
@@ -514,6 +516,33 @@ export class SqlitePersistence implements IPersistence {
 			console.log(`[migration] guardrails: added id column, migrated ${rows.length} rows`);
 		} catch (err) {
 			console.error("[migration] guardrails id migration failed:", err);
+		}
+
+		// Migration: add promptId column to guardrails and modes tables
+		try {
+			const grCols = this.db!.prepare(
+				`PRAGMA table_info(${this.t.guardrails})`,
+			).all() as Array<{ name: string }>;
+			if (!grCols.some((c) => c.name === "promptId")) {
+				this.db!.exec(
+					`ALTER TABLE ${this.t.guardrails} ADD COLUMN promptId TEXT DEFAULT NULL`,
+				);
+				console.log("[migration] Added promptId to guardrails table");
+			}
+		} catch {
+			// Column already exists
+		}
+
+		try {
+			const modeCols = this.db!.prepare(`PRAGMA table_info(${this.t.modes})`).all() as Array<{
+				name: string;
+			}>;
+			if (!modeCols.some((c) => c.name === "promptId")) {
+				this.db!.exec(`ALTER TABLE ${this.t.modes} ADD COLUMN promptId TEXT DEFAULT NULL`);
+				console.log("[migration] Added promptId to modes table");
+			}
+		} catch {
+			// Column already exists
 		}
 	}
 
@@ -1801,6 +1830,7 @@ export class SqlitePersistence implements IPersistence {
 				id: string;
 				name: string;
 				serverId: string;
+				promptId?: string;
 				prompt?: string;
 				triggerOnTools: IToolAttachment[];
 				inferenceParams: Record<string, unknown>;
@@ -1818,6 +1848,7 @@ export class SqlitePersistence implements IPersistence {
 				id: string;
 				name: string;
 				serverId: string;
+				promptId?: string;
 				prompt?: string;
 				triggerOnTools: IToolAttachment[];
 				inferenceParams: Record<string, unknown>;
@@ -1830,6 +1861,7 @@ export class SqlitePersistence implements IPersistence {
 				id: r.id as string,
 				name: r.name as string,
 				serverId: r.serverId as string,
+				promptId: (r.promptId as string) || undefined,
 				prompt: (r.prompt as string) || undefined,
 				triggerOnTools: JSON.parse(r.triggerOnTools as string) as IToolAttachment[],
 				inferenceParams: JSON.parse(r.inferenceParams as string) as Record<string, unknown>,
@@ -1844,6 +1876,7 @@ export class SqlitePersistence implements IPersistence {
 		id: string;
 		name: string;
 		serverId: string;
+		promptId?: string;
 		prompt?: string;
 		triggerOnTools?: IToolAttachment[];
 		inferenceParams?: Record<string, unknown>;
@@ -1851,20 +1884,22 @@ export class SqlitePersistence implements IPersistence {
 		includeBaseMessage?: boolean;
 	}): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.guardrails} (id, name, serverId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT(id) DO UPDATE SET
-				name = excluded.name,
-				serverId = excluded.serverId,
-				prompt = excluded.prompt,
-				triggerOnTools = excluded.triggerOnTools,
-				inferenceParams = excluded.inferenceParams,
-				messagesCount = excluded.messagesCount,
-				includeBaseMessage = excluded.includeBaseMessage`,
+			`INSERT INTO ${this.t.guardrails} (id, name, serverId, promptId, prompt, triggerOnTools, inferenceParams, messagesCount, includeBaseMessage)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			serverId = excluded.serverId,
+			promptId = excluded.promptId,
+			prompt = excluded.prompt,
+			triggerOnTools = excluded.triggerOnTools,
+			inferenceParams = excluded.inferenceParams,
+			messagesCount = excluded.messagesCount,
+			includeBaseMessage = excluded.includeBaseMessage`,
 		).run(
 			guardrail.id,
 			guardrail.name,
 			guardrail.serverId,
+			guardrail.promptId ?? null,
 			guardrail.prompt ?? null,
 			JSON.stringify(guardrail.triggerOnTools || []),
 			JSON.stringify(guardrail.inferenceParams || {}),
@@ -1887,6 +1922,7 @@ export class SqlitePersistence implements IPersistence {
 			name: string;
 			scope: string;
 			color: string;
+			promptId?: string;
 			prompt?: string;
 			allowedTools: IToolAttachment[];
 			activeGuardrails: string[];
@@ -1900,6 +1936,7 @@ export class SqlitePersistence implements IPersistence {
 			name: r.name as string,
 			scope: r.scope as string,
 			color: r.color as string,
+			promptId: (r.promptId as string) || undefined,
 			prompt: (r.prompt as string) || undefined,
 			allowedTools: JSON.parse(r.allowedTools as string) as IToolAttachment[],
 			activeGuardrails: JSON.parse(r.activeGuardrails as string) as string[],
@@ -1911,6 +1948,7 @@ export class SqlitePersistence implements IPersistence {
 		name: string;
 		scope: string;
 		color: string;
+		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
 		activeGuardrails: string[];
@@ -1924,6 +1962,7 @@ export class SqlitePersistence implements IPersistence {
 			name: row.name as string,
 			scope: row.scope as string,
 			color: row.color as string,
+			promptId: (row.promptId as string) || undefined,
 			prompt: (row.prompt as string) || undefined,
 			allowedTools: JSON.parse(row.allowedTools as string) as IToolAttachment[],
 			activeGuardrails: JSON.parse(row.activeGuardrails as string) as string[],
@@ -1935,25 +1974,28 @@ export class SqlitePersistence implements IPersistence {
 		name: string;
 		scope: string;
 		color: string;
+		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
 		activeGuardrails: string[];
 	}): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.modes} (id, name, scope, color, prompt, allowedTools, activeGuardrails)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT(id) DO UPDATE SET
-				name = excluded.name,
-				scope = excluded.scope,
-				color = excluded.color,
-				prompt = excluded.prompt,
-				allowedTools = excluded.allowedTools,
-				activeGuardrails = excluded.activeGuardrails`,
+			`INSERT INTO ${this.t.modes} (id, name, scope, color, promptId, prompt, allowedTools, activeGuardrails)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			scope = excluded.scope,
+			color = excluded.color,
+			promptId = excluded.promptId,
+			prompt = excluded.prompt,
+			allowedTools = excluded.allowedTools,
+			activeGuardrails = excluded.activeGuardrails`,
 		).run(
 			mode.id,
 			mode.name,
 			mode.scope,
 			mode.color,
+			mode.promptId ?? null,
 			mode.prompt ?? null,
 			JSON.stringify(mode.allowedTools),
 			JSON.stringify(mode.activeGuardrails),

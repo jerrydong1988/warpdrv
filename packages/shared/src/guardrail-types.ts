@@ -16,6 +16,7 @@ export interface IGuardrailDefinition {
 	id: string;
 	name: string;
 	serverId: string;
+	promptId?: string;
 	prompt?: string;
 	triggerOnTools?: IToolAttachment[];
 	inferenceParams?: Record<string, unknown>;
@@ -27,6 +28,7 @@ export interface IGuardrailCreatePayload {
 	id?: string;
 	name: string;
 	serverId: string;
+	promptId?: string;
 	prompt?: string;
 	triggerOnTools?: IToolAttachment[];
 	inferenceParams?: Record<string, unknown>;

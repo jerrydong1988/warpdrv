@@ -211,6 +211,7 @@ export interface IPersistence {
 				id: string;
 				name: string;
 				serverId: string;
+				promptId?: string;
 				prompt?: string;
 				triggerOnTools: IToolAttachment[];
 				inferenceParams: Record<string, unknown>;
@@ -223,6 +224,7 @@ export interface IPersistence {
 		id: string;
 		name: string;
 		serverId: string;
+		promptId?: string;
 		prompt?: string;
 		triggerOnTools?: IToolAttachment[];
 		inferenceParams?: Record<string, unknown>;
@@ -238,6 +240,7 @@ export interface IPersistence {
 			name: string;
 			scope: string;
 			color: string;
+			promptId?: string;
 			prompt?: string;
 			allowedTools: IToolAttachment[];
 			activeGuardrails: string[];
@@ -248,6 +251,7 @@ export interface IPersistence {
 		name: string;
 		scope: string;
 		color: string;
+		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
 		activeGuardrails: string[];
@@ -257,6 +261,7 @@ export interface IPersistence {
 		name: string;
 		scope: string;
 		color: string;
+		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
 		activeGuardrails: string[];

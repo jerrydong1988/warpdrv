@@ -41,6 +41,7 @@ guardrailsRouter.post("/", async (req, res) => {
 			id: nanoid(),
 			name: body.name,
 			serverId: body.serverId,
+			promptId: body.promptId || undefined,
 			prompt: body.prompt,
 			triggerOnTools: body.triggerOnTools || [],
 			inferenceParams: body.inferenceParams || {},
@@ -68,6 +69,7 @@ guardrailsRouter.put("/:id", async (req, res) => {
 		const updated: IGuardrailDefinition = {
 			...existing,
 			...(body.serverId !== undefined && { serverId: body.serverId }),
+			...(body.promptId !== undefined && { promptId: body.promptId }),
 			...(body.prompt !== undefined && { prompt: body.prompt }),
 			...(body.triggerOnTools !== undefined && { triggerOnTools: body.triggerOnTools }),
 			...(body.inferenceParams !== undefined && { inferenceParams: body.inferenceParams }),
