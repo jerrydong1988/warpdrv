@@ -3,6 +3,8 @@
 // Core types. Universal — no Node or browser dependencies.
 // ============================================================
 
+import type { INotification } from "@warpcore/shared";
+
 // Re-export Immer types from store (needed for slice integration)
 export type { ImmerGet, ImmerSet } from "../store";
 
@@ -473,7 +475,9 @@ export type IBridgeEvent =
 	| { type: "folder.created"; folder: IFolder }
 	| { type: "folder.updated"; folderId: TFolderId; updates: Partial<IFolder> }
 	| { type: "folder.deleted"; folderId: TFolderId }
-	| { type: "folder.reordered"; folders: IFolder[] };
+	| { type: "folder.reordered"; folders: IFolder[] }
+	| { type: "notification.created"; notification: INotification }
+	| { type: "notification.updated"; notification: INotification };
 
 export interface IMessagePatch {
 	stats?: IChatMessageStats;

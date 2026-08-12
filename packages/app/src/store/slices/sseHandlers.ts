@@ -458,5 +458,25 @@ export const sseHandlersSlice = (
 			setState((state) => {
 				state.folders = data;
 			}),
+
+		// Notifications
+		"notification.created": (data: any) =>
+			setState((state) => {
+				const n = data.notification;
+				const threadNotifs = state.notificationsByThread[n.threadId] ?? {};
+				threadNotifs[n.id] = n;
+				state.notificationsByThread[n.threadId] = threadNotifs;
+			}),
+		"notification.updated": (data: any) =>
+			setState((state) => {
+				const n = data.notification;
+				const threadNotifs = state.notificationsByThread[n.threadId];
+				if (!threadNotifs) return;
+				if (n.consumed || n.hidden) {
+					delete threadNotifs[n.id];
+				} else {
+					threadNotifs[n.id] = n;
+				}
+			}),
 	},
 });

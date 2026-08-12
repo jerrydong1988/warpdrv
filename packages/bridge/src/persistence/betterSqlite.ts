@@ -9,7 +9,11 @@ import type {
 	ICodeGraphFile,
 	ICodeGraphNode,
 	ICodeGraphSearchOptions,
+	INotification,
+	INotificationCreatePayload,
+	INotificationUpdatePayload,
 } from "@warpcore/shared";
+import { genNotificationId } from "@warpcore/shared";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
@@ -78,6 +82,7 @@ function buildTableNames(prefix: string) {
 		guardrails: `${prefix}guardrails`,
 		modes: `${prefix}modes`,
 		prompts: `${prefix}prompts`,
+		notifications: `${prefix}notifications`,
 	};
 }
 
@@ -327,9 +332,25 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 					content TEXT NOT NULL,
 					meta TEXT DEFAULT NULL,
 					created_at INTEGER NOT NULL,
-					updated_at INTEGER NOT NULL
-				);
-			`;
+						updated_at INTEGER NOT NULL
+						);
+
+						-- Notifications
+						CREATE TABLE IF NOT EXISTS ${t.notifications} (
+							id TEXT PRIMARY KEY,
+							threadId TEXT NOT NULL,
+							notificationType TEXT NOT NULL,
+							notificationSubtype TEXT NOT NULL DEFAULT '',
+							senderType TEXT NOT NULL DEFAULT '',
+							senderId TEXT NOT NULL DEFAULT '',
+							payload TEXT NOT NULL DEFAULT '{}',
+							consumed INTEGER NOT NULL DEFAULT 0,
+							hidden INTEGER NOT NULL DEFAULT 0,
+							createdAt INTEGER NOT NULL
+						);
+						CREATE INDEX IF NOT EXISTS idx_${t.notifications}_thread ON ${t.notifications}(threadId);
+						CREATE INDEX IF NOT EXISTS idx_${t.notifications}_created ON ${t.notifications}(createdAt DESC);
+					`;
 }
 
 // ============================================================
@@ -813,7 +834,10 @@ export class SqlitePersistence implements IPersistence {
 				).run(...ids);
 			}
 
-			// 12. Delete thread
+			// 12. Delete notifications
+			this.db!.prepare(`DELETE FROM ${this.t.notifications} WHERE threadId = ?`).run(id);
+
+			// 13. Delete thread
 			this.db!.prepare(`DELETE FROM ${this.t.threads} WHERE id = ?`).run(id);
 
 			return embeddings;
@@ -2129,5 +2153,147 @@ export class SqlitePersistence implements IPersistence {
 
 	async deleteChatPrompt(id: string): Promise<void> {
 		this.db!.prepare(`DELETE FROM ${this.t.prompts} WHERE id = ?`).run(id);
+	}
+
+	// ============================================================
+	// Notifications
+	// ============================================================
+
+	async notificationCreate(payload: INotificationCreatePayload): Promise<INotification> {
+		const id = genNotificationId();
+		const now = Date.now();
+		const notification: INotification = {
+			id,
+			threadId: payload.threadId,
+			notificationType: payload.notificationType,
+			notificationSubtype: payload.notificationSubtype ?? "",
+			senderType: payload.senderType ?? "",
+			senderId: payload.senderId ?? "",
+			payload: payload.payload ?? {},
+			consumed: false,
+			hidden: false,
+			createdAt: now,
+		};
+		this.db!.prepare(
+			`INSERT INTO ${this.t.notifications} (id, threadId, notificationType, notificationSubtype, senderType, senderId, payload, consumed, hidden, createdAt)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`,
+		).run(
+			notification.id,
+			notification.threadId,
+			notification.notificationType,
+			notification.notificationSubtype,
+			notification.senderType,
+			notification.senderId,
+			JSON.stringify(notification.payload),
+			notification.createdAt,
+		);
+		return notification;
+	}
+
+	async notificationGet(id: string): Promise<INotification | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.notifications} WHERE id = ?`).get(
+			id,
+		) as Record<string, unknown> | undefined;
+		if (!row) return null;
+		return this.hydrateNotification(row);
+	}
+
+	async notificationList(
+		threadId: string,
+		includeConsumed?: boolean,
+		includeHidden?: boolean,
+	): Promise<INotification[]> {
+		const conditions: string[] = [`threadId = ?`];
+		const params: unknown[] = [threadId];
+
+		if (!includeConsumed) conditions.push(`consumed = 0`);
+		if (!includeHidden) conditions.push(`hidden = 0`);
+
+		const where = conditions.join(` AND `);
+		const rows = this.db!.prepare(
+			`SELECT * FROM ${this.t.notifications} WHERE ${where} ORDER BY createdAt DESC`,
+		).all(...params) as Array<Record<string, unknown>>;
+		return rows.map((r) => this.hydrateNotification(r));
+	}
+
+	async notificationConsume(id: string): Promise<INotification> {
+		this.db!.prepare(`UPDATE ${this.t.notifications} SET consumed = 1 WHERE id = ?`).run(id);
+		const notification = await this.notificationGet(id);
+		if (!notification) throw new Error(`Notification ${id} not found`);
+		return notification;
+	}
+
+	async notificationHide(id: string): Promise<INotification> {
+		this.db!.prepare(`UPDATE ${this.t.notifications} SET hidden = 1 WHERE id = ?`).run(id);
+		const notification = await this.notificationGet(id);
+		if (!notification) throw new Error(`Notification ${id} not found`);
+		return notification;
+	}
+
+	async notificationUpdatePayload(
+		id: string,
+		payload: INotificationUpdatePayload,
+	): Promise<INotification> {
+		this.db!.prepare(`UPDATE ${this.t.notifications} SET payload = ? WHERE id = ?`).run(
+			JSON.stringify(payload.payload),
+			id,
+		);
+		const notification = await this.notificationGet(id);
+		if (!notification) throw new Error(`Notification ${id} not found`);
+		return notification;
+	}
+
+	async notificationDelete(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.notifications} WHERE id = ?`).run(id);
+	}
+
+	async notificationDeleteByThreadId(threadId: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.notifications} WHERE threadId = ?`).run(threadId);
+	}
+
+	async addMessageNotification(
+		threadId: string,
+		subThreadId: string,
+		message: string,
+	): Promise<INotification> {
+		return this.notificationCreate({
+			threadId,
+			notificationType: "agent",
+			notificationSubtype: "message",
+			senderType: "subthread",
+			senderId: subThreadId,
+			payload: { message },
+		});
+	}
+
+	async addToolNotification(
+		threadId: string,
+		subThreadId: string,
+		assistantMessageId: string,
+		toolCallId: string,
+	): Promise<INotification> {
+		return this.notificationCreate({
+			threadId,
+			notificationType: "agent",
+			notificationSubtype: "tool",
+			senderType: "subthread",
+			senderId: subThreadId,
+			payload: { assistantMessageId, toolCallId },
+		});
+	}
+
+	private hydrateNotification(row: Record<string, unknown>): INotification {
+		return {
+			id: row.id as string,
+			threadId: row.threadId as string,
+			notificationType: row.notificationType as string,
+			notificationSubtype: row.notificationSubtype as string,
+			senderType: row.senderType as string,
+			senderId: row.senderId as string,
+			payload: JSON.parse(row.payload as string) as Record<string, unknown>,
+			consumed: (row.consumed as number) === 1,
+			hidden: (row.hidden as number) === 1,
+			createdAt: row.createdAt as number,
+		};
 	}
 }

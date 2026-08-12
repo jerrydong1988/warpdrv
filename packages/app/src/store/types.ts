@@ -13,6 +13,7 @@ import type {
 	IHardwareInfo,
 	IKokoroStatus,
 	IMode,
+	INotification,
 	IModel,
 	IRecipe,
 	IRecipeRunState,
@@ -361,4 +362,9 @@ export interface AppState extends IChatStoreState {
 	pendingSlashCommands: IExtractedSlashCommand[];
 	setPendingSlashCommands: (commands: IExtractedSlashCommand[]) => void;
 	clearPendingSlashCommands: () => void;
+
+	// Notifications
+	notificationsByThread: Record<TThreadId, Record<string, INotification>>;
+	applyNotificationCreated: (notification: INotification) => void;
+	applyNotificationUpdated: (notification: INotification) => void;
 }

@@ -37,6 +37,7 @@ import { authRouter } from "./routes/auth";
 import { backendGroupsRouter } from "./routes/backendGroups";
 import { backendsRouter } from "./routes/backends";
 import { chatRouter } from "./routes/chat";
+import { notificationsRouter } from "./routes/notifications";
 import { checkpointsRouter } from "./routes/checkpoints";
 import { clientLogsRouter } from "./routes/clientLogs";
 import { guardrailsRouter } from "./routes/guardrails";
@@ -239,6 +240,7 @@ async function main() {
 	app.use("/api/update", authMiddleware, updateRouter);
 	app.use("/api/proxy", authMiddleware, proxyRouter);
 	app.use("/api/chat", authMiddleware, chatRouter);
+	app.use("/api/chat/notifications", authMiddleware, notificationsRouter);
 	app.use("/api/mcp", authMiddleware, mcpRouter);
 	app.use("/api/summary", authMiddleware, summaryRouter);
 	app.use("/api/recipes", authMiddleware, recipesRouter);

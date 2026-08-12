@@ -9,6 +9,9 @@ import type {
 	ICodeGraphFile,
 	ICodeGraphNode,
 	ICodeGraphSearchOptions,
+	INotification,
+	INotificationCreatePayload,
+	INotificationUpdatePayload,
 } from "@warpcore/shared";
 import type {
 	EToolApprovalMode,
@@ -304,6 +307,34 @@ export interface IPersistence {
 		},
 	): Promise<void>;
 	deleteChatPrompt(id: string): Promise<void>;
+
+	// Notifications
+	notificationCreate(payload: INotificationCreatePayload): Promise<INotification>;
+	notificationGet(id: string): Promise<INotification | null>;
+	notificationList(
+		threadId: string,
+		includeConsumed?: boolean,
+		includeHidden?: boolean,
+	): Promise<INotification[]>;
+	notificationConsume(id: string): Promise<INotification>;
+	notificationHide(id: string): Promise<INotification>;
+	notificationUpdatePayload(
+		id: string,
+		payload: INotificationUpdatePayload,
+	): Promise<INotification>;
+	notificationDelete(id: string): Promise<void>;
+	notificationDeleteByThreadId(threadId: string): Promise<void>;
+	addMessageNotification(
+		threadId: string,
+		subThreadId: string,
+		message: string,
+	): Promise<INotification>;
+	addToolNotification(
+		threadId: string,
+		subThreadId: string,
+		assistantMessageId: string,
+		toolCallId: string,
+	): Promise<INotification>;
 }
 
 // ============================================================
