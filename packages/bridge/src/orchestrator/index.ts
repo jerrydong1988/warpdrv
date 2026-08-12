@@ -542,9 +542,6 @@ export class Orchestrator {
 				messages,
 				message: finalMessage,
 			});
-			// Update divergence cache with post-inference messages (including assistant response)
-			// so the next turn does not falsely detect divergence.
-			this.updateDivergenceCache(request.threadId, messages);
 		}
 
 		// Stop conditions: waiting for approval, or no tool calls fired
@@ -1112,8 +1109,8 @@ export class Orchestrator {
 				return;
 			}
 
-			const maxLen = Math.max(cachedMessages.length, currentMessages.length);
-			for (let i = 0; i < maxLen; i++) {
+			const minLen = Math.min(cachedMessages.length, currentMessages.length);
+			for (let i = 0; i < minLen; i++) {
 				const oldMsg = cachedMessages[i];
 				const newMsg = currentMessages[i];
 				if (!isDeepStrictEqual(oldMsg, newMsg)) {
