@@ -25,7 +25,8 @@ async function detectNvidia(): Promise<IGpuInfo[]> {
 				driverVersion: parts[1] ?? null,
 			};
 		});
-	} catch {
+	} catch (err) {
+		console.warn('[hardware] failed to detect NVIDIA GPUs:', err instanceof Error ? err.message : String(err));
 		return [];
 	}
 }
@@ -43,7 +44,9 @@ async function detectAmdLinux(): Promise<IGpuInfo[]> {
 				};
 			});
 		}
-	} catch {}
+	} catch (err) {
+		console.warn('[hardware] failed to detect AMD GPUs via rocm-smi:', err instanceof Error ? err.message : String(err));
+	}
 	try {
 		const { stdout } = await execAsync("lspci | grep -i 'vga\\|3d\\|display' | grep -i 'amd\\|ati\\|radeon'");
 		const lines = stdout.trim().split('\n').filter(l => l.trim().length > 0);
@@ -52,7 +55,8 @@ async function detectAmdLinux(): Promise<IGpuInfo[]> {
 			name: line.split(':').slice(2).join(':').trim() || 'AMD GPU',
 			driverVersion: null,
 		}));
-	} catch {
+	} catch (err) {
+		console.warn('[hardware] failed to detect AMD GPUs via lspci:', err instanceof Error ? err.message : String(err));
 		return [];
 	}
 }
@@ -71,7 +75,9 @@ async function detectGpusWindows(): Promise<IGpuInfo[]> {
 			else if (lower.includes('intel')) vendor = 'intel';
 			gpus.push({ vendor, name: line, driverVersion: null });
 		}
-	} catch {}
+	} catch (err) {
+		console.warn('[hardware] failed to detect GPUs via wmic:', err instanceof Error ? err.message : String(err));
+	}
 	return gpus;
 }
 async function detectGpusLinux(): Promise<IGpuInfo[]> {
@@ -90,7 +96,9 @@ async function detectGpusLinux(): Promise<IGpuInfo[]> {
 				driverVersion: null,
 			});
 		}
-	} catch {}
+	} catch (err) {
+		console.warn('[hardware] failed to detect Intel GPUs via lspci:', err instanceof Error ? err.message : String(err));
+	}
 	return gpus;
 }
 async function detectGpusMac(): Promise<IGpuInfo[]> {
@@ -110,7 +118,8 @@ async function detectGpusMac(): Promise<IGpuInfo[]> {
 			else if (lower.includes('nvidia')) vendor = 'nvidia';
 			return { vendor, name, driverVersion: null };
 		});
-	} catch {
+	} catch (err) {
+		console.warn('[hardware] failed to detect GPUs via system_profiler:', err instanceof Error ? err.message : String(err));
 		return [];
 	}
 }

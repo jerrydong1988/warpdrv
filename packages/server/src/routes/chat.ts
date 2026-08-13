@@ -256,11 +256,11 @@ chatRouter.post('/messages/:messageId/embed', async (req, res) => {
 		}
 		const folderId = message.threadId ? (await persistence.getThread(message.threadId))?.folderId : null;
 		const topic = folderId ? (await persistence.getFolder(folderId))?.topic ?? 'global' : 'global';
-		console.log('[embedding] POST embed:', messageId, topic);
+		// console.log('[embedding] POST embed:', messageId, topic);
 		await embeddingManager.embedMessage(messageId, topic);
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
-		console.error('[embedding] POST embed error:', err);
+		// console.error('[embedding] POST embed error:', err);
 		res.status(500).json({ ok: false, data: null, error: String(err) });
 	}
 });
@@ -615,20 +615,20 @@ chatRouter.post('/cancel/:threadId', (req, res) => {
 
 // GET /api/chat/events — global SSE channel for all bridge events
 chatRouter.get('/events', async (req, res) => {
-	console.log('[Chat SSE] New client connection');
+	// console.log('[Chat SSE] New client connection');
 	const session = await createSession(req, res);
 	const channel = (broadcaster as any).getChannel();
 	channel.register(session);
-	console.log('[Chat SSE] Session registered to broadcaster channel');
+	// console.log('[Chat SSE] Session registered to broadcaster channel');
 	
 	// Keep connection alive until client disconnects
 	await new Promise<void>((resolve) => {
 		req.on('close', () => {
-			console.log('[Chat SSE] Client disconnected');
+			// console.log('[Chat SSE] Client disconnected');
 			resolve();
 		});
 		req.on('error', (err) => {
-			console.error('[Chat SSE] Connection error:', err);
+			// console.error('[Chat SSE] Connection error:', err);
 			resolve();
 		});
 	});

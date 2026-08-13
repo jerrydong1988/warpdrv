@@ -79,7 +79,7 @@ async function getVersion(binaryPath: string, buildNumber: number): Promise<stri
 
 		return parts.length > 0 ? parts.join(', ') : 'unknown';
 	} catch (err) {
-		console.log(`[getVersion] error for ${binaryPath}:`, String(err));
+	// console.log(`[getVersion] error for ${binaryPath}:`, String(err));
 		return null;
 	}
 }
@@ -226,7 +226,7 @@ export async function validateBackend(binaryPath: string, backendId: string): Pr
 	// Get build info first (needed for version detection logic)
 	const buildInfo = await getBuildInfo(binaryPath);
 	const buildNumber = buildInfo ? parseInt(buildInfo.buildNumber, 10) : 0;
-	console.log(`[validateBackend] binary=${binaryPath}, buildNumber=${buildNumber}`);
+	// console.log(`[validateBackend] binary=${binaryPath}, buildNumber=${buildNumber}`);
 	// Get GPU backend version (uses buildNumber to choose detection logic)
 	const version = await getVersion(binaryPath, buildNumber);
 	if (!version) {
@@ -235,6 +235,6 @@ export async function validateBackend(binaryPath: string, backendId: string): Pr
 	// Discover devices
 	const devices = await listDevices(binaryPath, backendId);
 	const result = { valid: true, version, buildInfo, devices, error: null };
-	console.log(`[validateBackend] result for ${binaryPath}:`, JSON.stringify({ ...result, devices: result.devices.map(d => ({ ...d, backendId: d.backendId })) }));
+	// console.log(`[validateBackend] result for ${binaryPath}:`, JSON.stringify({ ...result, devices: result.devices.map(d => ({ ...d, backendId: d.backendId })) }));
 	return result;
 }

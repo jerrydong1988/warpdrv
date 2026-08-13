@@ -16,6 +16,8 @@ import { hubRouter } from './routes/hub';
 import { tokensRouter } from './routes/tokens';
 import { authRouter } from './routes/auth';
 import { authMiddleware } from './middleware/auth';
+import { rateLimiter } from './middleware/rateLimiter';
+import { errorHandler } from './middleware/errorHandler';
 import type { ISettings, IServer, IDownload, IDevice, IBackend, IBackendGroup, IWhisperBackend, IWhisperServer } from '@warpcore/shared';
 import type { TBackendId, TBackendGroupId } from '@warpcore/shared';
 import { DEFAULT_SETTINGS, EServerStatus, EDownloadStatus, SSE_CHANNELS_CHECKPOINT } from '@warpcore/shared';
@@ -49,8 +51,43 @@ import { serveStaticApp } from './middleware/serveStatic';
 import { initRealm } from './services/initRealm';
 import path from 'path';
 import os from 'os';
+import { spawnSync } from 'child_process';
+import { createServer } from 'http';
+import { reconcileServers, launchAutoStartServers } from './services/processManager';
+import { reconcileWhisperServers, launchAutoStartWhisperServers } from './services/whisperProcessManager';
 
 const SETTINGS_KEY = 'settings:general';
+
+// Whitelist of known-safe shell paths to avoid command injection via $SHELL
+const KNOWN_SHELLS = ['/bin/bash', '/bin/sh', '/usr/bin/bash', '/usr/bin/sh', '/bin/zsh', '/usr/bin/zsh'];
+
+function resolveShellPath(): string | null {
+	try {
+		const envShell = process.env.SHELL;
+		if (envShell && KNOWN_SHELLS.includes(envShell)) {
+			const out = spawnSync(envShell, ['-c', 'echo $PATH'], {
+				encoding: 'utf8',
+				timeout: 3000,
+				stdio: ['ignore', 'pipe', 'ignore'],
+			}).stdout?.trim();
+			return out || null;
+		}
+		for (const shell of KNOWN_SHELLS) {
+			try {
+				spawnSync(shell, ['-c', 'true'], { timeout: 1000, stdio: 'ignore' });
+				const out = spawnSync(shell, ['-c', 'echo $PATH'], {
+					encoding: 'utf8',
+					timeout: 3000,
+					stdio: ['ignore', 'pipe', 'ignore'],
+				}).stdout?.trim();
+				return out || null;
+			} catch { /* try next shell */ }
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
 
 // Bridge components - exported for routes to use
 export let persistence: SqlitePersistence;
@@ -60,27 +97,7 @@ export let mcpConfig: McpConfig;
 export let broadcaster: SseBroadcaster;
 export let todoManager: TodoManager;
 
-import { execSync } from 'child_process';
-import { launchAutoStartServers, reconcileServers } from './services/processManager';
-import { reconcileWhisperServers, launchAutoStartWhisperServers } from './services/whisperProcessManager';
-import { createServer } from 'http';
-
-function resolveShellPath(): string | null {
-	try {
-		const shell = process.env.SHELL || '/bin/bash';
-		const out = execSync(`${shell} -ilc 'echo $PATH'`, {
-			encoding: 'utf8',
-			timeout: 3000,
-			stdio: ['ignore', 'pipe', 'ignore'],
-		}).trim();
-		return out || null;
-	} catch {
-		return null;
-	}
-}
-
 async function main() {
-	
 	const shellPath = resolveShellPath();
 	if (shellPath && shellPath !== process.env.PATH) {
 		// console.log('[debug] resolved shell PATH:', shellPath);
@@ -88,10 +105,10 @@ async function main() {
 	}
 
 	// console.log('[debug] PATH:', process.env.PATH || '(not set)');
-	console.log('[debug] HOME:', process.env.HOME || '(not set)');
-	console.log('[debug] RESOURCE_DIR:', process.env.RESOURCE_DIR);
-	console.log('[debug] execPath:', process.execPath);
-	console.log('[debug] pkg:', (process as any).pkg);
+	// console.log('[debug] HOME:', process.env.HOME || '(not set)');
+	// console.log('[debug] RESOURCE_DIR:', process.env.RESOURCE_DIR);
+	// console.log('[debug] execPath:', process.execPath);
+	// console.log('[debug] pkg:', (process as any).pkg);
 	await runMigrations();
 
 	// Ensure default settings exist
@@ -157,9 +174,10 @@ async function main() {
 		next();
 	});
 
-	app.use(cors());
-	app.use(express.json({ limit: '50mb' }));
+	app.use(cors({ origin: ['http://localhost:4400', 'http://127.0.0.1:4400', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
+	app.use(express.json({ limit: '10mb' }));
 	app.use(cookieParser());
+	app.use(rateLimiter());
 	// Auth routes (no middleware - public endpoints)
 	app.use('/api/auth', authRouter);
 	// Client log route (no auth — server may not be up when errors occur)
@@ -189,9 +207,9 @@ async function main() {
 	app.use('/api/whisper-models', authMiddleware, whisperModelsRouter);
 	// SSE endpoint (protected by auth)
 	app.get('/api/events', authMiddleware, async (req, res) => {
-		console.log('[SSE] New client');
+	// console.log('[SSE] New client');
 		await sseManager.handleConnection(req, res, () => {
-			console.log('[SSE] Client disconnected');
+		// console.log('[SSE] Client disconnected');
 		});
 	});
 
@@ -210,20 +228,26 @@ async function main() {
 		res.json({ ok: true, version: '0.1.0' });
 	});
 
+	// Global error handler
+	app.use(errorHandler);
+
 	const currentSettings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 	// Port: env var overrides settings, defaults to 4400
 	const envPort = process.env.CONTROL_API_PORT;
 	const port = envPort ? parseInt(envPort, 10) : (currentSettings.apiPort ?? DEFAULT_SETTINGS.apiPort);
+	let effectivePort: number;
 	if (isNaN(port) || port < 1 || port > 65535) {
 		console.error(`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using default 4400.`);
+		effectivePort = DEFAULT_SETTINGS.apiPort ?? 4400;
+	} else {
+		effectivePort = port;
 	}
 
 	const host = currentSettings.apiHost ?? DEFAULT_SETTINGS.apiHost;
-
 	// Register SSE channels
 	function registerSSEChannels(): void {
-		console.log('[SSE] Start channels..');
+	// console.log('[SSE] Start channels..');
 
 		// Phase 1: Servers
 		const SERVERS_PREFIX = 'servers:';
@@ -390,8 +414,8 @@ async function main() {
 	await initRealm(httpServer, eventNode);
 
 	// Start server
-	httpServer.listen(port, host, () => {
-		console.log(`[WarpCore] API server listening on ${host}:${port}`);
+	httpServer.listen(effectivePort, host, () => {
+		console.log(`[WarpCore] API server listening on ${host}:${effectivePort}`);
 		if (envPort) {
 			console.log(`[WarpCore] Port set via CONTROL_API_PORT environment variable`);
 		}

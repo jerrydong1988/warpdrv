@@ -25,7 +25,6 @@ function expandHome(p: string | undefined): string | undefined {
 }
 
 // Validate recipe step body to prevent shell injection
-// Only allows safe shell commands: single command with optional flags/args
 const SAFE_COMMAND_PATTERN = /^[a-zA-Z0-9_./-]+(\s+[a-zA-Z0-9_./-]+)*$/;
 const DANGEROUS_PATTERNS = [
 	/;\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,
@@ -193,32 +192,26 @@ export function validateRecipeBody(body: string): void {
 		throw new Error('Recipe step body cannot be empty');
 	}
 
-	// Check for command chaining (pipes, semicolons, &&, ||)
 	if (/[|;&]/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain command chaining (pipes, semicolons, &&, ||)');
 	}
 
-	// Check for subshell execution
 	if (/\(/.test(trimmed) || /\)/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain subshell execution');
 	}
 
-	// Check for file redirection
 	if (/[<>]/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain file redirection');
 	}
 
-	// Check for variable expansion
 	if (/\$/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain variable expansion');
 	}
 
-	// Check for backticks
 	if (/\`/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain backtick command substitution');
 	}
 
-	// Check for dangerous patterns
 	for (const pattern of DANGEROUS_PATTERNS) {
 		if (pattern.test(trimmed)) {
 			throw new Error(`Recipe step contains dangerous pattern: ${pattern.source}`);
@@ -226,7 +219,7 @@ export function validateRecipeBody(body: string): void {
 	}
 }
 
-interface ISSEmitter {
+interface ISSEEmitter {
 	emit(channel: string, data: unknown): void;
 }
 
@@ -238,6 +231,7 @@ interface IActiveRun {
 
 let activeRun: IActiveRun | null = null;
 let sseEmitter: ISSEEmitter | null = null;
+let runLock = false;
 
 export function setRecipeRunnerSSE(emitter: ISSEEmitter): void {
 	sseEmitter = emitter;
@@ -258,6 +252,9 @@ export async function startRun(
 ): Promise<TRunId> {
 	if (activeRun !== null) throw new Error('A recipe run is already in progress');
 	if (sseEmitter === null) throw new Error('Recipe runner SSE emitter not initialized');
+	if (runLock) throw new Error('A recipe run is already in progress');
+
+	runLock = true;
 
 	const runId = randomUUID();
 	const startedAt = Date.now();
@@ -278,11 +275,21 @@ export async function startRun(
 	};
 
 	activeRun = { state, proc: null, cancelled: false };
-
 	sseEmitter.emit('runs:started', state);
 
-	void executeRun(parsed).catch(err => {
+	executeRun(parsed).then(() => {}).catch(err => {
 		console.error('[recipeRunner] unhandled error in executeRun:', err);
+		if (activeRun !== null && activeRun.state.runId === runId) {
+			activeRun.state.status = ERecipeRunStatus.FAILED;
+			activeRun.state.finishedAt = Date.now();
+			sseEmitter?.emit('runs:finished', {
+				runId: activeRun.state.runId,
+				status: ERecipeRunStatus.FAILED,
+				finishedAt: activeRun.state.finishedAt,
+			});
+			activeRun = null;
+			runLock = false;
+		}
 	});
 
 	return runId;
@@ -297,7 +304,9 @@ export function cancelRun(): boolean {
 			const pid = proc.pid;
 			activeRun.proc = null;
 			if (pid !== undefined && process.platform !== 'win32') {
-				process.kill(-pid, 'SIGKILL');
+				// Use pid directly — negative pid kills the entire process group, which may
+				// inadvertently kill unrelated children of the same PID
+				process.kill(pid, 'SIGKILL');
 			} else if (pid !== undefined) {
 				spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
 			}
@@ -314,7 +323,6 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 	const controlPort = process.env.CONTROL_API_PORT;
 	if (controlPort !== undefined) env.CONTROL_API_PORT = controlPort;
 
-	// Sanitize recipe inputs: only safe env key names, reject dangerous overrides
 	const safeInputs = sanitizeRecipeInputs(activeRun.state.inputs);
 	for (const [name, value] of Object.entries(safeInputs)) {
 		env[name] = value;
@@ -339,7 +347,6 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 			startedAt,
 		});
 
-		// Validate step body before execution to prevent shell injection
 		validateRecipeBody(stepDef.body);
 
 		const result = await runStep(stepDef.body, stepDef.cwd, env, stepDef.id, activeRun.state.runId);
@@ -380,6 +387,7 @@ async function executeRun(parsed: IRecipeParsed): Promise<void> {
 	});
 
 	activeRun = null;
+	runLock = false;
 }
 
 interface IStepResult {
@@ -425,7 +433,6 @@ function runStep(
 		});
 
 		proc.stderr?.on('data', (chunk: Buffer) => {
-			console.log('[recipeRunner] stderr chunk:', chunk.length, 'bytes');
 			sseEmitter?.emit('runs:step-output', {
 				runId,
 				stepId,
@@ -441,10 +448,12 @@ function runStep(
 				kind: ERecipeStreamKind.STDERR,
 				data: `[runner] failed to spawn: ${err.message}\n`,
 			});
+			// Resolve the promise so the step doesn't hang forever
+			if (activeRun !== null) activeRun.proc = null;
+			resolve({ exitCode: 1, cancelled: false });
 		});
 
 		proc.on('exit', (code, signal) => {
-			console.log('[recipeRunner] exit:', { stepId, code, signal });
 			if (activeRun !== null) activeRun.proc = null;
 			const cancelled = activeRun !== null && activeRun.cancelled;
 			const exitCode = code !== null ? code : (signal !== null ? 1 : 1);
@@ -461,13 +470,12 @@ function sanitizeEnv(env: NodeJS.ProcessEnv): Record<string, string> {
 	return out;
 }
 
-// Only allow recipe input names that are safe env var keys and not dangerous overrides
 const SAFE_INPUT_KEY_RE = /^[A-Z_][A-Z0-9_]{0,127}$/i;
 const DANGEROUS_ENV_KEYS = new Set([
 	'PATH','LD_PRELOAD','LD_LIBRARY_PATH','PYTHONPATH','NODE_PATH',
 	'HOME','USER','LOGNAME','SHELL','TMP','TEMP','TMPDIR',
 	'DISPLAY','XAUTHORITY',
-	'HOME','USERPROFILE','APPDATA','LOCALAPPDATA',
+	'USERPROFILE','APPDATA','LOCALAPPDATA',
 	'HTTP_PROXY','HTTPS_PROXY','NO_PROXY','http_proxy','https_proxy','no_proxy',
 	'AGENT_NAME','AGENT_TOKEN','GITHUB_TOKEN','API_KEY','SECRET','PASSWORD',
 ]);

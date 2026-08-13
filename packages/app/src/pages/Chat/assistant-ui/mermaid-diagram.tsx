@@ -23,7 +23,12 @@ export const MermaidDiagram: FC<{ code: string; language: string }> = ({ code })
       .then(({ svg }) => {
         if (!cancelled) {
           // Sanitize SVG to strip any injected script/event handlers from model output
-          setSvg(DOMPurify.sanitize(svg, { USE_PROSE: true, ADD_ATTR: ['target'] }));
+          setSvg(DOMPurify.sanitize(svg, {
+            ADD_ATTR: ['target'],
+            USE_PROSE: false,
+            FORBID_TAGS: ['script', 'object', 'embed', 'form', 'iframe'],
+            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'],
+          }));
           setError(null);
         }
       })
