@@ -14,6 +14,11 @@ export interface ITodoResult {
 	todos: ITodoItem[];
 	etag: string | null;
 }
+export interface ISubThreadInfo {
+	threadId: string;
+	title: string;
+	pendingMessages: number;
+}
 export interface IWarpmcpDeps {
 	isRemote: (req: { ip: string; connection: { remoteAddress: string } }) => boolean;
 	validateBearerToken: (authHeader: string | undefined) => Promise<IAccessToken | null>;
@@ -68,6 +73,13 @@ export interface IWarpmcpDeps {
 	chatGetMessage?: (
 		messageId: string,
 	) => Promise<{ messageId: string; role: string; content: string } | null>;
+	listSubthreads?: (threadId: string) => Promise<ISubThreadInfo[]>;
+	createSubthread?: (
+		threadId: string,
+		agentId: string,
+		message: string,
+		title: string,
+	) => Promise<{ threadId: string }>;
 }
 export interface IStartArgs extends IWarpmcpDeps {
 	port: number;

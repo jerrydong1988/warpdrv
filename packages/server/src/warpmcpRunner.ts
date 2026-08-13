@@ -10,6 +10,7 @@ import {
 	codeGraphService,
 	getProjectRoot,
 	mcpClient,
+	subthreadService,
 	todoManager,
 } from "./index";
 import { isRemote } from "./middleware/auth";
@@ -59,6 +60,9 @@ export async function bootWarpmcp(): Promise<void> {
 		chatSearch: (q, threadId, limit, page) =>
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
+		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
+		createSubthread: (threadId, agentId, message, title) =>
+			subthreadService.createSubthread(threadId, agentId, message, title),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -81,6 +85,8 @@ export async function bootWarpmcp(): Promise<void> {
 				code_graph_list: { project_root: "{{ts.projectRoot}}" },
 				code_graph_clear: { project_root: "{{ts.projectRoot}}" },
 				chat_search: { threadId: "{{ws.threadId}}" },
+				list_subthreads: { threadId: "{{ws.threadId}}" },
+				create_subthread: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});
@@ -123,6 +129,9 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 		chatSearch: (q, threadId, limit, page) =>
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
+		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
+		createSubthread: (threadId, agentId, message, title) =>
+			subthreadService.createSubthread(threadId, agentId, message, title),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -145,6 +154,8 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 				code_graph_list: { project_root: "{{ts.projectRoot}}" },
 				code_graph_clear: { project_root: "{{ts.projectRoot}}" },
 				chat_search: { threadId: "{{ws.threadId}}" },
+				list_subthreads: { threadId: "{{ws.threadId}}" },
+				create_subthread: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});

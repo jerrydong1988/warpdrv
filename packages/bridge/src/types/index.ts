@@ -142,6 +142,7 @@ export interface IChatThreadCreatePayload {
 export interface IListThreadsOptions {
 	query?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 }
 
 // ============================================================

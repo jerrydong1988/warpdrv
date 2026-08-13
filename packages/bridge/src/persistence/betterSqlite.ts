@@ -751,6 +751,14 @@ export class SqlitePersistence implements IPersistence {
 			conditions.push("title LIKE ?");
 			vals.push(`%${options.query}%`);
 		}
+		if (options?.parentId !== undefined) {
+			if (options.parentId === null) {
+				conditions.push("parentId IS NULL");
+			} else {
+				conditions.push("parentId = ?");
+				vals.push(options.parentId);
+			}
+		}
 
 		const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 		const threads = this.db!.prepare(

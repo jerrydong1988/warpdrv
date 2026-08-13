@@ -83,6 +83,7 @@ import { getAllServerSlots, getServerSlots } from "./services/slotStateTracker";
 import { sseManager } from "./services/sseManagerInstance";
 import { getAllServerStats, getServerStats } from "./services/statsPoller";
 import { TodoManager } from "./services/todoManager";
+import { SubthreadService } from "./services/subthreadService";
 import { listChatPresets } from "./util/chatPresets";
 import { getDataDir } from "./util/mcpConfig";
 import { store } from "./util/store";
@@ -100,6 +101,7 @@ export let todoManager: TodoManager;
 export { getProjectRoot } from "./services/projectRoot";
 export let codeGraphService: CodeGraphService;
 export let chatSearchToolService: ChatSearchToolService;
+export let subthreadService: SubthreadService;
 
 import { execSync } from "child_process";
 import { createServer } from "http";
@@ -172,6 +174,7 @@ async function main() {
 		broadcaster,
 		eventNode,
 	});
+	subthreadService = new SubthreadService(persistence, orchestrator, broadcaster);
 
 	// Initialize embedding manager
 	await embeddingManager.initialize(persistence, broadcaster, dataDir);

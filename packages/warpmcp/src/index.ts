@@ -8,6 +8,8 @@ import { stableStringify } from "@warpcore/shared";
 import { authorizeAccess, authorizeToolCall } from "./auth";
 import { chatGetMessageDefinition, chatGetMessageHandler } from "./tools/chat_get_message";
 import { chatSearchDefinition, chatSearchHandler } from "./tools/chat_search";
+import { listSubthreadsDefinition, listSubthreadsHandler } from "./tools/list_subthreads";
+import { createSubthreadDefinition, createSubthreadHandler } from "./tools/create_subthread";
 import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from "./tools/code_graph_callees";
 import { codeGraphCallersDefinition, codeGraphCallersHandler } from "./tools/code_graph_callers";
 import { codeGraphClearDefinition, codeGraphClearHandler } from "./tools/code_graph_clear";
@@ -70,6 +72,8 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
 		{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
 		{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
+		{ def: listSubthreadsDefinition, handler: (a: any) => listSubthreadsHandler(deps, a) },
+		{ def: createSubthreadDefinition, handler: (a: any) => createSubthreadHandler(deps, a) },
 	];
 	const server = new McpServer(
 		{ name: SERVER_NAME, version: "0.1.0" },
@@ -120,6 +124,8 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 		codeGraphClear: args.codeGraphClear,
 		chatSearch: args.chatSearch,
 		chatGetMessage: args.chatGetMessage,
+		listSubthreads: args.listSubthreads,
+		createSubthread: args.createSubthread,
 	};
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? "0.0.0.0" : "127.0.0.1";
