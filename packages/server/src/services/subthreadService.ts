@@ -69,7 +69,7 @@ export class SubthreadService {
 			throw new Error(`Agent "${agentName}" not found`);
 		}
 
-		// 2.5. Check if the current mode allows this agent
+		// 2.5. Check if the current mode or thread-level agent restrictions allow this agent
 		const threadState = await this.persistence.getThreadState(parentThreadId);
 		const modeId = threadState?.modeId as string | undefined;
 		if (modeId) {
@@ -77,6 +77,13 @@ export class SubthreadService {
 			if (mode) {
 				if (!mode.allowedAgents.includes(agentName)) {
 					throw new Error(`Agent '${agentName}' is blocked by mode restrictions.`);
+				}
+			}
+		} else {
+			const activeAgents = threadState?.activeAgents as string[] | undefined;
+			if (activeAgents && activeAgents.length > 0) {
+				if (!activeAgents.includes(agentName)) {
+					throw new Error(`Agent '${agentName}' is blocked by thread restrictions.`);
 				}
 			}
 		}

@@ -36,6 +36,7 @@ import { encodingForModel } from "js-tiktoken";
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
+	Bot,
 	BrainCircuit,
 	BrainCircuitIcon,
 	CheckIcon,
@@ -224,7 +225,7 @@ export const Thread: FC<{
 								<div className="sticky bottom-0 left-0 right-0 mt-auto flex flex-col items-center gap-4 pb-4 md:pb-6 pt-4 bg-[linear-gradient(to_bottom,transparent_0%,var(--wc-bg-page)_35%,var(--wc-bg-page)_100%)]">
 									<ThreadPrimitive.ViewportFooter
 										className="aui-thread-viewport-footer flex flex-col gap-4 overflow-visible"
-										style={{ width: "44rem" }}
+										style={{ width: "48rem" }}
 									>
 										<ThreadScrollToBottom />
 										<Elicitation />
@@ -921,6 +922,210 @@ const ToolsSelector: FC = React.memo(() => {
 	);
 });
 
+const AgentSelector: FC = React.memo(() => {
+	const agents = useStore((s) => s.agents);
+	const setThreadState = useStore((s) => s.setThreadState);
+	const currentThreadId = useStore((s) => s.currentThreadId);
+	const modes = useStore((s) => s.modes);
+	const threadState = useStore((s) => s.getCurrentThreadState(s));
+
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
+
+	const availableAgents = useMemo(
+		() =>
+			Object.values(agents) as Array<{
+				id: string;
+				name: string;
+				tools: IToolAttachment[];
+				description?: string;
+			}>,
+		[agents],
+	);
+
+	// Mode-active agents
+	const modeAgentSet = useMemo(() => {
+		if (!isModeActive || !currentMode) return null;
+		return new Set(currentMode.allowedAgents || []);
+	}, [isModeActive, currentMode]);
+
+	// Thread-level agents (when no mode)
+	const threadAgents = useMemo(
+		() => (threadState?.activeAgents as string[]) || [],
+		[threadState?.activeAgents],
+	);
+
+	const activeAgentSet = useMemo(() => {
+		if (isModeActive && modeAgentSet) return modeAgentSet;
+		return new Set(threadAgents);
+	}, [isModeActive, modeAgentSet, threadAgents]);
+
+	const activeAgentCount = activeAgentSet.size;
+
+	const color = activeAgentCount > 0 ? "var(--wc-accent-blue)" : "var(--wc-text-muted)";
+	const borderColor = activeAgentCount > 0 ? "var(--wc-accent-blue)" : "var(--wc-border-default)";
+	const label = activeAgentCount > 0 ? `${activeAgentCount} Agent(s)` : "Agents Off";
+
+	const handleAgentToggle = useCallback(
+		async (agentName: string, checked: boolean) => {
+			if (isModeActive && currentMode) {
+				const currentAgents = currentMode.allowedAgents || [];
+				let next: string[];
+				if (checked) {
+					next = [...currentAgents, agentName];
+				} else {
+					next = currentAgents.filter((n) => n !== agentName);
+				}
+				try {
+					const { updateMode } = await import("@/api/mode-services");
+					await updateMode(currentMode.id, { allowedAgents: next });
+				} catch (e) {
+					console.error("[AgentSelector] Failed to update mode:", e);
+				}
+				return;
+			}
+			// No mode — save to thread state
+			const current = threadAgents;
+			let next: string[];
+			if (checked) {
+				next = [...current, agentName];
+			} else {
+				next = current.filter((n) => n !== agentName);
+			}
+			setThreadState(currentThreadId, { activeAgents: next });
+		},
+		[isModeActive, currentMode, threadAgents, currentThreadId, setThreadState],
+	);
+
+	return (
+		<Popover.Root lazyMount unmountOnExit>
+			<Popover.Trigger unstyled asChild>
+				<IconButton
+					variant="outline"
+					size="sm"
+					px="3"
+					ml="1"
+					borderRadius="lg"
+					borderWidth="1px"
+					borderColor={borderColor}
+					_hover={{ bg: "var(--wc-bg-hover)" }}
+					color={color}
+					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
+					title={`Agents ${label}`}
+				>
+					<span style={{ fontSize: "12px" }}>{label}</span>
+				</IconButton>
+			</Popover.Trigger>
+			<Popover.Positioner>
+				<Popover.Content
+					w="280px"
+					maxH="70vh"
+					overflow="auto"
+					bg="var(--wc-bg-elevated)"
+					borderWidth="1px"
+					borderColor="var(--wc-border-overlay)"
+					borderRadius="lg"
+					shadow="0 8px 32px var(--wc-overlay-modal)"
+				>
+					<Popover.Body p="3">
+						{availableAgents.length === 0 ? (
+							<Text
+								fontSize="12px"
+								color="var(--wc-text-faint)"
+								textAlign="center"
+								py="4"
+							>
+								No agents available
+							</Text>
+						) : (
+							<VStack gap="2" align="stretch">
+								{availableAgents.map((agent) => {
+									const isSelected = activeAgentSet.has(agent.name);
+									const toolCount = agent.tools?.length ?? 0;
+									return (
+										<Box
+											key={agent.id}
+											display="flex"
+											flexDirection="column"
+											gap="1"
+											p="2"
+											borderRadius="md"
+											cursor="pointer"
+											bg={
+												isSelected ? "var(--wc-bg-selected)" : "transparent"
+											}
+											_hover={{
+												bg: isSelected
+													? "var(--wc-bg-selected)"
+													: "var(--wc-bg-card)",
+											}}
+											onClick={() =>
+												handleAgentToggle(agent.name, !isSelected)
+											}
+										>
+											<Box display="flex" alignItems="center" gap="1.5">
+												{isSelected && (
+													<CheckIcon
+														size={12}
+														color="var(--wc-accent-green)"
+													/>
+												)}
+												{!isSelected && (
+													<Bot
+														size={13}
+														color="var(--wc-text-muted)"
+														flexShrink={0}
+													/>
+												)}
+												<Text
+													fontWeight="600"
+													fontSize="xs"
+													flex="1"
+													minW="0"
+												>
+													{agent.name}
+												</Text>
+												<Box
+													display="flex"
+													alignItems="center"
+													gap="1"
+													fontSize="9px"
+													color="var(--wc-text-muted)"
+													bg="var(--wc-bg-subtle)"
+													borderRadius="sm"
+													px="1.5"
+													py="0.5"
+													flexShrink={0}
+												>
+													<Wrench size={9} />
+													{toolCount} tool{toolCount === 1 ? "" : "s"}
+												</Box>
+											</Box>
+											{agent.description && (
+												<Text
+													fontSize="10px"
+													color="var(--wc-text-faint)"
+													lineHeight="1.3"
+													maxH="2.6em"
+													overflow="hidden"
+													pl={isSelected ? "4" : "5"}
+												>
+													{agent.description}
+												</Text>
+											)}
+										</Box>
+									);
+								})}
+							</VStack>
+						)}
+					</Popover.Body>
+				</Popover.Content>
+			</Popover.Positioner>
+		</Popover.Root>
+	);
+});
+
 const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = ({
 	onStreamChange,
 }) => {
@@ -961,6 +1166,7 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 				<ReasoningEffortToggle />
 				{/* <ToolsToggle /> */}
 				<ToolsSelector />
+				<AgentSelector />
 				<EmbeddingToggle />
 			</div>
 			<div className="flex items-center gap-2">
