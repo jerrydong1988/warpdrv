@@ -139,6 +139,10 @@ export class Orchestrator {
 			return await this.persistence.getMode(id);
 		});
 
+		this.eventNode.fn("bridge.listAgents", async (api) => {
+			return await this.persistence.listAgents();
+		});
+
 		this.eventNode.fn("bridge.getChatPrompt", async (api) => {
 			const id = api.payload as string;
 			return await this.persistence.getChatPrompt(id);

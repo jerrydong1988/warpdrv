@@ -32,7 +32,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 		inputRef(triggerRef.current);
 	}, [inputRef]);
 
-	const selectedNames = useMemo(() => {
+	const selectedIds = useMemo(() => {
 		if (!value || !value.trim()) return new Set<string>();
 		return new Set(
 			value
@@ -45,16 +45,16 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 	const availableAgents = useMemo(() => Object.values(agents) as IAgent[], [agents]);
 
 	const handleToggle = useCallback(
-		(name: string) => {
-			const next = new Set(selectedNames);
-			if (next.has(name)) {
-				next.delete(name);
+		(id: string) => {
+			const next = new Set(selectedIds);
+			if (next.has(id)) {
+				next.delete(id);
 			} else {
-				next.add(name);
+				next.add(id);
 			}
 			onChange(next.size ? [...next].join(",") : "");
 		},
-		[selectedNames, onChange],
+		[selectedIds, onChange],
 	);
 
 	const handleTriggerMouseDown = useCallback(
@@ -138,8 +138,8 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 		() =>
 			selectedNames.size === 0
 				? "Agents"
-				: `${selectedNames.size} agent${selectedNames.size === 1 ? "" : "s"}`,
-		[selectedNames.size],
+				: `${selectedIds.size} agent${selectedIds.size === 1 ? "" : "s"}`,
+		[selectedIds.size],
 	);
 
 	return (
@@ -186,7 +186,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 						overflow: "hidden",
 						textOverflow: "ellipsis",
 						whiteSpace: "nowrap",
-						color: selectedNames.size
+						color: selectedIds.size
 							? "var(--wc-text-primary)"
 							: "var(--wc-text-secondary)",
 					}}
@@ -227,13 +227,13 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 							</div>
 						)}
 						{availableAgents.map((agent) => {
-							const isSelected = selectedNames.has(agent.name);
+							const isSelected = selectedIds.has(agent.id);
 							const toolCount = agent.tools?.length ?? 0;
 							return (
 								<div
 									key={agent.id}
 									onMouseDown={(e) => e.stopPropagation()}
-									onClick={() => handleToggle(agent.name)}
+									onClick={() => handleToggle(agent.id)}
 									style={{
 										display: "flex",
 										flexDirection: "column",

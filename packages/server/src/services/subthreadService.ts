@@ -75,14 +75,14 @@ export class SubthreadService {
 		if (modeId) {
 			const mode = await getMode(modeId);
 			if (mode) {
-				if (!mode.allowedAgents.includes(agentName)) {
+				if (!mode.allowedAgents.includes(agent.id)) {
 					throw new Error(`Agent '${agentName}' is blocked by mode restrictions.`);
 				}
 			}
 		} else {
 			const activeAgents = threadState?.activeAgents as string[] | undefined;
 			if (activeAgents && activeAgents.length > 0) {
-				if (!activeAgents.includes(agentName)) {
+				if (!activeAgents.includes(agent.id)) {
 					throw new Error(`Agent '${agentName}' is blocked by thread restrictions.`);
 				}
 			}
@@ -118,6 +118,11 @@ export class SubthreadService {
 			totalCompletionTokens: 0,
 			createdAt: now,
 			updatedAt: now,
+		});
+
+		// 5.5. Save original agent info in thread state
+		await this.persistence.setThreadState(newThreadId, {
+			originalAgent: { id: agent.id, name: agent.name },
 		});
 
 		// 6. Save agent's tools (always include superthread_send_message)

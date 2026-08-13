@@ -164,7 +164,12 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
 		api.eventNode.hook("/warpcore", "bridge.preInference", async (eventApi) => {
 			const payload = eventApi.payload as {
-				request: { messageState?: Record<string, unknown>; threadId: string };
+				request: {
+					messageState?: Record<string, unknown>;
+					threadId: string;
+					attachAllTools?: boolean;
+					attachedTools?: Array<{ serverName: string; toolName: string }>;
+				};
 			};
 
 			// const commands = payload.request.messageState?.slashCommands as
@@ -209,6 +214,18 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			let mode: IMode | null = null;
 			if (modeId) mode = await getMode(modeId);
 
+			// Fetch all agents for resolution
+			const allAgents = (await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.listAgents",
+			)) as Array<{ id: string; name: string; description?: string }> | null;
+			const agentMap = new Map<string, { name: string; description?: string }>();
+			if (allAgents) {
+				for (const agent of allAgents) {
+					agentMap.set(agent.id, { name: agent.name, description: agent.description });
+				}
+			}
+
 			if (mode) {
 				const modesArr = await listModes();
 
@@ -235,6 +252,37 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					}
 				}
 
+				// Build combined allowed agent list (union of all modes)
+				const allAllowedAgentIds = new Set<string>();
+				for (const m of modesArr) {
+					for (const aid of m.allowedAgents || []) {
+						allAllowedAgentIds.add(aid);
+					}
+				}
+				const combinedAgents = [...allAllowedAgentIds]
+					.map((id) => agentMap.get(id))
+					.filter((a): a is { name: string; description?: string } => Boolean(a))
+					.sort((a, b) => a.name.localeCompare(b.name));
+
+				// Build the combined agents injection text
+				const agentsInjectionText =
+					combinedAgents.length > 0
+						? "This is the list of available agents. The allowed list varies per mode; you must follow the list of allowed agents for the active mode:\\n" +
+							combinedAgents
+								.map(
+									(a) =>
+										`- ${a.name}${a.description ? `: ${a.description}` : ""}`,
+								)
+								.join("\n")
+						: "No agents are available in any mode.";
+
+				// Inject combined agents list
+				injectSystemPrompt(
+					messages,
+					`\nAVAILABLE AGENTS\n\n${agentsInjectionText}\n`,
+					"append",
+				);
+
 				injectSystemPrompt(
 					messages,
 					`${MODE_SYSTEM_PROMPT}\n${modesArr
@@ -250,11 +298,14 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							if (toolNames.length) toolMessage += [...toolNames].sort().join(", ");
 							else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!";
 
-							// Build agents message
+							// Build agents message — resolve IDs to names
+							const agentIds = (mode.allowedAgents as string[]) || [];
+							const agentNamesList = agentIds
+								.map((id) => agentMap.get(id)?.name)
+								.filter((n): n is string => Boolean(n));
 							let agentMessage = "";
-							const agentNames = (mode.allowedAgents as string[]) || [];
-							if (agentNames.length)
-								agentMessage += [...agentNames].sort().join(", ");
+							if (agentNamesList.length)
+								agentMessage += [...agentNamesList].sort().join(", ");
 							else agentMessage += "AGENTS ARE NOT ALLOWED IN THIS MODE!";
 
 							// Build prompt text: saved prompt first, then custom prompt
@@ -267,6 +318,38 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						})
 						.join(`\n\n`)}\n`,
 				);
+
+				// --- No-mode agent injection ---
+				if (!mode) {
+					const request = payload.request;
+					const hasCreateSubthread =
+						request.attachAllTools === true ||
+						request.attachedTools?.some(
+							(t) => t.serverName === "warpmcp" && t.toolName === "create_subthread",
+						);
+					const threadAgentIds = threadState?.activeAgents as string[] | undefined;
+					if (hasCreateSubthread && threadAgentIds && threadAgentIds.length > 0) {
+						const threadAgents = threadAgentIds
+							.map((id) => agentMap.get(id))
+							.filter((a): a is { name: string; description?: string } => Boolean(a))
+							.sort((a, b) => a.name.localeCompare(b.name));
+						if (threadAgents.length > 0) {
+							const agentsText =
+								"This is the list of available agents that can be used to create subthreads:\n" +
+								threadAgents
+									.map(
+										(a) =>
+											`- ${a.name}${a.description ? `: ${a.description}` : ""}`,
+									)
+									.join("\n");
+							injectSystemPrompt(
+								messages,
+								`\nAVAILABLE AGENTS\n\n${agentsText}\n`,
+								"append",
+							);
+						}
+					}
+				}
 
 				if (content.length) {
 					console.log("[BEApplet: Appending Tail Prompt]");

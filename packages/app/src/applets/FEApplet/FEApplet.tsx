@@ -342,12 +342,12 @@ const AgentPicker = React.memo(
 		const selectedSet = useMemo(() => new Set(value), [value]);
 
 		const handleToggle = useCallback(
-			(name: string) => {
+			(id: string) => {
 				const next = new Set(selectedSet);
-				if (next.has(name)) {
-					next.delete(name);
+				if (next.has(id)) {
+					next.delete(id);
 				} else {
-					next.add(name);
+					next.add(id);
 				}
 				onChange([...next]);
 			},
@@ -425,7 +425,7 @@ const AgentPicker = React.memo(
 							</Text>
 						)}
 						{availableAgents.map((agent) => {
-							const isSelected = selectedSet.has(agent.name);
+							const isSelected = selectedSet.has(agent.id);
 							const toolCount = agent.tools?.length ?? 0;
 							return (
 								<Box
@@ -444,7 +444,7 @@ const AgentPicker = React.memo(
 									}}
 									onClick={(e) => {
 										e.stopPropagation();
-										handleToggle(agent.name);
+										handleToggle(agent.id);
 									}}
 								>
 									<Box display="flex" alignItems="center" gap="1.5">

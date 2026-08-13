@@ -968,14 +968,14 @@ const AgentSelector: FC = React.memo(() => {
 	const label = activeAgentCount > 0 ? `${activeAgentCount} Agent(s)` : "Agents Off";
 
 	const handleAgentToggle = useCallback(
-		async (agentName: string, checked: boolean) => {
+		async (agentId: string, checked: boolean) => {
 			if (isModeActive && currentMode) {
 				const currentAgents = currentMode.allowedAgents || [];
 				let next: string[];
 				if (checked) {
-					next = [...currentAgents, agentName];
+					next = [...currentAgents, agentId];
 				} else {
-					next = currentAgents.filter((n) => n !== agentName);
+					next = currentAgents.filter((n) => n !== agentId);
 				}
 				try {
 					const { updateMode } = await import("@/api/mode-services");
@@ -989,9 +989,9 @@ const AgentSelector: FC = React.memo(() => {
 			const current = threadAgents;
 			let next: string[];
 			if (checked) {
-				next = [...current, agentName];
+				next = [...current, agentId];
 			} else {
-				next = current.filter((n) => n !== agentName);
+				next = current.filter((n) => n !== agentId);
 			}
 			setThreadState(currentThreadId, { activeAgents: next });
 		},
@@ -1271,7 +1271,7 @@ const StatsTooltip = React.memo((): React.ReactNode => {
 			arr.push({ label: "c", value: `${actualTokens} tks` });
 		if (predictedMs > 0)
 			arr.push({ label: "tt", value: `${(predictedMs / 1000).toFixed(1)} s` });
-		if (finishReason) arr.push({ label: "fr", value: finishReason });
+		// if (finishReason) arr.push({ label: "fr", value: finishReason });
 		return arr;
 	}, [promptPerSecond, predictedPerSecond, actualTokens, predictedMs, finishReason]);
 
