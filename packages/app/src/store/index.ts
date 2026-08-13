@@ -39,6 +39,7 @@ import { hardwareSlice } from "./slices/hardware";
 import { kokoroSlice } from "./slices/kokoro";
 import { modelsSlice } from "./slices/models";
 import { modesSlice } from "./slices/modes";
+import { monitorBoxSlice } from "./slices/monitorBox";
 import { notificationsSlice } from "./slices/notifications";
 import { proxySlice } from "./slices/proxy";
 import { recipesSlice } from "./slices/recipes";
@@ -70,6 +71,7 @@ export const useStore = create<AppState>()(
 			const recipes = recipesSlice(set, get);
 			const checkpoints = checkpointsSlice(set, get);
 			const modes = modesSlice(set, get);
+			const monitorBox = monitorBoxSlice(set, get);
 			const guardrails = guardrailsSlice(set, get);
 			const agents = agentsSlice(set, get);
 			const notifications = notificationsSlice(set, get);
@@ -387,6 +389,10 @@ export const useStore = create<AppState>()(
 				notificationsByThread: notifications.notificationsByThread!,
 				applyNotificationCreated: notifications.applyNotificationCreated!,
 				applyNotificationUpdated: notifications.applyNotificationUpdated!,
+
+				// Monitor box
+				monitorBoxOpen: monitorBox.monitorBoxOpen!,
+				setMonitorBoxOpen: monitorBox.setMonitorBoxOpen!,
 			};
 		}),
 	),

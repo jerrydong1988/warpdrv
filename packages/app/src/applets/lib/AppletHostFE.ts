@@ -31,6 +31,7 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					label: string;
 					componentId?: string;
 					icon?: React.ComponentType<any>;
+					align?: "start" | "end";
 				},
 			) => {
 				return useStore.getState().registerUiSpaceComponent({
@@ -40,6 +41,7 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					appletName,
 					componentId: opts.componentId,
 					icon: opts.icon,
+					align: opts.align,
 				});
 			},
 			unregisterUiSpaceComponent: (id: TUISpaceComponentId) => {

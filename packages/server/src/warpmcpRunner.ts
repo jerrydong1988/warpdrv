@@ -11,6 +11,7 @@ import {
 	getProjectRoot,
 	mcpClient,
 	subthreadService,
+	threadStatusLineManager,
 	todoManager,
 } from "./index";
 import { isRemote } from "./middleware/auth";
@@ -67,6 +68,7 @@ export async function bootWarpmcp(): Promise<void> {
 			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
 		sendToSuperthread: (currentThreadId, message) =>
 			subthreadService.sendToSuperthread(currentThreadId, message),
+		setCurrentStatus: (tid, status) => threadStatusLineManager.setCurrentStatus(tid, status),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -93,6 +95,7 @@ export async function bootWarpmcp(): Promise<void> {
 				create_subthread: { threadId: "{{ws.threadId}}" },
 				subthread_send_message: { threadId: "{{ws.threadId}}" },
 				superthread_send_message: { threadId: "{{ws.threadId}}" },
+				set_current_status: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});
@@ -142,6 +145,7 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
 		sendToSuperthread: (currentThreadId, message) =>
 			subthreadService.sendToSuperthread(currentThreadId, message),
+		setCurrentStatus: (tid, status) => threadStatusLineManager.setCurrentStatus(tid, status),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -168,6 +172,7 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 				create_subthread: { threadId: "{{ws.threadId}}" },
 				subthread_send_message: { threadId: "{{ws.threadId}}" },
 				superthread_send_message: { threadId: "{{ws.threadId}}" },
+				set_current_status: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});

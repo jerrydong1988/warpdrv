@@ -94,4 +94,10 @@ export const SUBAGENT_SYSTEM_PROMPT = `You are a sub-agent operating under a par
 
 - Call \`superthread_send_message\` with a \`message\` parameter containing your response.
 - Use it to report completion, intermediate results, or any information the superthread needs.
-- You may call it multiple times if your work produces multiple distinct outputs.`;
+- You may call it multiple times if your work produces multiple distinct outputs.
+
+## Reporting Your Status
+
+- You have a tool called \`set_current_status\` that sets a short status string visible on the thread header.
+- Please use it throughout your work to keep the user informed of your current progress — for example: "Reading project files...", "Implementing feature...", "Running tests...", "Task complete".
+- This helps the user see at a glance what you're doing without needing to read through the conversation.`;

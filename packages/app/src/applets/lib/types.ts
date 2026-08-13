@@ -15,7 +15,12 @@ export interface IAppletAPIFE extends TAppletBaseAPI {
 	registerUiSpaceComponent: (
 		spaceId: string,
 		component: TUISpaceComponent,
-		opts: { label: string; componentId?: string; icon?: React.ComponentType<any> },
+		opts: {
+			label: string;
+			componentId?: string;
+			icon?: React.ComponentType<any>;
+			align?: "start" | "end";
+		},
 	) => TUISpaceComponentId;
 	unregisterUiSpaceComponent: (id: TUISpaceComponentId) => void;
 	registerComposerChip: (options: {

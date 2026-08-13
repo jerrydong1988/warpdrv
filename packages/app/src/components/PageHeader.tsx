@@ -10,7 +10,7 @@ import { useDependantState } from "../hooks/useDependantState";
 import { useStore } from "../store";
 
 interface IPageHeaderProps {
-	title: string;
+	title: string | ReactNode;
 	subtitle?: string;
 	icon?: ReactNode;
 	actions?: ReactNode;

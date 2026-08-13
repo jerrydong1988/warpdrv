@@ -49,6 +49,7 @@ import { updateMessageState, updateSettings } from "@/api/services";
 import { useToast } from "@/components/ToastProvider";
 import { WithErrorBoundary } from "@/components/WithErrorBoundary";
 import { useDerivedMsgsForUI } from "@/hooks/useChatSelectors";
+import { ThreadTitleDisplay } from "./ThreadTitleDisplay";
 import { extractTextFromFile } from "@/hooks/useFileReader";
 import { HotkeyMode, useHotkey } from "@/hooks/useHotKey";
 import { useSlashCommandProcessor } from "@/hooks/useSlashCommandProcessor";
@@ -1162,17 +1163,17 @@ export const ChatPage = React.memo(() => {
 							<Plus size={15} />
 							New Chat
 						</Button>
-						<span
+						<Box
 							className="drag"
 							style={{
 								fontSize: "13px",
 								color: "var(--wc-text-muted)",
 								position: "fixed",
-								left: `calc(50% - (${title.length * 3.5}px - ${threadsListCollapsed ? "-20" : "100"}px)`,
+								left: `calc(50% - (${title.length * 3.5}px - ${threadsListCollapsed ? "-20" : "80"}px)`,
 							}}
 						>
-							{title}
-						</span>
+							<ThreadTitleDisplay />
+						</Box>
 					</>
 				}
 			/>

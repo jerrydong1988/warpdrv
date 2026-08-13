@@ -48,6 +48,7 @@ import {
 	todoWriteDefinition,
 	todoWriteHandler,
 } from "./tools/todo";
+import { setCurrentStatusDefinition, setCurrentStatusHandler } from "./tools/set_current_status";
 import type { IStartArgs, IStartResult, IWarpmcpDeps } from "./types";
 
 const SERVER_NAME = "warpmcp";
@@ -89,6 +90,10 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{
 			def: superthreadSendMessageDefinition,
 			handler: (a: any) => superthreadSendMessageHandler(deps, a),
+		},
+		{
+			def: setCurrentStatusDefinition,
+			handler: (a: any) => setCurrentStatusHandler(deps, a),
 		},
 	];
 	const server = new McpServer(
@@ -144,6 +149,7 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 		createSubthread: args.createSubthread,
 		sendToSubthread: args.sendToSubthread,
 		sendToSuperthread: args.sendToSuperthread,
+		setCurrentStatus: args.setCurrentStatus,
 	};
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? "0.0.0.0" : "127.0.0.1";

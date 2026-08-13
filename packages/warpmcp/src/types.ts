@@ -89,6 +89,7 @@ export interface IWarpmcpDeps {
 		currentThreadId: string,
 		message: string,
 	) => Promise<{ notificationId: string; threadId: string }>;
+	setCurrentStatus?: (threadId: string, status: string) => Promise<{ currentStatus: string }>;
 }
 export interface IStartArgs extends IWarpmcpDeps {
 	port: number;

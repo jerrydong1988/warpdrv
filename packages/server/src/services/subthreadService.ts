@@ -7,6 +7,11 @@ import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
 import { getMode } from "./modeStore";
 import { store } from "../util/store";
 
+const INJECTED_TOOLS: IToolAttachment[] = [
+	{ serverName: "warpmcp", toolName: "superthread_send_message" },
+	{ serverName: "warpmcp", toolName: "set_current_status" },
+];
+
 export interface ISubThreadInfo {
 	threadId: string;
 	title: string;
@@ -125,13 +130,15 @@ export class SubthreadService {
 			originalAgent: { id: agent.id, name: agent.name },
 		});
 
-		// 6. Save agent's tools (always include superthread_send_message)
-		const superthreadTool = { serverName: "warpmcp", toolName: "superthread_send_message" };
+		// 6. Save agent's tools (always include injected tools)
 		const allTools = [
 			...agent.tools.filter(
-				(t) => !(t.serverName === "warpmcp" && t.toolName === "superthread_send_message"),
+				(t) =>
+					!INJECTED_TOOLS.some(
+						(inj) => inj.serverName === t.serverName && inj.toolName === t.toolName,
+					),
 			),
-			superthreadTool,
+			...INJECTED_TOOLS,
 		];
 		await this.persistence.saveThreadAttachedTools(newThreadId, false, allTools);
 
@@ -145,18 +152,20 @@ export class SubthreadService {
 				EToolApprovalMode.ALLOWED,
 			);
 		}
-		// Always auto-approve superthread_send_message
-		const hasSuperthreadAutoApprove = agent.autoApproveTools.some(
-			(t) => t.serverName === "warpmcp" && t.toolName === "superthread_send_message",
-		);
-		if (!hasSuperthreadAutoApprove) {
-			await this.persistence.setThreadToolPermission(
-				newThreadId,
-				"warpmcp",
-				"superthread_send_message",
-				true,
-				EToolApprovalMode.ALLOWED,
+		// Always auto-approve injected tools
+		for (const tool of INJECTED_TOOLS) {
+			const hasAutoApprove = agent.autoApproveTools.some(
+				(t) => t.serverName === tool.serverName && t.toolName === tool.toolName,
 			);
+			if (!hasAutoApprove) {
+				await this.persistence.setThreadToolPermission(
+					newThreadId,
+					tool.serverName,
+					tool.toolName,
+					true,
+					EToolApprovalMode.ALLOWED,
+				);
+			}
 		}
 
 		// 8. Get server for inference URL

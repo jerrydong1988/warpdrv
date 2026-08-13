@@ -371,4 +371,8 @@ export interface AppState extends IChatStoreState {
 	notificationsByThread: Record<TThreadId, Record<string, INotification>>;
 	applyNotificationCreated: (notification: INotification) => void;
 	applyNotificationUpdated: (notification: INotification) => void;
+
+	// Monitor box
+	monitorBoxOpen: boolean;
+	setMonitorBoxOpen: (open: boolean) => void;
 }

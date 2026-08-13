@@ -89,6 +89,7 @@ import { EUISpaceLoc } from "@/store/slices/uiSpaces";
 import type { IAppletAPIFE } from "../lib/types";
 import { GuardrailBadge, ModeGuardrailPicker } from "../ui/GuardrailBadge";
 import { ModeTabs } from "../ui/ModeTabs";
+import { MonitorButton } from "../ui/MonitorButton";
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
@@ -3025,8 +3026,18 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, {
 			label: "GuardrailShieldCheck",
 		});
-		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, { label: "Mode" });
-		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, { label: "Guardrails" });
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, ModeTabs, {
+			label: "Mode",
+			align: "start",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, GuardrailBadge, {
+			label: "Guardrails",
+			align: "end",
+		});
+		api.registerUiSpaceComponent(EUISpaceLoc.COMPOSER, MonitorButton, {
+			label: "Monitor",
+			align: "end",
+		});
 
 		const blockingSlashCommands = [
 			"guardrail",

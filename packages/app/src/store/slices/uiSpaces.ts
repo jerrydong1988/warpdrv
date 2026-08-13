@@ -16,6 +16,7 @@ export interface TUiSpaceComponentDef {
 	component: TUISpaceComponent;
 	props?: Record<string, unknown>;
 	icon?: React.ComponentType<any>;
+	align?: "start" | "end";
 }
 
 export enum EUISpaceLoc {
@@ -48,6 +49,7 @@ interface UiSpacesSlice {
 		component: TUISpaceComponent;
 		props?: Record<string, unknown>;
 		icon?: React.ComponentType<any>;
+		align?: "start" | "end";
 	}) => TUISpaceComponentId;
 
 	unregisterUiSpaceComponent: (
@@ -80,6 +82,7 @@ export function uiSpacesSlice(
 					component: def.component,
 					props: def.props,
 					icon: def.icon,
+					align: def.align || "start",
 				};
 				draft.uiSpaceComponentsById[id] = entry;
 				if (!draft.uiSpaceComponentsByLocation[def.location]) {

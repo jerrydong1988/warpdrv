@@ -94,6 +94,7 @@ import { Elicitation } from "./Elicitation";
 import { EmbeddingToggle } from "./EmbeddingToggle";
 import { KokoroTTSButton } from "./KokoroTTS";
 import { MarkdownText } from "./markdown-text";
+import { MonitorBox } from "@/applets/ui/MonitorBox";
 import { PendingToolCallsBox } from "./PendingToolCallsBox";
 import { SelectionPopover } from "./SelectionPopover";
 import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
@@ -230,6 +231,7 @@ export const Thread: FC<{
 										<ThreadScrollToBottom />
 										<Elicitation />
 										<AnnotationsBox />
+										<MonitorBox />
 										<PendingToolCallsBox />
 										<Composer />
 									</ThreadPrimitive.ViewportFooter>

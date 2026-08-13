@@ -84,6 +84,7 @@ import { sseManager } from "./services/sseManagerInstance";
 import { getAllServerStats, getServerStats } from "./services/statsPoller";
 import { TodoManager } from "./services/todoManager";
 import { SubthreadService } from "./services/subthreadService";
+import { ThreadStatusLineManager } from "./services/threadStatusLineManager";
 import { listChatPresets } from "./util/chatPresets";
 import { getDataDir } from "./util/mcpConfig";
 import { store } from "./util/store";
@@ -102,6 +103,7 @@ export { getProjectRoot } from "./services/projectRoot";
 export let codeGraphService: CodeGraphService;
 export let chatSearchToolService: ChatSearchToolService;
 export let subthreadService: SubthreadService;
+export let threadStatusLineManager: ThreadStatusLineManager;
 
 import { execSync } from "child_process";
 import { createServer } from "http";
@@ -159,6 +161,7 @@ async function main() {
 		console.error("[seed] Failed to seed default modes/guardrails:", err),
 	);
 	todoManager = new TodoManager(persistence);
+	threadStatusLineManager = new ThreadStatusLineManager(persistence);
 	codeGraphService = new CodeGraphService(persistence);
 	chatSearchToolService = new ChatSearchToolService(persistence);
 

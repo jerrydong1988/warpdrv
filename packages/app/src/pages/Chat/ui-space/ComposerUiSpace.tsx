@@ -10,11 +10,21 @@ export const ComposerUiSpace = React.memo(() => {
 
 	if (!componentIds || !Object.keys(componentIds).length) return null;
 
+	const ids = Object.keys(componentIds);
+	const leftIds = ids.filter((id) => {
+		const entry = entriesById[id];
+		return !entry || entry.align === "start";
+	});
+	const rightIds = ids.filter((id) => {
+		const entry = entriesById[id];
+		return entry?.align === "end";
+	});
+
 	return (
 		<Box
 			display="flex"
 			flexDir="row"
-			justify="space-between"
+			justifyContent="space-between"
 			alignItems="center"
 			w="calc(100% + var(--chakra-spacing-1\.5) * 2.5)"
 			overflowX="auto"
@@ -27,15 +37,20 @@ export const ComposerUiSpace = React.memo(() => {
 			m="-2"
 			p="1.5"
 		>
-			{Object.keys(componentIds).map((id, index) => {
-				const entry = entriesById[id];
-				if (!entry) return null;
-				return (
-					<Box key={id} flex="0 0 auto" ml={index > 0 ? "auto" : 0}>
+			<Box display="flex" flexDir="row" gap="2" flexShrink={0}>
+				{leftIds.map((id) => (
+					<Box key={id}>
 						<UiSpaceWrapper componentId={id} />
 					</Box>
-				);
-			})}
+				))}
+			</Box>
+			<Box display="flex" flexDir="row" gap="2" flexShrink={0}>
+				{rightIds.map((id) => (
+					<Box key={id}>
+						<UiSpaceWrapper componentId={id} />
+					</Box>
+				))}
+			</Box>
 		</Box>
 	);
 });
