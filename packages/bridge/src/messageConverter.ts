@@ -124,7 +124,8 @@ export function convertMessagesToOpenAIFormat(
 					}
 				}
 
-				const assistantMsg: TOpenAIMessage = { role: "assistant" };
+				// @ts-expect-error test for including null content
+				const assistantMsg: TOpenAIMessage = { role: "assistant", content: null };
 
 				if (content) assistantMsg.content = content;
 				if (toolCalls.length > 0) assistantMsg.tool_calls = toolCalls;

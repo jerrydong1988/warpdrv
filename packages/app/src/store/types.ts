@@ -1,4 +1,5 @@
 import type {
+	IAgent,
 	IBackend,
 	IBackendAsset,
 	IBackendGroup,
@@ -271,6 +272,9 @@ export interface AppState extends IChatStoreState {
 
 	// Guardrails (global definitions)
 	guardrails: Record<string, IGuardrailDefinition>;
+
+	// Agents
+	agents: Record<string, IAgent>;
 
 	// Chat Presets
 	chatPresets: IChatPreset[];

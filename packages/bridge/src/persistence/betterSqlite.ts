@@ -5,6 +5,7 @@
 // ============================================================
 
 import type {
+	IAgent,
 	ICodeGraphEdge,
 	ICodeGraphFile,
 	ICodeGraphNode,
@@ -13,7 +14,7 @@ import type {
 	INotificationCreatePayload,
 	INotificationUpdatePayload,
 } from "@warpcore/shared";
-import { genNotificationId } from "@warpcore/shared";
+import { genAgentId, genNotificationId } from "@warpcore/shared";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
@@ -83,6 +84,7 @@ function buildTableNames(prefix: string) {
 		modes: `${prefix}modes`,
 		prompts: `${prefix}prompts`,
 		notifications: `${prefix}notifications`,
+		agents: `${prefix}agents`,
 	};
 }
 
@@ -348,9 +350,23 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 							hidden INTEGER NOT NULL DEFAULT 0,
 							createdAt INTEGER NOT NULL
 						);
-						CREATE INDEX IF NOT EXISTS idx_${t.notifications}_thread ON ${t.notifications}(threadId);
-						CREATE INDEX IF NOT EXISTS idx_${t.notifications}_created ON ${t.notifications}(createdAt DESC);
-					`;
+							CREATE INDEX IF NOT EXISTS idx_${t.notifications}_thread ON ${t.notifications}(threadId);
+							CREATE INDEX IF NOT EXISTS idx_${t.notifications}_created ON ${t.notifications}(createdAt DESC);
+
+							-- Agents
+							CREATE TABLE IF NOT EXISTS ${t.agents} (
+								id TEXT PRIMARY KEY,
+								name TEXT NOT NULL,
+								serverId TEXT NOT NULL DEFAULT '',
+								promptId TEXT,
+								tools TEXT NOT NULL DEFAULT '[]',
+									autoApproveTools TEXT NOT NULL DEFAULT '[]',
+									description TEXT NOT NULL DEFAULT '',
+								created_at INTEGER NOT NULL,
+								updated_at INTEGER NOT NULL
+							);
+							CREATE INDEX IF NOT EXISTS idx_${t.agents}_server ON ${t.agents}(serverId);
+						`;
 }
 
 // ============================================================
@@ -2294,6 +2310,104 @@ export class SqlitePersistence implements IPersistence {
 			consumed: (row.consumed as number) === 1,
 			hidden: (row.hidden as number) === 1,
 			createdAt: row.createdAt as number,
+		};
+	}
+
+	// ============================================================
+	// Agents
+	// ============================================================
+
+	async listAgents(): Promise<IAgent[]> {
+		const rows = this.db!.prepare(
+			`SELECT * FROM ${this.t.agents} ORDER BY updated_at DESC`,
+		).all() as Array<Record<string, unknown>>;
+		return rows.map((r) => this.hydrateAgent(r));
+	}
+
+	async getAgent(id: string): Promise<IAgent | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.agents} WHERE id = ?`).get(id) as
+			| Record<string, unknown>
+			| undefined;
+		if (!row) return null;
+		return this.hydrateAgent(row);
+	}
+
+	async createAgent(agent: IAgent): Promise<void> {
+		this.db!.prepare(
+			`INSERT INTO ${this.t.agents} (id, name, serverId, promptId, tools, autoApproveTools, description, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		).run(
+			agent.id,
+			agent.name,
+			agent.serverId,
+			agent.promptId ?? null,
+			JSON.stringify(agent.tools),
+			JSON.stringify(agent.autoApproveTools),
+			agent.description,
+			agent.createdAt,
+			agent.updatedAt,
+		);
+	}
+
+	async updateAgent(
+		id: string,
+		updates: Partial<
+			Pick<
+				IAgent,
+				"name" | "serverId" | "promptId" | "tools" | "autoApproveTools" | "description"
+			>
+		>,
+	): Promise<void> {
+		const sets: string[] = [];
+		const values: unknown[] = [];
+		if (updates.name !== undefined) {
+			sets.push("name = ?");
+			values.push(updates.name);
+		}
+		if (updates.serverId !== undefined) {
+			sets.push("serverId = ?");
+			values.push(updates.serverId);
+		}
+		if (updates.promptId !== undefined) {
+			sets.push("promptId = ?");
+			values.push(updates.promptId ?? null);
+		}
+		if (updates.tools !== undefined) {
+			sets.push("tools = ?");
+			values.push(JSON.stringify(updates.tools));
+		}
+		if (updates.autoApproveTools !== undefined) {
+			sets.push("autoApproveTools = ?");
+			values.push(JSON.stringify(updates.autoApproveTools));
+		}
+		if (updates.description !== undefined) {
+			sets.push("description = ?");
+			values.push(updates.description);
+		}
+		if (sets.length === 0) return;
+		sets.push("updated_at = ?");
+		values.push(Date.now());
+		values.push(id);
+		this.db!.prepare(`UPDATE ${this.t.agents} SET ${sets.join(", ")} WHERE id = ?`).run(
+			...values,
+		);
+	}
+
+	async deleteAgent(id: string): Promise<void> {
+		this.db!.prepare(`DELETE FROM ${this.t.agents} WHERE id = ?`).run(id);
+	}
+
+	private hydrateAgent(row: Record<string, unknown>): IAgent {
+		return {
+			id: row.id as string,
+			name: row.name as string,
+			serverId: row.serverId as string,
+			promptId: (row.promptId as string) || undefined,
+			tools: JSON.parse(row.tools as string) as IToolAttachment[],
+			autoApproveTools: JSON.parse(row.autoApproveTools as string) as IToolAttachment[],
+			description: row.description as string,
+			createdAt: row.created_at as number,
+			updatedAt: row.updated_at as number,
 		};
 	}
 }

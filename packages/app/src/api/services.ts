@@ -295,6 +295,7 @@ export async function stopProxy() {
 }
 
 export * from "./hub-services";
+export * from "./agent-services";
 
 // Chat
 export async function fetchThreads(options?: { query?: string; folderId?: string | null }) {

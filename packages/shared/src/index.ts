@@ -28,6 +28,7 @@ export * from "./types";
 export * from "./vram";
 export * from "./whisper-types";
 export * from "./notification-types";
+export * from "./agent-types";
 export { stableStringify } from "./stableStringify";
 export {
 	genThreadId,
@@ -39,4 +40,5 @@ export {
 	genTokenId,
 	genPromptId,
 	genNotificationId,
+	genAgentId,
 } from "./id-utils";

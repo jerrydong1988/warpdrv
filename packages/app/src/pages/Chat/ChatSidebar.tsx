@@ -1,6 +1,6 @@
 import { Box, Flex } from "@chakra-ui/react";
 import type { IChatInferenceParams, IChatPreset } from "@warpcore/shared";
-import { ChevronRight, FileText, Plug, SearchIcon, Settings } from "lucide-react";
+import { ChevronRight, Bot, FileText, Plug, SearchIcon, Settings } from "lucide-react";
 import React, { useEffect } from "react";
 import { FaShieldAlt } from "react-icons/fa";
 import { LuListTodo, LuPlug, LuSlidersHorizontal } from "react-icons/lu";
@@ -15,6 +15,7 @@ import { ChatConfigContentPanel } from "./ChatConfigSidebar";
 import { ChatGuardrailsContentPanel } from "./ChatGuardrailsPanel";
 import { ChatModesContentPanel } from "./ChatModesPanel";
 import { ChatPromptsContentPanel } from "./ChatPromptsPanel";
+import { ChatAgentsContentPanel } from "./ChatAgentsPanel";
 import { ChatTodosContentPanel } from "./ChatTodosPanel";
 import { ChatToolsContentPanel } from "./ChatToolsSidebar";
 import { ThreadSearchPanel } from "./ThreadSearchPanel";
@@ -114,6 +115,8 @@ export const ChatSidebar = React.memo(
 								return <ChatModesContentPanel />;
 							if (chatSidebarTab === EChatSidebarTab.PROMPTS_PANEL)
 								return <ChatPromptsContentPanel />;
+							if (chatSidebarTab === EChatSidebarTab.AGENTS_PANEL)
+								return <ChatAgentsContentPanel />;
 							return null;
 						})()}
 					</Box>
@@ -323,6 +326,39 @@ export const ChatSidebar = React.memo(
 							size={18}
 							color={
 								chatSidebarTab === EChatSidebarTab.PROMPTS_PANEL && chatSidebarOpen
+									? "var(--wc-text-primary)"
+									: "var(--wc-text-muted)"
+							}
+						/>
+					</Flex>
+
+					{/* Agents tab */}
+					<Flex
+						mt="1"
+						onClick={() => toggleTab(EChatSidebarTab.AGENTS_PANEL)}
+						px="3"
+						py="2.5"
+						borderRadius="lg"
+						title="Agents"
+						cursor="pointer"
+						transition="all 0.15s"
+						bg={
+							chatSidebarTab === EChatSidebarTab.AGENTS_PANEL && chatSidebarOpen
+								? "var(--wc-bg-card)"
+								: "transparent"
+						}
+						borderWidth="1px"
+						borderColor={
+							chatSidebarTab === EChatSidebarTab.AGENTS_PANEL && chatSidebarOpen
+								? "var(--wc-border-default)"
+								: "transparent"
+						}
+						_hover={{ bg: "var(--wc-bg-card)", color: "var(--wc-text-primary)" }}
+					>
+						<Bot
+							size={18}
+							color={
+								chatSidebarTab === EChatSidebarTab.AGENTS_PANEL && chatSidebarOpen
 									? "var(--wc-text-primary)"
 									: "var(--wc-text-muted)"
 							}

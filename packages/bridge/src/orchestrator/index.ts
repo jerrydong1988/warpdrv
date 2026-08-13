@@ -833,6 +833,7 @@ export class Orchestrator {
 		}
 
 		if (streamError) {
+			console.error("[Orchestrator] Stream Error!", streamError);
 			this.broadcaster.emit({
 				type: "inference.error",
 				threadId: request.threadId,

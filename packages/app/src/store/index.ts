@@ -34,6 +34,7 @@ import { devicesSlice } from "./slices/devices";
 import { downloadsSlice } from "./slices/downloads";
 import { embeddingSlice } from "./slices/embedding";
 import { guardrailsSlice } from "./slices/guardrails";
+import { agentsSlice } from "./slices/agents";
 import { hardwareSlice } from "./slices/hardware";
 import { kokoroSlice } from "./slices/kokoro";
 import { modelsSlice } from "./slices/models";
@@ -70,6 +71,7 @@ export const useStore = create<AppState>()(
 			const checkpoints = checkpointsSlice(set, get);
 			const modes = modesSlice(set, get);
 			const guardrails = guardrailsSlice(set, get);
+			const agents = agentsSlice(set, get);
 			const notifications = notificationsSlice(set, get);
 			const hardware = hardwareSlice(set, get);
 			const releases = releasesSlice(set, get);
@@ -138,6 +140,7 @@ export const useStore = create<AppState>()(
 				checkpoints: checkpoints.checkpoints!,
 				modes: modes.modes!,
 				guardrails: guardrails.guardrails!,
+				agents: agents.agents!,
 				SSEHandlers: sseHandlers.SSEHandlers!,
 				elicitationByThread: bridge.elicitationByThread,
 				applyElicitationRequest: bridge.applyElicitationRequest,

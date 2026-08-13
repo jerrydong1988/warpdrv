@@ -9,6 +9,7 @@ export enum EChatSidebarTab {
 	TODOS_PANEL = "todos_panel",
 	MODES_PANEL = "modes_panel",
 	PROMPTS_PANEL = "prompts_panel",
+	AGENTS_PANEL = "agents_panel",
 }
 
 export function chatSidebarSlice(set: ImmerSet<AppState>, get: ImmerGet<AppState>) {

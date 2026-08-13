@@ -1,4 +1,5 @@
 import type {
+	IAgent,
 	ERecipeStreamKind,
 	IBackend,
 	IBackendGroup,
@@ -477,6 +478,20 @@ export const sseHandlersSlice = (
 				} else {
 					threadNotifs[n.id] = n;
 				}
+			}),
+
+		// Agents
+		"agents:init": (data: Record<string, IAgent>) =>
+			setState((state) => {
+				state.agents = data;
+			}),
+		"agents:update": (data: IAgent) =>
+			setState((state) => {
+				state.agents[data.id] = data;
+			}),
+		"agents:delete": (data: { id: string }) =>
+			setState((state) => {
+				delete state.agents[data.id];
 			}),
 	},
 });

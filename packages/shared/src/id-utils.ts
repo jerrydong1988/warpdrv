@@ -26,3 +26,6 @@ export const genPromptId = () => `g_${nanoid(6)}`;
 
 /** Generate a notification ID - prefix `n_` */
 export const genNotificationId = () => `n_${nanoid(6)}`;
+
+/** Generate an agent ID - prefix `a_` */
+export const genAgentId = () => `a_${nanoid(6)}`;

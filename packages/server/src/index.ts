@@ -34,6 +34,7 @@ import path from "path";
 import { authMiddleware } from "./middleware/auth";
 import { serveStaticApp } from "./middleware/serveStatic";
 import { authRouter } from "./routes/auth";
+import { agentsRouter } from "./routes/agents";
 import { backendGroupsRouter } from "./routes/backendGroups";
 import { backendsRouter } from "./routes/backends";
 import { chatRouter } from "./routes/chat";
@@ -226,6 +227,7 @@ async function main() {
 	// Token routes (require admin auth)
 	app.use("/api/tokens", authMiddleware, tokensRouter);
 	// API routes with auth middleware
+	app.use("/api/agents", authMiddleware, agentsRouter);
 	app.use("/api/settings", authMiddleware, settingsRouter);
 	app.use("/api/backends", authMiddleware, backendsRouter);
 	app.use("/api/hardware", authMiddleware, hardwareRouter);
@@ -506,6 +508,13 @@ async function main() {
 
 	sseManager.onConnect("prompts:init", async () => {
 		return persistence.listChatPrompts();
+	});
+
+	sseManager.onConnect("agents:init", async () => {
+		const agents = await persistence.listAgents();
+		const agentsMap: Record<string, (typeof agents)[number]> = {};
+		for (const a of agents) agentsMap[a.id] = a;
+		return agentsMap;
 	});
 
 	sseManager.onConnect("threads:init", async () => {
