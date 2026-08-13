@@ -10,6 +10,14 @@ import { chatGetMessageDefinition, chatGetMessageHandler } from "./tools/chat_ge
 import { chatSearchDefinition, chatSearchHandler } from "./tools/chat_search";
 import { listSubthreadsDefinition, listSubthreadsHandler } from "./tools/list_subthreads";
 import { createSubthreadDefinition, createSubthreadHandler } from "./tools/create_subthread";
+import {
+	subthreadSendMessageDefinition,
+	subthreadSendMessageHandler,
+} from "./tools/subthread_send_message";
+import {
+	superthreadSendMessageDefinition,
+	superthreadSendMessageHandler,
+} from "./tools/superthread_send_message";
 import { codeGraphCalleesDefinition, codeGraphCalleesHandler } from "./tools/code_graph_callees";
 import { codeGraphCallersDefinition, codeGraphCallersHandler } from "./tools/code_graph_callers";
 import { codeGraphClearDefinition, codeGraphClearHandler } from "./tools/code_graph_clear";
@@ -74,6 +82,14 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
 		{ def: listSubthreadsDefinition, handler: (a: any) => listSubthreadsHandler(deps, a) },
 		{ def: createSubthreadDefinition, handler: (a: any) => createSubthreadHandler(deps, a) },
+		{
+			def: subthreadSendMessageDefinition,
+			handler: (a: any) => subthreadSendMessageHandler(deps, a),
+		},
+		{
+			def: superthreadSendMessageDefinition,
+			handler: (a: any) => superthreadSendMessageHandler(deps, a),
+		},
 	];
 	const server = new McpServer(
 		{ name: SERVER_NAME, version: "0.1.0" },
@@ -126,6 +142,8 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 		chatGetMessage: args.chatGetMessage,
 		listSubthreads: args.listSubthreads,
 		createSubthread: args.createSubthread,
+		sendToSubthread: args.sendToSubthread,
+		sendToSuperthread: args.sendToSuperthread,
 	};
 	//console.log('[warpmcp] startServer deps.embeddingSearch:', typeof args.embeddingSearch);
 	const bindHost = exposeExternal ? "0.0.0.0" : "127.0.0.1";

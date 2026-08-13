@@ -80,6 +80,15 @@ export interface IWarpmcpDeps {
 		message: string,
 		title: string,
 	) => Promise<{ threadId: string }>;
+	sendToSubthread?: (
+		parentThreadId: string,
+		targetSubThreadId: string,
+		message: string,
+	) => Promise<{ notificationId: string; threadId: string }>;
+	sendToSuperthread?: (
+		currentThreadId: string,
+		message: string,
+	) => Promise<{ notificationId: string; threadId: string }>;
 }
 export interface IStartArgs extends IWarpmcpDeps {
 	port: number;

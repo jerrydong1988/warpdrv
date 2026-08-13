@@ -63,6 +63,10 @@ export async function bootWarpmcp(): Promise<void> {
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
 		createSubthread: (threadId, agentId, message, title) =>
 			subthreadService.createSubthread(threadId, agentId, message, title),
+		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
+			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
+		sendToSuperthread: (currentThreadId, message) =>
+			subthreadService.sendToSuperthread(currentThreadId, message),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -87,6 +91,8 @@ export async function bootWarpmcp(): Promise<void> {
 				chat_search: { threadId: "{{ws.threadId}}" },
 				list_subthreads: { threadId: "{{ws.threadId}}" },
 				create_subthread: { threadId: "{{ws.threadId}}" },
+				subthread_send_message: { threadId: "{{ws.threadId}}" },
+				superthread_send_message: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});
@@ -132,6 +138,10 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
 		createSubthread: (threadId, agentId, message, title) =>
 			subthreadService.createSubthread(threadId, agentId, message, title),
+		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
+			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
+		sendToSuperthread: (currentThreadId, message) =>
+			subthreadService.sendToSuperthread(currentThreadId, message),
 	});
 	await mcpClient.connect(WARPMCP_NAME, {
 		url: `http://127.0.0.1:${port}/mcp`,
@@ -156,6 +166,8 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 				chat_search: { threadId: "{{ws.threadId}}" },
 				list_subthreads: { threadId: "{{ws.threadId}}" },
 				create_subthread: { threadId: "{{ws.threadId}}" },
+				subthread_send_message: { threadId: "{{ws.threadId}}" },
+				superthread_send_message: { threadId: "{{ws.threadId}}" },
 			},
 		},
 	});

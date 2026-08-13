@@ -34,7 +34,7 @@ import type {
 	IToolAttachment,
 	TModeId,
 } from "@warpcore/shared";
-import { EGuardrailIssueType } from "@warpcore/shared";
+import { EGuardrailIssueType, EReasoningEffort } from "@warpcore/shared";
 import {
 	AlertTriangle,
 	Ban,
@@ -2751,6 +2751,19 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				},
 				tools: { type: "tools", description: "Tools the agent can use", index: 3 },
 				autoApprove: { type: "tools", description: "Tools to auto-approve", index: 4 },
+				reasoningLevel: {
+					type: "dropdown",
+					description: "Reasoning level (none/low/medium/high)",
+					index: 5,
+					props: {
+						items: [
+							{ label: "none", value: EReasoningEffort.NONE },
+							{ label: "low", value: EReasoningEffort.LOW },
+							{ label: "medium", value: EReasoningEffort.MEDIUM },
+							{ label: "high", value: EReasoningEffort.HIGH },
+						],
+					},
+				},
 			},
 			consumesInput: true,
 			inputPlaceholder: "Agent description...",
@@ -2762,6 +2775,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					tools: parseToolValue(params.tools || ""),
 					autoApproveTools: parseToolValue(params.autoApprove || ""),
 					description: extraParams?.prompt || "",
+					reasoningEffort: params.reasoningLevel,
 				});
 			},
 		});

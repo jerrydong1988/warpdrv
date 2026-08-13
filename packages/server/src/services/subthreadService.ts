@@ -1,8 +1,9 @@
 import type { Orchestrator, SqlitePersistence, SseBroadcaster } from "@warpcore/bridge/server";
 import { EToolApprovalMode } from "@warpcore/bridge";
 import type { IAgent, IToolAttachment } from "@warpcore/shared";
-import { genThreadId } from "@warpcore/shared";
+import { EReasoningEffort, genThreadId } from "@warpcore/shared";
 import type { IServer } from "@warpcore/shared";
+import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
 import { store } from "../util/store";
 
 export interface ISubThreadInfo {
@@ -37,7 +38,7 @@ export class SubthreadService {
 		// Count pending notifications per subthread
 		const pendingCountMap = new Map<string, number>();
 		for (const n of notifications) {
-			if (n.senderType === "subthread") {
+			if (n.senderType === "thread") {
 				pendingCountMap.set(n.senderId, (pendingCountMap.get(n.senderId) ?? 0) + 1);
 			}
 		}
@@ -67,12 +68,12 @@ export class SubthreadService {
 			throw new Error(`Agent ${agentId} not found`);
 		}
 
-		// 3. Resolve agent's prompt for systemPrompt
-		let systemPrompt = "";
+		// 3. Resolve agent's prompt for systemPrompt (prepend sub-agent prompt)
+		let systemPrompt = SUBAGENT_SYSTEM_PROMPT;
 		if (agent.promptId) {
 			const prompt = await this.persistence.getChatPrompt(agent.promptId);
 			if (prompt) {
-				systemPrompt = prompt.content;
+				systemPrompt += "\n\n" + prompt.content;
 			}
 		}
 
@@ -99,10 +100,15 @@ export class SubthreadService {
 			updatedAt: now,
 		});
 
-		// 6. Save agent's tools
-		if (agent.tools.length > 0) {
-			await this.persistence.saveThreadAttachedTools(newThreadId, false, agent.tools);
-		}
+		// 6. Save agent's tools (always include superthread_send_message)
+		const superthreadTool = { serverName: "warpmcp", toolName: "superthread_send_message" };
+		const allTools = [
+			...agent.tools.filter(
+				(t) => !(t.serverName === "warpmcp" && t.toolName === "superthread_send_message"),
+			),
+			superthreadTool,
+		];
+		await this.persistence.saveThreadAttachedTools(newThreadId, false, allTools);
 
 		// 7. Set auto-approve permissions
 		for (const tool of agent.autoApproveTools) {
@@ -110,6 +116,19 @@ export class SubthreadService {
 				newThreadId,
 				tool.serverName,
 				tool.toolName,
+				true,
+				EToolApprovalMode.ALLOWED,
+			);
+		}
+		// Always auto-approve superthread_send_message
+		const hasSuperthreadAutoApprove = agent.autoApproveTools.some(
+			(t) => t.serverName === "warpmcp" && t.toolName === "superthread_send_message",
+		);
+		if (!hasSuperthreadAutoApprove) {
+			await this.persistence.setThreadToolPermission(
+				newThreadId,
+				"warpmcp",
+				"superthread_send_message",
 				true,
 				EToolApprovalMode.ALLOWED,
 			);
@@ -127,6 +146,19 @@ export class SubthreadService {
 			this.broadcaster.emit({ type: "thread.created", thread });
 		}
 
+		// 9.5. Set thread config with agent's reasoning level
+		if (agent.reasoningEffort) {
+			await this.persistence.setThreadConfig({
+				threadId: newThreadId,
+				presetId: null,
+				systemPrompt,
+				params: JSON.stringify({
+					reasoningEffort: agent.reasoningEffort,
+					enableThinking: agent.reasoningEffort !== EReasoningEffort.NONE,
+				}),
+			});
+		}
+
 		// 10. Trigger inference via handleCompletionV2
 		const inferenceUrl = `http://127.0.0.1:${server.port}`;
 		const abortController = new AbortController();
@@ -140,7 +172,12 @@ export class SubthreadService {
 					userMessage: { content: message },
 					attachedTools: agent.tools,
 					skipToolsSave: true,
-					inferenceParams: {},
+					inferenceParams: agent.reasoningEffort
+						? {
+								reasoningEffort: agent.reasoningEffort,
+								enableThinking: agent.reasoningEffort !== EReasoningEffort.NONE,
+							}
+						: {},
 					folderId: parentThread.folderId,
 				},
 				abortController.signal,
@@ -150,5 +187,42 @@ export class SubthreadService {
 			});
 
 		return { threadId: newThreadId };
+	}
+
+	async sendToSubthread(
+		parentThreadId: string,
+		targetSubThreadId: string,
+		message: string,
+	): Promise<{ notificationId: string; threadId: string }> {
+		const notification = await this.persistence.notificationCreate({
+			threadId: targetSubThreadId,
+			notificationType: "agent",
+			notificationSubtype: "message",
+			senderType: "thread",
+			senderId: parentThreadId,
+			payload: { message },
+		});
+		this.broadcaster.emit({ type: "notification.created", notification });
+		return { notificationId: notification.id, threadId: targetSubThreadId };
+	}
+
+	async sendToSuperthread(
+		currentThreadId: string,
+		message: string,
+	): Promise<{ notificationId: string; threadId: string }> {
+		const thread = await this.persistence.getThread(currentThreadId);
+		if (!thread || !thread.parentId) {
+			throw new Error(`Thread ${currentThreadId} has no parent`);
+		}
+		const notification = await this.persistence.notificationCreate({
+			threadId: thread.parentId,
+			notificationType: "agent",
+			notificationSubtype: "message",
+			senderType: "thread",
+			senderId: currentThreadId,
+			payload: { message },
+		});
+		this.broadcaster.emit({ type: "notification.created", notification });
+		return { notificationId: notification.id, threadId: thread.parentId };
 	}
 }

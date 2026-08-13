@@ -355,16 +355,17 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 
 							-- Agents
 							CREATE TABLE IF NOT EXISTS ${t.agents} (
-								id TEXT PRIMARY KEY,
-								name TEXT NOT NULL,
-								serverId TEXT NOT NULL DEFAULT '',
-								promptId TEXT,
-								tools TEXT NOT NULL DEFAULT '[]',
+									id TEXT PRIMARY KEY,
+									name TEXT NOT NULL,
+									serverId TEXT NOT NULL DEFAULT '',
+									promptId TEXT,
+									tools TEXT NOT NULL DEFAULT '[]',
 									autoApproveTools TEXT NOT NULL DEFAULT '[]',
 									description TEXT NOT NULL DEFAULT '',
-								created_at INTEGER NOT NULL,
-								updated_at INTEGER NOT NULL
-							);
+									meta TEXT NOT NULL DEFAULT '{}',
+									created_at INTEGER NOT NULL,
+									updated_at INTEGER NOT NULL
+								);
 							CREATE INDEX IF NOT EXISTS idx_${t.agents}_server ON ${t.agents}(serverId);
 						`;
 }
@@ -462,6 +463,14 @@ export class SqlitePersistence implements IPersistence {
 		try {
 			this.db!.exec(`ALTER TABLE ${this.t.threads} ADD COLUMN parentId TEXT DEFAULT NULL`);
 			console.log("[migration] Added parentId to threads table");
+		} catch {
+			// Column already exists
+		}
+
+		// Add meta column to agents
+		try {
+			this.db!.exec(`ALTER TABLE ${this.t.agents} ADD COLUMN meta TEXT DEFAULT '{}'`);
+			console.log("[migration] Added meta to agents table");
 		} catch {
 			// Column already exists
 		}
@@ -2284,7 +2293,7 @@ export class SqlitePersistence implements IPersistence {
 			threadId,
 			notificationType: "agent",
 			notificationSubtype: "message",
-			senderType: "subthread",
+			senderType: "thread",
 			senderId: subThreadId,
 			payload: { message },
 		});
@@ -2300,7 +2309,7 @@ export class SqlitePersistence implements IPersistence {
 			threadId,
 			notificationType: "agent",
 			notificationSubtype: "tool",
-			senderType: "subthread",
+			senderType: "thread",
 			senderId: subThreadId,
 			payload: { assistantMessageId, toolCallId },
 		});
@@ -2342,8 +2351,8 @@ export class SqlitePersistence implements IPersistence {
 
 	async createAgent(agent: IAgent): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.agents} (id, name, serverId, promptId, tools, autoApproveTools, description, created_at, updated_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO ${this.t.agents} (id, name, serverId, promptId, tools, autoApproveTools, description, meta, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		).run(
 			agent.id,
 			agent.name,
@@ -2352,6 +2361,7 @@ export class SqlitePersistence implements IPersistence {
 			JSON.stringify(agent.tools),
 			JSON.stringify(agent.autoApproveTools),
 			agent.description,
+			JSON.stringify({ reasoningEffort: agent.reasoningEffort }),
 			agent.createdAt,
 			agent.updatedAt,
 		);
@@ -2362,7 +2372,13 @@ export class SqlitePersistence implements IPersistence {
 		updates: Partial<
 			Pick<
 				IAgent,
-				"name" | "serverId" | "promptId" | "tools" | "autoApproveTools" | "description"
+				| "name"
+				| "serverId"
+				| "promptId"
+				| "tools"
+				| "autoApproveTools"
+				| "description"
+				| "reasoningEffort"
 			>
 		>,
 	): Promise<void> {
@@ -2392,6 +2408,17 @@ export class SqlitePersistence implements IPersistence {
 			sets.push("description = ?");
 			values.push(updates.description);
 		}
+		if (updates.reasoningEffort !== undefined) {
+			const existing = this.db!.prepare(`SELECT meta FROM ${this.t.agents} WHERE id = ?`).get(
+				id,
+			) as { meta?: string } | undefined;
+			const meta = existing
+				? { ...(JSON.parse(existing.meta as string) as Record<string, unknown>) }
+				: {};
+			meta.reasoningEffort = updates.reasoningEffort;
+			sets.push("meta = ?");
+			values.push(JSON.stringify(meta));
+		}
 		if (sets.length === 0) return;
 		sets.push("updated_at = ?");
 		values.push(Date.now());
@@ -2414,6 +2441,8 @@ export class SqlitePersistence implements IPersistence {
 			tools: JSON.parse(row.tools as string) as IToolAttachment[],
 			autoApproveTools: JSON.parse(row.autoApproveTools as string) as IToolAttachment[],
 			description: row.description as string,
+			reasoningEffort: (JSON.parse(row.meta as string) as Record<string, unknown>)
+				.reasoningEffort as IAgent["reasoningEffort"],
 			createdAt: row.created_at as number,
 			updatedAt: row.updated_at as number,
 		};

@@ -1,4 +1,5 @@
 import type { IToolAttachment } from "./types";
+import type { EReasoningEffort } from "./enums";
 
 export type TAgentId = string;
 
@@ -10,6 +11,7 @@ export interface IAgent {
 	tools: IToolAttachment[];
 	autoApproveTools: IToolAttachment[];
 	description: string;
+	reasoningEffort?: EReasoningEffort;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -21,4 +23,5 @@ export interface IAgentCreatePayload {
 	tools?: IToolAttachment[];
 	autoApproveTools?: IToolAttachment[];
 	description?: string;
+	reasoningEffort?: EReasoningEffort;
 }
