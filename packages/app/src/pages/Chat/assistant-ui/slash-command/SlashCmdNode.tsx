@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "@/store";
 import { commandSuggestion } from "./CmdSuggestion";
+import { SlashCmdAgentSelector } from "./SlashCmdAgentSelector";
 import { SlashCmdColorPicker } from "./SlashCmdColorPicker";
 import { SlashCmdDefaultInput } from "./SlashCmdDefaultInput";
 import { SlashCmdDirectoryPicker } from "./SlashCmdDirectoryPicker";
@@ -34,6 +35,7 @@ const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
 	guardrails: SlashCmdGuardrails,
 	directory: SlashCmdDirectoryPicker,
 	color: SlashCmdColorPicker,
+	agents: SlashCmdAgentSelector,
 };
 
 const parseArgs = (raw: string): Record<string, string> => {

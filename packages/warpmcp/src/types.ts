@@ -76,7 +76,7 @@ export interface IWarpmcpDeps {
 	listSubthreads?: (threadId: string) => Promise<ISubThreadInfo[]>;
 	createSubthread?: (
 		threadId: string,
-		agentId: string,
+		agentName: string,
 		message: string,
 		title: string,
 	) => Promise<{ threadId: string }>;

@@ -61,8 +61,8 @@ export async function bootWarpmcp(): Promise<void> {
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
-		createSubthread: (threadId, agentId, message, title) =>
-			subthreadService.createSubthread(threadId, agentId, message, title),
+		createSubthread: (threadId, agentName, message, title) =>
+			subthreadService.createSubthread(threadId, agentName, message, title),
 		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
 			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
 		sendToSuperthread: (currentThreadId, message) =>
@@ -136,8 +136,8 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
-		createSubthread: (threadId, agentId, message, title) =>
-			subthreadService.createSubthread(threadId, agentId, message, title),
+		createSubthread: (threadId, agentName, message, title) =>
+			subthreadService.createSubthread(threadId, agentName, message, title),
 		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
 			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
 		sendToSuperthread: (currentThreadId, message) =>

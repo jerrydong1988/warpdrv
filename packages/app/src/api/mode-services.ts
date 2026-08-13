@@ -32,3 +32,9 @@ export async function updateModeGuardrails(
 	if (!res.ok) throw new Error(res.error);
 	return res.data!;
 }
+
+export async function updateModeAgents(id: TModeId, allowedAgents: string[]): Promise<IMode> {
+	const res = await api.patch<IMode>(`/modes/${id}/agents`, { allowedAgents });
+	if (!res.ok) throw new Error(res.error);
+	return res.data!;
+}

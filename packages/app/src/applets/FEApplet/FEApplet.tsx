@@ -71,6 +71,7 @@ import {
 	deleteMode as deleteModeApi,
 	updateMode as updateModeApi,
 	updateModeGuardrails as updateModeGuardrailsApi,
+	updateModeAgents as updateModeAgentsApi,
 } from "@/api/mode-services";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { PromptPicker } from "@/components/PromptPicker";
@@ -80,6 +81,7 @@ import { useDependantState } from "@/hooks/useDependantState";
 import type { IExtractedSlashCommand } from "@/pages/Chat/assistant-ui/docToString";
 import type { TDropdownItem } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown";
 import { parseGuardrailValue } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails";
+import { parseAgentValue } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdAgentSelector";
 import { parseToolValue } from "@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector";
 import { useStore } from "@/store";
 import type { TUiSpaceComponentDef } from "@/store/slices/uiSpaces";
@@ -308,6 +310,180 @@ const GuardrailToolPicker = React.memo(
 												);
 											})}
 										</Box>
+									)}
+								</Box>
+							);
+						})}
+					</Box>
+				)}
+			</Box>
+		);
+	},
+);
+
+const AgentPicker = React.memo(
+	({
+		value,
+		onChange,
+		onClick,
+	}: {
+		value: string[];
+		onChange: (agents: string[]) => void;
+		onClick?: (e: React.MouseEvent) => void;
+	}) => {
+		const agents = useStore((s) => s.agents);
+		const servers = useStore((s) => s.servers);
+		const [isOpen, setIsOpen] = useState(false);
+		const dropdownRef = useRef<HTMLDivElement | null>(null);
+		const triggerRef = useRef<HTMLDivElement | null>(null);
+
+		const availableAgents = useMemo(() => Object.values(agents) as IAgent[], [agents]);
+
+		const selectedSet = useMemo(() => new Set(value), [value]);
+
+		const handleToggle = useCallback(
+			(name: string) => {
+				const next = new Set(selectedSet);
+				if (next.has(name)) {
+					next.delete(name);
+				} else {
+					next.add(name);
+				}
+				onChange([...next]);
+			},
+			[selectedSet, onChange],
+		);
+
+		useEffect(() => {
+			if (!isOpen) return;
+			const handler = (e: MouseEvent) => {
+				if (
+					dropdownRef.current?.contains(e.target as Node) ||
+					triggerRef.current?.contains(e.target as Node)
+				)
+					return;
+				setIsOpen(false);
+			};
+			document.addEventListener("mousedown", handler);
+			return () => document.removeEventListener("mousedown", handler);
+		}, [isOpen]);
+
+		return (
+			<Box position="relative">
+				<Box
+					ref={triggerRef}
+					borderWidth="1px"
+					borderColor="var(--wc-border-default)"
+					borderRadius="md"
+					bg="var(--wc-bg-subtle)"
+					px="2.5"
+					py="1.5"
+					cursor="pointer"
+					minH="32px"
+					onClick={(e) => {
+						onClick?.(e);
+						setIsOpen(!isOpen);
+					}}
+				>
+					<Text
+						fontSize="xs"
+						color={
+							selectedSet.size > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"
+						}
+					>
+						{selectedSet.size > 0
+							? `${selectedSet.size} agent(s)`
+							: "No agents allowed"}
+					</Text>
+				</Box>
+				{isOpen && (
+					<Box
+						ref={dropdownRef}
+						position="absolute"
+						top="100%"
+						left={0}
+						zIndex={10000}
+						minW="260px"
+						maxW="320px"
+						maxH="280px"
+						overflowY="auto"
+						borderWidth="1px"
+						borderColor="var(--wc-border-overlay)"
+						borderRadius="lg"
+						bg="var(--wc-bg-elevated)"
+						shadow="lg"
+						p="2"
+					>
+						{availableAgents.length === 0 && (
+							<Text
+								fontSize="xs"
+								color="var(--wc-text-faint)"
+								textAlign="center"
+								p="3"
+							>
+								No agents available
+							</Text>
+						)}
+						{availableAgents.map((agent) => {
+							const isSelected = selectedSet.has(agent.name);
+							const toolCount = agent.tools?.length ?? 0;
+							return (
+								<Box
+									key={agent.id}
+									display="flex"
+									flexDirection="column"
+									gap="1"
+									p="2"
+									borderRadius="md"
+									cursor="pointer"
+									bg={isSelected ? "var(--wc-bg-selected)" : "transparent"}
+									_hover={{
+										bg: isSelected
+											? "var(--wc-bg-selected)"
+											: "var(--wc-bg-card)",
+									}}
+									onClick={(e) => {
+										e.stopPropagation();
+										handleToggle(agent.name);
+									}}
+								>
+									<Box display="flex" alignItems="center" gap="1.5">
+										{isSelected && (
+											<Check size={12} color="var(--wc-accent-green)" />
+										)}
+										{!isSelected && (
+											<Bot
+												size={13}
+												color="var(--wc-text-muted)"
+												flexShrink={0}
+											/>
+										)}
+										<Text fontWeight="600" fontSize="xs" flex="1" minW="0">
+											{agent.name}
+										</Text>
+										<Badge
+											size="xs"
+											fontSize="9px"
+											bg="var(--wc-bg-subtle)"
+											color="var(--wc-text-muted)"
+											borderRadius="sm"
+											px="1.5"
+											flexShrink={0}
+										>
+											{toolCount} tool{toolCount === 1 ? "" : "s"}
+										</Badge>
+									</Box>
+									{agent.description && (
+										<Text
+											fontSize="10px"
+											color="var(--wc-text-faint)"
+											lineHeight="1.3"
+											maxH="2.6em"
+											overflow="hidden"
+											pl={isSelected ? "4" : "5"}
+										>
+											{agent.description}
+										</Text>
 									)}
 								</Box>
 							);
@@ -1331,6 +1507,26 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 							<ModeGuardrailPicker
 								modeId={mode.id}
 								value={mode.activeGuardrails || []}
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</Box>
+
+						<Box>
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
+								Allowed agents
+							</Text>
+							<AgentPicker
+								value={mode.allowedAgents || []}
+								onChange={(agents) => {
+									updateMode({ allowedAgents: agents });
+								}}
 								onClick={(e) => e.stopPropagation()}
 							/>
 						</Box>
@@ -2622,16 +2818,17 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 
 		api.registerSlashCommand({
 			name: "create_mode",
-			description: "Create a new mode with allowed tools and optional tail prompt",
+			description: "Create a new mode with allowed tools, agents, and optional tail prompt",
 			params: {
 				name: { type: "string", description: "Mode name", index: 0 },
 				color: { type: "color", description: "Mode color", index: 1 },
 				tools: { type: "tools", description: "Allowed tools", index: 2 },
-				guardrails: { type: "guardrails", description: "Active guardrails", index: 3 },
+				agents: { type: "agents", description: "Allowed agents", index: 3 },
+				guardrails: { type: "guardrails", description: "Active guardrails", index: 4 },
 				prompt: {
 					type: "dropdown",
 					description: "Saved prompt to use (optional)",
-					index: 4,
+					index: 5,
 					props: {
 						items: usePromptIdItems,
 					},
@@ -2648,6 +2845,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					promptId: params.prompt || undefined,
 					prompt: extraParams?.prompt || undefined,
 					allowedTools: parseToolValue(params.tools || ""),
+					allowedAgents: parseAgentValue(params.agents || ""),
 					activeGuardrails: parseGuardrailValue(params.guardrails || ""),
 				});
 			},

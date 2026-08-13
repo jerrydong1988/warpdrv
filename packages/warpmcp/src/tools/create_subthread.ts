@@ -7,9 +7,9 @@ export const createSubthreadDefinition = {
 	inputSchema: {
 		type: "object",
 		properties: {
-			agentId: {
+			agentName: {
 				type: "string",
-				description: "The ID of the agent whose config to use for the subthread.",
+				description: "The name of the agent whose config to use for the subthread.",
 			},
 			title: {
 				type: "string",
@@ -20,17 +20,17 @@ export const createSubthreadDefinition = {
 				description: "The initial user message to seed the subthread with.",
 			},
 		},
-		required: ["agentId", "title", "message"],
+		required: ["agentName", "title", "message"],
 	},
 	resultLimit: 40960,
 };
 
 export async function createSubthreadHandler(
 	deps: IWarpmcpDeps,
-	args: { threadId: string; agentId: string; title: string; message: string },
+	args: { threadId: string; agentName: string; title: string; message: string },
 ) {
 	if (!deps.createSubthread) {
 		throw "[warpmcp] createSubthread function not found";
 	}
-	return deps.createSubthread(args.threadId, args.agentId, args.message, args.title);
+	return deps.createSubthread(args.threadId, args.agentName, args.message, args.title);
 }

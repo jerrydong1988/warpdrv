@@ -4,6 +4,7 @@ import type { IAgent, IToolAttachment } from "@warpcore/shared";
 import { EReasoningEffort, genThreadId } from "@warpcore/shared";
 import type { IServer } from "@warpcore/shared";
 import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
+import { getMode } from "./modeStore";
 import { store } from "../util/store";
 
 export interface ISubThreadInfo {
@@ -52,7 +53,7 @@ export class SubthreadService {
 
 	async createSubthread(
 		parentThreadId: string,
-		agentId: string,
+		agentName: string,
 		message: string,
 		title: string,
 	): Promise<{ threadId: string }> {
@@ -62,10 +63,22 @@ export class SubthreadService {
 			throw new Error(`Parent thread ${parentThreadId} not found`);
 		}
 
-		// 2. Look up agent
-		const agent = await this.persistence.getAgent(agentId);
+		// 2. Look up agent by name
+		const agent = await this.persistence.getAgentByName(agentName);
 		if (!agent) {
-			throw new Error(`Agent ${agentId} not found`);
+			throw new Error(`Agent "${agentName}" not found`);
+		}
+
+		// 2.5. Check if the current mode allows this agent
+		const threadState = await this.persistence.getThreadState(parentThreadId);
+		const modeId = threadState?.modeId as string | undefined;
+		if (modeId) {
+			const mode = await getMode(modeId);
+			if (mode) {
+				if (!mode.allowedAgents.includes(agentName)) {
+					throw new Error(`Agent '${agentName}' is blocked by mode restrictions.`);
+				}
+			}
 		}
 
 		// 3. Resolve agent's prompt for systemPrompt (prepend sub-agent prompt)

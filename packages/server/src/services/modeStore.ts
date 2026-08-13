@@ -11,6 +11,7 @@ export async function listModes(): Promise<IMode[]> {
 		promptId: r.promptId,
 		prompt: r.prompt,
 		allowedTools: r.allowedTools,
+		allowedAgents: r.allowedAgents,
 		activeGuardrails: r.activeGuardrails,
 	}));
 }
@@ -32,6 +33,7 @@ export async function getMode(id: TModeId): Promise<IMode | null> {
 		promptId: row.promptId,
 		prompt: row.prompt,
 		allowedTools: row.allowedTools,
+		allowedAgents: row.allowedAgents,
 		activeGuardrails: row.activeGuardrails,
 	};
 }
@@ -45,6 +47,7 @@ export async function putMode(mode: IMode): Promise<void> {
 		promptId: mode.promptId,
 		prompt: mode.prompt,
 		allowedTools: mode.allowedTools,
+		allowedAgents: mode.allowedAgents || [],
 		activeGuardrails: mode.activeGuardrails || [],
 	});
 }

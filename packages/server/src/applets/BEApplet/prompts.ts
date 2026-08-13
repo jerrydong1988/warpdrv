@@ -77,7 +77,7 @@ export const TRAILING_SYSTEM_PROMPT = `This message part is appended to provide 
 
 export const ALLOWED_TOOLS_REMINDER_SYSTEM_PROMPT = `Only use tools that are listed in the ALLOWED TOOLS LIST in the <system-reminder>.`;
 
-export const MODE_SYSTEM_PROMPT = `This conversation has an ACTIVE MODE. You MUST obey the instructions of the ACTIVE MODE, and you MUST only call tools listed in ACTIVE MODE's ALLOWED TOOLS. Every tool schema is present in the tool list regardless of MODE; but tools outside the ALLOWED TOOLS of the ACTIVE MODE are forbidden and MUST NOT be called. If a task requires a forbidden tool, state that plainly and stop rather than calling it.
+export const MODE_SYSTEM_PROMPT = `This conversation has an ACTIVE MODE. You MUST obey the instructions of the ACTIVE MODE, and you MUST only call tools listed in ACTIVE MODE's ALLOWED TOOLS. You MUST only use agents listed in ACTIVE MODE's ALLOWED AGENTS to create subthreads. Every tool schema is present in the tool list regardless of MODE; but tools outside the ALLOWED TOOLS of the ACTIVE MODE are forbidden and MUST NOT be called. If a task requires a forbidden tool, state that plainly and stop rather than calling it.
 
 <system-reminder> contains the ACTIVE MODE. The most recent <system-reminder> in the conversation is authoritative; earlier ones are history. The available MODES are: \n`;
 

@@ -318,15 +318,16 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 		);
 
 			CREATE TABLE IF NOT EXISTS ${t.modes} (
-				id TEXT PRIMARY KEY,
-				name TEXT NOT NULL,
-				scope TEXT NOT NULL DEFAULT 'global',
-				color TEXT NOT NULL DEFAULT '#a78bfa',
-				promptId TEXT,
-				prompt TEXT,
-				allowedTools TEXT NOT NULL DEFAULT '[]',
-				activeGuardrails TEXT NOT NULL DEFAULT '[]'
-			);
+					id TEXT PRIMARY KEY,
+					name TEXT NOT NULL,
+					scope TEXT NOT NULL DEFAULT 'global',
+					color TEXT NOT NULL DEFAULT '#a78bfa',
+					promptId TEXT,
+					prompt TEXT,
+					allowedTools TEXT NOT NULL DEFAULT '[]',
+					allowedAgents TEXT NOT NULL DEFAULT '[]',
+					activeGuardrails TEXT NOT NULL DEFAULT '[]'
+				);
 
 				CREATE TABLE IF NOT EXISTS ${t.prompts} (
 					id TEXT PRIMARY KEY,
@@ -356,17 +357,17 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 							-- Agents
 							CREATE TABLE IF NOT EXISTS ${t.agents} (
 									id TEXT PRIMARY KEY,
-									name TEXT NOT NULL,
-									serverId TEXT NOT NULL DEFAULT '',
-									promptId TEXT,
-									tools TEXT NOT NULL DEFAULT '[]',
-									autoApproveTools TEXT NOT NULL DEFAULT '[]',
-									description TEXT NOT NULL DEFAULT '',
-									meta TEXT NOT NULL DEFAULT '{}',
-									created_at INTEGER NOT NULL,
-									updated_at INTEGER NOT NULL
-								);
-							CREATE INDEX IF NOT EXISTS idx_${t.agents}_server ON ${t.agents}(serverId);
+										name TEXT NOT NULL UNIQUE,
+										serverId TEXT NOT NULL DEFAULT '',
+										promptId TEXT,
+										tools TEXT NOT NULL DEFAULT '[]',
+										autoApproveTools TEXT NOT NULL DEFAULT '[]',
+										description TEXT NOT NULL DEFAULT '',
+										meta TEXT NOT NULL DEFAULT '{}',
+										created_at INTEGER NOT NULL,
+										updated_at INTEGER NOT NULL
+									);
+									CREATE INDEX IF NOT EXISTS idx_${t.agents}_server ON ${t.agents}(serverId);
 						`;
 }
 
@@ -473,6 +474,16 @@ export class SqlitePersistence implements IPersistence {
 			console.log("[migration] Added meta to agents table");
 		} catch {
 			// Column already exists
+		}
+
+		// Add UNIQUE constraint on agent name
+		try {
+			this.db!.exec(
+				`CREATE UNIQUE INDEX IF NOT EXISTS idx_${this.t.agents}_name ON ${this.t.agents}(name)`,
+			);
+			console.log("[migration] Added UNIQUE constraint on agents.name");
+		} catch {
+			// Index already exists
 		}
 
 		// FTS5 — standard mode, populate index via INSERT
@@ -593,6 +604,23 @@ export class SqlitePersistence implements IPersistence {
 			}
 		} catch (err) {
 			console.error("[migration] Failed to add promptId to modes table:", err);
+		}
+
+		// Migration: add allowedAgents column to modes table
+		try {
+			const modeCols2 = this.db!.prepare(
+				`PRAGMA table_info(${this.t.modes})`,
+			).all() as Array<{
+				name: string;
+			}>;
+			if (!modeCols2.some((c) => c.name === "allowedAgents")) {
+				this.db!.exec(
+					`ALTER TABLE ${this.t.modes} ADD COLUMN allowedAgents TEXT NOT NULL DEFAULT '[]'`,
+				);
+				console.log("[migration] Added allowedAgents to modes table");
+			}
+		} catch (err) {
+			console.error("[migration] Failed to add allowedAgents to modes table:", err);
 		}
 	}
 
@@ -1986,6 +2014,7 @@ export class SqlitePersistence implements IPersistence {
 			promptId?: string;
 			prompt?: string;
 			allowedTools: IToolAttachment[];
+			allowedAgents: string[];
 			activeGuardrails: string[];
 		}>
 	> {
@@ -2000,6 +2029,7 @@ export class SqlitePersistence implements IPersistence {
 			promptId: (r.promptId as string) || undefined,
 			prompt: (r.prompt as string) || undefined,
 			allowedTools: JSON.parse(r.allowedTools as string) as IToolAttachment[],
+			allowedAgents: JSON.parse(r.allowedAgents as string) as string[],
 			activeGuardrails: JSON.parse(r.activeGuardrails as string) as string[],
 		}));
 	}
@@ -2012,6 +2042,7 @@ export class SqlitePersistence implements IPersistence {
 		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
+		allowedAgents: string[];
 		activeGuardrails: string[];
 	} | null> {
 		const row = this.db!.prepare(`SELECT * FROM ${this.t.modes} WHERE id = ?`).get(id) as
@@ -2026,6 +2057,7 @@ export class SqlitePersistence implements IPersistence {
 			promptId: (row.promptId as string) || undefined,
 			prompt: (row.prompt as string) || undefined,
 			allowedTools: JSON.parse(row.allowedTools as string) as IToolAttachment[],
+			allowedAgents: JSON.parse(row.allowedAgents as string) as string[],
 			activeGuardrails: JSON.parse(row.activeGuardrails as string) as string[],
 		};
 	}
@@ -2038,19 +2070,21 @@ export class SqlitePersistence implements IPersistence {
 		promptId?: string;
 		prompt?: string;
 		allowedTools: IToolAttachment[];
+		allowedAgents: string[];
 		activeGuardrails: string[];
 	}): Promise<void> {
 		this.db!.prepare(
-			`INSERT INTO ${this.t.modes} (id, name, scope, color, promptId, prompt, allowedTools, activeGuardrails)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(id) DO UPDATE SET
-			name = excluded.name,
-			scope = excluded.scope,
-			color = excluded.color,
-			promptId = excluded.promptId,
-			prompt = excluded.prompt,
-			allowedTools = excluded.allowedTools,
-			activeGuardrails = excluded.activeGuardrails`,
+			`INSERT INTO ${this.t.modes} (id, name, scope, color, promptId, prompt, allowedTools, allowedAgents, activeGuardrails)
+	 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	 ON CONFLICT(id) DO UPDATE SET
+		name = excluded.name,
+		scope = excluded.scope,
+		color = excluded.color,
+		promptId = excluded.promptId,
+		prompt = excluded.prompt,
+		allowedTools = excluded.allowedTools,
+		allowedAgents = excluded.allowedAgents,
+		activeGuardrails = excluded.activeGuardrails`,
 		).run(
 			mode.id,
 			mode.name,
@@ -2059,6 +2093,7 @@ export class SqlitePersistence implements IPersistence {
 			mode.promptId ?? null,
 			mode.prompt ?? null,
 			JSON.stringify(mode.allowedTools),
+			JSON.stringify(mode.allowedAgents),
 			JSON.stringify(mode.activeGuardrails),
 		);
 	}
@@ -2343,6 +2378,14 @@ export class SqlitePersistence implements IPersistence {
 
 	async getAgent(id: string): Promise<IAgent | null> {
 		const row = this.db!.prepare(`SELECT * FROM ${this.t.agents} WHERE id = ?`).get(id) as
+			| Record<string, unknown>
+			| undefined;
+		if (!row) return null;
+		return this.hydrateAgent(row);
+	}
+
+	async getAgentByName(name: string): Promise<IAgent | null> {
+		const row = this.db!.prepare(`SELECT * FROM ${this.t.agents} WHERE name = ?`).get(name) as
 			| Record<string, unknown>
 			| undefined;
 		if (!row) return null;

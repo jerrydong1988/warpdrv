@@ -250,13 +250,20 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							if (toolNames.length) toolMessage += [...toolNames].sort().join(", ");
 							else toolMessage += "TOOLS ARE NOT ALLOWED IN THIS MODE!";
 
+							// Build agents message
+							let agentMessage = "";
+							const agentNames = (mode.allowedAgents as string[]) || [];
+							if (agentNames.length)
+								agentMessage += [...agentNames].sort().join(", ");
+							else agentMessage += "AGENTS ARE NOT ALLOWED IN THIS MODE!";
+
 							// Build prompt text: saved prompt first, then custom prompt
 							const savedContent = mode.promptId
 								? promptMap.get(mode.promptId) || ""
 								: "";
 							const promptText = savedContent + (mode.prompt || "");
 
-							return `--- MODE ${mode.name} ---\n\n ${promptText}\n\nALLOWED TOOLS: ${toolMessage}\n---`;
+							return `--- MODE ${mode.name} ---\n\n ${promptText}\n\nALLOWED TOOLS: ${toolMessage}\n\nALLOWED AGENTS: ${agentMessage}\n---`;
 						})
 						.join(`\n\n`)}\n`,
 				);

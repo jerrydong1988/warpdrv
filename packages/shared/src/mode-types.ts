@@ -10,6 +10,7 @@ export interface IMode {
 	promptId?: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
+	allowedAgents: string[];
 	activeGuardrails: string[];
 }
 
@@ -20,5 +21,6 @@ export interface IModeCreatePayload {
 	promptId?: string;
 	prompt?: string;
 	allowedTools: IToolAttachment[];
+	allowedAgents?: string[];
 	activeGuardrails?: string[];
 }

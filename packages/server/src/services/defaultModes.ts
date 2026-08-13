@@ -31,6 +31,7 @@ Follow mode restriction on tools - see allowed tools list for this mode.
 			{ serverName: "warpmcp", toolName: "chat_search" },
 			{ serverName: "warpmcp", toolName: "chat_get_message" },
 		],
+		allowedAgents: [],
 		activeGuardrails: [],
 	},
 	{
@@ -59,6 +60,7 @@ Follow mode restriction on tools - see allowed tools list for this mode.
 			{ serverName: "warpmcp", toolName: "todo_read" },
 			{ serverName: "warpmcp", toolName: "shell_exec" },
 		],
+		allowedAgents: [],
 		activeGuardrails: ["gr-rm-guard", "gr-code-review"],
 	},
 ];
