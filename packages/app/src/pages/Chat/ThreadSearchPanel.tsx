@@ -84,9 +84,9 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 		timerRef.current = setTimeout(async () => {
 			setIsLoading(true);
 			try {
-				const res = await searchChatMessages(q, 'thread', { threadId, limit: 50 });
+				const res = await searchChatMessages(q, 'thread', { threadId: threadId ?? undefined, limit: 50 });
 				if (res.ok && res.data) {
-					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult) =>
+					const entries: SearchResultEntry[] = res.data.map((item) =>
 						item as unknown as SearchResultEntry
 					);
 					setResults(entries);
