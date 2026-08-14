@@ -438,6 +438,7 @@ export type IBridgeEvent =
 	| { type: 'elicitation_request'; threadId: string; request: IElicitationRequest }
 	| { type: 'elicitation_resolved'; id: string }
 	| { type: 'embedding.error'; error: string }
+	| { type: 'embedding.configured'; serverId: string }
 	| { type: 'embedding.embedded'; messageId: TMessageId; threadId: TThreadId; modelId: string; topic: string }
 	| { type: 'embedding.removed'; messageId: TMessageId; modelId: string; topic: string }
 	| { type: 'workspace_state.updated'; folderId: TFolderId; data: Record<string, unknown> }

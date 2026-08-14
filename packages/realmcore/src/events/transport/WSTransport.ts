@@ -38,7 +38,14 @@ export class WSTransport implements IMessageTransport {
 
 	public async sendMessage(msgId: string, payload: unknown): Promise<unknown> {
 		const msg: IWireMessage = { msgId, payload };
-		return this.socket.emitWithAck(WIRE_EVENT, msg);
+		// Guard against a peer that never acks — emitWithAck would otherwise
+		// hang the caller forever.
+		return await new Promise<unknown>((resolve) => {
+			const timer = setTimeout(() => resolve(undefined), 15000);
+			Promise.resolve(this.socket.emitWithAck(WIRE_EVENT, msg))
+				.then((result) => { clearTimeout(timer); resolve(result); })
+				.catch((err) => { clearTimeout(timer); resolve(err); });
+		});
 	}
 
 	public onMessage(msgId: string, handler: TRemoteHandler): void {
@@ -51,7 +58,13 @@ export class WSTransport implements IMessageTransport {
 			if (ack) ack(undefined);
 			return;
 		}
-		const result = await handler(msg.payload);
-		if (ack) ack(result);
+		try {
+			const result = await handler(msg.payload);
+			if (ack) ack(result);
+		} catch (err) {
+			// Always ack — a throwing remote handler previously left the peer's
+			// emitWithAck unresolved forever (realm route() calls could stall).
+			if (ack) ack({ __error: err instanceof Error ? err.message : String(err) });
+		}
 	}
 }

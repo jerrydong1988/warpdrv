@@ -29,7 +29,6 @@ presetsRouter.post('/', async (req, res) => {
 		name: payload.name.trim(),
 		backendId: payload.backendId,
 		modelPath: payload.modelPath,
-		mmprojPath: payload.mmprojPath,
 		params: payload.params,
 		createdAt: Date.now(),
 	};

@@ -54,18 +54,28 @@ modelsRouter.post('/scan', async (_req, res) => {
 		return;
 	}
 
+	const scanned = await rescanAllModels();
+	res.json({ ok: true, data: scanned, total: scanned.length, error: null });
+});
+
+// Shared scan implementation — used by the HTTP route and the download
+// RESCAN_MODELS post-action.
+export async function rescanAllModels(): Promise<IModel[]> {
+	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+	if (settings.modelRoots.length === 0) return cachedModels;
+
 	const before = cachedModels.length;
 	cachedModels = await scanAllModelRoots(settings.modelRoots);
 	lastScanAt = Date.now();
+	await store.put(MODELS_KEY, cachedModels);
 
 	const changed = cachedModels.length - before;
 	const changeMsg = changed > 0 ? ` (+${changed})` : changed < 0 ? ` (${changed})` : '';
 	console.log(`[models] Scan complete: ${cachedModels.length} models${changeMsg}`);
 
 	sseManager.emit('models:init', cachedModels);
-
-	res.json({ ok: true, data: cachedModels, total: cachedModels.length, error: null });
-});
+	return cachedModels;
+}
 
 // GET /api/models/scan-status
 modelsRouter.get('/scan-status', (_req, res) => {

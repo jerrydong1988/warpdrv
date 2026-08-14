@@ -187,8 +187,8 @@ export class EmbeddingService {
 			const body = await res.text();
 			throw new Error(`Embedding API error: ${res.status} ${body}`);
 		}
-		const data: { data?: { embedding: number[] }[] } = await res.json();
-		if (data.data && data.data[0] && data.data[0].embedding) {
+		const data = await res.json() as { data?: { embedding: number[] }[] } | null;
+		if (data?.data && data.data[0] && data.data[0].embedding) {
 			return data.data[0].embedding;
 		}
 		throw new Error('Unexpected embedding response format');

@@ -1,7 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import http from 'http';
 import net from 'net';
-import type { IServer, ILaunchParams, IChatInferenceParams, IBackend, IBackendGroup, ISettings } from '@warpcore/shared';
+import type { IServer, ILaunchParams, IChatInferenceParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams } from '@warpcore/shared';
 import { EServerStatus, EKvQuantType, DEFAULT_SETTINGS } from '@warpcore/shared';
 import { parse as shellParse } from 'shell-quote';
 import { bootstrapServer, teardownServer, parseLogLine } from './slotStateTracker';
@@ -10,6 +10,7 @@ import { ECheckpointSaveMode } from '@warpcore/shared';
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { getCachedModels } from '../routes/models';
+import { startStatsPolling, stopStatsPolling } from './statsPoller';
 
 export const SERVERS_PREFIX = 'servers:';
 const SETTINGS_KEY = 'settings:general';
@@ -17,12 +18,12 @@ const SETTINGS_KEY = 'settings:general';
 // Cross-platform process tree kill.
 // Linux/macOS: signal the process group via negative PID.
 // Windows: taskkill /T /F walks the process tree and force-terminates.
+// Note: on Windows, taskkill WITHOUT /F sends a WM_CLOSE-style request that
+// console applications (llama-server) do not handle — every "graceful" stop
+// previously burned the full 5s SIGKILL fallback. Use /F for both signals.
 export function killProcessTree(pid: number, signal: 'SIGTERM' | 'SIGKILL'): void {
 	if (process.platform === 'win32') {
-		const args = signal === 'SIGKILL'
-			? ['/T', '/F', '/PID', String(pid)]
-			: ['/T', '/PID', String(pid)];
-		spawnSync('taskkill', args, { stdio: 'ignore' });
+		spawnSync('taskkill', ['/T', '/F', '/PID', String(pid)], { stdio: 'ignore' });
 	} else {
 		process.kill(-pid, signal);
 	}
@@ -47,6 +48,8 @@ export function pollHealth(
 			return;
 		}
 		const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 2000 }, (res) => {
+			// Consume the response body so keep-alive sockets are released
+			res.resume();
 			if (res.statusCode === 200) {
 				clearInterval(interval);
 				onReady();
@@ -125,7 +128,9 @@ function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
 	// Ngram mode — per-type args based on specType
 	if (isNgram && sd.specType && sd.specType !== 'none') {
 		args.push('--spec-type', sd.specType);
-		const prefix = sd.specType === 'ngram-mod-n' ? 'mod-n'
+		// NOTE: 'ngram-mod' (not 'ngram-mod-n') is the enum value; the mod
+		// spec family uses the 'mod' prefix in llama.cpp flag names.
+		const prefix = sd.specType === 'ngram-mod' ? 'mod'
 			: sd.specType === 'ngram-map-k4v' ? 'map-k4v'
 			: sd.specType === 'ngram-map-k' ? 'map-k' : 'simple';
 		if (sd.ngramSizeN) args.push(`--spec-ngram-${prefix}-size-n`, String(sd.ngramSizeN));
@@ -226,6 +231,13 @@ export function buildArgs(
 			: buildSpecDecodeArgsPre9100(sd);
 		args.push(...specArgs);
 	}
+	// User extra args — placed BEFORE the server-controlled flags below so a
+	// user value can never override --host/--port/--slot-save-path (previously
+	// a crafted extraArgs could redirect checkpoint writes to any directory).
+	if (params.extraArgs.trim()) {
+		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
+		args.push(...tokens);
+	}
 	args.push('--host', '0.0.0.0');
 	args.push('--port', String(params.port));
 	// Injected extra args (e.g., --slot-save-path)
@@ -233,11 +245,6 @@ export function buildArgs(
 		for (const [key, value] of Object.entries(extraArgs)) {
 			args.push(`--${key}`, value);
 		}
-	}
-	// Extra args — tokenize respecting quoted JSON values
-	if (params.extraArgs.trim()) {
-		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
-		args.push(...tokens);
 	}
 	return args;
 }
@@ -269,6 +276,9 @@ export function spawnServer(
 		child.unref();
 		processes.set(serverId, child);
 		logBuffers.set(serverId, []);
+		// Carry an unterminated log line across chunks (a long line split by
+		// the OS buffer would otherwise be parsed as multiple fragments).
+		const pendingLine: Record<string, string> = {};
 		const appendLog = (line: string) => {
 			const buf = logBuffers.get(serverId);
 			if (buf) {
@@ -276,22 +286,19 @@ export function spawnServer(
 				if (buf.length > MAX_LOG_LINES) buf.shift();
 			}
 		};
-		child.stdout?.on('data', (data: Buffer) => {
-			const lines = data.toString().split('\n').filter(Boolean);
+		const handleChunk = (data: Buffer) => {
+			const combined = (pendingLine[serverId] ?? '') + data.toString();
+			const lines = combined.split('\n');
+			pendingLine[serverId] = lines.pop() ?? '';
 			for (const line of lines) {
+				if (!line) continue;
 				appendLog(line);
 				sseManager.emit('servers:logs', { [serverId]: [line] });
 				parseLogLine(serverId, line);
 			}
-		});
-		child.stderr?.on('data', (data: Buffer) => {
-			const lines = data.toString().split('\n').filter(Boolean);
-			for (const line of lines) {
-				appendLog(line);
-				sseManager.emit('servers:logs', { [serverId]: [line] });
-				parseLogLine(serverId, line);
-			}
-		});
+		};
+		child.stdout?.on('data', handleChunk);
+		child.stderr?.on('data', handleChunk);
 		// Extract port from args for health polling
 		const portIdx = args.indexOf('--port');
 		const port = portIdx !== -1 ? parseInt(args[portIdx + 1] ?? '0', 10) : 0;
@@ -303,7 +310,8 @@ export function spawnServer(
 				async () => {
 					onStatusChange(EServerStatus.RUNNING);
 					await emitServerUpdate(serverId, EServerStatus.RUNNING, null, Date.now());
-					// startStatsPolling(serverId, port);
+					// Live server stats (slots, tokens) via /health + /slots
+					startStatsPolling(serverId, port);
 					await bootstrapServer(serverId, port);
 					await maybeAutoLoadCheckpoint(serverId);
 				},
@@ -315,14 +323,27 @@ export function spawnServer(
 		}
 		child.on('error', async (err) => {
 			if (healthInterval) clearInterval(healthInterval);
+			stopStatsPolling(serverId);
+			// Spawn failures (e.g. ENOENT) never fire 'exit' — clean up so the
+			// maps don't leak an entry for a process that never started.
+			delete pendingLine[serverId];
+			processes.delete(serverId);
+			logBuffers.delete(serverId);
 			onStatusChange(EServerStatus.ERROR, err.message);
 			await emitServerUpdate(serverId, EServerStatus.ERROR, err.message, null);
 		});
-		child.on('exit', (code) => {
+		child.on('exit', async (code) => {
 			if (healthInterval) clearInterval(healthInterval);
-			// stopStatsPolling(serverId);
+			stopStatsPolling(serverId);
 			teardownServer(serverId);
+			delete pendingLine[serverId];
 			processes.delete(serverId);
+			// Release the reserved port so it can be reused (a crash or a stop
+			// previously leaked the port for the rest of the session).
+			try {
+				const srv = await store.get<IServer>(`${SERVERS_PREFIX}${serverId}`);
+				if (srv?.port && srv.port > 0 && usedPorts.has(srv.port)) usedPorts.delete(srv.port);
+			} catch { /* ignore */ }
 			if (code !== 0 && code !== null) {
 				onStatusChange(EServerStatus.ERROR, `Process exited with code ${code}`);
 				emitServerUpdate(serverId, EServerStatus.ERROR, `Process exited with code ${code}`, null).catch((err) => {
@@ -369,12 +390,14 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
     
     // Try to kill from in-memory process first, then fall back to PID
     if (child?.pid) {
-        // stopStatsPolling(serverId);
+        stopStatsPolling(serverId);
         teardownServer(serverId);
         
         return new Promise((resolve) => {
             const pidToUse = child.pid;
             let resolved = false;
+            let killTimer: ReturnType<typeof setTimeout> | null = null;
+            let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
             
             const cleanup = () => {
                 if (!resolved) {
@@ -384,12 +407,17 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
             };
             
             const finish = (success: boolean) => {
+                if (killTimer) { clearTimeout(killTimer); killTimer = null; }
+                if (forceKillTimer) { clearTimeout(forceKillTimer); forceKillTimer = null; }
                 cleanup();
                 resolve(success);
             };
             
-            // Listen for process exit
-            child.once('exit', (code) => {
+            // Listen for process exit. If the child already exited before this
+            // promise was created (e.g. it crashed moments earlier), the 'exit'
+            // event will never fire again and the kill would hang forever —
+            // handle that by running the exit path immediately.
+            const onExit = (code: number | null) => {
                 const status = code !== 0 && code !== null 
                     ? EServerStatus.ERROR 
                     : EServerStatus.STOPPED;
@@ -430,7 +458,14 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
                 };
                 
                 waitForPort();
-            });
+            };
+            if (child.exitCode !== null || child.signalCode !== null) {
+                // Already exited — run the exit path directly (guard against
+                // the kill hanging forever).
+                onExit(child.exitCode);
+            } else {
+                child.once('exit', onExit);
+            }
             
 			// Send SIGTERM to process tree
             try {
@@ -444,27 +479,30 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
                 return;
             }
             
-            // If not exited after 5 seconds, force kill with SIGKILL
-            const timeout = setTimeout(() => {
-                if (isProcessAlive(pidToUse!)) {
-                    try {
-                        killProcessTree(pidToUse!, 'SIGKILL');
-                    } catch (err) {
-                        console.error(`[processManager] SIGKILL failed for ${pidToUse}:`, err);
-                    }
-                    setTimeout(() => {
-                        if (!resolved) {
-                            finish(true);
-                        }
-                    }, 200);
+            // If not exited after 5 seconds, force kill with SIGKILL.
+            // The timer is cleared once the kill completes, and it refuses to
+            // act after `resolved` — otherwise a PID reused by an unrelated
+            // process within 5s would get SIGKILLed (data loss on the host).
+            killTimer = setTimeout(() => {
+                if (resolved) return;
+                if (!isProcessAlive(pidToUse!)) return;
+                try {
+                    killProcessTree(pidToUse!, 'SIGKILL');
+                } catch (err) {
+                    console.error(`[processManager] SIGKILL failed for ${pidToUse}:`, err);
                 }
+                forceKillTimer = setTimeout(() => {
+                    if (!resolved) {
+                        finish(true);
+                    }
+                }, 200);
             }, 5000);
         });
     }
     
     // If not in map, try to kill using PID from storage (orphan process)
     if (pid) {
-        // stopStatsPolling(serverId);
+        stopStatsPolling(serverId);
         teardownServer(serverId);
         if (!isProcessAlive(pid)) {
             return true;
@@ -472,10 +510,14 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
         
         return new Promise((resolve) => {
             let resolved = false;
+            let checkInterval: ReturnType<typeof setInterval> | null = null;
+            let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
             
             const finish = (success: boolean) => {
                 if (!resolved) {
                     resolved = true;
+                    if (checkInterval) { clearInterval(checkInterval); checkInterval = null; }
+                    if (forceKillTimer) { clearTimeout(forceKillTimer); forceKillTimer = null; }
                     resolve(success);
                 }
             };
@@ -489,24 +531,25 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
             }
             
             // Poll until process is dead
-            const checkInterval = setInterval(async () => {
+            checkInterval = setInterval(async () => {
                 if (!isProcessAlive(pid)) {
-                    clearInterval(checkInterval);
                     finish(true);
                 }
             }, 100);
             
             // Force kill after 5 seconds
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                if (isProcessAlive(pid)) {
-                    try {
-                        killProcessTree(pid, 'SIGKILL');
-                    } catch (err) {
-                        console.error(`[processManager] SIGKILL failed for orphan ${pid}:`, err);
-                    }
-                    setTimeout(() => finish(true), 200);
+            forceKillTimer = setTimeout(() => {
+                if (resolved) return; // already finished — do not touch the PID
+                if (!isProcessAlive(pid)) {
+                    finish(true);
+                    return;
                 }
+                try {
+                    killProcessTree(pid, 'SIGKILL');
+                } catch (err) {
+                    console.error(`[processManager] SIGKILL failed for orphan ${pid}:`, err);
+                }
+                setTimeout(() => finish(true), 200);
             }, 5000);
         });
     }
@@ -662,7 +705,7 @@ export async function findRandomAvailablePort(): Promise<number> {
 		const tier = Math.random() * 100;
 		const idx = Math.min(available.length - 1, Math.floor((tier / 100) * available.length));
 		const port = available[idx];
-		if (!usedPorts.has(port)) {
+		if (port !== undefined && !usedPorts.has(port)) {
 			usedPorts.add(port);
 			return port;
 		}
@@ -692,6 +735,8 @@ export async function reconcileServers(): Promise<void> {
 			} else {
 				server.status = EServerStatus.STOPPED;
 				server.pid = undefined;
+				// Remove stale port from tracking so it can be reused
+				if (server.port > 0) usedPorts.delete(server.port);
 				await store.put(SERVERS_PREFIX + server.id, server);
 			}
 		}

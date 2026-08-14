@@ -66,10 +66,10 @@ export class EmbeddingStore {
 			return existing.rowid;
 		}
 
-		this.db.prepare(
+		const result = this.db.prepare(
 			`INSERT INTO embeddings (embedding) VALUES (?)`
 		).run(vectorBlob);
-		const rowid = Number(this.db.lastInsertRowid);
+		const rowid = Number(result.lastInsertRowid);
 		this.db.prepare(
 			`INSERT INTO embedding_meta (rowid, messageId, text) VALUES (?, ?, ?)`
 		).run(rowid, messageId, text);

@@ -56,7 +56,7 @@ async function getVersion(binaryPath: string, buildNumber: number): Promise<stri
 		if (buildNumber >= 9100) {
 			// New builds: detect GPU backends from Available devices section
 			const deviceTypeMatch = output.match(/Available devices:.*\n\s+(CUDA|ROCm|Vulkan)\d:/s);
-			if (deviceTypeMatch) {
+			if (deviceTypeMatch?.[1]) {
 				parts.push(deviceTypeMatch[1]);
 			}
 			console.log(`[getVersion] new build detection, parts:`, parts);

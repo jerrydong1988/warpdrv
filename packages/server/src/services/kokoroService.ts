@@ -27,7 +27,8 @@ const STREAM_TTL_MS = 30_000;
 setInterval(() => {
 	const now = Date.now();
 	for (const id of Object.keys(pendingStreams)) {
-		if (now - pendingStreams[id].createdAt > STREAM_TTL_MS) delete pendingStreams[id];
+		const stream = pendingStreams[id];
+		if (stream && now - stream.createdAt > STREAM_TTL_MS) delete pendingStreams[id];
 	}
 }, 10_000);
 export async function initKokoroService(): Promise<void> {

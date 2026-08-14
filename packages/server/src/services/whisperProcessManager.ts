@@ -196,7 +196,11 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		return new Promise((resolve) => {
 			const pidToUse = child.pid!;
 			let resolved = false;
+			let killTimer: ReturnType<typeof setTimeout> | null = null;
+			let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
 			const finish = (success: boolean) => {
+				if (killTimer) { clearTimeout(killTimer); killTimer = null; }
+				if (forceKillTimer) { clearTimeout(forceKillTimer); forceKillTimer = null; }
 				if (!resolved) {
 					resolved = true;
 					processes.delete(serverId);
@@ -236,11 +240,15 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 			return;
 		}
 
-		setTimeout(() => {
+		// Force kill after 5s. Guarded so a PID reused by an unrelated process
+		// after a clean exit is never SIGKILLed.
+		killTimer = setTimeout(() => {
+			if (resolved) return;
+			if (!isProcessAlive(pidToUse)) return;
 			try {
 				killProcessTree(pidToUse, 'SIGKILL');
 			} catch {}
-			setTimeout(() => finish(true), 200);
+			forceKillTimer = setTimeout(() => finish(true), 200);
 		}, 5000);
 	});
 	}
@@ -257,16 +265,22 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		} catch {}
 
 		return new Promise((resolve) => {
+			let settled = false;
+			let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
 			const check = setInterval(() => {
 				try {
 					process.kill(pid, 0);
 				} catch {
+					settled = true;
+					if (forceKillTimer) { clearTimeout(forceKillTimer); forceKillTimer = null; }
 					clearInterval(check);
 					resolve(true);
 				}
 			}, 100);
-			setTimeout(() => {
+			forceKillTimer = setTimeout(() => {
+				if (settled) return; // already resolved — do not touch the PID
 				clearInterval(check);
+				if (!isProcessAlive(pid)) { resolve(true); return; }
 				try {
 					killProcessTree(pid, 'SIGKILL');
 				} catch {}
@@ -304,6 +318,9 @@ export async function reconcileWhisperServers(): Promise<void> {
 			} else {
 				server.status = EWhisperServerStatus.STOPPED;
 				server.pid = undefined;
+				// Release the reserved port so it can be reused (consistent
+				// with the llama-server reconcile path).
+				if (server.port > 0) usedPorts.delete(server.port);
 				await store.put(WHISPER_SERVERS_PREFIX + server.id, server);
 			}
 		}

@@ -2,6 +2,7 @@ import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
 import type { IGuardrail, IGuardrailIssue, IServer } from '@warpcore/shared';
+import { EServerStatus } from '@warpcore/shared';
 import { COMPACTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT } from './prompts';
 import { store } from '../../util/store';
 import { IChatMessage, TOpenAIMessage } from '@warpcore/bridge';
@@ -132,9 +133,14 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
             for (const guardrail of applicableGuardrails) {
                 try {
                     const grServer = await store.get<IServer>('servers:' + guardrail.serverId);
-                    if (!grServer) throw '[BEApplet] Guardrail server not found:' + guardrail.serverId;
-
-                    const grInferenceUrl = `http://127.0.0.1:${grServer.port}` || inferenceUrl;
+                    if (!grServer) throw new Error('[BEApplet] Guardrail server not found:' + guardrail.serverId);
+                    // The guardrail server must be running — the fallback below
+                    // was dead code (`|| inferenceUrl` on an always-truthy
+                    // string) and silently failed every guardrail instead.
+                    if (grServer.status !== EServerStatus.RUNNING) {
+                        throw new Error('[BEApplet] Guardrail server not running: ' + guardrail.serverId);
+                    }
+                    const grInferenceUrl = `http://127.0.0.1:${grServer.port}`;
 
                     const toText = (m: TOpenAIMessage) => {
                         if (m.role === "system") {
@@ -205,10 +211,13 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                             ...GUARDRAILS_DEFAULT_INFERENCE_PARAMS,
                             ...guardrail.inferenceParams,
                         }
-                    });
+                    }) as { content?: { type: string; text?: string }[] } | null | undefined;
 
-                    const text = result.content?.filter((c: any) => c.type === "text")?.[0]?.text || 'Error';
-                    const parsed: IGuardrailIssue[] =JSON.parse(text);
+                    const text = result?.content?.filter((c) => c.type === "text")?.[0]?.text || 'Error';
+                    // Models often wrap JSON in markdown fences — strip them
+                    // before parsing so every guardrail run succeeds.
+                    const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+                    const parsed: IGuardrailIssue[] = JSON.parse(stripped);
 
                     // Read existing results, merge, save
                     const existing = (await api.eventNode.invoke('/warpcore', 'bridge.getMessageState', messageId)) as Record<string, unknown>;

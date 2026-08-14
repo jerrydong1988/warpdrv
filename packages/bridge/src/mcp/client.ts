@@ -67,20 +67,24 @@ export class McpClientManager implements IMcpClient {
 		client.setRequestHandler(ElicitRequestSchema, async (req) => {
 			const id = randomUUID();
 			const promise = this.elicitationRegistry.register(id, name);
+			// The SDK types the params as a form|url union; we accept both shapes.
+			const params = req.params as { message?: string; mode?: string; url?: string; requestedSchema?: Record<string, unknown> };
 			this.broadcaster?.emit({
 				type: 'elicitation_request',
 				threadId: this.activeThreadByServer[name] ?? '',
 				request: {
 					id,
 					serverName: name,
-					message: req.params.message,
-					mode: (req.params.mode as 'form' | 'url' | undefined) ?? 'form',
-					url: req.params.url as string | undefined,
-					requestedSchema: req.params.requestedSchema as Record<string, unknown> | undefined,
+					message: params.message ?? '',
+					mode: (params.mode as 'form' | 'url' | undefined) ?? 'form',
+					url: params.url,
+					requestedSchema: params.requestedSchema,
 				},
 			});
 			const response = await promise;
-			return response;
+			// The SDK's elicitation result type is generic; the app-defined
+			// IElicitationResponse shape is what our own registry produces.
+			return response as unknown as { [key: string]: unknown };
 		});
 		let transport: StdioClientTransport | StreamableHTTPClientTransport;
 		let stdioEnv: Record<string, string> | null = null;
@@ -159,6 +163,10 @@ export class McpClientManager implements IMcpClient {
 				console.error(`[MCP]   Args: ${JSON.stringify(entry.args ?? [])}`);
 				console.error(`[MCP]   PATH: ${stdioEnv?.PATH || '(not set)'}`);
 			}
+			// Close the partially-initialized client so the stdio child process
+			// is not orphaned — repeated failed connects previously leaked one
+			// subprocess each.
+			try { await client.close(); } catch { /* ignore */ }
 			state.status = EMcpServerStatus.ERROR;
 			state.error = errorMsg;
 			this.clients[name] = { name, client, transport: transport!, state, reconnectTimer: null, config: entry, wasConnected: false, _disconnecting: false };

@@ -37,7 +37,7 @@ function parseUpstreamAsset(asset: IGithubReleaseAsset, tag: string): IBackendAs
 	if (name.startsWith('cudart-')) return null;
 	const buildMatch = name.match(/^llama-(b\d+)-bin-/);
 	if (!buildMatch) return null;
-	const llamaBuild = buildMatch[1];
+	const llamaBuild = buildMatch[1] ?? 'unknown';
 	const lower = name.toLowerCase();
 	let osName: TOs | null = null;
 	if (lower.includes('-win-')) osName = 'win';
@@ -52,10 +52,10 @@ function parseUpstreamAsset(asset: IGithubReleaseAsset, tag: string): IBackendAs
 	const rocmMatch = lower.match(/-rocm-([\d.]+)-/);
 	if (cudaMatch) {
 		backend = 'cuda';
-		backendVersion = cudaMatch[1];
+		backendVersion = cudaMatch[1] ?? null;
 	} else if (rocmMatch) {
 		backend = 'rocm';
-		backendVersion = rocmMatch[1];
+		backendVersion = rocmMatch[1] ?? null;
 	} else if (lower.includes('-vulkan')) {
 		backend = 'vulkan';
 	} else if (lower.includes('-hip')) {
@@ -97,11 +97,11 @@ function parseLemonadeAsset(asset: IGithubReleaseAsset, _tag: string): IBackendA
 	else if (lower.includes('ubuntu') || lower.includes('linux')) osName = 'linux';
 	if (!osName) return null;
 	const buildMatch = name.match(/(b\d+)/);
-	const llamaBuild = buildMatch ? buildMatch[1] : 'nightly';
+	const llamaBuild = buildMatch?.[1] ?? 'nightly';
 	const rocmMatch = lower.match(/rocm[-_]?([\d.]+)/);
-	const backendVersion = rocmMatch ? rocmMatch[1] : null;
+	const backendVersion = rocmMatch?.[1] ?? null;
 	const gfxMatch = name.match(/gfx[0-9a-fA-FxX]+/);
-	const gpuArch = gfxMatch ? gfxMatch[0].toLowerCase() : null;
+	const gpuArch = (gfxMatch && gfxMatch[0]) ? gfxMatch[0].toLowerCase() : null;
 	const key = `lemonade-${osName}-x64-rocm${backendVersion ? '-' + backendVersion : ''}${gpuArch ? '-' + gpuArch : ''}`;
 	return {
 		key,
@@ -161,7 +161,7 @@ function parseWhisperAsset(asset: IGithubReleaseAsset, _tag: string): IBackendAs
 	if (!name.includes('-bin-')) return null;
 	if (name.startsWith('cudart-')) return null;
 	const buildMatch = name.match(/^whisper-(v?[\d.]+|b\d+)-bin-/);
-	const llamaBuild = buildMatch ? buildMatch[1] : 'latest';
+	const llamaBuild = buildMatch?.[1] ?? 'latest';
 	const lower = name.toLowerCase();
 	let osName: TOs | null = null;
 	if (lower.includes('-win-')) osName = 'win';
@@ -212,7 +212,7 @@ function parseWhisperLemonadeAsset(asset: IGithubReleaseAsset, tag: string): IBa
 	const name = asset.name;
 	const lower = name.toLowerCase();
 	const versionMatch = name.match(/v?([\d.]+)/);
-	const whisperBuild = versionMatch ? versionMatch[1] : tag;
+	const whisperBuild = versionMatch?.[1] ?? tag;
 	let osName: TOs | null = null;
 	if (lower.includes('win')) osName = 'win';
 	else if (lower.includes('linux')) osName = 'linux';
@@ -227,11 +227,11 @@ function parseWhisperLemonadeAsset(asset: IGithubReleaseAsset, tag: string): IBa
 	if (lower.includes('cublas') || lower.includes('cuda')) {
 		backend = 'cuda';
 		const cudaMatch = lower.match(/(?:cublas|cuda)[-_]?([\d.]+)/);
-		backendVersion = cudaMatch ? cudaMatch[1] : null;
+		backendVersion = cudaMatch?.[1] ?? null;
 	} else if (lower.includes('rocm')) {
 		backend = 'rocm';
 		const rocmMatch = lower.match(/rocm[-_]?([\d.]+)/);
-		backendVersion = rocmMatch ? rocmMatch[1] : null;
+		backendVersion = rocmMatch?.[1] ?? null;
 	} else if (lower.includes('vulkan')) {
 		backend = 'vulkan';
 	} else if (lower.includes('metal')) {

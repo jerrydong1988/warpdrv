@@ -97,10 +97,12 @@ kokoroRouter.post('/install', async (_req, res) => {
 		const allFiles = [KOKORO_MODEL_FILE, KOKORO_CONFIG_FILE, ...KOKORO_TOKENIZER_FILES, ...KOKORO_VOICE_FILES];
 		const downloads = [];
 		for (let i = 0; i < allFiles.length; i++) {
+			const file = allFiles[i];
+			if (!file) continue;
 			const dl = await startDownload(
 				KOKORO_AUTHOR,
 				KOKORO_MODEL,
-				allFiles[i],
+				file,
 				destRoot,
 				allFiles,
 				i,

@@ -19,7 +19,7 @@ constructor(
 
 	private createHost(definition: TAppletDefinition, eventNode: EventNode): AppletHost {
 		const hostClass = this.hostClasses[definition.hostType];
-		if (!hostClass) throw `[Realm] FATAL: Class not found for host type ${definition.hostType}.`;
+		if (!hostClass) throw new Error(`[Realm] FATAL: Class not found for host type ${definition.hostType}.`);
 		return new hostClass(definition, eventNode);
 	}
 
@@ -39,7 +39,15 @@ constructor(
 		if (!this.hostClasses[definition.hostType] || definition.scope !== this.scope) return false;
 
 		const eventNode = new EventNodeClass(definition.name, false);
-		await this.eventNode.addChild(eventNode);
+		try {
+			await this.eventNode.addChild(eventNode);
+		} catch (err) {
+			// Concurrent/repeated initialize of the same applet throws here
+			// ('child id already exists') — treat as a failed attach instead of
+			// letting the rejection escape as an unhandled promise rejection.
+			console.error(`[AppletManager] ${definition.name} failed to attach:`, err instanceof Error ? err.message : err);
+			return false;
+		}
 		const host = this.createHost(definition, eventNode);
 		
 		try {
@@ -65,7 +73,10 @@ constructor(
 
 		autoStartArr
 			.filter((_, i) => statusArr[i])
-			.map(appletName => this.activeApplets[appletName].eventNode.broadcast(APPLET_READY))
+			.map(appletName => {
+				const applet = this.activeApplets[appletName];
+				if (applet) applet.eventNode.broadcast(APPLET_READY);
+			})
 	}
 
 	public async updateScopeValue(newValue: string | undefined): Promise<void> {
@@ -84,11 +95,19 @@ constructor(
 		if (!entry) return Promise.resolve();
 
 		this.terminatingHosts[appletName] = (async () => {
-			await entry.eventNode.survey(APPLET_TERMINATE);
-			await entry.host.terminate();
-			await this.eventNode.removeChild(entry.eventNode.nodeId);
-			delete this.activeApplets[appletName];
-			delete this.terminatingHosts[appletName];
+			try {
+				await entry.eventNode.survey(APPLET_TERMINATE);
+				await entry.host.terminate();
+				await this.eventNode.removeChild(entry.eventNode.nodeId);
+			} catch (err) {
+				// A throwing terminate previously left terminatingHosts filled
+				// forever, so every later terminate returned the same rejected
+				// promise and the applet could never restart. Log and clear.
+				console.error(`[AppletManager] ${appletName} terminate failed:`, err instanceof Error ? err.message : err);
+			} finally {
+				delete this.activeApplets[appletName];
+				delete this.terminatingHosts[appletName];
+			}
 		})();
 		return this.terminatingHosts[appletName];
 	}

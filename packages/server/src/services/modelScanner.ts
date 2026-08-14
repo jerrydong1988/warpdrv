@@ -60,6 +60,7 @@ async function scanDirRecursive(
 	ancestorMmproj: IGgufFile | null,
 	userSegment: string | null,
 	cachedModels: IModel[],
+	visitedPaths: Set<string>,
 ): Promise<IModel[]> {
 	let entries: Dirent[];
 	try {
@@ -83,9 +84,16 @@ async function scanDirRecursive(
 
 	const dirFiles: IGgufFile[] = [];
 	for (const entry of ggufEntries) {
-		const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath);
-		// if (ggufFile.metadata?.architecture === 'whisper') continue;
-		dirFiles.push(ggufFile);
+		// A single unreadable/corrupt file must not abort the whole scan
+		// (previously one bad file killed the root scan and overwrote the
+		// model cache with a partial result).
+		try {
+			const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath);
+			// if (ggufFile.metadata?.architecture === 'whisper') continue;
+			dirFiles.push(ggufFile);
+		} catch (err) {
+			console.error(`[modelScanner] Skipping unreadable GGUF ${path.join(dirPath, entry.name)}:`, err instanceof Error ? err.message : err);
+		}
 	}
 
 	// Resolve mmproj for this dir: same-dir wins over ancestor
@@ -137,14 +145,16 @@ async function scanDirRecursive(
 		results.push(model);
 	}
 
-	// Recurse into subdirs
-	// Pass deeper mmproj down: prefer same-dir mmproj, else propagate ancestor
+	// Recurse into subdirs (with symlink cycle detection)
 	const childMmproj = sameDirMmproj ?? ancestorMmproj;
 
 	for (const subDir of subDirs) {
 		const childPath = path.join(dirPath, subDir.name);
+		const resolvedChildPath = await fs.realpath(childPath).catch(() => childPath);
+		if (visitedPaths.has(resolvedChildPath)) continue; // Skip symlink cycle / already-visited dir
+		visitedPaths.add(resolvedChildPath);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels);
+		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels, visitedPaths);
 		results.push(...childModels);
 	}
 
@@ -164,7 +174,9 @@ export async function scanAllModelRoots(roots: string[]): Promise<IModel[]> {
 
 	const scanned: IModel[] = [];
 	for (const root of roots) {
-		const models = await scanDirRecursive(root, null, null, cachedModels);
+		const visited = new Set<string>();
+		try { visited.add(await fs.realpath(root)); } catch { visited.add(path.resolve(root)); }
+		const models = await scanDirRecursive(root, null, null, cachedModels, visited);
 		scanned.push(...models);
 	}
 

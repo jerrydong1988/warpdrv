@@ -292,14 +292,20 @@ export class SqlitePersistence implements IPersistence {
 			// Column already exists
 		}
 
-		// FTS5 — standard mode, populate index via INSERT
+		// FTS5 — standard mode, populate index via INSERT.
+		// This migration re-runs on every startup: use INSERT OR IGNORE and
+		// first clear the tables so restarts never duplicate rows (FTS5 allows
+		// duplicate rowids, which previously doubled the index per restart and
+		// made MATCH return every row multiple times).
 		try {
 			const txn = this.db!.transaction(() => {
+				this.db!.prepare(`DELETE FROM ${this.t.threadFts}`).run();
+				this.db!.prepare(`DELETE FROM ${this.t.messagePartsFts}`).run();
 				this.db!.prepare(
-					`INSERT INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`
+					`INSERT OR IGNORE INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`
 				).run();
 				this.db!.prepare(
-					`INSERT INTO ${this.t.messagePartsFts}(rowid, text)
+					`INSERT OR IGNORE INTO ${this.t.messagePartsFts}(rowid, text)
 					 SELECT rowid, CASE WHEN type IN ('text','reasoning') THEN text ELSE extractedText END
 					 FROM ${this.t.messageParts}
 					 WHERE (type IN ('text','reasoning') AND text IS NOT NULL AND length(text) > 0)

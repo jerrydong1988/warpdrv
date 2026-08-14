@@ -104,6 +104,7 @@ export class SegmentTrie<T> {
 		}
 		else {
 			const seg = segs[i];
+			if (seg === undefined) return;
 			if (node.named[seg]) this.walk(node.named[seg], segs, i + 1, found);
 			if (node.star) this.walk(node.star, segs, i + 1, found);
 		}
@@ -130,6 +131,7 @@ export class SegmentTrie<T> {
 		}
 		else {
 			const seg = segs[i];
+			if (seg === undefined) return false;
 			const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 			if (child && this.removeAt(child, segs, i + 1, value)) {
 				if (seg === STARSTAR) delete node.starstar;

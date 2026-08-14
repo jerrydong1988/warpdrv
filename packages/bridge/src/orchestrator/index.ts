@@ -68,6 +68,7 @@ export type TPureCompletionChunkHandler = (partType: string, deltaText: string) 
 
 // Track in-flight inference URLs per thread so resume can continue
 const threadInferenceUrls: Map<TThreadId, string> = new Map();
+const MAX_TRACKED_INFERENCE_URLS = 200;
 
 export class Orchestrator {
 	private mcpClient: IMcpClient;
@@ -294,6 +295,12 @@ export class Orchestrator {
 
 			// Stash inference URL for post-approval resume
 			threadInferenceUrls.set(request.threadId, inferenceUrl);
+			// Bound the map — entries were previously never evicted, growing
+			// without limit over a long-lived server.
+			if (threadInferenceUrls.size > MAX_TRACKED_INFERENCE_URLS) {
+				const oldest = threadInferenceUrls.keys().next().value;
+				if (oldest !== undefined) threadInferenceUrls.delete(oldest);
+			}
 
 			// Determine parent for the first assistant message
 			let parentForAssistant: string | null = request.parentId ?? null;
@@ -693,6 +700,53 @@ export class Orchestrator {
 						//console.log(new Date(), '[Orch] finish_reason received');
 						finishReason = fr;
 					}
+					if (chunk.timings) timings = chunk.timings as Record<string, number>;
+					if (chunk.usage) usage = chunk.usage as Record<string, number>;
+				}
+			}
+
+			// Flush any final unterminated SSE line — usage/timings/error chunks
+			// frequently arrive without a trailing newline and were dropped.
+			if (buffer.trim()) {
+				const { chunks: finalChunks } = parseSSEBuffer(buffer, true);
+				buffer = '';
+				for (const chunk of finalChunks) {
+					if (chunk.error || chunk.warpcore_event === 'error') {
+						streamError = chunk.error ?? 'Inference error from server';
+						break;
+					}
+					const delta = chunk.choices?.[0]?.delta;
+					if (delta?.content) {
+						fullText += delta.content;
+						if (turn.currentReasoningPart) { await this.flushReasoningPart(turn); }
+						if (!turn.currentTextPart) {
+							turn.currentTextPart = { id: crypto.randomUUID(), text: '' };
+							this.broadcaster.emit({
+								type: 'message.patched',
+								messageId: turn.assistantMessageId,
+								threadId: request.threadId,
+								updates: {
+									addParts: [{
+										id: turn.currentTextPart.id,
+										type: EMessagePartType.TEXT,
+										orderIndex: turn.partOrderCounter,
+										text: '',
+									}],
+								},
+							});
+						}
+						turn.currentTextPart.text += delta.content;
+						this.broadcaster.emit({
+							type: 'message.chunk',
+							messageId: turn.assistantMessageId,
+							threadId: request.threadId,
+							partId: turn.currentTextPart.id,
+							partType: EMessagePartType.TEXT,
+							deltaText: delta.content,
+						});
+					}
+					const fr2 = chunk.choices?.[0]?.finish_reason;
+					if (fr2) finishReason = fr2;
 					if (chunk.timings) timings = chunk.timings as Record<string, number>;
 					if (chunk.usage) usage = chunk.usage as Record<string, number>;
 				}
@@ -1180,7 +1234,8 @@ export class Orchestrator {
 				return res.json();
 			})
 			.then(body => {
-				const title = body?.choices?.[0]?.message?.content ?? '';
+				const data = body as { choices?: { message?: { content?: string } }[] } | null;
+				const title = data?.choices?.[0]?.message?.content ?? '';
 				if (!title) throw new Error('Empty title response');
 				return title.replace(/^["']|["']$/g, '').trim();
 			});
@@ -1297,6 +1352,33 @@ export class Orchestrator {
 
 					const fr = chunk.choices?.[0]?.finish_reason;
 					if (fr) finishReason = fr;
+					if (chunk.timings) timings = chunk.timings as Record<string, number>;
+					if (chunk.usage) usage = chunk.usage as Record<string, number>;
+				}
+			}
+
+			// Flush the final unterminated SSE line (usage/timings/error chunks
+			// often arrive without a trailing newline and were dropped).
+			if (buffer.trim()) {
+				const { chunks: finalChunks } = parseSSEBuffer(buffer, true);
+				buffer = '';
+				for (const chunk of finalChunks) {
+					if (chunk.error || chunk.warpcore_event === 'error') {
+						streamError = chunk.error ?? 'Inference error from server';
+						break;
+					}
+					const delta = chunk.choices?.[0]?.delta;
+					if (delta?.content) {
+						fullText += delta.content;
+						if (currentReasoningPart) flushReasoning();
+						if (!currentTextPart) {
+							currentTextPart = { id: crypto.randomUUID(), text: '' };
+						}
+						currentTextPart.text += delta.content;
+						onChunk?.('text', delta.content);
+					}
+					const fr2 = chunk.choices?.[0]?.finish_reason;
+					if (fr2) finishReason = fr2;
 					if (chunk.timings) timings = chunk.timings as Record<string, number>;
 					if (chunk.usage) usage = chunk.usage as Record<string, number>;
 				}
