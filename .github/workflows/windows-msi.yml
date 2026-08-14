@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         working-directory: packages/server
         run: |
-          npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node
+          npx esbuild src/index.ts --bundle --outfile=dist/server.cjs --format=cjs --platform=node --target=node22 --minify=false --external:kokoro-js --external:@huggingface/transformers --external:onnxruntime-node --external:tree-sitter --external:tree-sitter-typescript --external:tree-sitter-javascript --external:tree-sitter-python --external:tree-sitter-rust --external:tree-sitter-go --external:tree-sitter-cpp --external:tree-sitter-java --external:tree-sitter-php --external:@node-rs/xxhash --external:ignore
           Copy-Item ..\..\node_modules\better-sqlite3\build\Release\better_sqlite3.node dist\
           npx @yao-pkg/pkg dist/server.cjs --target node24-win-x64 --output dist/warpcore-server.exe --compress GZip
           node ..\..\.github\scripts\copy-runtime-deps.cjs win32 x64

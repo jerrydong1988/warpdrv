@@ -66,6 +66,31 @@ for (const packageName of ['kokoro-js', '@huggingface/transformers', 'onnxruntim
 	copyPackage(packageDir, packageName);
 }
 
+// tree-sitter grammars (used by codeGraphService) — mark the core package
+// plus the grammar bindings as external in esbuild and ship them here.
+for (const packageName of [
+	'tree-sitter', 'tree-sitter-typescript', 'tree-sitter-javascript',
+	'tree-sitter-python', 'tree-sitter-rust', 'tree-sitter-go', 'tree-sitter-cpp',
+	'tree-sitter-java', 'tree-sitter-php', 'ignore',
+]) {
+	const packageDir = path.join(rootNodeModules, packageName);
+	if (fs.existsSync(path.join(packageDir, 'package.json'))) {
+		copyPackage(packageDir, packageName);
+	}
+}
+
+// @node-rs native bindings (xxhash loader + platform-specific .node) and
+// @vscode ripgrep loader + binaries (used by the rg MCP tool).
+for (const scope of ['@node-rs', '@vscode']) {
+	const scopeDir = path.join(rootNodeModules, scope);
+	if (!fs.existsSync(scopeDir)) continue;
+	for (const entry of fs.readdirSync(scopeDir)) {
+		const packageDir = path.join(scopeDir, entry);
+		if (!fs.existsSync(path.join(packageDir, 'package.json'))) continue;
+		copyPackage(packageDir, `${scope}/${entry}`);
+	}
+}
+
 if (targetOs && targetArch) {
 	const napiRoot = path.join(outputRoot, 'onnxruntime-node', 'bin', 'napi-v3');
 	if (fs.existsSync(napiRoot)) {
