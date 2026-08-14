@@ -22,17 +22,23 @@ export function parseSSELine(line: string): ISSEChunk | null {
 // Parse a buffer of SSE text, returning parsed chunks and the remaining buffer.
 // With isFinal=true the whole buffer is treated as complete lines (used to
 // flush the final unterminated line when the stream ends — otherwise the last
-// chunk, e.g. usage or an error, is silently dropped).
-export function parseSSEBuffer(buffer: string, isFinal = false): { chunks: ISSEChunk[]; remaining: string } {
+// chunk, e.g. usage or an error, is silently dropped). 'done' reports whether
+// a data: [DONE] line was seen.
+export function parseSSEBuffer(buffer: string, isFinal = false): { chunks: ISSEChunk[]; remaining: string; done: boolean } {
 	const lines = buffer.split('\n');
 	let remaining = '';
 	if (!isFinal) remaining = lines.pop() ?? '';
 	const chunks: ISSEChunk[] = [];
+	let done = false;
 	for (const line of lines) {
+		if (line.trim() === 'data: [DONE]') {
+			done = true;
+			continue;
+		}
 		const chunk = parseSSELine(line);
 		if (chunk) chunks.push(chunk);
 	}
-	return { chunks, remaining };
+	return { chunks, remaining, done };
 }
 
 // Check if a line indicates the stream is done.

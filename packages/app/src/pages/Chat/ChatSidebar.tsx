@@ -8,13 +8,18 @@ import { ChatToolsContentPanel } from './ChatToolsSidebar';
 import { ThreadSearchPanel } from './ThreadSearchPanel';
 import { UiSpacePanel } from './ui-space/UiSpacePanel';
 import type { IChatInferenceParams, IChatPreset } from '@warpcore/shared';
-import { LuPlug, LuSlidersHorizontal } from 'react-icons/lu';
+import { LuPlug, LuSlidersHorizontal, LuListTodo } from 'react-icons/lu';
 import { VscTools } from 'react-icons/vsc';
 import { TbApps } from 'react-icons/tb';
+import { FaShieldAlt } from 'react-icons/fa';
+import { TiFlowSwitch } from 'react-icons/ti';
 import { useStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 import { EUISpaceLoc } from '@/store/slices/uiSpaces';
+import { ChatGuardrailsContentPanel } from './ChatGuardrailsPanel';
+import { ChatTodosContentPanel } from './ChatTodosPanel';
+import { ChatModesContentPanel } from './ChatModesPanel';
 
 interface IChatSidebarProps {
 	configParams: IChatInferenceParams;
@@ -38,6 +43,7 @@ export const ChatSidebar = React.memo(({
 	const setChatSidebarOpen = useStore(s => s.setChatSidebarOpen);
 	const openChatSidebarTab = useStore(s => s.openChatSidebarTab);
 	const currentThreadId = useStore(s => s.currentThreadId);
+	const rightPanelComponents = useStore(s => s.uiSpaceComponentsByLocation[EUISpaceLoc.RIGHT_PANEL]);
 
 	// ESC to close sidebar when in search mode
 	useEffect(() => {
@@ -86,6 +92,9 @@ export const ChatSidebar = React.memo(({
 						if (chatSidebarTab === EChatSidebarTab.TOOLS) return <ChatToolsContentPanel threadId={currentThreadId} />;
 						if (chatSidebarTab === EChatSidebarTab.SEARCH) return <ThreadSearchPanel threadId={currentThreadId} />;
 						if (chatSidebarTab === EChatSidebarTab.RIGHT_PANEL) return <UiSpacePanel location={EUISpaceLoc.RIGHT_PANEL} />;
+						if (chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL) return <ChatGuardrailsContentPanel />;
+						if (chatSidebarTab === EChatSidebarTab.TODOS_PANEL) return <ChatTodosContentPanel />;
+						if (chatSidebarTab === EChatSidebarTab.MODES_PANEL) return <ChatModesContentPanel />;
 						return null;
 					})()}
 				</Box>
@@ -106,6 +115,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Search in Chat"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.SEARCH && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -117,20 +127,77 @@ export const ChatSidebar = React.memo(({
 				</Flex>
 
 				{/* Applets tab */}
+				{rightPanelComponents && Object.keys(rightPanelComponents).length > 0 && (
+					<Flex
+						mt="1"
+						onClick={() => toggleTab(EChatSidebarTab.RIGHT_PANEL)}
+						px="3"
+						py="2.5"
+						title="Applets"
+						borderRadius="lg"
+						cursor="pointer"
+						transition="all 0.15s"
+						bg={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
+						borderWidth="1px"
+						borderColor={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
+						_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
+					>
+						<TbApps size={18} color={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
+					</Flex>
+				)}
+
+				{/* Guardrails tab */}
 				<Flex
 					mt="1"
-					onClick={() => toggleTab(EChatSidebarTab.RIGHT_PANEL)}
+					onClick={() => toggleTab(EChatSidebarTab.GUARDRAILS_PANEL)}
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Guardrails"
 					cursor="pointer"
 					transition="all 0.15s"
-					bg={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
+					bg={chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
 					borderWidth="1px"
-					borderColor={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
+					borderColor={chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
 					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
 				>
-					<TbApps size={18} color={chatSidebarTab === EChatSidebarTab.RIGHT_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
+					<FaShieldAlt size={18} color={chatSidebarTab === EChatSidebarTab.GUARDRAILS_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
+				</Flex>
+
+				{/* Todos tab */}
+				<Flex
+					mt="1"
+					onClick={() => toggleTab(EChatSidebarTab.TODOS_PANEL)}
+					px="3"
+					py="2.5"
+					borderRadius="lg"
+					title="Todos"
+					cursor="pointer"
+					transition="all 0.15s"
+					bg={chatSidebarTab === EChatSidebarTab.TODOS_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
+					borderWidth="1px"
+					borderColor={chatSidebarTab === EChatSidebarTab.TODOS_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
+					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
+				>
+					<LuListTodo size={18} color={chatSidebarTab === EChatSidebarTab.TODOS_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
+				</Flex>
+
+				{/* Modes tab */}
+				<Flex
+					mt="1"
+					onClick={() => toggleTab(EChatSidebarTab.MODES_PANEL)}
+					px="3"
+					py="2.5"
+					title="Modes"
+					borderRadius="lg"
+					cursor="pointer"
+					transition="all 0.15s"
+					bg={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
+					borderWidth="1px"
+					borderColor={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-border-default)' : 'transparent'}
+					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
+				>
+					<TiFlowSwitch size={18} color={chatSidebarTab === EChatSidebarTab.MODES_PANEL && chatSidebarOpen ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} />
 				</Flex>
 
 				{/* MCP tab */}
@@ -140,6 +207,7 @@ export const ChatSidebar = React.memo(({
 					px="3"
 					py="2.5"
 					borderRadius="lg"
+					title="Permissions"
 					cursor="pointer"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.TOOLS && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
@@ -158,6 +226,7 @@ export const ChatSidebar = React.memo(({
 					py="2.5"
 					borderRadius="lg"
 					cursor="pointer"
+					title="Config"
 					transition="all 0.15s"
 					bg={chatSidebarTab === EChatSidebarTab.CONFIG && chatSidebarOpen ? 'var(--wc-bg-card)' : 'transparent'}
 					borderWidth="1px"

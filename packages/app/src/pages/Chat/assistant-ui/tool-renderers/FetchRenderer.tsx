@@ -2,31 +2,27 @@ import React from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
 import { Globe } from 'lucide-react';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
-import { useTranslation } from 'react-i18next';
 
 export const FetchRenderer = React.memo((props: {
 	url?: string,
 	[key: string]: unknown
 }) => {
-	const { t } = useTranslation();
 	const { url, method, ...rest } = props;
 	const extras = Object.entries(rest).filter(([, v]) => v !== undefined);
 
 	return (
 		<Box px="3" py="2">
-			<HStack gap="2" align="center">
+			{/* Header removed — info shown in mini renderer */}
+			{/* <HStack gap="2" align="center">
 				<Globe size={13} color="var(--wc-text-secondary)" />
-				<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
-					{url ?? t('common:ui.noUrl')}
+								<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">
+					<Text as="span" color="var(--wc-text-muted)">{(method as string) || "GET"}</Text> {url ?? '(no url)'}
 				</Text>
-			</HStack>
-			<Text fontSize="10px" color="var(--wc-text-faint)" pt="1.5" pl="5">
-				{t('common:ui.method')}<Text as="span" color="var(--wc-text-muted)">{(method as string)}</Text>
-			</Text>
+			</HStack> */}
 			{/* {extras.length > 0 && (
 				<HStack gap="3" mt="1" pl="5" flexWrap="wrap">
 					{extras.map(([k, v]) => (
-						<Text key={k} fontSize="10px" color="var(--wc-text-faint)">
+												<Text key={k} fontSize="calc(var(--chat-font-size) - 4px)" color="var(--wc-text-faint)">
 							{k}: <Text as="span" color="var(--wc-text-muted)">{String(v)}</Text>
 						</Text>
 					))}
@@ -47,4 +43,13 @@ export const FetchRendererMeta: IToolCallRenderer = {
 		const { url: _u, uri: _i, link: _l, endpoint: _e, address: _a, ...rest } = args;
 		return { url, ...rest };
 	},
+  renderMini: React.memo(({ args }) => {
+    const url = args.url ?? args.uri ?? args.link ?? args.endpoint ?? args.address;
+    const method = (args.method as string) || 'GET';
+    if (typeof url !== 'string') return '';
+    const truncated = url.length > 70 ? url.slice(0, 67) + '...' : url;
+    return (
+      <Text whiteSpace="nowrap">{method} {truncated}</Text>
+    );
+  }),
 };

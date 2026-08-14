@@ -869,6 +869,7 @@ dictationPTTKey,
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
+							{/* fsAllowedRoots UI — commented out, sandbox check bypassed
 							<Box>
 								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">{t('sections.fsAllowedRoots')}</Text>
 								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">{t('descriptions.fsAllowedRoots')}</Text>
@@ -897,6 +898,7 @@ dictationPTTKey,
 									</HStack>
 								</VStack>
 							</Box>
+							*/}
 						</VStack>
 					</Card>
 

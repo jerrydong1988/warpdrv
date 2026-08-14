@@ -142,7 +142,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 
 		try {
 			if (!activeWhisperServerId || !activeWhisperServer) return;
-			const text = await transcribeAudioRaw(activeWhisperServerId, activeWhisperServer, audioBlob);
+			const text = (await transcribeAudioRaw(activeWhisperServerId, activeWhisperServer, audioBlob))?.replace(/\n+/g, ' ');
 			if (text) onTranscript(text);
 		} catch (err) {
 			console.error('[VoiceInput] PTT transcription error:', err);
@@ -204,7 +204,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				try {
 					if (!activeWhisperServerId || !activeWhisperServer) { console.log('[VAD Chat] no active server, skipping'); return; }
 					const wavBlob = float32ToWavBlob(audio);
-					const text = await transcribeAudioRaw(activeWhisperServerId, activeWhisperServer, wavBlob);
+					const text = (await transcribeAudioRaw(activeWhisperServerId, activeWhisperServer, wavBlob))?.replace(/\n+/g, ' ');
 					if (text) {
 						console.log('[VAD Chat] transcribed:', JSON.stringify(text.slice(0, 80)));
 						if (useStore.getState().annotatorVisible) {

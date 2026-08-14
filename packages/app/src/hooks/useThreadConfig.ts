@@ -3,11 +3,13 @@ import { useStore } from '../store';
 import { DEFAULT_INFERENCE_PARAMS } from '@/pages/Chat/ChatConfigSidebar';
 import { EReasoningEffort, IChatInferenceParams, IThreadConfig } from '@warpcore/shared';
 import { fetchThreadConfig, updateThreadConfig } from '@/api';
+import { fetchWorkspaceState } from '@/api/services';
 
 export function useThreadConfig(selectedPresetId: string | null,) {
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
 	const currentInferenceParams = useStore(s => s.currentInferenceParams as unknown as IChatInferenceParams);
+	const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
 
 	// Actions
 	const setCurrentSystemPrompt = useStore(s => s.setCurrentSystemPrompt);
@@ -64,42 +66,89 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 		flushChanges();
 	}, [flushChanges]);
 
+	// Load workspace state from store or fetch
+	const loadWorkspaceState = async (wsId: string) => {
+		const store = useStore.getState();
+		let wsState = store.workspaceStates[wsId];
+		if (!wsState || Object.keys(wsState).length === 0) {
+			const res = await fetchWorkspaceState(wsId);
+			if (res.ok && res.data) {
+				store.initWorkspaceState(wsId, res.data);
+				wsState = res.data;
+			}
+		}
+		return wsState;
+	};
+
+	// Apply workspace defaults
+	const setWorkspaceDefaults = (wsState: Record<string, unknown>) => {
+		const store = useStore.getState();
+		if (wsState.defaultServerId) {
+			store.setTempThreadServerId(wsState.defaultServerId as string);
+		}
+		if (wsState.defaultPresetId) {
+			const preset = store.chatPresets.find(p => p.id === wsState.defaultPresetId);
+			if (preset) store.setCurrentSystemPrompt(preset.systemPrompt);
+		}
+		if (wsState.defaultModeId) {
+			store.setThreadState(null, { modeId: wsState.defaultModeId as string });
+		}
+		const effort = (wsState.defaultReasoningEffort as string) ?? EReasoningEffort.NONE;
+		store.setCurrentInferenceParams({
+			reasoningEffort: effort,
+			enableThinking: effort !== 'none',
+		} as unknown as Record<string, unknown>);
+	};
+
+	// Standard defaults (no workspace)
+	const setDefaults = () => {
+		setCurrentInferenceParams({
+			reasoningEffort: EReasoningEffort.NONE, enableThinking: false
+		});
+		setCurrentSystemPrompt('');
+	};
+
 	const loadConfig = useCallback(async (threadId: string | null) => {
-		const setDefaults = () => {
-			setCurrentInferenceParams({
-				reasoningEffort: EReasoningEffort.NONE, enableThinking: false
-			 });
-			setCurrentSystemPrompt('');
+		const store = useStore.getState();
+		const wsId = store.activeWorkspaceId;
+
+		const resolveDefaults = async () => {
+			if (wsId) {
+				const wsState = await loadWorkspaceState(wsId);
+				if (wsState) {
+					setWorkspaceDefaults(wsState);
+				} else {
+					setDefaults();
+				}
+			} else {
+				setDefaults();
+			}
 		};
 
 		if (!threadId) {
-			setDefaults();
+			await resolveDefaults();
 			return;
 		}
 
 		try {
 			const res = await fetchThreadConfig(threadId);
-			if (!res.ok) {
-				setDefaults();
+			if (!res.ok || !res.data) {
+				await resolveDefaults();
 				return;
 			}
 
-			const config = res.data;
-			if (!config) setDefaults();
-			else {
-				let parsedParams: Record<string, unknown> = {};
-				try {
-					parsedParams = config.params ? JSON.parse(config.params) : {};
-				} catch {
-					console.warn('[useThreadConfig] Failed to parse params, using defaults');
-					parsedParams = {};
-				}
-				setCurrentSystemPrompt(config.systemPrompt ?? '');
-				setCurrentInferenceParams(parsedParams);
+			let parsedParams: Record<string, unknown> = {};
+			try {
+				parsedParams = res.data.params ? JSON.parse(res.data.params) : {};
+			} catch {
+				console.warn('[useThreadConfig] Failed to parse params, using defaults');
+				parsedParams = {};
 			}
+			setCurrentSystemPrompt(res.data.systemPrompt ?? '');
+			setCurrentInferenceParams(parsedParams);
 		} catch (err) {
 			console.error('[useThreadConfig] loadConfig failed:', err);
-			setDefaults();
+			await resolveDefaults().catch(() => setDefaults());
 		}
 	}, []);
 

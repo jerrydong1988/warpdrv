@@ -379,6 +379,7 @@ export interface ICompletionRequest {
 	generateTitle?: boolean;
 	attachAllTools?: boolean;
 	attachedTools?: IToolAttachment[];
+	skipToolsSave?: boolean;
 	messageState?: Record<string, unknown>;
 	threadState?: Record<string, unknown>;
 }
@@ -475,6 +476,9 @@ export interface ISSEChunk {
 	error?: string;
 	[key: string]: unknown;
 }
+
+// Persistence interface used by the server services
+export type { IPersistence } from './interfaces';
 
 // Message conversion utilities
 export { convertMessagesToOpenAIFormat, type TOpenAIMessage } from '../messageConverter';

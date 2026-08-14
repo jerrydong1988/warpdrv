@@ -69,6 +69,7 @@ export const fetchDefinition = {
 		},
 		required: ['url'],
 	},
+	resultLimit: 200000,
 };
 
 async function doFetch(url: string, method: string, headers: Record<string, string> | undefined, body: string | undefined, redirectCount = 0): Promise<{ status: number; headers: Record<string, string>; body: string }> {

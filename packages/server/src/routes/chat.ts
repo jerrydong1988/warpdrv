@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { createSession } from 'better-sse';
 import { persistence, orchestrator, broadcaster } from '../index';
 import { store } from '../util/store';
+import { sseManager } from '../services/sseManagerInstance';
 import type { IChatThreadCreatePayload, IChatMessageCreatePayload } from '@warpcore/shared';
 import { EServerStatus } from '@warpcore/shared';
 import { EChatRole, EMessagePartType, ICompletionRequest, type IFolder } from '@warpcore/bridge';
@@ -130,6 +131,7 @@ chatRouter.put('/threads/:id', async (req, res) => {
 			whisperServerId: body.whisperServerId ?? meta.whisperServerId,
 			tags: body.tags ?? meta.tags,
 			enableAutoEmbed: body.enableAutoEmbed ?? meta.enableAutoEmbed,
+			starred: body.starred ?? meta.starred,
 		});
 
 		await persistence.updateThread(req.params.id, {
@@ -512,6 +514,7 @@ chatRouter.get('/presets/:id', (req, res) => {
 chatRouter.post('/presets', (req, res) => {
 	try {
 		const preset = createChatPreset(req.body as IChatPresetCreatePayload);
+		sseManager.emit('chatPresets:update', preset);
 		res.json({ ok: true, data: preset, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -522,6 +525,7 @@ chatRouter.put('/presets/:id', (req, res) => {
 	try {
 		const preset = updateChatPreset(req.params.id, req.body as Partial<IChatPresetCreatePayload>);
 		if (!preset) return res.status(404).json({ ok: false, data: null, error: 'Not found' });
+		sseManager.emit('chatPresets:update', preset);
 		res.json({ ok: true, data: preset, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -532,6 +536,7 @@ chatRouter.delete('/presets/:id', (req, res) => {
 	try {
 		const ok = deleteChatPreset(req.params.id);
 		if (!ok) return res.status(404).json({ ok: false, data: null, error: 'Not found' });
+		sseManager.emit('chatPresets:delete', { id: req.params.id });
 		res.json({ ok: true, data: null, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
@@ -704,7 +709,7 @@ chatRouter.put('/folders/reorder', async (req, res) => {
 });
 
 chatRouter.post('/tool-calls/:id/resume', async (req, res) => {
-	const { decision, threadId, serverId, systemPrompt, inferenceParams, attachAllTools, attachedTools } = req.body as {
+	const { decision, threadId, serverId, systemPrompt, inferenceParams, attachAllTools, attachedTools, skipToolsSave } = req.body as {
 		decision: 'approve' | 'deny';
 		threadId: string;
 		serverId: string;
@@ -712,6 +717,7 @@ chatRouter.post('/tool-calls/:id/resume', async (req, res) => {
 		inferenceParams: Record<string, unknown>;
 		attachAllTools?: boolean;
 		attachedTools?: any[];
+		skipToolsSave?: boolean;
 	};
 
 	if (decision !== 'approve' && decision !== 'deny') {
@@ -738,6 +744,7 @@ chatRouter.post('/tool-calls/:id/resume', async (req, res) => {
 		inferenceParams: inferenceParams as any,
 		attachAllTools,
 		attachedTools,
+		skipToolsSave,
 	};
 
 	// Track abort for this resume — same pattern as completions route

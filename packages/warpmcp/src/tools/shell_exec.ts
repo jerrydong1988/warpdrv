@@ -27,6 +27,7 @@ export const shellExecDefinition = {
 		},
 		required: ['command'],
 	},
+	resultLimit: 40960,
 };
 
 export class ShellCommandValidationError extends Error {

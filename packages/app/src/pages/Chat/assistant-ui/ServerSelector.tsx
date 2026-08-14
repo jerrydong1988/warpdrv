@@ -54,8 +54,8 @@ export const ThreadServerSelector = React.memo(({
 	const tempThreadServerId = useStore(s => s.tempThreadServerId);
 	const setTempThreadServerId = useStore(s => s.setTempThreadServerId);
 
-	const assignedServerId = useMemo(() => 
-		thread?.meta ? parseThreadMeta(thread.meta).serverId : null, 
+	const assignedServerId = useMemo(() =>
+		thread?.meta ? parseThreadMeta(thread.meta).serverId : null,
 		[thread]
 	);
 
@@ -98,7 +98,7 @@ export const ThreadServerSelector = React.memo(({
 		<Box position="relative" className={shake ? 'animate-[jiggle_0.4s_ease-in-out]' : ''}>
 			<HStack
 				gap="2"
-				p="2.5"
+				p="2"
 				cursor={'pointer'}
 				borderRadius="lg"
 				borderWidth="1px"
@@ -108,8 +108,8 @@ export const ThreadServerSelector = React.memo(({
 				onClick={() => setOpen(!open)}
 				fontSize="12px"
 				color="var(--wc-text-primary)"
-				minW="130px"
-				maxW="130px"
+				minW="150px"
+				maxW="150px"
 				position="relative"
 				overflow="hidden"
 			>

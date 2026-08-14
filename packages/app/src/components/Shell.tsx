@@ -278,14 +278,14 @@ function SidebarLink({
 				borderRadius="lg"
 				cursor="pointer"
 				transition="all 0.15s ease"
-				bg={isActive ? 'rgba(255, 255, 255, 0.065)' : 'transparent'}
-				color={isActive ? '#ccc' : 'rgba(255, 255, 255, 0.5)'}
+				bg={isActive ? 'var(--wc-border-subtle)' : 'transparent'}
+				color={isActive ? 'var(--wc-text-primary)' : 'var(--wc-text-secondary)'}
 				borderWidth="1px"
-				borderColor={isActive ? 'rgba(90, 90, 90, 0.4)' : 'transparent'}
+				borderColor={isActive ? 'var(--wc-border-default)' : 'transparent'}
 				justifyContent={collapsed ? 'center' : 'flex-start'}
 				_hover={{
-					bg: 'rgba(255, 255, 255, 0.08)',
-					color: 'rgba(255, 255, 255, 0.8)',
+					bg: 'var(--wc-bg-active)',
+					color: 'var(--wc-text-primary)',
 				}}
 			>
 				<Box position="relative" flexShrink={0}>
@@ -332,12 +332,12 @@ export const Shell = React.memo(() => {
 			<Flex flex="1" overflow="hidden">
 				{/* Sidebar */}
 				<Flex
-					bg={sseConnected ? '#030303' : '#7f1d1d'}
+					bg={sseConnected ? 'var(--wc-bg-page)' : '#7f1d1d'}
 					direction="column"
 					w={isCollapsed ? '60px' : '220px'}
 					minW={isCollapsed ? '60px' : '220px'}
 					borderRightWidth="1px"
-					borderColor="rgba(255, 255, 255, 0.1)"
+					borderColor="var(--wc-border-subtle)"
 					px={isCollapsed ? '2' : '4'}
 					pt={'2'}
 					pb={("0")}

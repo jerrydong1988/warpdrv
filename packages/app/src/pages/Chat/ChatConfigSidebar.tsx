@@ -3,10 +3,7 @@ import { Box, Flex, Text, HStack, VStack, Input, Textarea, IconButton, SegmentGr
 import { Settings, ChevronRight, ChevronLeft, Save, Trash2, Plus, RotateCcw } from 'lucide-react';
 import { LuCode, LuLayoutGrid } from 'react-icons/lu';
 import {
-	fetchChatPresets,
-	createChatPreset,
 	updateChatPreset as updateChatPresetApi,
-	deleteChatPreset,
 	updateSettings,
 } from '../../api/services';
 import type { IChatPreset, IChatInferenceParams, ISettings, IModel } from '@warpcore/shared';
@@ -17,6 +14,7 @@ import { useStore } from '@/store';
 import { useQuery, useListQuery } from '@/hooks/useQuery';
 import { useDependantState } from "@/hooks/useDependantState";
 import { useTranslation } from 'react-i18next';
+import { ProjectRootPicker } from './ProjectRootPicker';
 
 // ============================================================
 // Default params — must match the one in ChatPage
@@ -235,7 +233,9 @@ export function ChatConfigContentPanel({
 	onPresetSelect,
 }: IChatConfigContentPanelProps) {
 	const { t } = useTranslation();
-	const [presets, setPresets] = useState<IChatPreset[]>([]);
+	const chatPresets = useStore(s => s.chatPresets);
+	const addChatPreset = useStore(s => s.addChatPreset);
+	const removeChatPreset = useStore(s => s.removeChatPreset);
 	const [advancedOpen, setAdvancedOpen] = useState(false);
 	const [savePresetName, setSavePresetName] = useState('');
 	const [showSaveInput, setShowSaveInput] = useState(false);
@@ -253,12 +253,7 @@ export function ChatConfigContentPanel({
 
 	const { error: jsonError, validateAndParse, clearError } = useJsonValidator<Partial<IChatInferenceParams>>();
 
-	const loadPresets = useCallback(async () => {
-		const res = await fetchChatPresets();
-		if (res.ok) setPresets(res.data as IChatPreset[]);
-	}, []);
-
-	useEffect(() => { loadPresets(); }, [loadPresets]);
+	const presets = chatPresets;
 
 	const updateParam = useCallback((key: keyof IChatInferenceParams, value: IChatInferenceParams[keyof IChatInferenceParams]) => {
 		onParamsChange({ ...params, [key]: value });
@@ -266,20 +261,18 @@ export function ChatConfigContentPanel({
 
 	async function handleSavePreset() {
 		if (!savePresetName.trim()) return;
-		await createChatPreset({
+		await addChatPreset({
 			name: savePresetName.trim(),
 			systemPrompt,
 			params,
 		});
 		setSavePresetName('');
 		setShowSaveInput(false);
-		await loadPresets();
 	}
 
 	async function handleDeletePreset(id: string) {
-		await deleteChatPreset(id);
+		await removeChatPreset(id);
 		if (selectedPresetId === id) onPresetSelect(null, null);
-		await loadPresets();
 	}
 
 	function handlePresetChange(presetId: string) {
@@ -372,6 +365,12 @@ export function ChatConfigContentPanel({
 					resize="vertical"
 					p="2"
 				/>
+			</Box>
+
+			{/* Project Root */}
+			<Box>
+				<SectionHeader title="Project Root" />
+				<ProjectRootPicker />
 			</Box>
 
 			{/* Inference Params View Mode */}

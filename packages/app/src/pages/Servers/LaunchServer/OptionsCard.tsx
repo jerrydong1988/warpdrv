@@ -25,6 +25,7 @@ export const OptionsCard = React.memo(({
 					<ToggleChip label={t('common:ui.noWarmup')} active={params.noWarmup} onClick={() => onParamChange('noWarmup', !params.noWarmup)} />
 					<ToggleChip label={t('common:ui.jinja')} active={params.jinja} onClick={() => onParamChange('jinja', !params.jinja)} />
 					<ToggleChip label={t('common:ui.swaFull')} active={params.swaFull} onClick={() => onParamChange('swaFull', !params.swaFull)} />
+					<ToggleChip label="Preserve Thinking" active={params.preserveThinking ?? false} onClick={() => onParamChange('preserveThinking', !(params.preserveThinking ?? false))} />
 				</HStack>
 				<Flex gap="4">
 					<NumberField label={t('common:ui.batchSize')} value={params.batchSize} onChange={v => onParamChange('batchSize', v)} min={1} step={256} />

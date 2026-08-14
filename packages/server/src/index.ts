@@ -16,8 +16,6 @@ import { hubRouter } from './routes/hub';
 import { tokensRouter } from './routes/tokens';
 import { authRouter } from './routes/auth';
 import { authMiddleware, adminMiddleware } from './middleware/auth';
-import { rateLimiter } from './middleware/rateLimiter';
-import { errorHandler } from './middleware/errorHandler';
 import type { ISettings, IServer, IDownload, IDevice, IBackend, IBackendGroup, IWhisperBackend, IWhisperServer } from '@warpcore/shared';
 import type { TBackendId, TBackendGroupId } from '@warpcore/shared';
 import { DEFAULT_SETTINGS, EServerStatus, EDownloadStatus, SSE_CHANNELS_CHECKPOINT } from '@warpcore/shared';
@@ -28,11 +26,14 @@ import { mcpRouter } from './routes/mcp';
 import { proxyRouter } from './routes/proxy';
 import { startModelProxy, getProxyStatus } from './services/modelProxy';
 import { summaryRouter } from './routes/summary';
+import { listChatPresets } from './util/chatPresets';
 import { sseManager } from './services/sseManagerInstance';
 import { getAllServerStats, getServerStats } from './services/statsPoller';
 import { getAllServerSlots, getServerSlots } from './services/slotStateTracker';
 import { listCheckpoints } from './services/checkpointService';
 import { recipesRouter } from './routes/recipes';
+import { modesRouter } from './routes/modes';
+import { guardrailsRouter } from './routes/guardrails';
 import { checkpointsRouter } from './routes/checkpoints';
 import { clientLogsRouter } from './routes/clientLogs';
 import { whisperBackendsRouter } from './routes/whisperBackends';
@@ -40,36 +41,39 @@ import { whisperServersRouter } from './routes/whisperServers';
 import { whisperModelsRouter, loadCachedWhisperModels, getCachedWhisperModels } from './routes/whisperModels';
 import { setRecipeRunnerSSE, getActiveRun } from './services/recipeRunner';
 import { listRecipes } from './services/recipeStore';
+import { listModes } from './services/modeStore';
 import { getAllDownloads, getAllDownloadsRecord } from './services/downloadManager';
 import { SqlitePersistence, SqlitePersistenceWithBroadcast, McpClientManager, McpConfig, PermissionManager, Orchestrator, SseBroadcaster } from '@warpcore/bridge/server';
 import { EventNode } from '@warpcore/realmcore';
 import { bootWarpmcp } from './warpmcpRunner';
 import { TodoManager } from './services/todoManager';
+import { CodeGraphService } from './services/codeGraphService';
+import { ChatSearchToolService } from './services/chatSearchToolService';
+import { getProjectRoot } from './services/projectRoot';
 import { embeddingManager } from './services/embeddingManager';
 import { getDataDir } from './util/mcpConfig';
 import { serveStaticApp } from './middleware/serveStatic';
 import { initRealm } from './services/initRealm';
 import path from 'path';
 import os from 'os';
-import { spawnSync } from 'child_process';
-import { createServer } from 'http';
-import { reconcileServers, launchAutoStartServers } from './services/processManager';
-import { reconcileWhisperServers, launchAutoStartWhisperServers } from './services/whisperProcessManager';
 
 const SETTINGS_KEY = 'settings:general';
 
-// Global async-error guards: an unhandled rejection (or thrown exception)
-// would otherwise crash the whole server process (Node >= 15). Log loudly
-// and keep serving — individual request/event handlers must still be fixed,
-// but a single bad promise must not take down every running llama-server.
-process.on('unhandledRejection', (reason, promise) => {
-	console.error('[WarpCore] Unhandled rejection:', reason instanceof Error ? reason.stack ?? reason.message : reason);
-	// Note: unhandledRejection fires after the rejection handler hook; the
-	// promise is already lost, nothing more we can do here.
-});
-process.on('uncaughtException', (err) => {
-	console.error('[WarpCore] Uncaught exception:', err.stack ?? err.message);
-});
+// Bridge components - exported for routes to use
+export let persistence: SqlitePersistence;
+export let mcpClient: McpClientManager;
+export let orchestrator: Orchestrator;
+export let mcpConfig: McpConfig;
+export let broadcaster: SseBroadcaster;
+export let todoManager: TodoManager;
+export { getProjectRoot } from './services/projectRoot';
+export let codeGraphService: CodeGraphService;
+export let chatSearchToolService: ChatSearchToolService;
+
+import { execSync, spawnSync } from 'child_process';
+import { launchAutoStartServers, reconcileServers } from './services/processManager';
+import { reconcileWhisperServers, launchAutoStartWhisperServers } from './services/whisperProcessManager';
+import { createServer } from 'http';
 
 // Whitelist of known-safe shell paths to avoid command injection via $SHELL
 const KNOWN_SHELLS = ['/bin/bash', '/bin/sh', '/usr/bin/bash', '/usr/bin/sh', '/bin/zsh', '/usr/bin/zsh'];
@@ -102,15 +106,17 @@ function resolveShellPath(): string | null {
 	}
 }
 
-// Bridge components - exported for routes to use
-export let persistence: SqlitePersistence;
-export let mcpClient: McpClientManager;
-export let orchestrator: Orchestrator;
-export let mcpConfig: McpConfig;
-export let broadcaster: SseBroadcaster;
-export let todoManager: TodoManager;
+// Global async-error guards: an unhandled rejection (or thrown exception)
+// would otherwise crash the whole server process (Node >= 15).
+process.on('unhandledRejection', (reason) => {
+	console.error('[WarpCore] Unhandled rejection:', reason instanceof Error ? reason.stack ?? reason.message : reason);
+});
+process.on('uncaughtException', (err) => {
+	console.error('[WarpCore] Uncaught exception:', err.stack ?? err.message);
+});
 
 async function main() {
+	
 	const shellPath = resolveShellPath();
 	if (shellPath && shellPath !== process.env.PATH) {
 		// console.log('[debug] resolved shell PATH:', shellPath);
@@ -118,10 +124,10 @@ async function main() {
 	}
 
 	// console.log('[debug] PATH:', process.env.PATH || '(not set)');
-	// console.log('[debug] HOME:', process.env.HOME || '(not set)');
-	// console.log('[debug] RESOURCE_DIR:', process.env.RESOURCE_DIR);
-	// console.log('[debug] execPath:', process.execPath);
-	// console.log('[debug] pkg:', (process as any).pkg);
+	console.log('[debug] HOME:', process.env.HOME || '(not set)');
+	console.log('[debug] RESOURCE_DIR:', process.env.RESOURCE_DIR);
+	console.log('[debug] execPath:', process.execPath);
+	console.log('[debug] pkg:', (process as any).pkg);
 	await runMigrations();
 
 	// Ensure default settings exist
@@ -137,6 +143,8 @@ async function main() {
 	persistence = new SqlitePersistenceWithBroadcast(path.join(dataDir, 'chat.db'), {}, broadcaster);
 	await persistence.init();
 	todoManager = new TodoManager(persistence);
+	codeGraphService = new CodeGraphService(persistence);
+	chatSearchToolService = new ChatSearchToolService(persistence);
 
 	// Initialize MCP
 	mcpConfig = new McpConfig(path.join(dataDir, 'mcp.json'));
@@ -187,17 +195,18 @@ async function main() {
 		next();
 	});
 
+	// CORS: restrict browser origins to the local dev/desktop origins rather
+	// than reflecting any origin.
 	app.use(cors({ origin: ['http://localhost:4400', 'http://127.0.0.1:4400', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
-	app.use(express.json({ limit: '10mb' }));
+	app.use(express.json({ limit: '50mb' }));
 	app.use(cookieParser());
-	app.use(rateLimiter());
 	// Auth routes (no middleware - public endpoints)
 	app.use('/api/auth', authRouter);
 	// Client log route (no auth — server may not be up when errors occur)
 	app.use('/api/client-log', clientLogsRouter);
-	// Control-plane routes: any authenticated token may pass authMiddleware,
-	// but adminMiddleware restricts privileged actions to admin tokens
-	// (local requests bypass auth entirely unless authRequireForLocalhost).
+	// Control-plane routes: authMiddleware accepts any valid token, but
+	// adminMiddleware restricts privileged actions to admin tokens (local
+	// requests bypass auth entirely unless authRequireForLocalhost).
 	app.use('/api/tokens', authMiddleware, adminMiddleware, tokensRouter);
 	app.use('/api/settings', authMiddleware, adminMiddleware, settingsRouter);
 	app.use('/api/backends', authMiddleware, adminMiddleware, backendsRouter);
@@ -209,6 +218,8 @@ async function main() {
 	app.use('/api/servers', authMiddleware, adminMiddleware, serversRouter);
 	app.use('/api/presets', authMiddleware, adminMiddleware, presetsRouter);
 	app.use('/api/proxy', authMiddleware, adminMiddleware, proxyRouter);
+	app.use('/api/modes', authMiddleware, adminMiddleware, modesRouter);
+	app.use('/api/guardrails', authMiddleware, adminMiddleware, guardrailsRouter);
 	app.use('/api/whisper-backends', authMiddleware, adminMiddleware, whisperBackendsRouter);
 	app.use('/api/whisper-servers', authMiddleware, adminMiddleware, whisperServersRouter);
 	app.use('/api/whisper-models', authMiddleware, adminMiddleware, whisperModelsRouter);
@@ -222,9 +233,9 @@ async function main() {
 	app.use('/api/summary', authMiddleware, summaryRouter);
 	// SSE endpoint (protected by auth)
 	app.get('/api/events', authMiddleware, async (req, res) => {
-	// console.log('[SSE] New client');
+		console.log('[SSE] New client');
 		await sseManager.handleConnection(req, res, () => {
-		// console.log('[SSE] Client disconnected');
+			console.log('[SSE] Client disconnected');
 		});
 	});
 
@@ -243,26 +254,20 @@ async function main() {
 		res.json({ ok: true, version: '0.1.0' });
 	});
 
-	// Global error handler
-	app.use(errorHandler);
-
 	const currentSettings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 	// Port: env var overrides settings, defaults to 4400
 	const envPort = process.env.CONTROL_API_PORT;
 	const port = envPort ? parseInt(envPort, 10) : (currentSettings.apiPort ?? DEFAULT_SETTINGS.apiPort);
-	let effectivePort: number;
 	if (isNaN(port) || port < 1 || port > 65535) {
 		console.error(`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using default 4400.`);
-		effectivePort = DEFAULT_SETTINGS.apiPort ?? 4400;
-	} else {
-		effectivePort = port;
 	}
 
 	const host = currentSettings.apiHost ?? DEFAULT_SETTINGS.apiHost;
+
 	// Register SSE channels
 	function registerSSEChannels(): void {
-	// console.log('[SSE] Start channels..');
+		console.log('[SSE] Start channels..');
 
 		// Phase 1: Servers
 		const SERVERS_PREFIX = 'servers:';
@@ -423,14 +428,34 @@ async function main() {
 		return { recipes: recipesMap, activeRun: getActiveRun() };
 	});
 
+	sseManager.onConnect('modes:init', async () => {
+		const modes = await listModes();
+		const modesMap: Record<string, typeof modes[number]> = {};
+		for (const m of modes) modesMap[m.id] = m;
+		return modesMap;
+	});
+
+	sseManager.onConnect('guardrails:init', async () => {
+		const guardrails = await persistence.listGuardrails();
+		const result: Record<string, typeof guardrails[string]> = {};
+		for (const [name, g] of Object.entries(guardrails)) {
+			result[name] = g;
+		}
+		return result;
+	});
+
+	sseManager.onConnect('chatPresets:init', async () => {
+		return listChatPresets();
+	});
+
 	const httpServer = createServer(app);
 
 	// Initialize realm events
 	await initRealm(httpServer, eventNode);
 
 	// Start server
-	httpServer.listen(effectivePort, host, () => {
-		console.log(`[WarpCore] API server listening on ${host}:${effectivePort}`);
+	httpServer.listen(port, host, () => {
+		console.log(`[WarpCore] API server listening on ${host}:${port}`);
 		if (envPort) {
 			console.log(`[WarpCore] Port set via CONTROL_API_PORT environment variable`);
 		}

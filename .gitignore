@@ -9,6 +9,9 @@ lerna-debug.log*
 
 .warpcore-db
 
+landing/node_modules
+landing/dist
+
 packages/desktop/target/
 packages/desktop/binaries/
 packages/desktop/app-dist/
@@ -38,3 +41,7 @@ dist-ssr
 *.sw?
 
 CLAUDE.md
+
+# Astro landing project (build cache & originals)
+landing/.astro/
+landing/original/

@@ -48,6 +48,8 @@ const text = docToString(json).trim();
 
 export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props, ref) => {
 	const setPendingSlashCommands = useStore(s => s.setPendingSlashCommands);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+	const chatFontFamily = useStore(s => s.settings.chatFontFamily ?? '');
 	const onEnterRef = useRef(props.onEnter);
 	onEnterRef.current = props.onEnter;
 	const canSendRef = useRef(props.canSend);
@@ -65,7 +67,7 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 			attributes: {
 				class: "aui-composer-input",
 				"aria-label": "Message input",
-				style: "outline: none;",
+				style: `outline: none; min-height: 50px; font-size: ${chatFontSize}px;${chatFontFamily ? ` font-family: ${chatFontFamily};` : ''}`,
 			},
 		},
 		onUpdate: ({ editor }) => {
@@ -91,7 +93,7 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 		getEditor: () => editor,
 	}), [editor]);
 
-	return <EditorContent editor={editor} className={props.className} />;
+	return <EditorContent editor={editor} className={props.className}/>;
 });
 
 ComposerEditor.displayName = "ComposerEditor";

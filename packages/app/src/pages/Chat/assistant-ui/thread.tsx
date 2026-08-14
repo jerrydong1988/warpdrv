@@ -3,10 +3,9 @@ import {
 	ComposerAttachments,
 	UserMessageAttachments,
 } from "./attachment";
-import { useTranslation } from 'react-i18next';
 import { MarkdownText } from "./markdown-text";
 import { ToolFallback } from "./tool-fallback";
-import { ToolCallBlockWrapper } from "./ToolCallBlockWrapper";
+import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import { KokoroTTSButton } from "./KokoroTTS";
 import { EmbeddingToggle } from "./EmbeddingToggle";
@@ -68,6 +67,7 @@ import { encodingForModel } from 'js-tiktoken';
 import { IconButton } from '@chakra-ui/react';
 import { Elicitation } from './Elicitation';
 import { AnnotationsBox } from './AnnotationsBox';
+import { PendingToolCallsBox } from './PendingToolCallsBox';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { SelectionPopover } from './SelectionPopover';
 import { DictationProvider, useDictation } from './DictationContext';
@@ -76,6 +76,8 @@ import { ComposerEditor, IWarpComposerEditorRef } from './ComposerEditor';
 import { insertComposerText, clearComposerEditor } from './composerEditorRegistry';
 import { ComposerUiSpace } from '../ui-space/ComposerUiSpace';
 import { MessageUiSpace } from '../ui-space/MessageUiSpace';
+import { MessageFooterUiSpace } from '../ui-space/MessageFooterUiSpace';
+import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 import type { IExtractedSlashCommand } from './docToString';
 
 const tokenEncoder = encodingForModel('gpt-4o');
@@ -103,11 +105,18 @@ export const ServerStatusContext = React.createContext<IServerStatusContext>({
 	supportsMultiModal: false,
 });
 
+const hexToRgba = (hex: string): string => {
+	const cleaned = hex.replace('#', '');
+	const r = parseInt(cleaned.slice(0, 2), 16);
+	const g = parseInt(cleaned.slice(2, 4), 16);
+	const b = parseInt(cleaned.slice(4, 6), 16);
+	return `rgba(${r},${g},${b}`;
+};
+
 export const Thread: FC<{
 	isLoading?: boolean,
 	currentServerId: TServerId | null
 }> = React.memo(({ isLoading = false, currentServerId }) => {
-	const { t } = useTranslation('chat');
 	const ThreadMsgFn = useCallback(() => <ThreadMessage />, []);
 	const serversMap = useStore(s => s.servers);
 	const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
@@ -121,10 +130,10 @@ export const Thread: FC<{
 	const isValidServer = !!currentServerId && currentServer?.status === EServerStatus.RUNNING;
 	const supportsMultiModal = currentServer?.useMultiModal ?? false;
 	const chatFixedWidth = useStore(s => s.settings.chatFixedWidth ?? false);
-	const currentThreadId = useStore(s => s.currentThreadId);
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
-		let resolveFn: (() => void) | null = null;
+		let resolveFn: (() => void) | null = null as (() => void) | null;
 		const handleConfirm = async () => {
 			setDeletingLoading(true);
 			try {
@@ -132,7 +141,7 @@ export const Thread: FC<{
 			} finally {
 				setDeletingLoading(false);
 				setDeletingMessageId(null);
-				if (resolveFn) (resolveFn as () => void)();
+				resolveFn?.();
 			}
 		};
 		return {
@@ -154,6 +163,7 @@ export const Thread: FC<{
 							["--thread-max-width" as string]: "44rem",
 							["--composer-radius" as string]: "24px",
 							["--composer-padding" as string]: "10px",
+							["--chat-font-size" as string]: `calc(${chatFontSize}px - 3px)`,
 						}}
 					>
 						<ThreadPrimitive.Viewport
@@ -187,6 +197,7 @@ export const Thread: FC<{
 										<ThreadScrollToBottom />
 										<Elicitation />
 										<AnnotationsBox />
+										<PendingToolCallsBox />
 										<Composer />
 									</ThreadPrimitive.ViewportFooter>
 								</div>
@@ -196,13 +207,13 @@ export const Thread: FC<{
 
 					{deletingMessageId && (
 						<ConfirmDialog
-							title={t('actions.deleteMessage')}
-							message={t('dialogs.deleteMessageConfirm')}
+							title="Delete Message"
+							message="Are you sure you want to delete this message?"
 							isOpen={true}
 							onConfirm={deleteMessageCtx.confirm}
 							onCancel={deleteMessageCtx.close}
 							isLoading={deletingLoading}
-							confirmLabel={t('actions.delete')}
+							confirmLabel="Delete"
 						/>
 					)}
 				</DictationProvider>
@@ -227,11 +238,10 @@ const ThreadMessage: FC = () => {
 };
 
 const ThreadScrollToBottom: FC = () => {
-	const { t } = useTranslation('chat');
 	return (
 		<ThreadPrimitive.ScrollToBottom asChild>
 			<TooltipIconButton
-				tooltip={t('composer.scrollToBottom')}
+				tooltip="Scroll to bottom"
 				variant="outline"
 				className="aui-thread-scroll-to-bottom absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible dark:border-border dark:bg-background dark:hover:bg-accent"
 			>
@@ -242,7 +252,6 @@ const ThreadScrollToBottom: FC = () => {
 };
 
 const ThreadWelcome: FC = () => {
-	const { t } = useTranslation('chat');
 	const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
 	if (activeWorkspaceId) {
 		return <WorkspaceView folderId={activeWorkspaceId} />;
@@ -265,10 +274,10 @@ const ThreadWelcome: FC = () => {
 						className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both duration-200"
 					/>
 					<h1 className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-semibold text-2xl duration-200" style={{ color: 'var(--wc-text-heading)' }}>
-						{t('threadList.welcomeTitle')}
+						Hello there!
 					</h1>
 					<p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-xl delay-75 duration-200" style={{ color: 'var(--wc-text-secondary)' }}>
-						{t('threadList.welcomeSubtitle')}
+						How can I help you today?
 					</p>
 				</div>
 			</div>
@@ -305,7 +314,6 @@ const ThreadSuggestionItem: FC = () => {
 };
 
 const ContextUsageBar: FC = () => {
-	const { t } = useTranslation('chat');
 	const { contextSize } = useContext(ChatConfigContext);
 	const branchTokensCount = useContext(BranchTokensContext);
 	const composerText = useAuiState((s) => s.composer.text);
@@ -315,13 +323,14 @@ const ContextUsageBar: FC = () => {
 	const ctxLabel = contextSize > 0 ? (contextSize > 1000 ? `${(contextSize / 1000).toFixed(0)}k` : String(contextSize)) : '?';
 	const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
 	const color = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : 'var(--wc-text-muted)';
+	const textColor = pct > 90 ? 'var(--wc-accent-red)' : pct > 70 ? 'var(--wc-accent-yellow-strong)' : undefined;
 
 	return (
-		<div className="flex items-center gap-2 px-1 pt-1" title={t('dynamic.contextUsage', { used: total.toLocaleString(), total: contextSize > 0 ? contextSize.toLocaleString() : '?' })}>
-			<div className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
+		<div className="flex items-center gap-2 px-1 pt-1" title={`Context: ${total.toLocaleString()} / ${contextSize > 0 ? contextSize.toLocaleString() : '?'} tokens`}>
+			<div className="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden">
 				<div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
 			</div>
-			<span className="text-[10px] font-mono text-muted-foreground/40 shrink-0">
+			<span className="text-[12px] font-mono text-muted-foreground/60 shrink-0" style={textColor ? { color: textColor } : undefined}>
 				{total > 1000 ? `${(total / 1000).toFixed(1)}k` : total} / {ctxLabel}
 			</span>
 		</div>
@@ -329,7 +338,6 @@ const ContextUsageBar: FC = () => {
 };
 
 const Composer: FC = () => {
-	const { t } = useTranslation('chat');
 	const { isValidServer } = useContext(ServerStatusContext);
 	const { waveformStream, setWaveformStream, subscribeTranscript } = useDictation();
 	const annotatorVisible = useStore(s => s.annotatorVisible);
@@ -340,6 +348,14 @@ const Composer: FC = () => {
 	const composerText = useAuiState(s => s.composer.text);
 	const pendingSlashCommands = useStore(s => s.pendingSlashCommands);
 	const editorRef = useRef<IWarpComposerEditorRef>(null);
+	const modes = useStore(s => s.modes);
+	const modeId = useStore(s => {
+		const ts = s.getCurrentThreadState();
+		return ts?.modeId as string | undefined;
+	});
+	const modeColor = useMemo(() => {
+		return modeId ? modes[modeId]?.color : null;
+	}, [modeId, modes]);
 
 	const handleChangeText = useCallback((text: string) => {
 		aui.composer().setText(text);
@@ -408,18 +424,19 @@ const Composer: FC = () => {
 			<ComposerPrimitive.AttachmentDropzone asChild>
 				<div
 					data-slot="composer-shell"
-					className="flex w-full flex-col gap-2 rounded-xl border p-(--composer-padding) transition-shadow focus-within:border-[var(--wc-border-default)] data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+					className="flex w-full flex-col gap-2 rounded-xl border composer-gradient-border p-(--composer-padding) transition-shadow data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
 					style={{
 						background: "var(--wc-bg-elevated)",
 						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
-						borderColor: "var(--wc-border-default)",
+						color: "var(--wc-text-primary)",
+						...(modeColor ? { borderColor: modeColor } : {}),
 					}}
 				>
 					<ComposerAttachments />
 					<ComposerUiSpace />
 <ComposerEditor
 					ref={editorRef}
-					placeholder={t('composer.placeholder')}
+					placeholder="Send a message..."
 					className="aui-composer-editor max-h-32 min-h-10 w-full overflow-y-auto bg-transparent px-1.75 py-1 text-sm"
 					onChangeText={handleChangeText}
 					onEnter={handleEnter}
@@ -434,7 +451,6 @@ const Composer: FC = () => {
 };
 
 const ReasoningEffortToggle: FC = () => {
-	const { t } = useTranslation('chat');
 	const { reasoningEffort, onReasoningEffortChange, enableThinking, onEnableThinkingChange } = useContext(ChatConfigContext);
 	const levels: EReasoningEffort[] = [EReasoningEffort.LOW, EReasoningEffort.MEDIUM, EReasoningEffort.HIGH, EReasoningEffort.NONE];
 	const next = () => {
@@ -454,7 +470,7 @@ const ReasoningEffortToggle: FC = () => {
 	return (
 		<IconButton
 			variant="outline"
-			size="md"
+			size="sm"
 			px="3"
 			ml="1"
 			borderRadius={"lg"}
@@ -463,21 +479,27 @@ const ReasoningEffortToggle: FC = () => {
 			_hover={{ bg: 'var(--wc-bg-hover)' }}
 			color={color}
 			onClick={next}
+			fontSize="12px"
+			textTransform={"capitalize"}
 			className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent`}
-			title={t('dynamic.reasoningEffortTooltip', { level: label })}
+			title={`Reasoning effort: ${label} (click to cycle)`}
 		>
-			<BrainCircuit className={`${isOn ? '' : 'opacity-40'}`} />
-			<span style={{ textTransform: "capitalize", fontSize: "12px" }}>{label}</span>
+			Effort {label}
 		</IconButton>
 	);
 };
 
 const ToolsSelector: FC = React.memo(() => {
-	const { t } = useTranslation('chat');
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
+	const modes = useStore(s => s.modes);
+	const threadState = useStore(s => s.getCurrentThreadState());
+
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
 
 	const connectedServers = useMemo(() => {
 		const entries = Object.entries(mcpServers).filter(([, state]) => state.status === EMcpServerStatus.CONNECTED);
@@ -486,24 +508,55 @@ const ToolsSelector: FC = React.memo(() => {
 
 	const totalCount = useMemo(() => connectedServers.reduce((sum, [, s]) => sum + s.tools.length, 0), [connectedServers]);
 
-	const color = (attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)';
-	const label = attachAllTools
-		? t('toolList.allTools')
-		: attachedTools.length > 0
-			? t('toolList.toolCount', { count: attachedTools.length })
-			: t('toolList.off');
+	// Mode-active tools
+	const modeToolSet = useMemo(() => {
+		if (!isModeActive || !currentMode) return null;
+		const s = new Set<string>();
+		for (const t of currentMode.allowedTools) {
+			if (typeof t === 'string') continue;
+			s.add(`${t.serverName}:${t.toolName}`);
+		}
+		return s;
+	}, [isModeActive, currentMode]);
+
+	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
+
+	const color = isModeActive
+		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
+		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
+	const label = isModeActive
+		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Tools Off')
+		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tools` : 'Tools Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
+		if (isModeActive) return;
 		if (checked) {
 			setAttachedTools(true, []);
 		} else {
 			setAttachedTools(false, attachedTools);
 		}
-	}, [attachedTools]);
+	}, [attachedTools, isModeActive]);
 
-	const handleToolChange = useCallback((serverName: string, toolName: string, checked: boolean) => {
-		if (attachAllTools) return;
+	const handleToolChange = useCallback(async (serverName: string, toolName: string, checked: boolean) => {
 		const tool: IToolAttachment = { serverName, toolName };
+		if (isModeActive && currentMode) {
+			// Update mode's allowedTools
+			const currentTools = currentMode.allowedTools.filter((t: any) => typeof t !== 'string') as IToolAttachment[];
+			let next: IToolAttachment[];
+			if (checked) {
+				next = [...currentTools, tool];
+			} else {
+				next = currentTools.filter(t => !(t.serverName === serverName && t.toolName === toolName));
+			}
+			try {
+				const { updateMode } = await import('@/api/mode-services');
+				await updateMode(currentMode.id, { allowedTools: next });
+			} catch (e) {
+				console.error('[ToolsSelector] Failed to update mode:', e);
+			}
+			return;
+		}
+		if (attachAllTools) return;
 		let next: IToolAttachment[];
 		if (checked) {
 			next = [...attachedTools, tool];
@@ -513,7 +566,9 @@ const ToolsSelector: FC = React.memo(() => {
 		setAttachedTools(false, next);
 	}, [
 		attachAllTools,
-		attachedTools
+		attachedTools,
+		isModeActive,
+		currentMode,
 	]);
 
 	return (
@@ -521,18 +576,17 @@ const ToolsSelector: FC = React.memo(() => {
 			<Popover.Trigger unstyled asChild>
 				<IconButton
 					variant="outline"
-					size="md"
+					size="sm"
 					px="3"
 					ml="1"
 					borderRadius={"lg"}
 					borderWidth="1px"
-					borderColor={(attachAllTools || attachedTools.length > 0) ? color : "var(--wc-border-default)"}
+					borderColor={"var(--wc-border-default)"}
 					_hover={{ bg: 'var(--wc-bg-hover)' }}
 					color={color}
 					className="flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent"
-					title={t('dynamic.toolsTooltip', { label })}
+					title={`Tools ${label}`}
 				>
-					<VscTools className={`${(attachAllTools || attachedTools.length > 0) ? '' : 'opacity-40'}`} />
 					<span style={{ fontSize: "12px" }}>{label}</span>
 				</IconButton>
 			</Popover.Trigger>
@@ -549,26 +603,31 @@ const ToolsSelector: FC = React.memo(() => {
 				>
 					<Popover.Body p="3">
 						{totalCount === 0 ? (
-							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">{t('toolList.noToolsAvailable')}</Text>
+							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">No tools available</Text>
 						) : (
 							<VStack gap="3" align="stretch">
-								<HStack gap="2">
-									<Switch.Root
-										label={t('toolList.allTools')}
-										checked={attachAllTools}
-										onCheckedChange={(details) => handleAllToolsChange(details.checked)}
-									>
-										<Switch.HiddenInput />
-										<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
-											<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
-										</Switch.Control>
-										<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
-											{t('common:ui.allTools')}</Switch.Label>
-									</Switch.Root>
-								</HStack>
+								{!isModeActive && (
+									<HStack gap="2">
+										<Switch.Root
+											label="All tools"
+											checked={attachAllTools}
+											onCheckedChange={(details) => handleAllToolsChange(details.checked)}
+										>
+											<Switch.HiddenInput />
+											<Switch.Control css={{ bg: attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+												<Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)' }} />
+											</Switch.Control>
+											<Switch.Label ml="2" fontSize="12px" color={attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)'} userSelect="none">
+												All tools
+											</Switch.Label>
+										</Switch.Root>
+									</HStack>
+								)}
 								<AccordionRoot collapsible defaultValue={[]}>
 							{connectedServers.map(([serverName, state]) => {
-									const activeCount = attachedTools.filter(t => t.serverName === serverName).length;
+									const activeCount = isModeActive
+										? state.tools.filter(t => modeToolSet?.has(`${serverName}:${t.name}`)).length
+										: attachedTools.filter(t => t.serverName === serverName).length;
 									return (
 										<AccordionItemComp key={serverName} value={serverName} style={{ border: 'none' }}>
 											<AccordionItemTrigger
@@ -592,19 +651,21 @@ const ToolsSelector: FC = React.memo(() => {
 											<AccordionItemContent pt="1" pb="2" px="2" style={{ border: 'none' }}>
 												<VStack gap="1.5" align="stretch">
 													{state.tools.map(tool => {
-														const isSelected = attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name);
+														const isSelected = isModeActive
+															? !!modeToolSet?.has(`${serverName}:${tool.name}`)
+															: (attachAllTools || attachedTools.some(t => t.serverName === serverName && t.toolName === tool.name));
 														return (
-															<HStack key={tool.name} gap="2" opacity={attachAllTools ? 0.4 : 1}>
+															<HStack key={tool.name} gap="2" opacity={(isModeActive ? false : attachAllTools) ? 0.4 : 1}>
 																<Switch.Root
 																	label={tool.name}
 																	checked={isSelected}
-																	disabled={attachAllTools}
+																	disabled={!isModeActive && attachAllTools}
 																	onCheckedChange={(details) => {
-																		if (!attachAllTools) handleToolChange(serverName, tool.name, details.checked);
+																		handleToolChange(serverName, tool.name, details.checked);
 																	}}
 																>
 																	<Switch.HiddenInput />
-																	<Switch.Control css={{ bg: isSelected && !attachAllTools ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
+																	<Switch.Control css={{ bg: isSelected ? 'var(--wc-accent-blue)' : 'var(--wc-text-disabled)' }}>
 <Switch.Thumb css={{ bg: 'var(--wc-bg-elevated)'}} />
 								</Switch.Control>
 								<Switch.Label ml="0" fontSize="12px" color={isSelected ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'} userSelect="none">
@@ -630,7 +691,6 @@ const ToolsSelector: FC = React.memo(() => {
 });
 
 const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = ({ onStreamChange }) => {
-	const { t } = useTranslation('chat');
 	const { isValidServer, supportsMultiModal } = useContext(ServerStatusContext);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const canAttach = isValidServer && supportsMultiModal;
@@ -655,13 +715,12 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 			aui.composer().setText("<continue>");
 		}
 		aui.composer().send({ startRun: true });
-		clearComposerEditor();
 	}, [isSendDisabled, annotations, composerText, clearAnnotations, pendingSlashCommands.length]);
 
 	return (
 		<div className="aui-composer-action-wrapper relative flex items-center justify-between">
 			<div className="flex items-center gap-1">
-				<ComposerAddAttachment disabled={!canAttach} tooltip={canAttach ? t('composer.attachFile') : t('composer.multimodalNotSupported')} />
+				<ComposerAddAttachment disabled={!canAttach} tooltip={canAttach ? "Add Attachment" : "Multimodal not supported"} />
 				<ReasoningEffortToggle />
 				{/* <ToolsToggle /> */}
 				<ToolsSelector />
@@ -677,12 +736,12 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 					<TooltipIconButton
 						onClick={handleSend}
 						disabled={!isValidServer || isSendDisabled}
-						tooltip={!isValidServer ? t('composer.selectModelFirst') : t('composer.sendMessage')}
+						tooltip={!isValidServer ? "Select and start a model first" : "Send message"}
 						side="bottom"
 						type="button"
 						variant="outline"
 						className={`${(!isValidServer || isSendDisabled) ? 'opacity-50 cursor-not-allowed' : ''} aui-composer-send size-9`}
-						aria-label={!isValidServer ? t('composer.sendMessageNoModel') : t('actions.send')}
+						aria-label={!isValidServer ? "Send message - model not selected" : "Send message"}
 						style={!isValidServer
 							? { color: 'var(--wc-text-muted)', borderColor: 'var(--wc-border-default)', backgroundColor: 'transparent' }
 							: { color: 'var(--wc-accent-blue)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-8)' }
@@ -697,7 +756,7 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							type="button"
 							variant="outline"
 							className="aui-composer-cancel size-9"
-							aria-label={t('actions.stop')}
+							aria-label="Stop generating"
 							color="var(--wc-text-primary)"
 						style={{ borderColor: 'var(--wc-border-default)' }}
 						>
@@ -755,7 +814,6 @@ const StatsTooltip: FC = () => {
 };
 
 const EmbeddingStatus: FC = React.memo(() => {
-	const { t } = useTranslation();
 	const messageId = useAuiState(s => s.message.id);
 	const embedded = useStore(s => s.embeddingStatusByMessage[messageId]);
 	const selectedServerId = useStore(s => s.selectedEmbeddingServerId);
@@ -791,7 +849,7 @@ const EmbeddingStatus: FC = React.memo(() => {
 			</TooltipTrigger>
 			<TooltipContent align="start" sideOffset={4} side="bottom">
 				<div className="text-sm" style={{ color: 'var(--wc-special-white)', boxShadow: "0 0 10px black" }}>
-					<span>{embedded ? t('common:ui.embeddedClickToRemove') : t('common:ui.embedMessage')}</span>
+					<span>{embedded ? 'Embedded (click to remove)' : 'Embed message'}</span>
 				</div>
 			</TooltipContent>
 		</Tooltip>
@@ -800,15 +858,17 @@ const EmbeddingStatus: FC = React.memo(() => {
 
 const ToolCallRenderer: FC = () => {
 	const part = useAuiState(s => s.part);
-	
+	const messageId = useAuiState(s => s.message.id);
+
 	return (
-		<ToolCallBlockWrapper
+		<ToolCallBlockCollapsible
 			toolCallId={(part as any).toolCallId}
 			toolName={(part as any).toolName}
 			serverName={(part as any).serverName ?? 'unknown'}
 			args={(part as any).args}
 			result={(part as any).result}
 			status={mapStatusFromPart((part as any).status)}
+			messageId={messageId}
 		/>
 	);
 };
@@ -841,7 +901,6 @@ const componentsMap = {
 };
 
 const AssistantMessage: FC = React.memo(() => {
-	const { t } = useTranslation('chat');
 	const parts = useAuiState((s) => s.message.content);
 	const status = useAuiState((s) => s.message.status?.type);
 	const messageId = useAuiState((s) => s.message.id);
@@ -862,13 +921,13 @@ const AssistantMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px" }}>
+				<div className="aui-assistant-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "15px 0 5px 15px", borderRadius: "15px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
 					{startingTools && startingTools.length > 0 && (
 						<div className="mt-2 text-md italic" style={{ color: 'var(--wc-text-tertiary)' }}>
-							{t('toolStatus.calling', { tools: startingTools.join(', ') })}
+							calling: {startingTools.join(', ')}...
 						</div>
 					)}
 					<MessageError />
@@ -885,7 +944,6 @@ const AssistantMessage: FC = React.memo(() => {
  });
 
 const ReasoningBlock: FC = React.memo(() => {
-	const { t } = useTranslation('chat');
 	const reasoning = useAuiState((s) => {
 		const part = s.part;
 		return part?.type === 'reasoning' ? (part as any).reasoning : '';
@@ -894,20 +952,20 @@ const ReasoningBlock: FC = React.memo(() => {
 	if (!reasoning) return null;
 
 	return (
-		
+
 		<div className="mb-3 rounded-lg border" style={{ borderColor: 'var(--wc-border-subtle)', backgroundColor: 'var(--wc-bg-subtle)' }}>
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium transition-colors"
-					style={{ color: 'var(--wc-text-muted)' }}
+				className="flex w-full items-center gap-2 px-3 py-2 font-medium transition-colors"
+					style={{ color: 'var(--wc-text-muted)', fontSize: 'calc(var(--chat-font-size) - 2px)' }}
 			>
-				<BrainCircuitIcon className="size-3.5" />
-				<span>{t('labels.thinking')}{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} ${t('labels.tokensEst')})` : ''}</span>
+				{/*<BrainCircuitIcon className="size-3.5" />*/}
+				<span>Thinking{reasoning.length > 100 ? ` (${Math.ceil(reasoning.length / 4)} tks)` : ''}</span>
 				<ChevronDownIcon className={`size-3.5 ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
 			</button>
-			{open && (
-				<div className="px-3 pb-3 text-xs whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)' }}>
+				{open && (
+					<div className="px-3 pb-3 whitespace-pre-wrap max-h-64 overflow-y-auto" style={{ color: 'var(--wc-text-secondary)', fontSize: 'var(--chat-font-size)' }}>
 					{reasoning}
 				</div>
 			)}
@@ -933,12 +991,11 @@ const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = (
 );
 
 const DeleteMessageButton: FC<{ messageId: string }> = ({ messageId }) => {
-	const { t } = useTranslation('chat');
 	const ctx = useContext(DeleteMessageContext);
 	return (
 		<HStack gap="2" onClick={() => ctx?.open(messageId)}>
 			<Trash2 size={14} color="var(--wc-accent-red)" />
-			<Text fontSize="12px" color="var(--wc-accent-red)">{t('actions.delete')}</Text>
+			<Text fontSize="12px" color="var(--wc-accent-red)">Delete</Text>
 		</HStack>
 	);
 };
@@ -977,7 +1034,6 @@ const BrowserTTS = React.memo(() => {
 });
 
 const AssistantActionBar: FC = () => {
-	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const isCopied = useAuiState((s) => s.message.isCopied);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
@@ -993,6 +1049,7 @@ const AssistantActionBar: FC = () => {
 		>
 			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1006,7 +1063,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">{t('actions.reload')}</Text>
+									<Text fontSize="12px">Reload</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1015,7 +1072,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="copy">
 								<HStack gap="2">
 									{isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-									<Text fontSize="12px">{t('actions.copy')}</Text>
+									<Text fontSize="12px">Copy</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Copy>
@@ -1023,7 +1080,7 @@ const AssistantActionBar: FC = () => {
 							<Menu.Item value="edit">
 								<HStack gap="2">
 									<PencilIcon size={14} />
-									<Text fontSize="12px">{t('actions.edit')}</Text>
+									<Text fontSize="12px">Edit</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Edit>
@@ -1057,7 +1114,7 @@ const ToolMessage: FC = React.memo(() => {
 			}}
 		>
 			<MessageUiSpace>
-				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, backgroundColor: "var(--wc-bg-subtle)", padding: "15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "40px" }}>
+				<div className="aui-tool-message-content wrap-break-word px-2 leading-relaxed" style={{ color: 'var(--wc-text-primary)', fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, padding: "5px 15px 5px 15px", borderRadius: "15px", display: "flex", flexDirection: "column", gap: "5px" }}>
 					<MessagePrimitive.Parts
 						components={componentsMap}
 					/>
@@ -1065,7 +1122,7 @@ const ToolMessage: FC = React.memo(() => {
 				</div>
 			</MessageUiSpace>
 
-			<div className="aui-tool-message-footer mt-1 ml-2 flex min-h-6 items-center gap-1">
+			<div className="aui-tool-message-footer ml-2 flex min-h-6 items-center gap-1">
 				<StatsTooltip />
 				<BranchPicker />
 				<ToolActionBar />
@@ -1075,7 +1132,6 @@ const ToolMessage: FC = React.memo(() => {
 });
 
 const ToolActionBar: FC = () => {
-	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
@@ -1088,6 +1144,7 @@ const ToolActionBar: FC = () => {
 			style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: "visible" }}
 		>
 			<EmbeddingStatus />
+			<MessageFooterUiSpace />
 
 			<Menu.Root positioning={{ getAnchorRect }}>
 				<Menu.Trigger asChild>
@@ -1101,7 +1158,7 @@ const ToolActionBar: FC = () => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">{t('actions.reload')}</Text>
+									<Text fontSize="12px">Reload</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1166,7 +1223,7 @@ const UserMessage: FC = () => {
 			<UserMessageAttachments />
 			<MessageUiSpace>
 				<div className="flex justify-end">
-					<div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden max-w-[80%]" style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined }}>
+					<div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden max-w-[80%]" style={{ fontSize: `${chatFontSize}px`, fontFamily: chatFontFamily || undefined, background: "var(--wc-bg-active)", color: "var(--wc-text-primary)" }}>
 						<MessagePrimitive.Parts />
 						<MessageSlashCommands />
 					</div>
@@ -1182,7 +1239,6 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
-	const { t } = useTranslation('chat');
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
@@ -1194,38 +1250,38 @@ const UserActionBar: FC = () => {
 			className="aui-user-action-bar-root"
 			style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: "visible" }}
 		>
-			{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
-			<EmbeddingStatus />
+					{kokoroInstalled ? <KokoroTTSButton /> : <BrowserTTS />}
+					<EmbeddingStatus />
+					<MessageFooterUiSpace />
 
-			<Menu.Root positioning={{ getAnchorRect }}>
-				<Menu.Trigger asChild>
-					<ActionBarIcon>
-						<MoreVertical size={14} ref={ref}/>
-					</ActionBarIcon>
-				</Menu.Trigger>
-				<Menu.Positioner>
-					<Menu.Content>
-						<ActionBarPrimitive.Edit asChild>
-							<Menu.Item value="edit">
-								<HStack gap="2">
-									<PencilIcon size={14} />
-									<Text fontSize="12px">{t('actions.edit')}</Text>
-								</HStack>
-							</Menu.Item>
-						</ActionBarPrimitive.Edit>
-						<Menu.Separator />
-						<Menu.Item value="delete">
-							<DeleteMessageButton messageId={messageId} />
-						</Menu.Item>
-					</Menu.Content>
-				</Menu.Positioner>
-			</Menu.Root>
-		</ActionBarPrimitive.Root>
-	);
-};
+					<Menu.Root positioning={{ getAnchorRect }}>
+						<Menu.Trigger asChild>
+							<ActionBarIcon>
+								<MoreVertical size={14} ref={ref}/>
+							</ActionBarIcon>
+						</Menu.Trigger>
+						<Menu.Positioner>
+							<Menu.Content>
+								<ActionBarPrimitive.Edit asChild>
+									<Menu.Item value="edit">
+										<HStack gap="2">
+											<PencilIcon size={14} />
+											<Text fontSize="12px">Edit</Text>
+										</HStack>
+									</Menu.Item>
+								</ActionBarPrimitive.Edit>
+								<Menu.Separator />
+								<Menu.Item value="delete">
+									<DeleteMessageButton messageId={messageId} />
+								</Menu.Item>
+							</Menu.Content>
+						</Menu.Positioner>
+					</Menu.Root>
+				</ActionBarPrimitive.Root>
+			);
+			};
 
 const EditComposer: FC = () => {
-	const { t } = useTranslation('chat');
 	return (
 		<MessagePrimitive.Root className="aui-edit-composer-wrapper mx-auto flex w-full flex-col px-2 py-3">
 			<ComposerPrimitive.Root className="aui-edit-composer-root ml-auto flex w-full max-w-[85%] flex-col bg-muted" >
@@ -1236,10 +1292,11 @@ const EditComposer: FC = () => {
 				<div className="aui-edit-composer-footer mx-3 mb-3 flex items-center gap-2 self-end">
 					<ComposerPrimitive.Cancel asChild>
 						<Button variant="ghost" size="sm">
-							{t('common:ui.cancel')}</Button>
+							Cancel
+						</Button>
 					</ComposerPrimitive.Cancel>
 					<ComposerPrimitive.Send asChild>
-						<Button size="sm">{t('actions.update')}</Button>
+						<Button size="sm">Update</Button>
 					</ComposerPrimitive.Send>
 				</div>
 			</ComposerPrimitive.Root>
@@ -1257,7 +1314,6 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 	className,
 	...rest
 }) => {
-	const { t } = useTranslation('chat');
 	return (
 		<BranchPickerPrimitive.Root
 			hideWhenSingleBranch
@@ -1268,7 +1324,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 			{...rest}
 		>
 			<BranchPickerPrimitive.Previous asChild>
-				<TooltipIconButton tooltip={t('actions.previous')}>
+				<TooltipIconButton tooltip="Previous">
 					<ChevronLeftIcon />
 				</TooltipIconButton>
 			</BranchPickerPrimitive.Previous>
@@ -1276,7 +1332,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
 				<BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
 			</span>
 			<BranchPickerPrimitive.Next asChild>
-				<TooltipIconButton tooltip={t('actions.next')}>
+				<TooltipIconButton tooltip="Next">
 					<ChevronRightIcon />
 				</TooltipIconButton>
 			</BranchPickerPrimitive.Next>

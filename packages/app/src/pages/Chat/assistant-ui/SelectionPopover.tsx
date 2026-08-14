@@ -105,6 +105,7 @@ export const SelectionPopover = () => {
 				if (dictationSource === 'popover' && dictationActive) {
 					stopDictation();
 				}
+				setInputText('');
 				setVisible(false);
 			}
 		};
@@ -223,7 +224,7 @@ export const SelectionPopover = () => {
 				style={{
 					flex: 1, minWidth: '150px',
 					background: 'var(--wc-bg-subtle)', border: '1px solid var(--wc-border-subtle)',
-					borderRadius: '6px', padding: '5px 8px', fontSize: '12px',
+					borderRadius: '6px', padding: '5px 8px', fontSize: 'var(--chat-font-size)',
 					color: 'var(--wc-text-primary)', outline: 'none', resize: 'none',
 					fontFamily: 'inherit', lineHeight: '1.4',
 				}}

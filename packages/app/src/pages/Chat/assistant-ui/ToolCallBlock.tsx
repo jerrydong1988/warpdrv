@@ -31,11 +31,11 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 			<Box px="3" py="1">
 				<HStack gap="1" cursor="pointer" onClick={() => setArgsExpanded(!argsExpanded)} py="1">
 					{argsExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-					<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.arguments')}</Text>
-				</HStack>
-				{argsExpanded && (
-					<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="200px">
-						<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{t('common:ui.arguments')}</Text>
+					</HStack>
+					{argsExpanded && (
+						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="200px">
+							<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 							{formatJson(args)}
 						</Text>
 					</Box>
@@ -45,11 +45,11 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 				<Box px="3" py="1">
 					<HStack gap="1" cursor="pointer" onClick={() => setResultExpanded(!resultExpanded)} py="1">
 						{resultExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-						<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.result')}</Text>
-					</HStack>
-					{resultExpanded && (
-						<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="300px">
-							<Text fontSize="11px" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+							<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{t('common:ui.result')}</Text>
+						</HStack>
+						{resultExpanded && (
+							<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" mb="1" overflow="auto" maxH="300px">
+								<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
 								{formatJson(result)}
 							</Text>
 						</Box>

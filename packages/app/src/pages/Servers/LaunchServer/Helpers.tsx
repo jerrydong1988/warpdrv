@@ -166,14 +166,14 @@ export function SliderNumberField({ label, value, onChange, min, max, step, suff
 					type="number" value={value}
 					onChange={e => {
 						const v = Number(e.target.value);
-						if (!isNaN(v)) onChange(Math.max(min, Math.min(max, v)));
+						if (!isNaN(v) && v >= min) onChange(v);
 					}}
 					size="sm" w="100px"
 					bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)"
 					color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace'
 					fontSize="13px" borderRadius="lg" textAlign="right"
 					_focus={{ borderColor: 'var(--wc-accent-blue)', outline: 'none' }}
-					min={min} max={max}
+					min={min}
 				/>
 			</HStack>
 		</Box>

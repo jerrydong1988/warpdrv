@@ -5,11 +5,14 @@ import { Wrench, Check, Ban, Loader, AlertCircle, X, Lock } from 'lucide-react';
 import { ToolCallBlock } from '@/pages/Chat/assistant-ui/ToolCallBlock';
 import { useStore } from '@/store';
 import { EToolCallStatus, EToolApprovalMode } from '@warpcore/bridge';
+import type { IToolAttachment } from '@warpcore/shared';
 import { ServerStatusContext } from './thread';
 import { autoResolveRenderer } from './tool-renderers/resolver';
 import { WithErrorBoundary } from '../../../components/WithErrorBoundary';
 import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
+import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
+import { computeModeUnionTools } from '@/lib/toolUtils';
 
 interface IToolCallBlockWrapperProps {
 	toolCallId: string;
@@ -18,6 +21,7 @@ interface IToolCallBlockWrapperProps {
 	args: Record<string, unknown>;
 	result?: unknown;
 	status: 'complete' | 'running' | 'requires-action' | 'error';
+	messageId: string;
 }
 
 const statusColors: Record<EToolCallStatus, string> = {
@@ -38,7 +42,7 @@ const STATUS_LABEL_KEYS: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.ERROR]: 'toolStatus.error',
 };
 
-export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverName, args, result, status }: IToolCallBlockWrapperProps) => {
+export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverName, args, result, status, messageId }: IToolCallBlockWrapperProps) => {
 	const { t } = useTranslation();
 	const statusLabel = (s: EToolCallStatus) => t(`chat:${STATUS_LABEL_KEYS[s]}`);
 	const currentThreadId = useStore(s => s.currentThreadId);
@@ -50,6 +54,18 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	const toolCallRenderers = useStore(s => s.toolCallRenderers);
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
+	const modes = useStore(s => s.modes);
+	const threads = useStore(s => s.threads);
+	const threadState = useStore(s => s.getCurrentThreadState());
+	const modeId = threadState?.modeId as string | undefined;
+	const currentMode = modeId ? modes[modeId] : null;
+	const isModeActive = !!currentMode;
+
+	const modeUnionTools = useMemo(
+		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
+		[isModeActive, modes, currentThreadId, threads]
+	);
+
 	const [deciding, setDeciding] = useState(false);
 	const toast = useToast();
 
@@ -57,17 +73,19 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 		if (!currentThreadId || !currentServerId) return;
 		setDeciding(true);
 		try {
+			const tools = isModeActive ? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true } : { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
 			await decideMcpToolCall(
 				toolCallId, decision, currentThreadId, currentServerId,
 				currentSystemPrompt, currentInferenceParams,
 				undefined,
-				attachAllTools,
-				attachedTools
+				tools.attachAllTools,
+				tools.attachedTools ?? undefined,
+				tools.skipToolsSave
 			);
 		} finally {
 			setDeciding(false);
 		}
-	}, [toolCallId, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools]);
+	}, [toolCallId, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools]);
 
 	const handleAlwaysApprove = useCallback(async () => {
 		if (!currentThreadId || !currentServerId || !serverName) return;
@@ -76,18 +94,20 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 			await setThreadToolPermission(currentThreadId, serverName, toolName, true, EToolApprovalMode.ALLOWED);
 			const res = await fetchThreadPermissions(currentThreadId);
 			if (res.ok) useStore.getState().setThreadToolPermissions(currentThreadId, res.data.threadOverrides);
+			const tools = isModeActive ? { attachAllTools: false, attachedTools: modeUnionTools, skipToolsSave: true } : { attachAllTools, attachedTools: attachAllTools ? undefined : attachedTools };
 			await decideMcpToolCall(
 				toolCallId, 'approve', currentThreadId, currentServerId,
 				currentSystemPrompt, currentInferenceParams,
 				undefined,
-				attachAllTools,
-				attachedTools
+				tools.attachAllTools,
+				tools.attachedTools ?? undefined,
+				tools.skipToolsSave
 			);
 			toast.toast('success', t('common:toast.toolAlwaysApproved', { toolName }));
 		} finally {
 			setDeciding(false);
 		}
-	}, [toolCallId, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, toast]);
+	}, [toolCallId, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools, toast]);
 
 
 	const displayStatus: EToolCallStatus = toolCall?.status ?? (
@@ -136,68 +156,62 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 	}, [serverState, toolName, toolCallRenderers, args, result]);
 
 	return (
-		<Box m="-3.5" borderRadius="lg" bg="var(--wc-bg-surface)" overflow="hidden" borderBottomColor={"var(--wc-border-subtle)"} borderBottomWidth={1}>
+		<Box m="-3.5" borderRadius="lg" bg="var(--wc-bg-interactive)" overflow="hidden" borderBottomColor={"var(--wc-border-default)"} borderBottomWidth={0}>
 			<HStack gap="3" px="3" py="2.5" borderBottomColor={"var(--wc-border-subtle)"} borderBottomWidth={1}>
 				<Wrench size={13} color="var(--wc-text-tertiary)" />
-				<Text fontSize="13px" fontWeight="700" color="var(--wc-text-secondary)">{toolName}</Text>
-				<Text fontSize="12px" color="var(--wc-text-faint)">{serverName}</Text>
+				<Text fontSize="calc(var(--chat-font-size) - 1px)" fontWeight="700" color="var(--wc-text-secondary)">{toolName}</Text>
+				<Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)">{serverName}</Text>
 				<Box flex="1" />
 				<HStack gap="1">
-					{isExecuting && (
-						<>
-							<Loader size={11} color={statusColor} className="animate-spin" />
-							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
-						</>
-					)}
-					{displayStatus === EToolCallStatus.COMPLETED && <Check size={11} color={statusColor} />}
-					{displayStatus === EToolCallStatus.DENIED && (
-						<>
-							<Ban size={11} color={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
-						</>
-					)}
-					{displayStatus === EToolCallStatus.ERROR && (
-						<>
-							<AlertCircle size={11} color={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
-						</>
-					)}
-					{isPending && (
-						<>
-							<Box w="6px" h="6px" borderRadius="full" bg={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
-						</>
-					)}
+				{isExecuting && (
+					<>
+						<Loader size={11} color={statusColor} className="animate-spin" />
+						<Text fontSize="calc(var(--chat-font-size) - 4px)" color={statusColor}>{statusLabel(displayStatus)}</Text>
+					</>
+				)}
+				{displayStatus === EToolCallStatus.COMPLETED && <Check size={11} color={statusColor} />}
+				{displayStatus === EToolCallStatus.DENIED && (
+					<>
+						<Ban size={11} color={statusColor} />
+						<Text fontSize="calc(var(--chat-font-size) - 4px)" color={statusColor}>{statusLabel(displayStatus)}</Text>
+					</>
+				)}
+				{displayStatus === EToolCallStatus.ERROR && (
+					<>
+						<AlertCircle size={11} color={statusColor} />
+						<Text fontSize="calc(var(--chat-font-size) - 4px)" color={statusColor}>{statusLabel(displayStatus)}</Text>
+					</>
+				)}
+				{isPending && deciding && (
+					<>
+						<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
+						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">{t('common:ui.processing')}</Text>
+					</>
+				)}
+				{isPending && !deciding && (
+					<HStack gap="2">
+						<Box as="button" px="3" py="1" fontSize="calc(var(--chat-font-size) - 2px)" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" _hover={{ bg: 'var(--wc-accent-green-hover)' }} onClick={() => handleDecision('approve')}>
+							<HStack gap="1"><Check size={12} /><Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.allowOnce')}</Text></HStack>
+						</Box>
+						<Box as="button" px="3" py="1" fontSize="calc(var(--chat-font-size) - 2px)" borderRadius="sm" bg="var(--wc-accent-yellow-bg-8)" color="var(--wc-accent-yellow-strong)" _hover={{ bg: 'var(--wc-accent-yellow-hover-bg)' }} onClick={() => handleAlwaysApprove()}>
+							<HStack gap="1"><Lock size={12} /><Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.allowAlways')}</Text></HStack>
+						</Box>
+						<Box as="button" px="3" py="1" fontSize="calc(var(--chat-font-size) - 2px)" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" _hover={{ bg: 'var(--wc-accent-red-hover)' }} onClick={() => handleDecision('deny')}>
+							<HStack gap="1"><X size={12} /><Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.deny')}</Text></HStack>
+						</Box>
+					</HStack>
+				)}
 				</HStack>
 			</HStack>
 
-			{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
-				<Box px="3" py="2" borderTopWidth="1px" borderColor="var(--wc-border-subtle)">
-					<Text fontSize="11px" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
-				</Box>
-			)}
-
-			{body}
-
-			{isPending && !deciding && (
-				<HStack gap="2" px="3" py="2" justify="flex-end" borderTopWidth="1px" borderColor="var(--wc-border-subtle)">
-					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" _hover={{ bg: 'var(--wc-accent-green-hover)' }} onClick={() => handleDecision('approve')}>
-						<HStack gap="1"><Check size={12} /><Text fontSize="12px">{t('common:ui.allowOnce')}</Text></HStack>
+			<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
+				{displayStatus === EToolCallStatus.ERROR && toolCall?.error && (
+					<Box px="3" py="2" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)">
+						<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-red)" whiteSpace="pre-wrap" wordBreak="break-word">{toolCall.error}</Text>
 					</Box>
-					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-yellow-bg-8)" color="var(--wc-accent-yellow-strong)" _hover={{ bg: 'var(--wc-accent-yellow-hover-bg)' }} onClick={() => handleAlwaysApprove()}>
-						<HStack gap="1"><Lock size={12} /><Text fontSize="12px">{t('common:ui.allowAlways')}</Text></HStack>
-					</Box>
-					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" _hover={{ bg: 'var(--wc-accent-red-hover)' }} onClick={() => handleDecision('deny')}>
-						<HStack gap="1"><X size={12} /><Text fontSize="12px">{t('common:ui.deny')}</Text></HStack>
-					</Box>
-				</HStack>
-			)}
-			{deciding && (
-				<HStack gap="2" px="3" py="2" justify="center">
-					<Loader size={12} className="animate-spin" color="var(--wc-text-muted)" />
-					<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.processing')}</Text>
-				</HStack>
-			)}
+				)}
+				{body}
+			</ToolCallUiSpace>
 		</Box>
 	);
 });

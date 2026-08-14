@@ -1,4 +1,4 @@
-import type { IToolCallRenderer } from '@/store/types';
+import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 import type React from 'react';
 
 export interface IResolvedRenderer {
@@ -34,6 +34,31 @@ function findCandidates(toolName: string, registry: Record<string, IToolCallRend
 	return matches;
 }
 
+// Shared: find the first renderer whose keywords match the tool name and whose canRender accepts the args.
+// Returns entry + props together so canRender is only called once.
+function findMatchingRenderer(
+	toolName: string,
+	args: Record<string, unknown>,
+	registry: Record<string, IToolCallRenderer>,
+): { entry: IToolCallRenderer; props: TCanRenderResult } | null {
+	// Priority 1: keyword exactly equals toolName
+	for (const [, entry] of Object.entries(registry)) {
+		if (entry.keywords.includes(toolName)) {
+			const result = entry.canRender(args);
+			if (result !== false) return { entry, props: result };
+		}
+	}
+	// Priority 2: tokenized keyword match
+	const candidates = findCandidates(toolName, registry);
+	for (const name of candidates) {
+		const entry = registry[name];
+		if (!entry) continue;
+		const result = entry.canRender(args);
+		if (result !== false) return { entry, props: result };
+	}
+	return null;
+}
+
 // Auto-resolves a renderer for a tool call by name+args.
 // Returns null if no candidate renderer accepts the args.
 export function autoResolveRenderer(
@@ -41,14 +66,20 @@ export function autoResolveRenderer(
 	args: Record<string, unknown>,
 	registry: Record<string, IToolCallRenderer>,
 ): IResolvedRenderer | null {
-	const candidates = findCandidates(toolName, registry);
-	for (const name of candidates) {
-		const entry = registry[name];
-		if (!entry) continue;
-		const result = entry.canRender(args);
-		if (result !== false) {
-			return { component: entry.component, props: result };
-		}
-	}
-	return null;
+	const match = findMatchingRenderer(toolName, args, registry);
+	if (!match || match.props === false) return null;
+	return { component: match.entry.component, props: match.props };
+}
+
+// Auto-resolves a mini renderer component for a tool call.
+// Returns null if no matching renderer with renderMini is found.
+export function autoResolveMiniRenderer(
+	toolName: string,
+	args: Record<string, unknown>,
+	result: unknown,
+	registry: Record<string, IToolCallRenderer>,
+): React.ComponentType<{ args: Record<string, unknown>; result?: unknown }> | null {
+	const match = findMatchingRenderer(toolName, args, registry);
+	if (!match || !match.entry.renderMini) return null;
+	return match.entry.renderMini;
 }
