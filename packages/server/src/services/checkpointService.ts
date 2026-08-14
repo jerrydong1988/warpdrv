@@ -59,11 +59,19 @@ function composeCheckpointId(hash: TFingerprintHash, createdAt: number, slotInde
 	return `${hash}-${createdAt}-${slotIndex}`;
 }
 
+function assertSafeCheckpointId(id: TCheckpointId): void {
+	if (!id || typeof id !== 'string' || id.includes('/') || id.includes('\\') || id.includes('..')) {
+		throw new Error('Invalid checkpoint id');
+	}
+}
+
 function sidecarPath(dir: string, id: TCheckpointId): string {
+	assertSafeCheckpointId(id);
 	return path.join(dir, `${id}.json`);
 }
 
 function binPath(dir: string, id: TCheckpointId): string {
+	assertSafeCheckpointId(id);
 	return path.join(dir, `${id}.bin`);
 }
 
@@ -323,8 +331,26 @@ export async function deleteCheckpoint(id: TCheckpointId): Promise<boolean> {
 	const sidecar = sidecarPath(dir, id);
 	const bin = binPath(dir, id);
 	let removed = false;
-	if (fs.existsSync(sidecar)) { fs.unlinkSync(sidecar); removed = true; }
-	if (fs.existsSync(bin)) { fs.unlinkSync(bin); removed = true; }
+	// Remove the .bin first: on Windows a locked file throws EPERM while a
+	// llama-server that loaded the checkpoint still holds it. Fail loudly with
+	// a clear message instead of silently leaving a half-deleted checkpoint.
+	if (fs.existsSync(bin)) {
+		try {
+			fs.unlinkSync(bin);
+			removed = true;
+		} catch (err) {
+			console.error(`[checkpoint] Failed to delete ${bin}:`, err);
+			throw new Error('Checkpoint file is in use (locked by a running server). Stop the server that loaded this checkpoint and retry.');
+		}
+	}
+	if (fs.existsSync(sidecar)) {
+		try {
+			fs.unlinkSync(sidecar);
+			removed = true;
+		} catch (err) {
+			console.error(`[checkpoint] Failed to delete sidecar ${sidecar}:`, err);
+		}
+	}
 	return removed;
 }
 

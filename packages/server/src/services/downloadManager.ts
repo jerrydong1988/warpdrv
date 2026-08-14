@@ -15,8 +15,39 @@ const activeDownloaders = new Map<TDownloadId, DownloaderHelper>();
 // In-memory download state (synced to store for history)
 const downloadState = new Map<TDownloadId, IDownload>();
 
+// Ids cancelled via cancelDownload — the downloader's async 'stop' event fires
+// after helper.stop() and would otherwise overwrite CANCELLED with PAUSED.
+const cancelledDownloads = new Set<TDownloadId>();
+
 function makeDownloadId(): TDownloadId {
 	return crypto.randomBytes(8).toString('hex');
+}
+
+// Hugging Face repo authors/names and file paths are interpolated into both
+// the download URL and local path.join() destinations. Reject anything that
+// could escape the destination directory or the HF domain.
+const HF_REPO_SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function sanitizeDownloadPaths(author: string, modelName: string, filename: string): void {
+	if (!HF_REPO_SEGMENT_RE.test(author)) {
+		throw new Error(`Invalid model author: ${author}`);
+	}
+	if (!HF_REPO_SEGMENT_RE.test(modelName)) {
+		throw new Error(`Invalid model name: ${modelName}`);
+	}
+	if (!filename || typeof filename !== 'string') {
+		throw new Error('Invalid filename');
+	}
+	// Nested sub-directories are supported, but no absolute paths, no empty or
+	// dot segments, and no `..` traversal.
+	if (
+		filename.startsWith('/') ||
+		filename.startsWith('\\') ||
+		filename.startsWith('..') ||
+		filename.split(/[\\/]/).some(seg => seg === '' || seg === '.' || seg === '..')
+	) {
+		throw new Error(`Invalid filename: ${filename}`);
+	}
 }
 
 function quantFromFilename(filename: string): string {
@@ -91,6 +122,15 @@ function setupDownloaderEvents(
 	});
 
 	helper.on('stop', async () => {
+		// If this download was explicitly cancelled, keep CANCELLED instead of
+		// flipping back to PAUSED (the 'stop' event races cancelDownload).
+		if (cancelledDownloads.has(id)) {
+			cancelledDownloads.delete(id);
+			activeDownloaders.delete(id);
+			await persistDownload(dl);
+			emitDownloadUpdate(dl);
+			return;
+		}
 		dl.status = EDownloadStatus.PAUSED;
 		dl.speedBps = 0;
 		const resumeState = helper.getResumeState();
@@ -115,6 +155,7 @@ export async function startDownload(
 	partIndex: number = 0,
 	groupKey?: string,
 ): Promise<IDownload> {
+	sanitizeDownloadPaths(author, modelName, filename);
 	const id = makeDownloadId();
 
 	// Handle nested directories - create full path including subdirectories
@@ -204,15 +245,21 @@ export async function startMultiPartDownload(
 ): Promise<string[]> {
 	const downloadIds: string[] = [];
 
-	// Start all parts in parallel
-	const downloadPromises = fileParts.map((filename, index) =>
-		startDownload(author, modelName, filename, destRoot, fileParts, index).then((dl) => {
+	// Cap concurrent shard downloads — launching every part simultaneously
+	// opened 10+ parallel connections to Hugging Face per model.
+	const MAX_CONCURRENT_SHARDS = 3;
+	let nextIndex = 0;
+	const workers = Array.from({ length: Math.min(MAX_CONCURRENT_SHARDS, fileParts.length) }, async () => {
+		while (nextIndex < fileParts.length) {
+			const index = nextIndex++;
+			const filename = fileParts[index];
+			if (!filename) continue;
+			const dl = await startDownload(author, modelName, filename, destRoot, fileParts, index);
 			downloadIds.push(dl.id);
-			return dl;
-		}),
-	);
+		}
+	});
 
-	await Promise.all(downloadPromises);
+	await Promise.all(workers);
 	return downloadIds;
 }
 
@@ -284,7 +331,10 @@ export async function resumeDownload(id: TDownloadId): Promise<boolean> {
 
 export async function cancelDownload(id: TDownloadId): Promise<boolean> {
 	const helper = activeDownloaders.get(id);
-	if (helper) helper.stop();
+	if (helper) {
+		cancelledDownloads.add(id);
+		helper.stop();
+	}
 	activeDownloaders.delete(id);
 
 	const dl = downloadState.get(id) ?? await store.get<IDownload>(DOWNLOADS_PREFIX + id);

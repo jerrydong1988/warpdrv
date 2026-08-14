@@ -171,6 +171,12 @@ function proxyRequest(
 		}
 	});
 
+	// If the client disconnects mid-stream, tear down the upstream request so
+	// we don't keep buffering/streaming to a dead socket.
+	res.on('close', () => {
+		if (!res.writableEnded) proxyReq.destroy();
+	});
+
 	// Pipe request body through for POST requests
 	req.pipe(proxyReq, { end: true });
 }
@@ -233,11 +239,23 @@ function createProxyApp(): express.Express {
 	// Enable CORS for browser clients
 	app.use(cors());
 
-	// Parse JSON body but keep it available for piping
+	// Parse JSON body but keep it available for piping.
+	// Bounded buffering — an unbounded accumulate would let any client
+	// (the proxy binds 0.0.0.0 when remote access is enabled) exhaust memory.
+	const MAX_PROXY_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 	app.use((req, res, next) => {
 		let rawBody = '';
-		req.on('data', (chunk: Buffer) => { rawBody += chunk.toString(); });
+		let tooLarge = false;
+		req.on('data', (chunk: Buffer) => {
+			if (rawBody.length + chunk.length > MAX_PROXY_BODY_BYTES) {
+				tooLarge = true;
+				req.destroy();
+				return;
+			}
+			rawBody += chunk.toString();
+		});
 		req.on('end', () => {
+			if (tooLarge) return;
 			try {
 				if (rawBody) (req as any)._rawBody = rawBody;
 				if (rawBody) req.body = JSON.parse(rawBody);
@@ -246,6 +264,7 @@ function createProxyApp(): express.Express {
 			}
 			next();
 		});
+		req.on('error', () => { /* destroyed above */ });
 	});
 
 	// Apply auth middleware to all /v1/* routes
@@ -253,10 +272,20 @@ function createProxyApp(): express.Express {
 
 	// POST /v1/audio/transcriptions — route to whisper server via multipart model field
 	app.post('/v1/audio/transcriptions', async (req, res) => {
-		// Buffer the entire request body first
+		// Buffer the entire request body first (bounded — audio uploads are
+		// capped at MAX_PROXY_BODY_BYTES to prevent memory exhaustion)
 		const chunks: Buffer[] = [];
+		let totalBytes = 0;
 		await new Promise<void>((resolve, reject) => {
-			req.on('data', (chunk: Buffer) => chunks.push(chunk));
+			req.on('data', (chunk: Buffer) => {
+				totalBytes += chunk.length;
+				if (totalBytes > MAX_PROXY_BODY_BYTES) {
+					reject(new Error('Request body too large'));
+					req.destroy();
+					return;
+				}
+				chunks.push(chunk);
+			});
 			req.on('end', resolve);
 			req.on('error', reject);
 		});
@@ -457,8 +486,9 @@ export async function startModelProxy(): Promise<StartProxyResult> {
 	const port = settings.proxyPort ?? 1234;
 
 	return new Promise((resolve) => {
-		const server = app.listen(port, '0.0.0.0', async () => {
-			console.log(`[WarpCore] Model proxy listening on 0.0.0.0:${port}`);
+		const host = settings.proxyHost ?? '127.0.0.1';
+		const server = app.listen(port, host, async () => {
+			console.log(`[WarpCore] Model proxy listening on ${host}:${port}`);
 			proxyServerInstance = server;
 			proxyError = null;
 			const status = await getProxyStatus();

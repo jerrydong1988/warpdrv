@@ -8,15 +8,15 @@ const SETTINGS_KEY = 'settings:general';
 const COOKIE_NAME = 'warpcore_auth';
 
 // Check if request is from a remote host (not localhost)
-export function isRemote(req: { ip: string; connection: { remoteAddress: string } }): boolean {
-	const ip = req.ip || req.connection.remoteAddress || '';
+export function isRemote(req: { ip?: string; connection?: { remoteAddress?: string } }): boolean {
+	const ip = req.ip || req.connection?.remoteAddress || '';
 	const normalized = ip.replace(/^::ffff:/, '');
 	const isLocalhost = normalized === '::1' || normalized === '127.0.0.1';
 	return !isLocalhost;
 }
 
 // Check if auth should be required for this request
-export async function shouldRequireAuth(req: { ip: string; connection: { remoteAddress: string } }): Promise<boolean> {
+export async function shouldRequireAuth(req: { ip?: string; connection?: { remoteAddress?: string } }): Promise<boolean> {
 	const settings = await getSettings();
 	
 	// If localhost auth is forced, always require auth
@@ -42,9 +42,10 @@ export async function hasAdminAccess(req: { cookies?: Record<string, string>; he
 	if (!settings.apiAuthEnabled && !settings.proxyAuthEnabled) return true;
 
 	// Check cookie first
-	if (req.cookies?.[COOKIE_NAME]) {
+	const cookieId = req.cookies?.[COOKIE_NAME];
+	if (cookieId) {
 		const tokens = await store.list<IAccessToken>('tokens:');
-		const token = tokens.find(t => t.id === req.cookies[COOKIE_NAME]);
+		const token = tokens.find(t => t.id === cookieId);
 		if (token?.admin) return true;
 	}
 
@@ -85,6 +86,18 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
 	}
 
 	res.status(401).json({ ok: false, data: null, error: 'Authentication required' });
+}
+
+// Admin-only middleware: must be mounted AFTER authMiddleware.
+// Gates control-plane routes (tokens, settings, backends, recipes, MCP config,
+// downloads, servers) so that non-admin (inference-only) tokens cannot
+// escalate privileges or reach arbitrary command execution.
+export async function adminMiddleware(req: any, res: Response, next: NextFunction): Promise<void> {
+	if (await hasAdminAccess(req)) {
+		next();
+		return;
+	}
+	res.status(403).json({ ok: false, data: null, error: 'Admin access required' });
 }
 
 // Auth middleware for /v1/* proxy routes

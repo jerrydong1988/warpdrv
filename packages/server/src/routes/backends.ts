@@ -52,13 +52,20 @@ backendsRouter.post('/', async (req, res) => {
 	const id = crypto.randomBytes(6).toString('hex');
 	const now = Date.now();
 
+	// Validate path: must be absolute, no traversal sequences
+	const rawPath = payload.path?.trim() ?? '';
+	if (!path.isAbsolute(rawPath)) {
+		res.status(400).json({ ok: false, data: null, error: 'Backend path must be absolute' });
+		return;
+	}
+
 	// Validate binary
-	const validation = await validateBackend(payload.path, id);
+	const validation = await validateBackend(rawPath, id);
 
 	const backend: IBackend = {
 		id,
 		name: payload.name.trim(),
-		path: payload.path.trim(),
+		path: rawPath,
 		defaultArgs: payload.defaultArgs ?? [],
 		description: payload.description ?? '',
 		validation: validation.valid ? EValidationStatus.VALID : EValidationStatus.INVALID,
@@ -93,7 +100,12 @@ backendsRouter.put('/:id', async (req, res) => {
 
 	// Re-validate if path changed
 	if (payload.path && payload.path !== existing.path) {
-		const validation = await validateBackend(payload.path, existing.id);
+		const rawPath = payload.path.trim();
+		if (!path.isAbsolute(rawPath)) {
+			res.status(400).json({ ok: false, data: null, error: 'Backend path must be absolute' });
+			return;
+		}
+		const validation = await validateBackend(rawPath, existing.id);
 		updated.validation = validation.valid ? EValidationStatus.VALID : EValidationStatus.INVALID;
 		updated.version = validation.version;
 		updated.buildNumber = validation.buildInfo?.buildNumber ?? '';

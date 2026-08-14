@@ -1,16 +1,19 @@
 import { spawn } from 'child_process';
 import { getShellSpec } from '../util/shellCmd';
 
-// Only these commands are permitted — no subshells, no eval, no shell builtins
+// Only these commands are permitted — no shells, no eval-style flags.
+// Shells (bash/sh/zsh/fish/powershell/cmd) are deliberately excluded:
+// executing the whole command via `-c` would make the allowlist pointless.
 const ALLOWED_COMMANDS = new Set([
-	'bash','sh','zsh','fish',
 	'npx','npm','node','pnpm','yarn',
 	'cargo','rustc','clippy-driver',
 	'git','gh',
 	'cat','head','tail','wc','sort','uniq','grep','sed','awk','find','ls','mkdir','cp','mv','rm','touch','chmod','chown','ln',
 	'dir','type','echo','printenv','env','which','where','whoami','hostname','date','time',
-	'powershell','pwsh','cmd',
 ]);
+
+// Flags that make the (still allowlisted) runtimes evaluate arbitrary code
+const EVAL_FLAGS = ['-e', '-p', '--eval', '--print', '-c', '--check', '-i', '--interactive'];
 
 export const shellExecDefinition = {
 	name: 'shell_exec',
@@ -59,8 +62,16 @@ export function validateShellCommand(command: string): void {
 		throw new ShellCommandValidationError('Command cannot be empty');
 	}
 
+	// Reject all control characters (newlines, tabs, CR, etc.) — the command
+	// is executed via `bash -c` / `powershell -Command`, where a newline is a
+	// statement separator and would bypass the metacharacter blocklist below.
+	if (/[\x00-\x1f\x7f]/.test(command)) {
+		throw new ShellCommandValidationError('Control characters (newlines, tabs, etc.) are not allowed');
+	}
+
 	// Block all shell metacharacters that enable injection
-	if (/[|;&`$()<>{}\[\]!]/.test(trimmed)) {
+	// Note: `||` must be checked before single `|`; path traversal with encoded dots also blocked
+	if (/\|\||[|;&`$()<>{}\[\]!]/.test(trimmed)) {
 		throw new ShellCommandValidationError('Shell metacharacters are not allowed (pipes, semicolons, subshells, variable expansion, etc.)');
 	}
 
@@ -74,14 +85,20 @@ export function validateShellCommand(command: string): void {
 		throw new ShellCommandValidationError(`Command '${base}' is not in the allowed list`);
 	}
 
-	// Block common env-injection patterns in remaining args
+	// Block eval-style flags on the allowlisted runtimes (node -e, npm -c, etc.)
 	const argsPart = trimmed.slice(firstToken.length).trim();
+	const flagMatch = argsPart.match(/-{1,2}[a-zA-Z]+/g);
+	if (flagMatch && flagMatch.some(f => EVAL_FLAGS.includes(f.toLowerCase()))) {
+		throw new ShellCommandValidationError(`Flag '${flagMatch.find(f => EVAL_FLAGS.includes(f.toLowerCase()))}' is not allowed (would evaluate arbitrary code)`);
+	}
+
+	// Block common env-injection patterns in remaining args
 	if (/\b(PASSWORD|SECRET|API_KEY|TOKEN|PRIVATE_KEY)=/.test(argsPart)) {
 		throw new ShellCommandValidationError('Embedding credential assignments in command args is not allowed');
 	}
 
-	// Block path-traversal patterns in args
-	if (/[\.\.][\/\\]/.test(argsPart) || /%.*%/.test(argsPart)) {
+	// Block path-traversal patterns in args (including multi-dot variants)
+	if (/[\.\.][\/\\]/.test(argsPart) || /%.*%/.test(argsPart) || /\.{2,}[\/\\]/.test(argsPart)) {
 		throw new ShellCommandValidationError('Path traversal or env-variable references in arguments are not allowed');
 	}
 }
@@ -94,20 +111,39 @@ export async function shellExecHandler(
 
 	// Restrict working directory to configured allowed roots
 	if (args.cwd) {
+		const pathMod = await import('path');
+		const fsp = await import('fs/promises');
 		let resolvedCwd: string;
 		try {
-			resolvedCwd = require('path').resolve(args.cwd);
+			resolvedCwd = pathMod.resolve(args.cwd);
 		} catch {
 			throw new ShellCommandValidationError(`Invalid cwd: ${args.cwd}`);
 		}
-		const pathMod = await import('path');
 		if (allowedRoots && allowedRoots.length > 0) {
-			const valid = allowedRoots.some(root => {
+			// Lexical containment (both separator styles)…
+			const lexicallyValid = allowedRoots.some(root => {
 				const absRoot = pathMod.resolve(root);
 				return resolvedCwd === absRoot || resolvedCwd.startsWith(absRoot + pathMod.sep) || resolvedCwd.startsWith(absRoot + '/');
 			});
-			if (!valid) {
+			if (!lexicallyValid) {
 				throw new ShellCommandValidationError(`cwd '${args.cwd}' is outside the allowed roots`);
+			}
+			// …and symlink-aware containment: a cwd that is or contains a symlink
+			// pointing outside the roots would escape the sandbox.
+			let realCwd: string;
+			try {
+				realCwd = await fsp.realpath(resolvedCwd);
+			} catch {
+				realCwd = resolvedCwd; // path may not exist yet; spawn will surface the error
+			}
+			const reallyValid = allowedRoots.some(root => {
+				const absRoot = pathMod.resolve(root);
+				let realRoot: string;
+				try { realRoot = require('fs').realpathSync(absRoot); } catch { realRoot = absRoot; }
+				return realCwd === realRoot || realCwd.startsWith(realRoot + pathMod.sep) || realCwd.startsWith(realRoot + '/');
+			});
+			if (!reallyValid) {
+				throw new ShellCommandValidationError(`cwd '${args.cwd}' resolves outside the allowed roots`);
 			}
 		}
 	}

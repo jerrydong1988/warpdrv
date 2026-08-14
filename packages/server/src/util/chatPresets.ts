@@ -19,6 +19,14 @@ function ensureDir(): string {
 	return dir;
 }
 
+// Preset ids are interpolated into file paths — reject anything that could
+// escape the presets directory (e.g. `..%2F..%2Fwarpcore-data`).
+function assertSafePresetId(id: string): void {
+	if (!id || typeof id !== 'string' || id.includes('/') || id.includes('\\') || id === '..' || id.includes('..')) {
+		throw new Error('Invalid preset id');
+	}
+}
+
 export function listChatPresets(): IChatPreset[] {
 	const dir = ensureDir();
 	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
@@ -35,6 +43,7 @@ export function listChatPresets(): IChatPreset[] {
 }
 
 export function getChatPreset(id: string): IChatPreset | null {
+	assertSafePresetId(id);
 	const filePath = path.join(ensureDir(), `${id}.json`);
 	if (!fs.existsSync(filePath)) return null;
 	try {
@@ -60,6 +69,7 @@ export function createChatPreset(payload: IChatPresetCreatePayload): IChatPreset
 }
 
 export function updateChatPreset(id: string, payload: Partial<IChatPresetCreatePayload>): IChatPreset | null {
+	assertSafePresetId(id);
 	const existing = getChatPreset(id);
 	if (!existing) return null;
 	const updated: IChatPreset = {
@@ -73,6 +83,7 @@ export function updateChatPreset(id: string, payload: Partial<IChatPresetCreateP
 }
 
 export function deleteChatPreset(id: string): boolean {
+	assertSafePresetId(id);
 	const filePath = path.join(ensureDir(), `${id}.json`);
 	if (!fs.existsSync(filePath)) return false;
 	fs.unlinkSync(filePath);

@@ -192,6 +192,12 @@ export function validateRecipeBody(body: string): void {
 		throw new Error('Recipe step body cannot be empty');
 	}
 
+	// Reject control characters — the body is executed via `bash -c`, where a
+	// newline is a statement separator and would bypass every pattern below.
+	if (/[\x00-\x1f\x7f]/.test(body)) {
+		throw new Error('Recipe steps cannot contain control characters (newlines, tabs, etc.)');
+	}
+
 	if (/[|;&]/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain command chaining (pipes, semicolons, &&, ||)');
 	}

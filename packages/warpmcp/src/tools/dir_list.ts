@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { assertPathAllowed } from '../util/sandbox';
+import { assertPathAllowed, assertFileSafe } from '../util/sandbox';
 import type { IWarpmcpDeps } from '../types';
 export interface IDirEntry {
 	name: string;
@@ -19,7 +19,9 @@ export const dirListDefinition = {
 	},
 };
 export async function dirListHandler(deps: IWarpmcpDeps, args: { path: string }): Promise<{ entries: IDirEntry[] }> {
-	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
+	const roots = deps.getFsAllowedRoots();
+	const safePath = await assertPathAllowed(roots, args.path);
+	assertFileSafe(roots, safePath);
 	const items = await fs.readdir(safePath, { withFileTypes: true });
 	const entries: IDirEntry[] = [];
 	for (const item of items) {

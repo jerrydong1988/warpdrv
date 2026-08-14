@@ -15,7 +15,7 @@ import { presetsRouter } from './routes/presets';
 import { hubRouter } from './routes/hub';
 import { tokensRouter } from './routes/tokens';
 import { authRouter } from './routes/auth';
-import { authMiddleware } from './middleware/auth';
+import { authMiddleware, adminMiddleware } from './middleware/auth';
 import { rateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import type { ISettings, IServer, IDownload, IDevice, IBackend, IBackendGroup, IWhisperBackend, IWhisperServer } from '@warpcore/shared';
@@ -57,6 +57,19 @@ import { reconcileServers, launchAutoStartServers } from './services/processMana
 import { reconcileWhisperServers, launchAutoStartWhisperServers } from './services/whisperProcessManager';
 
 const SETTINGS_KEY = 'settings:general';
+
+// Global async-error guards: an unhandled rejection (or thrown exception)
+// would otherwise crash the whole server process (Node >= 15). Log loudly
+// and keep serving — individual request/event handlers must still be fixed,
+// but a single bad promise must not take down every running llama-server.
+process.on('unhandledRejection', (reason, promise) => {
+	console.error('[WarpCore] Unhandled rejection:', reason instanceof Error ? reason.stack ?? reason.message : reason);
+	// Note: unhandledRejection fires after the rejection handler hook; the
+	// promise is already lost, nothing more we can do here.
+});
+process.on('uncaughtException', (err) => {
+	console.error('[WarpCore] Uncaught exception:', err.stack ?? err.message);
+});
 
 // Whitelist of known-safe shell paths to avoid command injection via $SHELL
 const KNOWN_SHELLS = ['/bin/bash', '/bin/sh', '/usr/bin/bash', '/usr/bin/sh', '/bin/zsh', '/usr/bin/zsh'];
@@ -182,29 +195,31 @@ async function main() {
 	app.use('/api/auth', authRouter);
 	// Client log route (no auth — server may not be up when errors occur)
 	app.use('/api/client-log', clientLogsRouter);
-	// Token routes (require admin auth)
-	app.use('/api/tokens', authMiddleware, tokensRouter);
-	// API routes with auth middleware
-	app.use('/api/settings', authMiddleware, settingsRouter);
-	app.use('/api/backends', authMiddleware, backendsRouter);
+	// Control-plane routes: any authenticated token may pass authMiddleware,
+	// but adminMiddleware restricts privileged actions to admin tokens
+	// (local requests bypass auth entirely unless authRequireForLocalhost).
+	app.use('/api/tokens', authMiddleware, adminMiddleware, tokensRouter);
+	app.use('/api/settings', authMiddleware, adminMiddleware, settingsRouter);
+	app.use('/api/backends', authMiddleware, adminMiddleware, backendsRouter);
+	app.use('/api/backend-groups', authMiddleware, adminMiddleware, backendGroupsRouter);
+	app.use('/api/recipes', authMiddleware, adminMiddleware, recipesRouter);
+	app.use('/api/mcp', authMiddleware, adminMiddleware, mcpRouter);
+	app.use('/api/hub', authMiddleware, adminMiddleware, hubRouter);
+	app.use('/api/checkpoints', authMiddleware, adminMiddleware, checkpointsRouter);
+	app.use('/api/servers', authMiddleware, adminMiddleware, serversRouter);
+	app.use('/api/presets', authMiddleware, adminMiddleware, presetsRouter);
+	app.use('/api/proxy', authMiddleware, adminMiddleware, proxyRouter);
+	app.use('/api/whisper-backends', authMiddleware, adminMiddleware, whisperBackendsRouter);
+	app.use('/api/whisper-servers', authMiddleware, adminMiddleware, whisperServersRouter);
+	app.use('/api/whisper-models', authMiddleware, adminMiddleware, whisperModelsRouter);
+	// Read-only routes: any valid token
 	app.use('/api/hardware', authMiddleware, hardwareRouter);
 	app.use('/api/releases', authMiddleware, releasesRouter);
 	app.use('/api/kokoro', authMiddleware, kokoroRouter);
-	app.use('/api/backend-groups', authMiddleware, backendGroupsRouter);
 	app.use('/api/models', authMiddleware, modelsRouter);
-	app.use('/api/servers', authMiddleware, serversRouter);
-	app.use('/api/presets', authMiddleware, presetsRouter);
-	app.use('/api/hub', authMiddleware, hubRouter);
 	app.use('/api/update', authMiddleware, updateRouter);
-	app.use('/api/proxy', authMiddleware, proxyRouter);
 	app.use('/api/chat', authMiddleware, chatRouter);
-	app.use('/api/mcp', authMiddleware, mcpRouter);
 	app.use('/api/summary', authMiddleware, summaryRouter);
-	app.use('/api/recipes', authMiddleware, recipesRouter);
-	app.use('/api/checkpoints', authMiddleware, checkpointsRouter);
-	app.use('/api/whisper-backends', authMiddleware, whisperBackendsRouter);
-	app.use('/api/whisper-servers', authMiddleware, whisperServersRouter);
-	app.use('/api/whisper-models', authMiddleware, whisperModelsRouter);
 	// SSE endpoint (protected by auth)
 	app.get('/api/events', authMiddleware, async (req, res) => {
 	// console.log('[SSE] New client');

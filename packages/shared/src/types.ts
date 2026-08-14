@@ -305,6 +305,7 @@ export interface ISettings {
 	portRangeEnd: number;
 	apiHost: string;
 	apiPort: number;
+	proxyHost?: string;
 	proxyPort: number;
 	proxyEnabled: boolean;
 	proxyAuthEnabled: boolean;
@@ -347,8 +348,11 @@ export const DEFAULT_SETTINGS: ISettings = {
 	modelRoots: [],
 	portRangeStart: 8010,
 	portRangeEnd: 8099,
-	apiHost: '0.0.0.0',
+	// Bind to loopback by default — expose the API remotely only after the
+	// user explicitly changes apiHost and enables authentication.
+	apiHost: '127.0.0.1',
 	apiPort: 4400,
+	proxyHost: '127.0.0.1',
 	proxyPort: 1234,
 	proxyEnabled: true,
 	proxyAuthEnabled: false,

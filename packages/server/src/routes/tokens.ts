@@ -123,7 +123,14 @@ export async function validateBearerToken(authHeader: string | undefined): Promi
 	if (!rawToken) return null;
 
 	const tokens = await store.list<IAccessToken>(TOKEN_PREFIX);
+
+	// Fast pre-filter: only compare bcrypt hashes for tokens whose stored
+	// tokenPrefix (the first 11 chars of the raw token) matches. Previously
+	// every request ran bcrypt.compare against EVERY token — a CPU-bound DoS
+	// surface (bcrypt is deliberately slow) on any authenticated endpoint.
+	const rawPrefix = rawToken.substring(0, 11);
 	for (const token of tokens) {
+		if (token.tokenPrefix !== rawPrefix) continue;
 		const match = await bcrypt.compare(rawToken, token.tokenHash);
 		if (match) return token;
 	}

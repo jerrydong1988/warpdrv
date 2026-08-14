@@ -45,6 +45,7 @@ authRouter.post('/login', async (req, res) => {
 		httpOnly: true,
 		secure: isSecure,
 		sameSite: 'strict' as const,
+		path: '/', // Cookie must be sent to all API paths
 		maxAge: undefined, // no expiry
 	});
 
@@ -70,7 +71,7 @@ authRouter.get('/check', async (req, res) => {
 	const tokenId = req.cookies?.[COOKIE_NAME];
 
 	if (!tokenId) {
-		res.status(401).json({ ok: true, data: null, error: null });
+		res.status(401).json({ ok: false, data: null, error: 'Not authenticated' });
 		return;
 	}
 
@@ -80,8 +81,8 @@ authRouter.get('/check', async (req, res) => {
 
 	if (!token) {
 		// Cookie exists but token doesn't, clear it
-		res.clearCookie(COOKIE_NAME);
-		res.status(401).json({ ok: true, data: null, error: null });
+		res.clearCookie(COOKIE_NAME, { path: '/' });
+		res.status(401).json({ ok: false, data: null, error: 'Token not found' });
 		return;
 	}
 
@@ -106,7 +107,7 @@ authRouter.get('/me', async (req, res) => {
 	const token = tokens.find(t => t.id === tokenId);
 
 	if (!token) {
-		res.clearCookie(COOKIE_NAME);
+		res.clearCookie(COOKIE_NAME, { path: '/' });
 		res.status(401).json({ ok: false, data: null, error: 'Token not found' });
 		return;
 	}
@@ -120,6 +121,6 @@ authRouter.get('/me', async (req, res) => {
 
 // POST /api/auth/logout - clear cookie
 authRouter.post('/logout', (_req, res) => {
-	res.clearCookie(COOKIE_NAME);
+	res.clearCookie(COOKIE_NAME, { path: '/' });
 	res.json({ ok: true, data: null, error: null });
 });
