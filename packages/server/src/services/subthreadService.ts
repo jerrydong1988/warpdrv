@@ -1,16 +1,33 @@
 import type { Orchestrator, SqlitePersistence, SseBroadcaster } from "@warpcore/bridge/server";
 import { EToolApprovalMode } from "@warpcore/bridge";
 import type { IAgent, IToolAttachment } from "@warpcore/shared";
-import { EReasoningEffort, EServerStatus, genThreadId } from "@warpcore/shared";
+import {
+	EReasoningEffort,
+	EServerStatus,
+	EThreadHierarchyType,
+	genThreadId,
+} from "@warpcore/shared";
 import type { IServer } from "@warpcore/shared";
 import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
 import { getMode } from "./modeStore";
 import { store } from "../util/store";
 
-const INJECTED_TOOLS: IToolAttachment[] = [
+export const INJECTED_TOOLS: IToolAttachment[] = [
 	{ serverName: "warpmcp", toolName: "superthread_send_message" },
 	{ serverName: "warpmcp", toolName: "set_current_status" },
 ];
+
+export function mergeWithInjectedTools(savedTools: IToolAttachment[]): IToolAttachment[] {
+	return [
+		...savedTools.filter(
+			(t) =>
+				!INJECTED_TOOLS.some(
+					(inj) => inj.serverName === t.serverName && inj.toolName === t.toolName,
+				),
+		),
+		...INJECTED_TOOLS,
+	];
+}
 
 export interface ISubThreadInfo {
 	threadId: string;
@@ -136,9 +153,10 @@ export class SubthreadService {
 			updatedAt: now,
 		});
 
-		// 5.5. Save original agent info in thread state
+		// 5.5. Save original agent info + guardrails in thread state
 		await this.persistence.updateThreadState(newThreadId, {
 			originalAgent: { id: agent.id, name: agent.name },
+			activeGuardrails: agent.guardrails ?? [],
 		});
 
 		// 6. Save agent's tools (always include injected tools)
@@ -211,6 +229,12 @@ export class SubthreadService {
 					userMessage: { content: message },
 					attachedTools: allTools,
 					skipToolsSave: true,
+					messageState: {
+						sender: {
+							threadId: parentThreadId,
+							type: EThreadHierarchyType.SUPERTHREAD,
+						},
+					},
 					inferenceParams: agent.reasoningEffort
 						? {
 								reasoningEffort: agent.reasoningEffort,
@@ -229,6 +253,92 @@ export class SubthreadService {
 	}
 
 	async sendToSubthread(
+		parentThreadId: string,
+		targetSubThreadId: string,
+		message: string,
+	): Promise<{ notificationId?: string; threadId: string }> {
+		// 1. Look up target thread to get serverId
+		const targetThread = await this.persistence.getThread(targetSubThreadId);
+		if (!targetThread) {
+			throw new Error(`Target thread ${targetSubThreadId} not found`);
+		}
+
+		// 2. Get serverId from thread meta
+		const meta = JSON.parse(targetThread.meta) as { serverId: string | null };
+		if (!meta.serverId) {
+			throw new Error(`Thread ${targetSubThreadId} has no serverId`);
+		}
+
+		// 3. Check if server is running
+		const server = await store.get<IServer>("servers:" + meta.serverId);
+		if (!server || server.status !== EServerStatus.RUNNING) {
+			return this.queueNotification(parentThreadId, targetSubThreadId, message);
+		}
+
+		// 4. Check if thread is currently running inference
+		if (this.orchestrator.isThreadRunningInference(targetSubThreadId)) {
+			return this.queueNotification(parentThreadId, targetSubThreadId, message);
+		}
+
+		// 4.5. Fetch and flush pending parent notifications
+		const pendingNotifications = await this.persistence.notificationList(
+			targetSubThreadId,
+			false, // exclude consumed
+			false, // exclude hidden
+		);
+		const parentMessages = pendingNotifications.filter(
+			(n) => n.senderType === "thread" && n.senderId === parentThreadId,
+		);
+		const combinedMessage =
+			parentMessages.length > 0
+				? message +
+					"\n\n--- queued message boundary ---\n\n" +
+					parentMessages
+						.map((n) => (n.payload as { message?: string }).message)
+						.filter(Boolean)
+						.join("\n\n--- queued message boundary ---\n\n")
+				: message;
+
+		// 5. Send directly via handleCompletionV2
+		const inferenceUrl = `http://127.0.0.1:${server.port}`;
+		const abortController = new AbortController();
+
+		const savedTools = await this.persistence.getThreadAttachedTools(targetSubThreadId);
+		const attachedTools = mergeWithInjectedTools(savedTools?.tools ?? []);
+
+		this.orchestrator
+			.handleCompletionV2(
+				inferenceUrl,
+				{
+					threadId: targetSubThreadId,
+					serverId: meta.serverId,
+					userMessage: { content: combinedMessage },
+					attachedTools,
+					skipToolsSave: true,
+					messageState: {
+						sender: {
+							threadId: parentThreadId,
+							type: EThreadHierarchyType.SUPERTHREAD,
+						},
+					},
+					folderId: targetThread.folderId ?? undefined,
+					inferenceParams: {},
+				},
+				abortController.signal,
+			)
+			.catch((err) => {
+				console.error(`[Subthread] Inference failed for thread ${targetSubThreadId}:`, err);
+			});
+
+		// Consume the flushed notifications
+		for (const n of parentMessages) {
+			await this.persistence.notificationConsume(n.id);
+		}
+
+		return { threadId: targetSubThreadId };
+	}
+
+	private async queueNotification(
 		parentThreadId: string,
 		targetSubThreadId: string,
 		message: string,

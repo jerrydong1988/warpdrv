@@ -87,7 +87,7 @@ import { useStore } from "@/store";
 import type { TUiSpaceComponentDef } from "@/store/slices/uiSpaces";
 import { EUISpaceLoc } from "@/store/slices/uiSpaces";
 import type { IAppletAPIFE } from "../lib/types";
-import { GuardrailBadge, ModeGuardrailPicker } from "../ui/GuardrailBadge";
+import { GuardrailBadge, GuardrailPicker } from "../ui/GuardrailBadge";
 import { ModeTabs } from "../ui/ModeTabs";
 import { MonitorButton } from "../ui/MonitorButton";
 
@@ -1505,9 +1505,9 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 							>
 								Active guardrails
 							</Text>
-							<ModeGuardrailPicker
-								modeId={mode.id}
+							<GuardrailPicker
 								value={mode.activeGuardrails || []}
+								onChange={(ids) => updateModeGuardrailsApi(mode.id, ids)}
 								onClick={(e) => e.stopPropagation()}
 							/>
 						</Box>
@@ -2613,6 +2613,24 @@ const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
+								Active guardrails
+							</Text>
+							<GuardrailPicker
+								value={agent.guardrails || []}
+								onChange={(ids) => updateAgent({ guardrails: ids })}
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</Box>
+
+						<Box>
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
 								Description
 							</Text>
 							<Textarea
@@ -2950,10 +2968,11 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				},
 				tools: { type: "tools", description: "Tools the agent can use", index: 3 },
 				autoApprove: { type: "tools", description: "Tools to auto-approve", index: 4 },
+				guardrails: { type: "guardrails", description: "Guardrails to attach", index: 5 },
 				reasoningLevel: {
 					type: "dropdown",
 					description: "Reasoning level (none/low/medium/high)",
-					index: 5,
+					index: 6,
 					props: {
 						items: [
 							{ label: "none", value: EReasoningEffort.NONE },
@@ -2975,6 +2994,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					autoApproveTools: parseToolValue(params.autoApprove || ""),
 					description: extraParams?.prompt || "",
 					reasoningEffort: params.reasoningLevel,
+					guardrails: parseGuardrailValue(params.guardrails || ""),
 				});
 			},
 		});

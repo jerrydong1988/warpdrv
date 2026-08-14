@@ -457,6 +457,13 @@ export interface IChatMessageCreatePayload {
 	stats?: string;
 }
 
+// Thread sender metadata for message state
+export interface IThreadSenderInfo {
+	threadId: string;
+	agent?: { id: string; name: string };
+	type: EThreadHierarchyType;
+}
+
 // Thread config with typed params - WarpCore format
 export interface IThreadConfig {
 	threadId: string;

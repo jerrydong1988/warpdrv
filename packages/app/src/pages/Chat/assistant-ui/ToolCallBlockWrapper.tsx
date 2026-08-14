@@ -63,15 +63,13 @@ export const ToolCallBlockWrapper = React.memo(
 		const attachAllTools = useStore((s) => s.attachAllTools);
 		const attachedTools = useStore((s) => s.attachedTools);
 		const modes = useStore((s) => s.modes);
-		const threads = useStore((s) => s.threads);
-		const threadState = useStore((s) => s.getCurrentThreadState(s));
-		const modeId = threadState?.modeId as string | undefined;
+		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId);
 		const currentMode = modeId ? modes[modeId] : null;
 		const isModeActive = !!currentMode;
 
 		const modeUnionTools = useMemo(
-			() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
-			[isModeActive, modes, currentThreadId, threads],
+			() => computeModeUnionTools(modes, isModeActive),
+			[isModeActive, modes],
 		);
 
 		const [deciding, setDeciding] = useState(false);

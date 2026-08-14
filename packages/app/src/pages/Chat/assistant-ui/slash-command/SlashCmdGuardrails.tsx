@@ -31,7 +31,7 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 		inputRef(triggerRef.current);
 	}, [inputRef]);
 
-	const selectedNames = useMemo(() => {
+	const selectedIds = useMemo(() => {
 		if (!value || !value.trim()) return new Set<string>();
 		return new Set(
 			value
@@ -41,12 +41,12 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 		);
 	}, [value]);
 
-	const handleToggle = (name: string) => {
-		const next = new Set(selectedNames);
-		if (next.has(name)) {
-			next.delete(name);
+	const handleToggle = (id: string) => {
+		const next = new Set(selectedIds);
+		if (next.has(id)) {
+			next.delete(id);
 		} else {
-			next.add(name);
+			next.add(id);
 		}
 		onChange(next.size ? [...next].join(",") : "");
 	};
@@ -119,9 +119,9 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 	}, [isOpen]);
 
 	const displayLabel =
-		selectedNames.size === 0
+		selectedIds.size === 0
 			? "Guardrails"
-			: `${selectedNames.size} guardrail${selectedNames.size === 1 ? "" : "s"}`;
+			: `${selectedIds.size} guardrail${selectedIds.size === 1 ? "" : "s"}`;
 
 	const availableGuardrails = Object.values(guardrails);
 
@@ -169,7 +169,7 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 						overflow: "hidden",
 						textOverflow: "ellipsis",
 						whiteSpace: "nowrap",
-						color: selectedNames.size
+						color: selectedIds.size
 							? "var(--wc-text-primary)"
 							: "var(--wc-text-secondary)",
 					}}
@@ -210,12 +210,12 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 							</div>
 						)}
 						{availableGuardrails.map((g) => {
-							const isSelected = selectedNames.has(g.name);
+							const isSelected = selectedIds.has(g.id);
 							return (
 								<div
-									key={g.name}
+									key={g.id}
 									onMouseDown={(e) => e.stopPropagation()}
-									onClick={() => handleToggle(g.name)}
+									onClick={() => handleToggle(g.id)}
 									style={{
 										display: "flex",
 										alignItems: "center",
@@ -265,6 +265,6 @@ export function parseGuardrailValue(value: string): string[] {
 		.filter(Boolean);
 }
 
-export function serializeGuardrailValue(names: string[]): string {
-	return names.join(",");
+export function serializeGuardrailValue(ids: string[]): string {
+	return ids.join(",");
 }

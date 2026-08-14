@@ -73,16 +73,14 @@ export const ToolCallBlockCollapsible = React.memo(
 		const attachAllTools = useStore((s) => s.attachAllTools);
 		const attachedTools = useStore((s) => s.attachedTools);
 		const modes = useStore((s) => s.modes);
-		const threads = useStore((s) => s.threads);
-		const threadState = useStore((s) => s.getCurrentThreadState(s));
+		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId);
 		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
-		const modeId = threadState?.modeId as string | undefined;
 		const currentMode = modeId ? modes[modeId] : null;
 		const isModeActive = !!currentMode;
 
 		const modeUnionTools = useMemo(
-			() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
-			[isModeActive, modes, currentThreadId, threads],
+			() => computeModeUnionTools(modes, isModeActive),
+			[isModeActive, modes],
 		);
 
 		const [isOpen, setIsOpen] = useState(false);
@@ -400,14 +398,16 @@ export const ToolCallBlockCollapsible = React.memo(
 					</CollapsibleTrigger>
 
 					<CollapsibleContent>
-						<ToolCallBlockBody
-							toolCallId={toolCallId}
-							toolName={toolName}
-							serverName={serverName}
-							args={args}
-							result={result}
-							messageId={messageId}
-						/>
+						{isOpen && (
+							<ToolCallBlockBody
+								toolCallId={toolCallId}
+								toolName={toolName}
+								serverName={serverName}
+								args={args}
+								result={result}
+								messageId={messageId}
+							/>
+						)}
 					</CollapsibleContent>
 				</Collapsible>
 			</Box>

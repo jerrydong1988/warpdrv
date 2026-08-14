@@ -12,6 +12,7 @@ export interface IAgent {
 	autoApproveTools: IToolAttachment[];
 	description: string;
 	reasoningEffort?: EReasoningEffort;
+	guardrails: string[];
 	createdAt: number;
 	updatedAt: number;
 }
@@ -24,4 +25,5 @@ export interface IAgentCreatePayload {
 	autoApproveTools?: IToolAttachment[];
 	description?: string;
 	reasoningEffort?: EReasoningEffort;
+	guardrails?: string[];
 }

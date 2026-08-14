@@ -49,7 +49,6 @@ export const PendingToolCallsBox = React.memo(() => {
 	const attachAllTools = useStore((s) => s.attachAllTools);
 	const attachedTools = useStore((s) => s.attachedTools);
 	const modes = useStore((s) => s.modes);
-	const threads = useStore((s) => s.threads);
 	const threadState = useStore((s) => s.getCurrentThreadState(s));
 	const mcpServers = useStore((s) => s.mcpServers);
 	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
@@ -62,8 +61,8 @@ export const PendingToolCallsBox = React.memo(() => {
 	const headMessageId = currentThreadId ? headMessageIdByThread[currentThreadId] : null;
 
 	const modeUnionTools = useMemo(
-		() => computeModeUnionTools(modes, isModeActive, currentThreadId, threads),
-		[isModeActive, modes, currentThreadId, threads],
+		() => computeModeUnionTools(modes, isModeActive),
+		[isModeActive, modes],
 	);
 
 	// Filter tool calls for the head message of the current thread

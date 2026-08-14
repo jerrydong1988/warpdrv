@@ -11,7 +11,12 @@
 
 import type { EventNode } from "@warpcore/realmcore";
 import crypto from "crypto";
-import { genMessageId, genPartId, stableStringify } from "@warpcore/shared";
+import {
+	genMessageId,
+	genPartId,
+	stableStringify,
+	EThreadInferenceEndCause,
+} from "@warpcore/shared";
 import { isDeepStrictEqual } from "util";
 import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";
 import {
@@ -89,6 +94,11 @@ export class Orchestrator {
 	private broadcaster: IBridgeBroadcaster;
 	private eventNode: EventNode;
 	private pureCompletionControllers: Record<string, AbortController> = {};
+	private runningInferences: Set<TThreadId> = new Set();
+
+	public isThreadRunningInference(threadId: TThreadId): boolean {
+		return this.runningInferences.has(threadId);
+	}
 
 	constructor(config: IOrchestratorConfig) {
 		this.mcpClient = config.mcpClient;
@@ -184,6 +194,36 @@ export class Orchestrator {
 				delete this.pureCompletionControllers[id];
 			}
 			return { cancelled: !!controller };
+		});
+
+		this.eventNode.fn("bridge.isThreadRunningInference", async (api) => {
+			return this.isThreadRunningInference(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.getThread", async (api) => {
+			return this.persistence.getThread(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.listNotifications", async (api) => {
+			const { threadId } = api.payload as { threadId: string };
+			return this.persistence.notificationList(threadId, false, false);
+		});
+
+		this.eventNode.fn("bridge.consumeNotification", async (api) => {
+			return this.persistence.notificationConsume(api.payload as string);
+		});
+
+		this.eventNode.fn("bridge.getThreadAttachedTools", async (api) => {
+			return this.persistence.getThreadAttachedTools(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.handleCompletion", async (api) => {
+			const { inferenceUrl, request } = api.payload as {
+				inferenceUrl: string;
+				request: ICompletionRequest;
+			};
+			const ac = new AbortController();
+			this.handleCompletionV2(inferenceUrl, request, ac.signal).catch(console.error);
 		});
 	}
 
@@ -311,6 +351,18 @@ export class Orchestrator {
 		request: ICompletionRequest,
 		abortSignal: AbortSignal,
 	): Promise<void> {
+		let cause: EThreadInferenceEndCause = EThreadInferenceEndCause.COMPLETED;
+		const setCause = (newCause: EThreadInferenceEndCause) => {
+			if (cause === EThreadInferenceEndCause.COMPLETED) {
+				cause = newCause;
+			} else {
+				console.error(
+					`[Orchestrator] Cannot override inference cause: ${cause} → ${newCause} for thread ${request.threadId}`,
+				);
+			}
+		};
+		this.runningInferences.add(request.threadId);
+		this.eventNode.broadcast("bridge.threadInference.started", { threadId: request.threadId });
 		try {
 			// Auto-create thread if needed
 			let thread = await this.persistence.getThread(request.threadId);
@@ -446,6 +498,7 @@ export class Orchestrator {
 				baseMessages,
 				enabledTools,
 				abortSignal,
+				setCause,
 			);
 
 			// Fire title generation after response completes (fire-and-forget)
@@ -464,6 +517,11 @@ export class Orchestrator {
 					});
 			}
 		} catch (err) {
+			setCause(
+				abortSignal.aborted
+					? EThreadInferenceEndCause.ABORTED
+					: EThreadInferenceEndCause.ERROR,
+			);
 			const errorMsg = err instanceof Error ? err.message : String(err);
 			if (abortSignal.aborted) {
 				this.broadcaster.emit({
@@ -480,6 +538,12 @@ export class Orchestrator {
 					error: errorMsg,
 				});
 			}
+		} finally {
+			this.runningInferences.delete(request.threadId);
+			this.eventNode.broadcast("bridge.threadInference.ended", {
+				threadId: request.threadId,
+				cause,
+			});
 		}
 	}
 
@@ -493,6 +557,7 @@ export class Orchestrator {
 		messages: Array<TOpenAIMessage>,
 		enabledTools: IToolDefinition[],
 		abortSignal: AbortSignal,
+		setCause: (c: EThreadInferenceEndCause) => void,
 	): Promise<void> {
 		if (abortSignal.aborted) return;
 
@@ -550,7 +615,10 @@ export class Orchestrator {
 
 		// Stop conditions: waiting for approval, or no tool calls fired
 		if (!result) return;
-		if (result.needsAsk) return;
+		if (result.needsAsk) {
+			setCause(EThreadInferenceEndCause.PENDING_APPROVAL);
+			return;
+		}
 		if (!result.hadToolCalls) return;
 
 		// Tool calls auto-resolved — trigger next pass with new assistant message
@@ -562,6 +630,7 @@ export class Orchestrator {
 			messages,
 			enabledTools,
 			abortSignal,
+			setCause,
 		);
 	}
 
@@ -1303,14 +1372,35 @@ export class Orchestrator {
 		const enabledTools = await this.resolveEnabledTools(request);
 		const baseMessages = await this.buildMessageChain(request, tc.messageId);
 
-		await this.executePass(
-			inferenceUrl,
-			request,
-			tc.messageId,
-			baseMessages,
-			enabledTools,
-			abortSignal,
-		);
+		this.runningInferences.add(request.threadId);
+		this.eventNode.broadcast("bridge.threadInference.started", { threadId: request.threadId });
+		let cause: EThreadInferenceEndCause = EThreadInferenceEndCause.COMPLETED;
+		const setCause = (newCause: EThreadInferenceEndCause) => {
+			if (cause === EThreadInferenceEndCause.COMPLETED) {
+				cause = newCause;
+			} else {
+				console.error(
+					`[Orchestrator] Cannot override inference cause: ${cause} → ${newCause} for thread ${request.threadId}`,
+				);
+			}
+		};
+		try {
+			await this.executePass(
+				inferenceUrl,
+				request,
+				tc.messageId,
+				baseMessages,
+				enabledTools,
+				abortSignal,
+				setCause,
+			);
+		} finally {
+			this.runningInferences.delete(request.threadId);
+			this.eventNode.broadcast("bridge.threadInference.ended", {
+				threadId: request.threadId,
+				cause,
+			});
+		}
 	}
 
 	private buildInferenceParams(params: Record<string, unknown>): Record<string, unknown> {

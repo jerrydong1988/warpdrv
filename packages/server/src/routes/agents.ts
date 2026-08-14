@@ -52,6 +52,7 @@ agentsRouter.post("/", async (req, res) => {
 			autoApproveTools: payload.autoApproveTools || [],
 			description: payload.description || "",
 			reasoningEffort: payload.reasoningEffort,
+			guardrails: payload.guardrails || [],
 			createdAt: now,
 			updatedAt: now,
 		};
@@ -83,6 +84,7 @@ agentsRouter.put("/:id", async (req, res) => {
 			autoApproveTools: body.autoApproveTools,
 			description: body.description,
 			reasoningEffort: body.reasoningEffort,
+			guardrails: body.guardrails,
 		});
 
 		const updated = await persistence.getAgent(id);

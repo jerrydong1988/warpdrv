@@ -5,6 +5,7 @@
 // ============================================================
 
 import type {
+	EReasoningEffort,
 	IAgent,
 	ICodeGraphEdge,
 	ICodeGraphFile,
@@ -356,24 +357,28 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 
 							-- Agents
 							CREATE TABLE IF NOT EXISTS ${t.agents} (
-									id TEXT PRIMARY KEY,
-										name TEXT NOT NULL UNIQUE,
-										serverId TEXT NOT NULL DEFAULT '',
-										promptId TEXT,
-										tools TEXT NOT NULL DEFAULT '[]',
-										autoApproveTools TEXT NOT NULL DEFAULT '[]',
-										description TEXT NOT NULL DEFAULT '',
-										meta TEXT NOT NULL DEFAULT '{}',
-										created_at INTEGER NOT NULL,
-										updated_at INTEGER NOT NULL
-									);
-									CREATE INDEX IF NOT EXISTS idx_${t.agents}_server ON ${t.agents}(serverId);
+								id TEXT PRIMARY KEY,
+								name TEXT NOT NULL UNIQUE,
+								description TEXT NOT NULL DEFAULT '',
+								meta TEXT NOT NULL DEFAULT '{}',
+								created_at INTEGER NOT NULL,
+								updated_at INTEGER NOT NULL
+							);
 						`;
 }
 
 // ============================================================
 // BetterSqlitePersistence
 // ============================================================
+interface IAgentMeta {
+	serverId: string;
+	promptId?: string;
+	tools: IToolAttachment[];
+	autoApproveTools: IToolAttachment[];
+	reasoningEffort?: EReasoningEffort;
+	guardrails: string[];
+}
+
 export class SqlitePersistence implements IPersistence {
 	private db: Database.Database | null = null;
 	private dbPath: string;
@@ -466,24 +471,6 @@ export class SqlitePersistence implements IPersistence {
 			console.log("[migration] Added parentId to threads table");
 		} catch {
 			// Column already exists
-		}
-
-		// Add meta column to agents
-		try {
-			this.db!.exec(`ALTER TABLE ${this.t.agents} ADD COLUMN meta TEXT DEFAULT '{}'`);
-			console.log("[migration] Added meta to agents table");
-		} catch {
-			// Column already exists
-		}
-
-		// Add UNIQUE constraint on agent name
-		try {
-			this.db!.exec(
-				`CREATE UNIQUE INDEX IF NOT EXISTS idx_${this.t.agents}_name ON ${this.t.agents}(name)`,
-			);
-			console.log("[migration] Added UNIQUE constraint on agents.name");
-		} catch {
-			// Index already exists
 		}
 
 		// FTS5 — standard mode, populate index via INSERT
@@ -2393,18 +2380,22 @@ export class SqlitePersistence implements IPersistence {
 	}
 
 	async createAgent(agent: IAgent): Promise<void> {
+		const meta: IAgentMeta = {
+			serverId: agent.serverId,
+			promptId: agent.promptId,
+			tools: agent.tools,
+			autoApproveTools: agent.autoApproveTools,
+			reasoningEffort: agent.reasoningEffort,
+			guardrails: agent.guardrails,
+		};
 		this.db!.prepare(
-			`INSERT INTO ${this.t.agents} (id, name, serverId, promptId, tools, autoApproveTools, description, meta, created_at, updated_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO ${this.t.agents} (id, name, description, meta, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?)`,
 		).run(
 			agent.id,
 			agent.name,
-			agent.serverId,
-			agent.promptId ?? null,
-			JSON.stringify(agent.tools),
-			JSON.stringify(agent.autoApproveTools),
 			agent.description,
-			JSON.stringify({ reasoningEffort: agent.reasoningEffort }),
+			JSON.stringify(meta),
 			agent.createdAt,
 			agent.updatedAt,
 		);
@@ -2422,6 +2413,7 @@ export class SqlitePersistence implements IPersistence {
 				| "autoApproveTools"
 				| "description"
 				| "reasoningEffort"
+				| "guardrails"
 			>
 		>,
 	): Promise<void> {
@@ -2431,37 +2423,43 @@ export class SqlitePersistence implements IPersistence {
 			sets.push("name = ?");
 			values.push(updates.name);
 		}
-		if (updates.serverId !== undefined) {
-			sets.push("serverId = ?");
-			values.push(updates.serverId);
-		}
-		if (updates.promptId !== undefined) {
-			sets.push("promptId = ?");
-			values.push(updates.promptId ?? null);
-		}
-		if (updates.tools !== undefined) {
-			sets.push("tools = ?");
-			values.push(JSON.stringify(updates.tools));
-		}
-		if (updates.autoApproveTools !== undefined) {
-			sets.push("autoApproveTools = ?");
-			values.push(JSON.stringify(updates.autoApproveTools));
-		}
 		if (updates.description !== undefined) {
 			sets.push("description = ?");
 			values.push(updates.description);
 		}
-		if (updates.reasoningEffort !== undefined) {
+
+		const hasMetaField =
+			updates.serverId !== undefined ||
+			updates.promptId !== undefined ||
+			updates.tools !== undefined ||
+			updates.autoApproveTools !== undefined ||
+			updates.reasoningEffort !== undefined ||
+			updates.guardrails !== undefined;
+		if (hasMetaField) {
 			const existing = this.db!.prepare(`SELECT meta FROM ${this.t.agents} WHERE id = ?`).get(
 				id,
 			) as { meta?: string } | undefined;
-			const meta = existing
-				? { ...(JSON.parse(existing.meta as string) as Record<string, unknown>) }
-				: {};
-			meta.reasoningEffort = updates.reasoningEffort;
+			const meta: IAgentMeta = existing?.meta
+				? {
+						serverId: "",
+						tools: [],
+						autoApproveTools: [],
+						guardrails: [],
+						...(JSON.parse(existing.meta) as Partial<IAgentMeta>),
+					}
+				: { serverId: "", tools: [], autoApproveTools: [], guardrails: [] };
+			if (updates.serverId !== undefined) meta.serverId = updates.serverId;
+			if (updates.promptId !== undefined) meta.promptId = updates.promptId ?? undefined;
+			if (updates.tools !== undefined) meta.tools = updates.tools;
+			if (updates.autoApproveTools !== undefined)
+				meta.autoApproveTools = updates.autoApproveTools;
+			if (updates.reasoningEffort !== undefined)
+				meta.reasoningEffort = updates.reasoningEffort;
+			if (updates.guardrails !== undefined) meta.guardrails = updates.guardrails;
 			sets.push("meta = ?");
 			values.push(JSON.stringify(meta));
 		}
+
 		if (sets.length === 0) return;
 		sets.push("updated_at = ?");
 		values.push(Date.now());
@@ -2476,16 +2474,23 @@ export class SqlitePersistence implements IPersistence {
 	}
 
 	private hydrateAgent(row: Record<string, unknown>): IAgent {
+		const meta: IAgentMeta = {
+			serverId: "",
+			tools: [],
+			autoApproveTools: [],
+			guardrails: [],
+			...(JSON.parse((row.meta as string) || "{}") as Partial<IAgentMeta>),
+		};
 		return {
 			id: row.id as string,
 			name: row.name as string,
-			serverId: row.serverId as string,
-			promptId: (row.promptId as string) || undefined,
-			tools: JSON.parse(row.tools as string) as IToolAttachment[],
-			autoApproveTools: JSON.parse(row.autoApproveTools as string) as IToolAttachment[],
+			serverId: meta.serverId,
+			promptId: meta.promptId,
+			tools: meta.tools,
+			autoApproveTools: meta.autoApproveTools,
 			description: row.description as string,
-			reasoningEffort: (JSON.parse(row.meta as string) as Record<string, unknown>)
-				.reasoningEffort as IAgent["reasoningEffort"],
+			reasoningEffort: meta.reasoningEffort,
+			guardrails: meta.guardrails,
 			createdAt: row.created_at as number,
 			updatedAt: row.updated_at as number,
 		};

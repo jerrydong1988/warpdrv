@@ -16,8 +16,9 @@ import type {
 	IServer,
 	ITodoItem,
 } from "@warpcore/shared";
-import { parseMessyLLMArray } from "@warpcore/shared";
+import { parseMessyLLMArray, EThreadHierarchyType, EServerStatus } from "@warpcore/shared";
 import { getMode, listModes } from "../../services/modeStore";
+import { mergeWithInjectedTools } from "../../services/subthreadService";
 import { store } from "../../util/store";
 import type { IAppletAPIBE } from "../lib/types";
 import {
@@ -746,6 +747,86 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						},
 					});
 				}
+			}
+		});
+
+		api.eventNode.on("/warpcore", "bridge.threadInference.ended", async (eventApi) => {
+			const payload = eventApi.payload as {
+				threadId: string;
+				cause: string;
+			};
+			const { threadId, cause } = payload;
+
+			// Only auto-process if inference ended normally (not user abort, error, or pending approval)
+			if (cause !== "completed") return;
+
+			const thread = await api.eventNode.invoke("/warpcore", "bridge.getThread", threadId);
+			if (!thread || !thread.parentId) return;
+
+			// Pre-send checks (before consuming notifications)
+			const meta = JSON.parse(thread.meta) as { serverId: string | null };
+			if (!meta?.serverId) return;
+
+			const server = await store.get<IServer>("servers:" + meta.serverId);
+			if (!server || server.status !== EServerStatus.RUNNING) return;
+
+			const isRunning = await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.isThreadRunningInference",
+				threadId,
+			);
+			if (isRunning) return;
+
+			// Fetch pending notifications, filter to parent thread only
+			const notifications = await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.listNotifications",
+				{ threadId },
+			);
+			const parentMessages = notifications.filter(
+				(n) => n.senderType === "thread" && n.senderId === thread.parentId,
+			);
+			if (parentMessages.length === 0) return;
+
+			const combinedMessage = parentMessages
+				.map((n) => (n.payload as { message?: string }).message)
+				.filter(Boolean)
+				.join("\n\n--- queued message boundary ---\n\n");
+
+			if (!combinedMessage) return;
+
+			// Load saved tools + inject subthread tools
+			const savedTools = await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.getThreadAttachedTools",
+				threadId,
+			);
+			const attachedTools = mergeWithInjectedTools(savedTools?.tools ?? []);
+
+			const inferenceUrl = `http://127.0.0.1:${server.port}`;
+			const abortController = new AbortController();
+
+			await api.eventNode.invoke("/warpcore", "bridge.handleCompletion", {
+				inferenceUrl: `http://127.0.0.1:${server.port}`,
+				request: {
+					threadId,
+					serverId: meta.serverId,
+					userMessage: { content: combinedMessage },
+					attachedTools,
+					skipToolsSave: true,
+					messageState: {
+						sender: {
+							threadId: thread.parentId,
+							type: EThreadHierarchyType.SUPERTHREAD,
+						},
+					},
+					folderId: thread.folderId ?? undefined,
+					inferenceParams: {},
+				},
+			});
+
+			for (const n of parentMessages) {
+				await api.eventNode.invoke("/warpcore", "bridge.consumeNotification", n.id);
 			}
 		});
 	});

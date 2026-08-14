@@ -11,14 +11,14 @@ import { useStore } from "@/store";
 
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
 
-export const ModeGuardrailPicker = memo(
+export const GuardrailPicker = memo(
 	({
-		modeId,
 		value,
+		onChange,
 		onClick,
 	}: {
-		modeId: string;
 		value: string[];
+		onChange: (ids: string[]) => void;
 		onClick?: (e: React.MouseEvent) => void;
 	}) => {
 		const guardrails = useStore((s) => s.guardrails) || EMPTY_GUARDRAILS;
@@ -32,7 +32,7 @@ export const ModeGuardrailPicker = memo(
 		const handleToggle = (e: React.MouseEvent, id: string) => {
 			e.stopPropagation();
 			const next = selectedSet.has(id) ? value.filter((n) => n !== id) : [...value, id];
-			updateModeGuardrailsApi(modeId, next);
+			onChange(next);
 		};
 
 		useEffect(() => {

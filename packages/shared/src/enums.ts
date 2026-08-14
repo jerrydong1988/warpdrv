@@ -54,6 +54,20 @@ export enum ESpecType {
 // Re-export from hub-types
 export { EDownloadStatus } from "./hub-types";
 
+// Thread hierarchy relationship type
+export enum EThreadHierarchyType {
+	SUBTHREAD = "SUBTHREAD",
+	SUPERTHREAD = "SUPERTHREAD",
+}
+
+// Thread inference end cause
+export enum EThreadInferenceEndCause {
+	COMPLETED = "completed",
+	ABORTED = "aborted",
+	ERROR = "error",
+	PENDING_APPROVAL = "pending_approval",
+}
+
 // Chat inference enums (kept in shared - not chat-specific)
 // Note: EChatRole, EMcpTransportType, EMcpServerStatus, EToolApprovalMode,
 // and EToolCallStatus have been moved to @warpcore/bridge
