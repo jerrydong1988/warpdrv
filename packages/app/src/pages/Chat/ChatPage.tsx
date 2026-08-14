@@ -343,6 +343,7 @@ const ChatInner = React.memo(
 		const applyToolCallCreated = useStore((s) => s.applyToolCallCreated);
 		const initThreadState = useStore((s) => s.initThreadState);
 		const initMessageStates = useStore((s) => s.initMessageStates);
+		const seedThreadNotifications = useStore((s) => s.seedThreadNotifications);
 		const selectedEmbeddingServerId = useStore((s) => s.selectedEmbeddingServerId);
 		const servers = useStore((s) => s.servers);
 		const setThreadEmbeddingStatuses = useStore((s) => s.setThreadEmbeddingStatuses);
@@ -403,11 +404,14 @@ const ChatInner = React.memo(
 					}
 
 					// Fetch persisted states
-					const [threadStateRes, msgStatesRes] = await Promise.all([
+					const [threadStateRes, msgStatesRes, notificationsRes] = await Promise.all([
 						fetch(`/api/chat/threads/${currentThreadId}/state`).then((res) =>
 							res.ok ? res.json() : null,
 						),
 						fetch(`/api/chat/threads/${currentThreadId}/message-states`).then((res) =>
+							res.ok ? res.json() : null,
+						),
+						fetch(`/api/chat/notifications/${currentThreadId}`).then((res) =>
 							res.ok ? res.json() : null,
 						),
 					]);
@@ -416,6 +420,9 @@ const ChatInner = React.memo(
 					}
 					if (msgStatesRes?.data) {
 						initMessageStates(msgStatesRes.data);
+					}
+					if (notificationsRes?.data) {
+						seedThreadNotifications(currentThreadId!, notificationsRes.data);
 					}
 
 					// Fetch embedding statuses
@@ -444,6 +451,7 @@ const ChatInner = React.memo(
 			setThreadEmbeddingStatuses,
 			initThreadState,
 			initMessageStates,
+			seedThreadNotifications,
 		]);
 
 		// Realm events and applet state

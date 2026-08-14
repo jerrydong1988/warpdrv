@@ -179,15 +179,15 @@ interface ThreadActions {
 }
 const ThreadActionsContext = React.createContext<ThreadActions | null>(null);
 
-const TreeNode = React.memo(({ node }: { node: TreeEntry }) => {
+const TreeNode = ({ node }: { node: TreeEntry }) => {
 	return (
 		<Box w="full">
 			{node.type === "thread" ? <ThreadNode node={node} /> : <FolderNode node={node} />}
 		</Box>
 	);
-});
+};
 
-const ThreadNode = React.memo(({ node }: { node: TreeEntry }) => {
+const ThreadNode = ({ node }: { node: TreeEntry }) => {
 	const thread = useStore((s) => s.threads[node.id]);
 	if (!thread) return null;
 
@@ -452,9 +452,9 @@ const ThreadNode = React.memo(({ node }: { node: TreeEntry }) => {
 		</Box>,
 		portalTarget,
 	);
-});
+};
 
-const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
+const FolderNode = ({ node }: { node: TreeEntry }) => {
 	const folder = useStore((s) => s.folders.find((f) => f.id === node.id));
 	if (!folder) return null;
 
@@ -687,7 +687,7 @@ const FolderNode = React.memo(({ node }: { node: TreeEntry }) => {
 			)}
 		</Box>
 	);
-});
+};
 
 export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => void }) => {
 	const api = useThreadsAndFolders();

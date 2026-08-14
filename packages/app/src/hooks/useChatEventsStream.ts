@@ -59,6 +59,8 @@ export function useChatEventsStream() {
 	const applyFolderUpdated = useStore((s) => s.applyFolderUpdated);
 	const applyFolderDeleted = useStore((s) => s.applyFolderDeleted);
 	const applyFolderReordered = useStore((s) => s.applyFolderReordered);
+	const applyNotificationCreated = useStore((s) => s.applyNotificationCreated);
+	const applyNotificationUpdated = useStore((s) => s.applyNotificationUpdated);
 
 	useEffect(() => {
 		console.log("[Chat SSE] Creating EventSource connection to /api/chat/events");
@@ -236,6 +238,12 @@ export function useChatEventsStream() {
 				case "folder.reordered":
 					applyFolderReordered(event.folders);
 					break;
+				case "notification.created":
+					applyNotificationCreated(event.notification);
+					break;
+				case "notification.updated":
+					applyNotificationUpdated(event.notification);
+					break;
 				default:
 					// Unknown event type, ignore
 					break;
@@ -268,6 +276,8 @@ export function useChatEventsStream() {
 		es.addEventListener("folder.updated", handleEvent);
 		es.addEventListener("folder.deleted", handleEvent);
 		es.addEventListener("folder.reordered", handleEvent);
+		es.addEventListener("notification.created", handleEvent);
+		es.addEventListener("notification.updated", handleEvent);
 		es.onerror = (err) => {
 			console.error("[Chat SSE] ❌ Connection error:", err);
 		};
@@ -302,5 +312,7 @@ export function useChatEventsStream() {
 		applyFolderDeleted,
 		applyFolderReordered,
 		applyFolderUpdated,
+		applyNotificationCreated,
+		applyNotificationUpdated,
 	]);
 }

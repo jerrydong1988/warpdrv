@@ -787,7 +787,7 @@ export class Orchestrator {
 								if (name) {
 									// Allow hooks to block tool calls based on mode restrictions
 									const shouldAbort = await this.eventNode.pipe(
-										"bridge.tool.pre",
+										"bridge.preTool",
 										{
 											request,
 											threadId: request.threadId,

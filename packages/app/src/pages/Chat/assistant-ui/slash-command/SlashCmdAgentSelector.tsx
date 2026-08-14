@@ -275,7 +275,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 												style={{ opacity: 0.4, flexShrink: 0 }}
 											/>
 										)}
-										<span style={{ fontWeight: 600, fontSize: "0.75rem" }}>
+										<span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
 											{agent.name}
 										</span>
 										<span
@@ -300,7 +300,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 										<div
 											style={{
 												paddingLeft: isSelected ? "18px" : "20px",
-												fontSize: "0.65rem",
+												fontSize: "0.75rem",
 												color: "var(--wc-text-faint)",
 												lineHeight: "1.3",
 												maxHeight: "2.6em",

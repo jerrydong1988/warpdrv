@@ -1,7 +1,7 @@
 import type { Orchestrator, SqlitePersistence, SseBroadcaster } from "@warpcore/bridge/server";
 import { EToolApprovalMode } from "@warpcore/bridge";
 import type { IAgent, IToolAttachment } from "@warpcore/shared";
-import { EReasoningEffort, genThreadId } from "@warpcore/shared";
+import { EReasoningEffort, EServerStatus, genThreadId } from "@warpcore/shared";
 import type { IServer } from "@warpcore/shared";
 import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
 import { getMode } from "./modeStore";
@@ -74,6 +74,17 @@ export class SubthreadService {
 			throw new Error(`Agent "${agentName}" not found`);
 		}
 
+		// 2.2. Check if the agent's server is running
+		const server = await store.get<IServer>("servers:" + agent.serverId);
+		if (!server) {
+			throw new Error(`Server ${agent.serverId} not found`);
+		}
+		if (server.status !== EServerStatus.RUNNING) {
+			throw new Error(
+				`Server '${server.serverName}' is not running (status: ${server.status})`,
+			);
+		}
+
 		// 2.5. Check if the current mode or thread-level agent restrictions allow this agent
 		const threadState = await this.persistence.getThreadState(parentThreadId);
 		const modeId = threadState?.modeId as string | undefined;
@@ -126,7 +137,7 @@ export class SubthreadService {
 		});
 
 		// 5.5. Save original agent info in thread state
-		await this.persistence.setThreadState(newThreadId, {
+		await this.persistence.updateThreadState(newThreadId, {
 			originalAgent: { id: agent.id, name: agent.name },
 		});
 
@@ -168,19 +179,13 @@ export class SubthreadService {
 			}
 		}
 
-		// 8. Get server for inference URL
-		const server = await store.get<IServer>("servers:" + agent.serverId);
-		if (!server) {
-			throw new Error(`Server ${agent.serverId} not found`);
-		}
-
-		// 9. Emit thread.created event
+		// 8. Emit thread.created event
 		const thread = await this.persistence.getThread(newThreadId);
 		if (thread) {
 			this.broadcaster.emit({ type: "thread.created", thread });
 		}
 
-		// 9.5. Set thread config with agent's reasoning level
+		// 8.5. Set thread config with agent's reasoning level
 		if (agent.reasoningEffort) {
 			await this.persistence.setThreadConfig({
 				threadId: newThreadId,
@@ -193,7 +198,7 @@ export class SubthreadService {
 			});
 		}
 
-		// 10. Trigger inference via handleCompletionV2
+		// 9. Trigger inference via handleCompletionV2
 		const inferenceUrl = `http://127.0.0.1:${server.port}`;
 		const abortController = new AbortController();
 
@@ -204,7 +209,7 @@ export class SubthreadService {
 					threadId: newThreadId,
 					serverId: agent.serverId,
 					userMessage: { content: message },
-					attachedTools: agent.tools,
+					attachedTools: allTools,
 					skipToolsSave: true,
 					inferenceParams: agent.reasoningEffort
 						? {

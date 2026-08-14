@@ -34,10 +34,11 @@ export class PermissionManager implements IPermissions {
 				toolName,
 			);
 			//console.log('[Perm] thread override result:', threadPerm);
-			const allThreadPerms = await this.persistence.getAllThreadToolPermissions(threadId);
+			// const allThreadPerms = await this.persistence.getAllThreadToolPermissions(threadId);
 			//console.log('[Perm] ALL thread perms for this thread:', JSON.stringify(allThreadPerms));
 			if (threadPerm) {
-				//console.log('[Perm] using thread override:', threadPerm.approvalMode); return threadPerm.approvalMode;
+				//console.log('[Perm] using thread override:', threadPerm.approvalMode);
+				return threadPerm.approvalMode;
 			}
 		}
 		// 2. Global

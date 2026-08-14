@@ -7,6 +7,7 @@ interface NotificationsSlice {
 	notificationsByThread: Record<TThreadId, Record<string, INotification>>;
 	applyNotificationCreated: (notification: INotification) => void;
 	applyNotificationUpdated: (notification: INotification) => void;
+	seedThreadNotifications: (threadId: TThreadId, notifications: INotification[]) => void;
 }
 
 export const notificationsSlice = (
@@ -30,5 +31,13 @@ export const notificationsSlice = (
 			} else {
 				threadNotifs[notification.id] = notification;
 			}
+		}),
+	seedThreadNotifications: (threadId: TThreadId, notifications: INotification[]) =>
+		setState((state) => {
+			const threadNotifs: Record<string, INotification> = {};
+			for (const n of notifications) {
+				threadNotifs[n.id] = n;
+			}
+			state.notificationsByThread[threadId] = threadNotifs;
 		}),
 });

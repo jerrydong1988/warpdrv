@@ -281,8 +281,7 @@ export const PendingToolCallsBox = React.memo(() => {
 	return (
 		<Box
 			data-role="assistant"
-			minW="52rem"
-			mx="-4rem"
+			minW="48rem"
 			shadow="0 10px 10px 10px rgba(0,0,0,0.15)"
 			borderWidth="1px"
 			borderColor="var(--wc-border-default)"

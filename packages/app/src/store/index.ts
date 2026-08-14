@@ -389,6 +389,7 @@ export const useStore = create<AppState>()(
 				notificationsByThread: notifications.notificationsByThread!,
 				applyNotificationCreated: notifications.applyNotificationCreated!,
 				applyNotificationUpdated: notifications.applyNotificationUpdated!,
+				seedThreadNotifications: notifications.seedThreadNotifications!,
 
 				// Monitor box
 				monitorBoxOpen: monitorBox.monitorBoxOpen!,

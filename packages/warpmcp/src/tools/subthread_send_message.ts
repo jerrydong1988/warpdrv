@@ -7,7 +7,7 @@ export const subthreadSendMessageDefinition = {
 	inputSchema: {
 		type: "object",
 		properties: {
-			threadId: {
+			subThreadId: {
 				type: "string",
 				description: "The ID of the subthread to send the message to.",
 			},
@@ -16,17 +16,17 @@ export const subthreadSendMessageDefinition = {
 				description: "The message content to send.",
 			},
 		},
-		required: ["threadId", "message"],
+		required: ["subThreadId", "message"],
 	},
 	resultLimit: 40960,
 };
 
 export async function subthreadSendMessageHandler(
 	deps: IWarpmcpDeps,
-	args: { threadId: string; subthreadId: string; message: string },
+	args: { parentThreadId: string; subThreadId: string; message: string },
 ) {
 	if (!deps.sendToSubthread) {
 		throw "[warpmcp] sendToSubthread function not found";
 	}
-	return deps.sendToSubthread(args.threadId, args.subthreadId, args.message);
+	return deps.sendToSubthread(args.parentThreadId, args.subThreadId, args.message);
 }

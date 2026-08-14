@@ -459,7 +459,7 @@ const AgentPicker = React.memo(
 												flexShrink={0}
 											/>
 										)}
-										<Text fontWeight="600" fontSize="xs" flex="1" minW="0">
+										<Text fontWeight="600" fontSize="sm" flex="1" minW="0">
 											{agent.name}
 										</Text>
 										<Badge
@@ -476,7 +476,7 @@ const AgentPicker = React.memo(
 									</Box>
 									{agent.description && (
 										<Text
-											fontSize="10px"
+											fontSize="12px"
 											color="var(--wc-text-faint)"
 											lineHeight="1.3"
 											maxH="2.6em"
@@ -834,7 +834,8 @@ const CompactIndicator = React.memo(
 		if (!hasCompact) return children;
 		return (
 			<>
-				<Box display="flex" alignItems="center" gap="2" mb="2">
+				{children}
+				<Box display="flex" alignItems="center" gap="2" mt="2">
 					<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
 					<Text
 						fontSize="sm"
@@ -846,7 +847,6 @@ const CompactIndicator = React.memo(
 					</Text>
 					<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
 				</Box>
-				{children}
 			</>
 		);
 	},

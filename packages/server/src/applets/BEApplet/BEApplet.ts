@@ -448,7 +448,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			return userMsg;
 		});
 
-		api.eventNode.hook("/warpcore", "bridge.tool.pre", async (eventApi) => {
+		api.eventNode.hook("/warpcore", "bridge.preTool", async (eventApi) => {
 			const payload = eventApi.payload as {
 				threadId: string;
 				messageId: string;

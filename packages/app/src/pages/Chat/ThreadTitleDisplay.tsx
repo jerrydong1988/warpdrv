@@ -8,7 +8,9 @@ export const ThreadTitleDisplay = React.memo(() => {
 	);
 	const currentThreadId = useStore((s) => s.currentThreadId);
 	const currentStatus = useStore((s) =>
-		s.currentThreadId ? s.threadStates[s.currentThreadId]?.currentStatus : undefined,
+		s.currentThreadId
+			? (s.threadStates[s.currentThreadId]?.currentStatus as string)
+			: undefined,
 	);
 	const activeWorkspaceId = useStore((s) => s.activeWorkspaceId);
 	const workspaceName = useStore((s) => {
@@ -18,15 +20,20 @@ export const ThreadTitleDisplay = React.memo(() => {
 	});
 
 	return (
-		<VStack align="start" gap={0}>
-			<HStack gap="2">
+		<VStack align="start" gap={0} className="drag">
+			<HStack gap="2" className="drag">
 				{workspaceName && (
-					<Text fontSize="14px" fontWeight="500" color="var(--wc-text-primary)">
+					<Text
+						fontSize="14px"
+						fontWeight="500"
+						color="var(--wc-text-primary)"
+						className="drag"
+					>
 						{workspaceName}
 					</Text>
 				)}
 				{workspaceName && (
-					<Text fontSize="14px" color="var(--wc-text-muted)">
+					<Text fontSize="14px" color="var(--wc-text-muted)" className="drag">
 						/
 					</Text>
 				)}
@@ -35,12 +42,13 @@ export const ThreadTitleDisplay = React.memo(() => {
 					fontWeight="600"
 					letterSpacing="-0.02em"
 					color="var(--wc-text-header-title)"
+					className="drag"
 				>
 					{threadTitle}
 				</Text>
 			</HStack>
 			{currentStatus && (
-				<Text fontSize="12px" color="var(--wc-text-muted)">
+				<Text fontSize="12px" color="var(--wc-text-muted)" className="drag">
 					{currentStatus}
 				</Text>
 			)}

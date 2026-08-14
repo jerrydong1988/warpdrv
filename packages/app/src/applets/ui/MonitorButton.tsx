@@ -1,6 +1,6 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { Bot, ChevronUp } from "lucide-react";
-import { memo, useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { useStore } from "@/store";
 
 export const MonitorButton = memo(() => {

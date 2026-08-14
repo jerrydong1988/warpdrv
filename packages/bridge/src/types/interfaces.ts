@@ -5,6 +5,7 @@
 // ============================================================
 
 import type {
+	IAgent,
 	ICodeGraphEdge,
 	ICodeGraphFile,
 	ICodeGraphNode,
@@ -335,6 +336,14 @@ export interface IPersistence {
 		assistantMessageId: string,
 		toolCallId: string,
 	): Promise<INotification>;
+
+	// Agents
+	listAgents(): Promise<IAgent[]>;
+	getAgent(id: string): Promise<IAgent | null>;
+	getAgentByName(name: string): Promise<IAgent | null>;
+	createAgent(agent: IAgent): Promise<void>;
+	updateAgent(id: string, updates: Partial<IAgent>): Promise<void>;
+	deleteAgent(id: string): Promise<void>;
 }
 
 // ============================================================

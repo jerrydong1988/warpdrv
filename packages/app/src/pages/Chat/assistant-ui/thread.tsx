@@ -1043,7 +1043,7 @@ const AgentSelector: FC = React.memo(() => {
 						) : (
 							<VStack gap="2" align="stretch">
 								{availableAgents.map((agent) => {
-									const isSelected = activeAgentSet.has(agent.name);
+									const isSelected = activeAgentSet.has(agent.id);
 									const toolCount = agent.tools?.length ?? 0;
 									return (
 										<Box
@@ -1062,9 +1062,7 @@ const AgentSelector: FC = React.memo(() => {
 													? "var(--wc-bg-selected)"
 													: "var(--wc-bg-card)",
 											}}
-											onClick={() =>
-												handleAgentToggle(agent.name, !isSelected)
-											}
+											onClick={() => handleAgentToggle(agent.id, !isSelected)}
 										>
 											<Box display="flex" alignItems="center" gap="1.5">
 												{isSelected && (
@@ -1082,7 +1080,7 @@ const AgentSelector: FC = React.memo(() => {
 												)}
 												<Text
 													fontWeight="600"
-													fontSize="xs"
+													fontSize="sm"
 													flex="1"
 													minW="0"
 												>
@@ -1106,7 +1104,7 @@ const AgentSelector: FC = React.memo(() => {
 											</Box>
 											{agent.description && (
 												<Text
-													fontSize="10px"
+													fontSize="12px"
 													color="var(--wc-text-faint)"
 													lineHeight="1.3"
 													maxH="2.6em"
