@@ -132,7 +132,7 @@ export const Thread: FC<{
 			} finally {
 				setDeletingLoading(false);
 				setDeletingMessageId(null);
-				if (resolveFn) resolveFn();
+				if (resolveFn) (resolveFn as () => void)();
 			}
 		};
 		return {
@@ -295,7 +295,6 @@ const ThreadSuggestionItem: FC = () => {
 					variant="ghost"
 					className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-4 py-3 text-left text-sm transition-colors"
 					style={{ backgroundColor: 'var(--wc-bg-card)', color: 'var(--wc-text-primary)' }}
-					_hover={{ bg: 'var(--wc-bg-hover)' }}
 				>
 					<SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 font-medium" />
 					<SuggestionPrimitive.Description className="aui-thread-welcome-suggestion-text-2 empty:hidden" style={{ color: 'var(--wc-text-secondary)' }} />
@@ -488,7 +487,11 @@ const ToolsSelector: FC = React.memo(() => {
 	const totalCount = useMemo(() => connectedServers.reduce((sum, [, s]) => sum + s.tools.length, 0), [connectedServers]);
 
 	const color = (attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)';
-	const label = attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${String(attachedTools.length)} Tool(s)` : 'Off';
+	const label = attachAllTools
+		? t('toolList.allTools')
+		: attachedTools.length > 0
+			? t('toolList.toolCount', { count: attachedTools.length })
+			: t('toolList.off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
 		if (checked) {
@@ -684,7 +687,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							? { color: 'var(--wc-text-muted)', borderColor: 'var(--wc-border-default)', backgroundColor: 'transparent' }
 							: { color: 'var(--wc-accent-blue)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-8)' }
 						}
-						_hover={!isValidServer ? undefined : { color: 'var(--wc-accent-blue-hover)', borderColor: 'var(--wc-accent-blue-border)', backgroundColor: 'var(--wc-accent-blue-bg-10)' }}
 					>
 						<SendHorizonal className="aui-composer-send-icon size-4" />
 					</TooltipIconButton>
@@ -697,7 +699,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 							className="aui-composer-cancel size-9"
 							aria-label={t('actions.stop')}
 							color="var(--wc-text-primary)"
-							borderColor="var(--wc-border-default)"
 						style={{ borderColor: 'var(--wc-border-default)' }}
 						>
 							<SquareIcon className="aui-composer-cancel-icon size-4 fill-current" />
@@ -840,6 +841,7 @@ const componentsMap = {
 };
 
 const AssistantMessage: FC = React.memo(() => {
+	const { t } = useTranslation('chat');
 	const parts = useAuiState((s) => s.message.content);
 	const status = useAuiState((s) => s.message.status?.type);
 	const messageId = useAuiState((s) => s.message.id);
@@ -866,7 +868,7 @@ const AssistantMessage: FC = React.memo(() => {
 					/>
 					{startingTools && startingTools.length > 0 && (
 						<div className="mt-2 text-md italic" style={{ color: 'var(--wc-text-tertiary)' }}>
-							calling: {startingTools.join(', ')}...
+							{t('toolStatus.calling', { tools: startingTools.join(', ') })}
 						</div>
 					)}
 					<MessageError />
@@ -981,7 +983,7 @@ const AssistantActionBar: FC = () => {
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null)
+	const ref = useRef<SVGSVGElement | null>(null)
   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (
@@ -1077,7 +1079,7 @@ const ToolActionBar: FC = () => {
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null)
+	const ref = useRef<SVGSVGElement | null>(null)
   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (
@@ -1184,7 +1186,7 @@ const UserActionBar: FC = () => {
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
-	const ref = useRef<HTMLDivElement | null>(null)
+	const ref = useRef<SVGSVGElement | null>(null)
   	const getAnchorRect = () => ref.current!.getBoundingClientRect()
 
 	return (

@@ -69,11 +69,15 @@
     "toolAlwaysApproved": "\"{{toolName}}\" 将在当前对话线程中始终批准",
     "directoryPickerNotSupported": "此环境中不支持目录选择器",
     "tokenNameRequired": "令牌名称不能为空",
-    "selectWhisperBackend": "选择一个 Whisper 后端",
-    "selectModelFile": "选择一个模型文件",
+    "selectWhisperBackend": "选择 whisper 后端",
+    "selectModelFile": "选择模型文件",
     "checkpointIncompatible": "检查点与目标服务器不兼容",
     "autostartUpdateFailed": "更新自启动设置失败",
-    "notAuthenticated": "未认证"
+    "notAuthenticated": "未认证",
+    "loadedSlots": "已加载 {{count}} 个槽位",
+    "loadFailed": "加载失败",
+    "whisperServerUpdated": "Whisper 服务器已更新",
+    "whisperServerLaunched": "Whisper 服务器已启动"
   },
   "fields": {
     "name": "名称",
@@ -164,7 +168,7 @@
     "toggleThreadsList": "切换对话列表"
   },
   "todo": {
-		"done": "[已完成]",
+    "done": "[已完成]",
     "pending": "[待办]"
   },
   "ui": {
@@ -340,7 +344,7 @@
     "presencePenalty": "存在惩罚",
     "preset": "预设",
     "presetName": "预设名称...",
-    "processing": "处理中...",
+    "processing": "正在处理 {{name}}...",
     "processorsP": "处理器 (-p)",
     "prompt": "提示词",
     "reasoningEffort": "推理强度",
@@ -436,7 +440,6 @@
     "editWhisperServer": "编辑 Whisper 服务器",
     "embedMessage": "嵌入消息",
     "embeddedClickToRemove": "已嵌入（点击移除）",
-    "frontendApplet": "前端小程序",
     "guardrailName": "护栏名称",
     "kType": "K 类型",
     "lastModified": "最后修改时间",

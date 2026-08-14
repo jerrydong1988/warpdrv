@@ -1,6 +1,10 @@
 import type { IApiResponse, IApiListResponse } from '@warpcore/shared';
+import { translateServerError } from './translateError';
 
 const API_BASE = '/api';
+
+// NOTE: fetchAuthCheck relies on the "HTTP 401" prefix in thrown messages —
+// translateServerError only localizes the message body and keeps the prefix.
 
 async function request<T>(
 	path: string,
@@ -14,7 +18,7 @@ async function request<T>(
 		});
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
-			throw new Error(`HTTP ${res.status}: ${json.error ?? res.statusText}`);
+			throw new Error(`HTTP ${res.status}: ${translateServerError(json.error ?? res.statusText)}`);
 		}
 		const json = await res.json();
 		return json as IApiResponse<T>;
@@ -35,7 +39,7 @@ async function requestList<T>(
 		});
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
-			throw new Error(`HTTP ${res.status}: ${json.error ?? res.statusText}`);
+			throw new Error(`HTTP ${res.status}: ${translateServerError(json.error ?? res.statusText)}`);
 		}
 		const json = await res.json();
 		return json as IApiListResponse<T>;
@@ -82,14 +86,15 @@ export async function logout(): Promise<IApiResponse<null>> {
 }
 
 export async function fetchAuthCheck(): Promise<IApiResponse<unknown>> {
-	try {
-		return await api.get<unknown>('/auth/check');
-	} catch (err) {
-		if (String(err).includes('HTTP 401')) {
-			return { ok: true, data: null, error: null };
-		}
-		return { ok: false, data: null, error: String(err) };
+	// NOTE: request() never rejects — it resolves { ok:false, error: 'Error: HTTP 401…' }
+	// for 401 responses, so the 401 branch must be handled on the resolved value.
+	const res = await api.get<unknown>('/auth/check');
+	if (res.ok) return res;
+	if (String(res.error).includes('HTTP 401')) {
+		// 401 means unauthenticated — not an error for the auth check flow
+		return { ok: true, data: null, error: null };
 	}
+	return res;
 }
 
 export async function fetchAuthMe(): Promise<IApiResponse<unknown>> {

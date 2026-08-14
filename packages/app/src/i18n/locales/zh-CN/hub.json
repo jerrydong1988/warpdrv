@@ -60,6 +60,7 @@
   },
   "downloadStatus": {
     "downloading": "下载中",
+    "installing": "安装中",
     "paused": "已暂停",
     "completed": "已完成",
     "failed": "失败",

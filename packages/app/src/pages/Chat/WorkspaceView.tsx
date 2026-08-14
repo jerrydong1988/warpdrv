@@ -136,16 +136,16 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	const handleTopicSave = async () => {
 		const trimmed = topic.trim();
 		if (!trimmed) {
-			setTopicError('Topic cannot be empty');
+			setTopicError(t('chat:workspace.topicEmpty'));
 			return;
 		}
 		if (trimmed === 'global') {
-			setTopicError('Topic "global" is reserved');
+			setTopicError(t('chat:workspace.topicReserved'));
 			return;
 		}
 		const res = await updateFolderTopic(folderId, trimmed);
 		if (!res.ok) {
-			setTopicError(res.error ?? 'Failed to update topic');
+			setTopicError(res.error ?? t('chat:workspace.topicUpdateFailed'));
 			return;
 		}
 		setTopicError(null);

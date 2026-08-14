@@ -60,6 +60,7 @@
   },
   "downloadStatus": {
     "downloading": "Downloading",
+    "installing": "Installing",
     "paused": "Paused",
     "completed": "Completed",
     "failed": "Failed",

@@ -73,7 +73,11 @@
     "selectModelFile": "Select a model file",
     "checkpointIncompatible": "Checkpoint incompatible with target server",
     "autostartUpdateFailed": "Failed to update autostart",
-    "notAuthenticated": "Not authenticated"
+    "notAuthenticated": "Not authenticated",
+    "loadedSlots": "Loaded {{count}} slot(s)",
+    "loadFailed": "Load failed",
+    "whisperServerUpdated": "Whisper server updated",
+    "whisperServerLaunched": "Whisper server launched"
   },
   "fields": {
     "name": "Name",
@@ -340,7 +344,7 @@
     "presencePenalty": "Presence Penalty",
     "preset": "Preset",
     "presetName": "Preset name...",
-    "processing": "Processing...",
+    "processing": "Processing {{name}}...",
     "processorsP": "Processors (-p)",
     "prompt": "Prompt",
     "reasoningEffort": "Reasoning effort",
@@ -436,7 +440,6 @@
     "editWhisperServer": "Edit Whisper Server",
     "embedMessage": "Embed message",
     "embeddedClickToRemove": "Embedded (click to remove)",
-    "frontendApplet": "Frontend applet",
     "guardrailName": "Guardrail name",
     "kType": "K Type",
     "lastModified": "Last Modified",

@@ -142,7 +142,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 			try {
 				const startRes = await restartServer(server.id);
 				if (!startRes.ok) {
-					toast('error', startRes.error ?? 'Failed to start server');
+					toast('error', startRes.error ?? t('common:toast.serverStartFailed'));
 					setIsLaunching(false);
 					return;
 				}
@@ -178,12 +178,12 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 				mappings,
 			});
 			if (res.ok && res.data?.success) {
-				toast('success', `Loaded ${res.data.restoredSlotCount} slot(s)`);
+				toast('success', t('common:toast.loadedSlots', { count: res.data.restoredSlotCount }));
 				onClose();
 			} else if (res.data?.fingerprintMismatches.length) {
-				toast('error', 'Checkpoint incompatible with target server');
+				toast('error', t('common:toast.checkpointIncompatible'));
 			} else {
-				toast('error', res.error ?? 'Load failed');
+				toast('error', res.error ?? t('common:toast.loadFailed'));
 			}
 		} catch (err) {
 			toast('error', String(err));

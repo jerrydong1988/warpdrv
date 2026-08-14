@@ -35,7 +35,9 @@
   },
   "toolList": {
     "allTools": "All tools",
-    "noToolsAvailable": "No tools available"
+    "noToolsAvailable": "No tools available",
+    "toolCount": "{{count}} Tool(s)",
+    "off": "Off"
   },
   "labels": {
     "noChatsDesc": "Start a new conversation to begin",
@@ -134,5 +136,18 @@
   "slashCmd": {
     "noMatches": "No matches",
     "noServers": "No servers available"
+  },
+  "workspace": {
+    "topicEmpty": "Topic cannot be empty",
+    "topicReserved": "Topic \"global\" is reserved",
+    "topicUpdateFailed": "Failed to update topic"
+  },
+  "toolStatus": {
+    "awaitingApproval": "Awaiting approval",
+    "denied": "Denied",
+    "running": "Running",
+    "completed": "Completed",
+    "error": "Error",
+    "calling": "calling: {{tools}}..."
   }
 }

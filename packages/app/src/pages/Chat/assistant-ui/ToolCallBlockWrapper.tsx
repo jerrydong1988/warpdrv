@@ -28,16 +28,19 @@ const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.ERROR]: 'var(--wc-accent-red)',
 };
 
-const statusLabels: Record<EToolCallStatus, string> = {
-	[EToolCallStatus.PENDING]: 'Awaiting approval',
-	[EToolCallStatus.DENIED]: 'Denied',
-	[EToolCallStatus.EXECUTING]: 'Running',
-	[EToolCallStatus.COMPLETED]: 'Completed',
-	[EToolCallStatus.ERROR]: 'Error',
+// Status labels are localized via t() inside the component (module-level
+// constants cannot use the useTranslation hook).
+const STATUS_LABEL_KEYS: Record<EToolCallStatus, string> = {
+	[EToolCallStatus.PENDING]: 'toolStatus.awaitingApproval',
+	[EToolCallStatus.DENIED]: 'toolStatus.denied',
+	[EToolCallStatus.EXECUTING]: 'toolStatus.running',
+	[EToolCallStatus.COMPLETED]: 'toolStatus.completed',
+	[EToolCallStatus.ERROR]: 'toolStatus.error',
 };
 
 export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverName, args, result, status }: IToolCallBlockWrapperProps) => {
 	const { t } = useTranslation();
+	const statusLabel = (s: EToolCallStatus) => t(`chat:${STATUS_LABEL_KEYS[s]}`);
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const { currentServerId } = useContext(ServerStatusContext);
 	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
@@ -80,7 +83,7 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 				attachAllTools,
 				attachedTools
 			);
-			toast({ title: t('common:toast.toolAlwaysApproved', { toolName }), status: 'success', duration: 3000 });
+			toast.toast('success', t('common:toast.toolAlwaysApproved', { toolName }));
 		} finally {
 			setDeciding(false);
 		}
@@ -143,26 +146,26 @@ export const ToolCallBlockWrapper = React.memo(({ toolCallId, toolName, serverNa
 					{isExecuting && (
 						<>
 							<Loader size={11} color={statusColor} className="animate-spin" />
-							<Text fontSize="10px" color={statusColor}>{statusLabels[displayStatus]}</Text>
+							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
 						</>
 					)}
 					{displayStatus === EToolCallStatus.COMPLETED && <Check size={11} color={statusColor} />}
 					{displayStatus === EToolCallStatus.DENIED && (
 						<>
 							<Ban size={11} color={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabels[displayStatus]}</Text>
+							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
 						</>
 					)}
 					{displayStatus === EToolCallStatus.ERROR && (
 						<>
 							<AlertCircle size={11} color={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabels[displayStatus]}</Text>
+							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
 						</>
 					)}
 					{isPending && (
 						<>
 							<Box w="6px" h="6px" borderRadius="full" bg={statusColor} />
-							<Text fontSize="10px" color={statusColor}>{statusLabels[displayStatus]}</Text>
+							<Text fontSize="10px" color={statusColor}>{statusLabel(displayStatus)}</Text>
 						</>
 					)}
 				</HStack>

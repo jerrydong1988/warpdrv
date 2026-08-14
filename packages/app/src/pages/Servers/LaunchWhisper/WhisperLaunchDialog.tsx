@@ -240,11 +240,11 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 
 	const handleLaunch = async () => {
 		if (!selectedBackendId) {
-			toast('error', 'Select a whisper backend');
+			toast('error', t('common:toast.selectWhisperBackend'));
 			return;
 		}
 		if (!selectedModelPath) {
-			toast('error', 'Select a model file');
+			toast('error', t('common:toast.selectModelFile'));
 			return;
 		}
 
@@ -261,10 +261,10 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 
 			if (isEdit && serverId) {
 				await updateWhisperServer(serverId, { ...payload, relaunch: true });
-				toast('success', 'Whisper server updated');
+				toast('success', t('common:toast.whisperServerUpdated'));
 			} else {
 				await createWhisperServer(payload);
-				toast('success', 'Whisper server launched');
+				toast('success', t('common:toast.whisperServerLaunched'));
 			}
 			onClose();
 		} catch (err) {
