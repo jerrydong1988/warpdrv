@@ -16,8 +16,13 @@
 		"postinstall": "patch-package"
 	},
 	"devDependencies": {
-		"concurrently": "^9.1.2",
+		"concurrently": "^9.2.4",
 		"cross-env": "^10.1.0",
 		"patch-package": "^8.0.1"
+	},
+	"overrides": {
+		"express": {
+			"path-to-regexp": "^8.4.0"
+		}
 	}
 }
