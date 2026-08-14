@@ -140,10 +140,6 @@ export const DictationProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 						setIsTranscribing(false);
 					}
 				},
-				onError: (err: Error) => {
-					console.error('[Dictation] ERROR — calling stop():', err);
-					stop();
-				},
 				baseAssetPath: '/vad/',
 				model: 'v5',
 				onnxWASMBasePath: '/onnxruntime/',

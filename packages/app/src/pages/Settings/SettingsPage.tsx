@@ -488,7 +488,7 @@ dictationPTTKey,
 									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.appZoom')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>{Math.round(appZoomLevel * 100)}%</Text>
 								</HStack>
-								<Box as="input" type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
+								<input type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
 								<HStack justify="space-between">
 									<Text fontSize="10px" color="var(--wc-text-faint)">50%</Text>
 									<Text fontSize="10px" color="var(--wc-text-faint)">300%</Text>
@@ -507,9 +507,9 @@ dictationPTTKey,
 							{/* Chat Font Family */}
 							<VStack align="stretch" gap="2">
 								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontFamily')}</Text>
-								<NativeSelect.Root value={chatFontFamily}>
+								<NativeSelect.Root>
 									<NativeSelect.Field
-										size="sm"
+										value={chatFontFamily}
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
@@ -677,17 +677,17 @@ dictationPTTKey,
 									color="var(--wc-accent-blue)"
 									_hover={{ bg: 'var(--wc-accent-blue-bg-25)' }}
 									borderRadius="lg"
-									leftIcon={<Mic size={15} />}
 									onClick={handleGrantMicPermission}
 								>
+									<Mic size={15} />
 									{t('actions.grantMicAccess')}
 								</Button>
 							) : micDevices.length === 0 ? (
 								<Text fontSize="12px" color="var(--wc-text-faint)">{t('options.noMicDevices')}</Text>
 							) : (
-								<NativeSelect.Root value={micDeviceId}>
+								<NativeSelect.Root>
 									<NativeSelect.Field
-										size="sm"
+										value={micDeviceId}
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
@@ -981,9 +981,9 @@ dictationPTTKey,
 								color="var(--wc-text-secondary)"
 								_hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-10)' }}
 								borderRadius="lg"
-								leftIcon={<BookOpen size={15} />}
 								onClick={() => updateSettings({ isOnboardingComplete: false })}
 							>
+								<BookOpen size={15} />
 								{t('actions.rerunOnboarding')}
 							</Button>
 						</VStack>

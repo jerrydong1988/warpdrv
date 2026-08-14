@@ -2,11 +2,14 @@ import { nanoid } from 'nanoid';
 import type React from 'react';
 import { AppletHost, TCallback } from '@warpcore/realmcore';
 import { useStore } from '@/store';
+import type { AppState } from '@/store/types';
 import type { ISlashCommand } from '@/store/slices/slashCommands';
 import { EUISpaceLoc } from '@/store/slices/uiSpaces';
 import type { TUISpaceComponentId, TUISpaceComponent } from '@/store/slices/uiSpaces';
 import type { IAppletAPIFE } from './types';
 import { UiSpaceChip } from '../ui/UiSpaceChip';
+
+type TUiSpaceComponentDef = Parameters<AppState['registerUiSpaceComponent']>[0] & { icon?: React.ComponentType<any> };
 
 export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 	protected override buildApi(): IAppletAPIFE {
@@ -29,21 +32,22 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 				componentId?: string,
 				icon?: React.ComponentType<any>,
 			}) => {
-				return useStore.getState().registerUiSpaceComponent({
+				const def: TUiSpaceComponentDef = {
 					location: spaceId as EUISpaceLoc,
 					component,
 					label: opts.label,
 					appletName,
 					componentId: opts.componentId,
 					icon: opts.icon,
-				});
+				};
+				return useStore.getState().registerUiSpaceComponent(def);
 			},
 			unregisterUiSpaceComponent: (id: TUISpaceComponentId) => {
 				useStore.getState().unregisterUiSpaceComponent(appletName, id);
 			},
 			registerComposerChip: (options) => {
 				const id = options.componentId ?? nanoid();
-				return useStore.getState().registerUiSpaceComponent({
+				const def: TUiSpaceComponentDef = {
 					componentId: id,
 					location: EUISpaceLoc.COMPOSER,
 					component: UiSpaceChip,
@@ -51,7 +55,8 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					appletName,
 					props: options,
 					icon: options.icon,
-				});
+				};
+				return useStore.getState().registerUiSpaceComponent(def);
 			},
 		};
 	}

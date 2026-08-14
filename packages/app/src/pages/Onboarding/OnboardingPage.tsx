@@ -37,6 +37,8 @@ export function OnboardingPage() {
 	const StepComponent = STEPS[currentStep];
 	const stepProps: IStepProps = { goNext, goPrev, finishOnboarding };
 
+	if (!StepComponent) return null;
+
 	return (
 		<Box
 			position="absolute"

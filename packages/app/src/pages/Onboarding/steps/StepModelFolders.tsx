@@ -89,7 +89,7 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 								<Flex w="8" h="8" borderRadius="md" alignItems="center" justifyContent="center" bg="var(--wc-bg-surface)" flexShrink={0}>
 									<FolderOpen size={14} color="var(--wc-text-secondary)" />
 								</Flex>
-								<Text flex="1" fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' isTruncated>
+								<Text flex="1" fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' truncate>
 									{root}
 								</Text>
 								<Button
@@ -159,10 +159,10 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 							borderColor="var(--wc-accent-blue-border)"
 							_hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }}
 							borderRadius="lg"
-							leftIcon={isScanning ? <Spinner size="xs" /> : <Check size={15} />}
 							onClick={handleSaveAndScan}
 							disabled={modelRoots.length === 0 || isScanning}
 						>
+							{isScanning ? <Spinner size="xs" /> : <Check size={15} />}
 							{isScanning ? 'Scanning...' : t('common:ui.saveScan')}
 						</Button>
 					</Flex>

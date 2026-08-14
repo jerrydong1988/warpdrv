@@ -108,7 +108,7 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 									<Flex key={asset.key} align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={!!selectedLlama[asset.key]}
-											onCheckedChange={(e) => setSelectedLlama(prev => ({ ...prev, [asset.key]: e.checked }))}
+											onCheckedChange={(e) => setSelectedLlama(prev => ({ ...prev, [asset.key]: e.checked === true }))}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />
@@ -127,7 +127,7 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 									<Flex key={asset.key} align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={!!selectedWhisper[asset.key]}
-											onCheckedChange={(e) => setSelectedWhisper(prev => ({ ...prev, [asset.key]: e.checked }))}
+											onCheckedChange={(e) => setSelectedWhisper(prev => ({ ...prev, [asset.key]: e.checked === true }))}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />
@@ -147,7 +147,7 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 									<Flex align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={installKokoroSelected}
-											onCheckedChange={(e) => setInstallKokoroSelected(e.checked)}
+											onCheckedChange={(e) => setInstallKokoroSelected(e.checked === true)}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />

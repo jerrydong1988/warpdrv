@@ -7,7 +7,7 @@ import { useStore } from '@/store';
 import { useMutation } from '@/hooks/useQuery';
 import { restartServer } from '@/api/services';
 import { restartWhisperServer } from '@/api/whisperServices';
-import { EServerStatus, EWhisperServerStatus, type IServer, type IWhisperServer } from '@warpcore/shared';
+import { EServerStatus, EWhisperServerStatus, type IServer, type IWhisperServer, type IApiResponse } from '@warpcore/shared';
 import { StatusDot } from '../StatusDot';
 import { TileContainer } from '../TileContainer';
 
@@ -54,7 +54,7 @@ export const ServersTile = React.memo(() => {
 		const mostRecentWhisper = whisperSorted[0];
 
 		if (mostRecentWhisper) {
-			const llamaDisplay = llamaSorted.slice(0, 2).map((s) => ({
+			const llamaDisplay: DisplayServer[] = llamaSorted.slice(0, 2).map((s) => ({
 				id: s.id,
 				serverName: s.serverName,
 				status: s.status,
@@ -82,7 +82,10 @@ export const ServersTile = React.memo(() => {
 	);
 
 	const { mutate: restartWhisperMut, loading: loadingWhisper } = useMutation<string, void>(
-		useCallback((id: string) => restartWhisperServer(id), [])
+		useCallback(async (id: string): Promise<IApiResponse<void>> => {
+			await restartWhisperServer(id);
+			return { ok: true, data: undefined, error: null };
+		}, [])
 	);
 
 	const handleStart = async (id: string, isWhisper: boolean) => {
@@ -119,7 +122,7 @@ export const ServersTile = React.memo(() => {
 										<StatusDot state={statusToState(srv.status as EServerStatus)} />
 									)}
 									<Box overflow="hidden">
-										<Text fontSize="13px" color="var(--wc-text-tertiary)" noOfLines={1}>
+										<Text fontSize="13px" color="var(--wc-text-tertiary)" lineClamp={1}>
 											{srv.serverName}
 										</Text>
 									</Box>

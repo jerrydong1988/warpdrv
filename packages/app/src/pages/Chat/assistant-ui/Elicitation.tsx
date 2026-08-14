@@ -61,6 +61,19 @@ export const Elicitation = React.memo(() => {
 		try { host = new URL(elicitation.url).host; } catch { host = elicitation.url; }
 	}
 
+	// The URL originates from the LLM/server — only open http(s) targets.
+	const openElicitationUrl = () => {
+		if (!elicitation.url) return;
+		try {
+			const u = new URL(elicitation.url);
+			if (u.protocol === 'http:' || u.protocol === 'https:') {
+				window.open(elicitation.url, '_blank', 'noopener,noreferrer');
+			}
+		} catch {
+			// ignore invalid URLs
+		}
+	};
+
 	return (
 		<Box borderWidth="1px" borderColor="var(--wc-border-default)" borderRadius="lg" bg="var(--wc-bg-surface)" p="3" maxH="320px" overflow="auto">
 			<Text fontSize="11px" fontWeight="600" color="var(--wc-text-primary)" mb="1">{elicitation.serverName}</Text>
@@ -69,7 +82,7 @@ export const Elicitation = React.memo(() => {
 				<VStack gap="2" align="stretch" mb="3">
 					<Text fontSize="11px" color="var(--wc-text-muted)">{t('common:ui.youWillBeSentTo')}</Text>
 					<Text fontSize="12px" fontFamily="mono" color="var(--wc-text-primary)" wordBreak="break-all">{host}</Text>
-					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue)" disabled={submitting} onClick={() => { if (elicitation.url) window.open(elicitation.url, '_blank'); }}>
+					<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue)" {...(submitting ? { disabled: true } : {})} onClick={openElicitationUrl}>
 						<HStack gap="1"><ExternalLink size={12} /><Text fontSize="12px">{t('elicitation.openInBrowser')}</Text></HStack>
 					</Box>
 				</VStack>
@@ -104,9 +117,9 @@ export const Elicitation = React.memo(() => {
 			</VStack>
 			)}
 			<HStack gap="2" justify="flex-end">
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-overlay-dim)" color="var(--wc-text-muted)" disabled={submitting} onClick={() => handleAction('cancel')}>{t('common:ui.cancel')}</Box>
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" disabled={submitting} onClick={() => handleAction('decline')}>{t('common:ui.decline')}</Box>
-				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" disabled={submitting} onClick={() => handleAction('accept')}>{isUrlMode ? t('common:ui.done') : 'Submit'}</Box>
+				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-overlay-dim)" color="var(--wc-text-muted)" {...(submitting ? { disabled: true } : {})} onClick={() => handleAction('cancel')}>{t('common:ui.cancel')}</Box>
+				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-red-bg-12)" color="var(--wc-accent-red-alt)" {...(submitting ? { disabled: true } : {})} onClick={() => handleAction('decline')}>{t('common:ui.decline')}</Box>
+				<Box as="button" px="3" py="1" fontSize="12px" borderRadius="sm" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" {...(submitting ? { disabled: true } : {})} onClick={() => handleAction('accept')}>{isUrlMode ? t('common:ui.done') : 'Submit'}</Box>
 			</HStack>
 		</Box>
 	);

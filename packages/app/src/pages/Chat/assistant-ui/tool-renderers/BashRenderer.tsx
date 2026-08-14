@@ -15,9 +15,11 @@ function splitCommand(command: string): string[] {
 		if (typeof token === 'object' && token !== null && 'op' in token && OPERATORS.has(token.op)) {
 			groups.push([]);
 		} else if (typeof token === 'string') {
-			groups[groups.length - 1].push(token);
+			const last = groups[groups.length - 1];
+			if (last) last.push(token);
 		} else if (typeof token === 'object' && token !== null && 'op' in token) {
-			groups[groups.length - 1].push(token.op);
+			const last = groups[groups.length - 1];
+			if (last) last.push(token.op);
 		}
 	}
 	return groups

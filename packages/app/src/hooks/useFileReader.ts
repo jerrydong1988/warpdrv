@@ -2,8 +2,12 @@ import { useCallback } from 'react';
 import type { IMessagePartAttachment } from '@warpcore/bridge';
 import { EMessagePartType } from '@warpcore/bridge';
 import * as pdfjsLib from 'pdfjs-dist';
+// Bundle the pdf.js worker locally so it always matches the library version
+// (a mismatched CDN worker version silently breaks text extraction) and the
+// app never depends on a remote CDN at runtime.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -58,7 +62,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
 	}
 	if (file.type === 'application/pdf') {
 		const arrayBuffer = await file.arrayBuffer();
-		const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 		let text = '';
 		for (let i = 1; i <= pdf.numPages; i++) {
 			const page = await pdf.getPage(i);
@@ -112,7 +116,7 @@ export function useFileReader() {
 		
 		if (file.type === 'application/pdf') {
 			const arrayBuffer = await file.arrayBuffer();
-			const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+			const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 			let text = '';
 			
 			for (let i = 1; i <= pdf.numPages; i++) {

@@ -410,7 +410,7 @@ const [search, setSearch] = useState('');
 				{allModels.length > 0 && filtered.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models match "{search}"
+							{t('models:noResults', { search })}
 						</Text>
 					</Flex>
 				)}

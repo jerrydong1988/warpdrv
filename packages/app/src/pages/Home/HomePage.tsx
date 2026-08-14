@@ -84,8 +84,8 @@ color="var(--wc-text-muted)"
 							>	
 								{t('details')}&nbsp;
 								{!showSteps 
-									? <ChevronDown size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
-									: <ChevronUp size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} transition="transform 0.15s ease" />
+									? <ChevronDown size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} style={{ transition: 'transform 0.15s ease' }} />
+									: <ChevronUp size={20} transform={showSteps ? 'rotate(180deg)' : 'rotate(0deg)'} style={{ transition: 'transform 0.15s ease' }} />
 								}
 							</Flex>
 						)}

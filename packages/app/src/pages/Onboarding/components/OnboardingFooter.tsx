@@ -32,10 +32,10 @@ export function OnboardingFooter({
 					_hover={{ color: 'var(--wc-text-primary)' }}
 					borderRadius="lg"
 					fontSize="13px"
-					leftIcon={<ArrowLeft size={16} />}
 					onClick={onBack}
 					disabled={disableBack}
 				>
+					<ArrowLeft size={16} />
 					{backLabel}
 				</Button>
 
@@ -46,10 +46,10 @@ export function OnboardingFooter({
 					borderRadius="lg"
 					fontSize="13px"
 					fontWeight="500"
-					rightIcon={<ArrowRight size={16} />}
 					onClick={onNext}
 				>
 					{nextLabel}
+					<ArrowRight size={16} />
 				</Button>
 			</Flex>
 		</Box>

@@ -13,14 +13,16 @@ interface ICardProps {
 	gradientFrom?: string;
 	gradientTo?: string;
 	p?: string;
+	w?: string;
 }
 
-export function Card({ children, variant = 'default', accentColor, onClick, selected, bg, borderColor, hasGradient, gradientFrom, gradientTo, p = '5' }: ICardProps) {
+export function Card({ children, variant = 'default', accentColor, onClick, selected, bg, borderColor, hasGradient, gradientFrom, gradientTo, p = '5', w }: ICardProps) {
 	const isClickable = !!onClick;
 
 	return (
 		<Box
 			position="relative"
+			w={w}
 			bg={hasGradient && gradientFrom && gradientTo ? undefined : bg ?? 'var(--wc-bg-card)'}
 			bgGradient={hasGradient && gradientFrom && gradientTo ? 'to-r' : undefined}
 			gradientFrom={hasGradient ? gradientFrom : undefined}

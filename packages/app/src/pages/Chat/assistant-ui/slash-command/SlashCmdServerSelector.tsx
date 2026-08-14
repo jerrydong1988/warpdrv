@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 type SlashCmdServerSelectorProps = {
 	value: string;
 	placeholder: string;
-	inputRef: (el: HTMLInputElement | null) => void;
+	inputRef: (el: HTMLSpanElement | null) => void;
 	onChange: (next: string) => void;
 	onKeyDown: (e: React.KeyboardEvent) => void;
 	onFocus: () => void;

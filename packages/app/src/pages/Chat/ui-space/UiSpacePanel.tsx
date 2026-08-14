@@ -49,7 +49,7 @@ export const UiSpacePanel = React.memo(({ location }: { location: EUISpaceLoc })
 									{/* <Box fontSize="11px" color="var(--wc-text-muted)">
 										{entry.appletName}
 									</Box> */}
-									<ChevronDown size={14} color="var(--wc-text-muted)" className="chevron" css={{ transition: 'transform 0.15s ease' }} />
+									<ChevronDown size={14} color="var(--wc-text-muted)" className="chevron" style={{ transition: 'transform 0.15s ease' }} />
 								</HStack>
 							</AccordionItemTrigger>
                             <AccordionItemContent>

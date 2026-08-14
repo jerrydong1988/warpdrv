@@ -43,10 +43,11 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		const drawPass = (pts: Array<{ x: number; y: number }>, hueShift: number, alpha: number, yScale: number) => {
 			ctx.beginPath();
 			ctx.moveTo(0, 0);
-			ctx.lineTo(pts[0].x, pts[0].y * yScale);
+			const first = pts[0];
+			if (first) ctx.lineTo(first.x, first.y * yScale);
 			for (let i = 0; i < pts.length - 1; i++) {
-				const p0 = pts[i];
-				const p1 = pts[i + 1];
+				const p0 = pts[i]!;
+				const p1 = pts[i + 1]!;
 				const mx = (p0.x + p1.x) / 2;
 				const my = ((p0.y + p1.y) / 2) * yScale;
 				ctx.quadraticCurveTo(p0.x, p0.y * yScale, mx, my);
@@ -69,7 +70,7 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 			const cx = samples / 2;
 			for (let i = 0; i <= samples; i++) {
 				const binIndex = binStart + Math.floor((i / samples) * usableBins);
-				const v = data[binIndex] / 255;
+				const v = (data[binIndex] ?? 0) / 255;
 				const envelope = 1 - Math.pow(Math.abs(i - cx) / cx, 1.6);
 				const amp = v * envelope;
 				const y = Math.max(2, amp * height * 0.95);

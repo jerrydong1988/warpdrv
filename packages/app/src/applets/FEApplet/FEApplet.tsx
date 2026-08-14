@@ -68,7 +68,7 @@ const TodoPanel = React.memo(() => {
 	}, [annotations, addAnnotation, removeAnnotation]);
 
 	const toggleDone = useCallback((index: number) => {
-		const updated = todos.map((t, j) =>
+		const updated: ITodoItem[] = todos.map((t, j) =>
 			j === index ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t
 		);
 		setThreadState(threadId, { todos: updated });
@@ -109,7 +109,7 @@ const TodoPanel = React.memo(() => {
 	const addTodo = useCallback(() => {
 		const trimmed = addText.trim();
 		if (!trimmed) return;
-		const newTodos = [...todos, { text: trimmed, status: 'pending' }];
+		const newTodos: ITodoItem[] = [...todos, { text: trimmed, status: 'pending' }];
 		setThreadState(threadId, { todos: newTodos });
 		setAddText('');
 		addTodoAnnotation(newTodos);
@@ -136,8 +136,9 @@ const TodoPanel = React.memo(() => {
 			return;
 		}
 		const toIndex = dragOverIndex !== null ? dragOverIndex : todos.length;
-		const updated = [...todos];
+		const updated: ITodoItem[] = [...todos];
 		const [item] = updated.splice(fromIndex, 1);
+		if (!item) return;
 		updated.splice(toIndex, 0, item);
 		setThreadState(threadId, { todos: updated });
 		setDraggingIndex(null);
@@ -657,7 +658,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 								{allClear && <CheckCircle size={16} color="var(--wc-accent-green)" />}
 							</HStack>
 							<HStack gap="2" align="center">
-								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" css={{ transition: 'transform 0.15s ease' }} />
+								<ChevronDown size={16} color="var(--wc-text-muted)" className="chevron" style={{ transition: 'transform 0.15s ease' }} />
 							</HStack>
 						</AccordionItemTrigger>
 						<AccordionItemContent>
@@ -668,7 +669,7 @@ const GuardrailResults = React.memo(({ def, children }: { def: TUiSpaceComponent
 										{processingEntries.map(([name]) => (
 											<HStack key={name} gap="2">
 												<Spinner size="sm" />
-												<Text fontSize="sm" color="var(--wc-text-muted)">Processing {name}...</Text>
+												<Text fontSize="sm" color="var(--wc-text-muted)">{t('common:ui.processing', { name })}</Text>
 											</HStack>
 										))}
 										{sortedIssues.map(({ guardrailName, issue }, i) => (

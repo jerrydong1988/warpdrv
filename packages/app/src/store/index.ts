@@ -78,6 +78,7 @@ export const useStore = create<AppState>()(
 					whisperBackends: whisperBackends.whisperBackends!,
 					whisperServers: whisperServers.whisperServers!,
 					whisperServerLogs: whisperServers.whisperServerLogs!,
+					whisperModels: whisperServers.whisperModels!,
 					selectedWhisperServerId: bridge.selectedWhisperServerId,
 					setSelectedWhisperServerId: bridge.setSelectedWhisperServerId,
 					models: models.models!,
@@ -128,6 +129,7 @@ export const useStore = create<AppState>()(
 					startingToolsByMessage: bridge.startingToolsByMessage,
 					isRunningByThread: bridge.isRunningByThread,
 					inferenceError: bridge.inferenceError,
+					embeddingError: bridge.embeddingError,
 					embeddingStatusByMessage: bridge.embeddingStatusByMessage,
 
 					// Bridge MCP State

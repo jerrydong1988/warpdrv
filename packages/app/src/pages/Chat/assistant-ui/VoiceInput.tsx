@@ -51,7 +51,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 	const vadActive = useStore(s => s.vadActive);
 	const setVadActive = useStore(s => s.setVadActive);
 	const [isVADTranscribing, setIsVADTranscribing] = useState(false);
-	const vadSessionRef = useRef<ReturnType<typeof createVADSession> | null>(null);
+	const vadSessionRef = useRef<Awaited<ReturnType<typeof createVADSession>> | null>(null);
 	const vadWaveformStreamRef = useRef<MediaStream | null>(null);
 
 	const whisperServers = useStore(s => s.whisperServers);
@@ -195,9 +195,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 		const session = await createVADSession({
 			onSpeechStart: () => {
 				console.log('[VAD Chat] speech started: cancelling inference, stopping TTS');
-				if (aui.composer().canCancel) {
-					aui.composer().cancel();
-				}
+				aui.composer().cancel();
 				stopTTS();
 			},
 			onSpeechEnd: async (audio: Float32Array) => {
@@ -274,7 +272,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			<Box display="none">
 				<Box
 					as="button"
-					type="button"
 					display="flex"
 					alignItems="center"
 					justifyContent="center"
@@ -288,7 +285,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 					opacity={vadActive ? 0.4 : 1}
 					_hover={{ bg: vadActive ? undefined : 'var(--wc-bg-hover)' }}
 					onClick={isPTTRecording ? handlePTTEnd : handlePTTStart}
-					disabled={vadActive}
 					title={vadActive ? t('common:ui.dictationDisabledDuringVoiceChat') : isPTTRecording ? t('common:ui.stopRecording') : t('common:ui.startRecordingDictation')}
 				>
 					{isPTTRecording ? (
@@ -304,7 +300,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			{/* VAD Dictation Button */}
 			<Box
 				as="button"
-				type="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -332,7 +327,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 			{/* VAD Chat Toggle — disabled when dictation active */}
 			<Box
 				as="button"
-				type="button"
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
@@ -346,7 +340,6 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 				opacity={dictationActive ? 0.4 : 1}
 				_hover={{ bg: dictationActive ? undefined : 'var(--wc-bg-hover)' }}
 				onClick={handleVADToggle}
-				disabled={dictationActive}
 				title={dictationActive ? t('common:ui.voiceChatDisabledDuringDictation') : vadActive ? t('common:ui.voiceChatActiveClickToStop') : t('common:ui.toggleVoiceChatMode')}
 			>
 				{isVADTranscribing ? (

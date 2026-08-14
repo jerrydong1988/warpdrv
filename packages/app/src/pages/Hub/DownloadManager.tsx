@@ -38,6 +38,7 @@ function formatEta(remainingBytes: number, speedBps: number): string {
 
 const STATUS_ICONS: Record<EDownloadStatus, React.ReactNode> = {
 	[EDownloadStatus.DOWNLOADING]: <Download size={11} />,
+	[EDownloadStatus.INSTALLING]: <Download size={11} />,
 	[EDownloadStatus.PAUSED]: <Pause size={11} />,
 	[EDownloadStatus.COMPLETED]: <CheckCircle size={11} />,
 	[EDownloadStatus.FAILED]: <AlertCircle size={11} />,
@@ -46,6 +47,7 @@ const STATUS_ICONS: Record<EDownloadStatus, React.ReactNode> = {
 
 const STATUS_COLORS: Record<EDownloadStatus, string> = {
 	[EDownloadStatus.DOWNLOADING]: 'var(--wc-accent-blue)',
+	[EDownloadStatus.INSTALLING]: 'var(--wc-accent-blue)',
 	[EDownloadStatus.PAUSED]: 'var(--wc-accent-yellow)',
 	[EDownloadStatus.COMPLETED]: 'var(--wc-accent-green)',
 	[EDownloadStatus.FAILED]: 'var(--wc-accent-red)',
@@ -63,6 +65,7 @@ export const DownloadManager = React.memo(({ onClose }: IDownloadManagerProps) =
 
 	const STATUS_LABELS: Record<EDownloadStatus, string> = useMemo(() => ({
 		[EDownloadStatus.DOWNLOADING]: t('downloadStatus.downloading'),
+		[EDownloadStatus.INSTALLING]: t('downloadStatus.installing'),
 		[EDownloadStatus.PAUSED]: t('downloadStatus.paused'),
 		[EDownloadStatus.COMPLETED]: t('downloadStatus.completed'),
 		[EDownloadStatus.FAILED]: t('downloadStatus.failed'),
