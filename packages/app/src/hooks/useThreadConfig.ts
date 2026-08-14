@@ -77,18 +77,29 @@ export function useThreadConfig(selectedPresetId: string | null,) {
 			return;
 		}
 
-		const res = await fetchThreadConfig(threadId);
-		if (!res.ok) {
-			setDefaults();
-			return;
-		}
+		try {
+			const res = await fetchThreadConfig(threadId);
+			if (!res.ok) {
+				setDefaults();
+				return;
+			}
 
-		const config = res.data;
-		if (!config) setDefaults();
-		else {
-			const parsedParams = config.params ? JSON.parse(config.params) : {};
-			setCurrentSystemPrompt(config.systemPrompt ?? '');
-			setCurrentInferenceParams(parsedParams);
+			const config = res.data;
+			if (!config) setDefaults();
+			else {
+				let parsedParams: Record<string, unknown> = {};
+				try {
+					parsedParams = config.params ? JSON.parse(config.params) : {};
+				} catch {
+					console.warn('[useThreadConfig] Failed to parse params, using defaults');
+					parsedParams = {};
+				}
+				setCurrentSystemPrompt(config.systemPrompt ?? '');
+				setCurrentInferenceParams(parsedParams);
+			}
+		} catch (err) {
+			console.error('[useThreadConfig] loadConfig failed:', err);
+			setDefaults();
 		}
 	}, []);
 

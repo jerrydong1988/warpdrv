@@ -8,7 +8,8 @@ function findLastSentenceEnd(text: string): number {
 	for (let i = text.length - 1; i >= 0; i--) {
 		const c = text[i];
 		if (c === '.' || c === '!' || c === '?') {
-			if (i + 1 >= text.length || /\s/.test(text[i + 1])) {
+			const next = text[i + 1];
+			if (next === undefined || /\s/.test(next)) {
 				return i;
 			}
 		}
@@ -61,7 +62,13 @@ export function useChatEventsStream() {
 		};
 
 		const handleEvent = (e: MessageEvent) => {
-			const event = JSON.parse(e.data) as IBridgeEvent;
+			let event: IBridgeEvent;
+			try {
+				event = JSON.parse(e.data) as IBridgeEvent;
+			} catch {
+				console.warn('[Chat SSE] Failed to parse event:', e.data?.slice(0, 100));
+				return;
+			}
 			switch (event.type) {
 				case 'thread.created':
 					applyThreadCreated(event.thread);
@@ -84,34 +91,32 @@ export function useChatEventsStream() {
 			case 'message.deleted':
 				applyMessageDeleted(event.messageId, event.threadId);
 				break;
-case 'message.chunk':
+	case 'message.chunk':
 				applyMessageChunk(event.messageId, event.threadId, event.partId, event.deltaText);
-		if (event.partType === 'text') {
+				if (event.partType === 'text') {
 					const state = useStore.getState();
 					const guardPass = state.ttsActiveMessageId === event.messageId && state.ttsIsGenerating === 'vad';
-					//console.log('[TTS SSE] chunk: messageId=', event.messageId, 'ttsActiveMsg=', state.ttsActiveMessageId, 'generating=', state.ttsIsGenerating, 'guardPass=', guardPass);
-					if (!guardPass) break;
-					const msg = state.messagesByThread[event.threadId]?.[event.messageId];
-					if (msg) {
-						const part = msg.content.find((p: any) => p.id === event.partId);
-						const buffered = state.chunksByMessageId[event.messageId]?.chunk || '';
-						const fullText = (part?.text || '') + buffered;
-						const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
-						const remaining = fullText.slice(spoken);
-						const lastEnd = findLastSentenceEnd(remaining);
-						if (lastEnd > -1) {
-							const sentence = remaining.slice(0, lastEnd + 1);
-							const reqId = useStore.getState().ttsVadRequestId;
-							//console.log('[TTS SSE] calling startStream: requestId=', reqId, 'sentence=', JSON.stringify(sentence.slice(0, 60)));
-							useStore.getState().ttsVadIncSent();
-							startStream(
-								reqId,
-								sentence,
-								state.settings.kokoroVoice || 'af_heart',
-							).catch((err) => { console.error('[TTS SSE] startStream ERROR:', err); });
-							useStore.getState().ttsSetSpokenIndex(event.messageId, spoken + lastEnd + 1);
-						} else {
-							console.log('[TTS SSE] no sentence boundary found in remaining text');
+					if (guardPass) {
+						const msg = state.messagesByThread[event.threadId]?.[event.messageId];
+						if (msg) {
+							const part = msg.content.find(p => p.id === event.partId);
+							const buffered = state.chunksByMessageId[event.messageId]?.chunk || '';
+							const partText = part && 'text' in part ? (part as { text: string }).text : '';
+							const fullText = partText + buffered;
+							const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
+							const remaining = fullText.slice(spoken);
+								const lastEnd = findLastSentenceEnd(remaining);
+							if (lastEnd > -1) {
+								const sentence = remaining.slice(0, lastEnd + 1);
+								const reqId = useStore.getState().ttsVadRequestId;
+								useStore.getState().ttsVadIncSent();
+								startStream(
+									reqId,
+									sentence,
+									state.settings.kokoroVoice || 'af_heart',
+								).catch((err) => { console.error('[TTS SSE] startStream ERROR:', err); });
+								useStore.getState().ttsSetSpokenIndex(event.messageId, spoken + lastEnd + 1);
+							}
 						}
 					}
 				}
@@ -129,13 +134,13 @@ case 'message.chunk':
 				applyInferenceStarted(event.threadId, event.messageId);
 				{
 					const s = useStore.getState();
-					//console.log('[TTS SSE] inference.started: vadActive=', s.vadActive, 'messageId=', event.messageId);
-					if (!s.vadActive) { break; }
-					s.ttsSetSpokenIndex(event.messageId, 0);
-					s.ttsVadReset();
-					const newId = s.ttsVadNewRequestId();
-					setKokoroCurrentRequestId(newId);
-					s.ttsStart(event.messageId, 'vad');
+					if (s.vadActive) {
+						s.ttsSetSpokenIndex(event.messageId, 0);
+						s.ttsVadReset();
+						const newId = s.ttsVadNewRequestId();
+						setKokoroCurrentRequestId(newId);
+						s.ttsStart(event.messageId, 'vad');
+					}
 				}
 				break;
 case 'inference.ended':

@@ -26,6 +26,7 @@ import { useThreadConfig } from '@/hooks/useThreadConfig';
 import { useThreadAttachedTools } from '@/hooks/useThreadAttachedTools';
 import { useHotkey, HotkeyMode } from '@/hooks/useHotKey';
 import { useSlashCommandProcessor } from '@/hooks/useSlashCommandProcessor';
+import { EChatSidebarTab } from '@/store/slices/chatSidebar';
 
 import { extractTextFromFile } from '@/hooks/useFileReader';
 import { useToast } from '@/components/ToastProvider';
@@ -455,12 +456,15 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 		}
 
 		// Pipe for FEApplet to intercept (guardrails, etc.)
-		const pipeResult = await realmEvents.eventNode.pipe(
-			'bridge.preCompletion',
-			{ body, slashCommands, threadId },
-			'.',
-			true,
-		);
+		// If realm isn't ready yet, skip interception rather than blocking chat
+		const pipeResult = realmEvents
+			? await realmEvents.eventNode.pipe(
+				'bridge.preCompletion',
+				{ body, slashCommands, threadId },
+				'.',
+				true,
+			)
+			: true;
 
 		// If text is empty (slash commands only), skip inference
 		if (!body.userMessage.content.trim()) return;
@@ -540,13 +544,11 @@ const ChatInner = React.memo(({ threadsListCollapsed, onOpenSearch }: { threadsL
 		isDisabled: false,
 		// Called by assistant-ui when messages update (including branch switches)
 		setMessages: (newMessages: any) => {
-			// Extract the last message ID from the new messages
 			const lastMessage = newMessages[newMessages.length - 1] as any;
-			if (currentThreadId && lastMessage && !isRunning) {
-				// Map assistant-ui message ID back to our store's message ID
-				const ourMessageId = lastMessage.id;
-				setHeadMessageId(currentThreadId, ourMessageId);
-			}
+			if (!currentThreadId || !lastMessage || isRunning) return;
+			const ourMessageId = lastMessage.id;
+			// Only set head message when it actually changes (avoid mid-stream updates)
+			setHeadMessageId(currentThreadId, ourMessageId);
 		},
 		adapters: {
 			threadList: {
@@ -630,7 +632,7 @@ export const ChatPage = React.memo(() => {
 		},
 		{
 			onActivate: () => {
-				openChatSidebarTab('search');
+				openChatSidebarTab(EChatSidebarTab.SEARCH);
 				setTimeout(() => {
 					const input = document.querySelector('#chat-thread-search-input') as HTMLInputElement | null;
 					input?.focus();

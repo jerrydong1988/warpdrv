@@ -6,17 +6,24 @@ import { AppletManager, EAppletHostType, EAppletScope } from '@warpcore/realmcor
 import { feApplets, AppletHostFE } from '@/applets';
 
 export function useRealm(currentThreadId: string | null) {
-	const realmRef = useRef<{ 
-		eventNode: EventNode; 
+	const realmRef = useRef<{
+		eventNode: EventNode;
 		remoteNode: RemoteNode;
-		nodeId: string; 
+		nodeId: string;
 		socket: Socket;
 		appletMgr: AppletManager;
 	}>(null);
 
 	const [isParentAttached, setParentAttached] = useState<boolean>(false);
 
-	if (!realmRef.current) {
+	// Initialize the realm connection once per mount. The cleanup nulls the
+	// ref AND disconnects, so React StrictMode's double-mount re-initializes
+	// cleanly; thread switches are handled by updateScopeValue below and must
+	// NOT tear the connection down (previously the socket stayed dead after
+	// the first thread switch because the guard skipped re-init).
+	useEffect(() => {
+		if (realmRef.current) return; // Already initialized
+
 		console.log(`[Realm] Loading..`);
 
 		const nodeId = `chat-${nanoid(6)}`;
@@ -38,30 +45,36 @@ export function useRealm(currentThreadId: string | null) {
 			transports: ['websocket'],
 			upgrade: false,
 		});
-		
+
 		const remoteNode = new RemoteNode('warpcore', chatNode, new WSTransport(socket));
 
-		socket.on('connect', () => {
-			console.log(`[Realm] ✅ Connected as ${nodeId}.`);
-		});
-
-		socket.on('disconnect', () => {
-			console.error(`[Realm] Disconnected!`);
-			setParentAttached(false);
-		});
-
-		socket.io.on('error', (err) => {
-			console.error(`[Realm] Manager error:`, err.message);
-		});
-
-		realmRef.current = { 
-			eventNode: chatNode, 
+		realmRef.current = {
+			eventNode: chatNode,
 			remoteNode,
-			nodeId, 
+			nodeId,
 			socket,
 			appletMgr,
 		};
-	}
+
+		// Register listeners after store is populated to avoid stale references
+		const onConnect = () => { console.log(`[Realm] ✅ Connected as ${nodeId}.`); };
+		const onDisconnect = () => { console.error(`[Realm] Disconnected!`); setParentAttached(false); };
+		const onManagerError = (err: { message: string }) => { console.error(`[Realm] Manager error:`, err.message); };
+
+		socket.on('connect', onConnect);
+		socket.on('disconnect', onDisconnect);
+		socket.io.on('error', onManagerError);
+
+		return () => {
+			socket.off('connect', onConnect);
+			socket.off('disconnect', onDisconnect);
+			socket.io.off('error', onManagerError);
+			socket.disconnect();
+			// Allow re-initialization (e.g. StrictMode double-mount, or a
+			// future explicit reconnect) instead of leaving a dead connection.
+			realmRef.current = null;
+		};
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		if (!isParentAttached) return;
@@ -76,15 +89,6 @@ export function useRealm(currentThreadId: string | null) {
 		if (!isParentAttached) return;
 		realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
 	}, [currentThreadId, isParentAttached]);
-
-	useEffect(() => {
-		const socket = realmRef.current?.socket;
-		if (socket && !socket.connected) socket.connect();
-
-		return () => {
-			socket?.disconnect();
-		};
-	}, []);
 
 	return realmRef.current;
 }
