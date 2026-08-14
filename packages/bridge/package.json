@@ -1,5 +1,6 @@
 {
 	"name": "@warpcore/bridge",
+	"private": true,
 	"version": "0.1.0",
 	"description": "Chat engine with MCP tool orchestration for OpenAI-compatible inference servers",
 	"type": "module",

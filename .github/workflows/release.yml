@@ -52,10 +52,12 @@ jobs:
             file
 
       - name: Install npm dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run release build
         run: ./release.sh deb appimage
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
 
       - name: Resolve version
         id: version

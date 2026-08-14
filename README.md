@@ -10,7 +10,7 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/mikjee/warpdrv?include_prereleases)](https://github.com/mikjee/warpdrv/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/mikjee/warpdrv/ci.yml?branch=main)](https://github.com/mikjee/warpdrv/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/mikjee/warpdrv/ci.yml?branch=master)](https://github.com/mikjee/warpdrv/actions)
 [![Stars](https://img.shields.io/github/stars/mikjee/warpdrv?style=social)](https://github.com/mikjee/warpdrv/stargazers)
 [![Issues](https://img.shields.io/github/issues/mikjee/warpdrv)](https://github.com/mikjee/warpdrv/issues)
 [![Platform](https://img.shields.io/badge/platform-linux-success)](#install)

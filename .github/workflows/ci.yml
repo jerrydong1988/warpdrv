@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  typecheck-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate translations
+        run: npm run i18n:check -w @warpcore/app
+
+      - name: Run core tests
+        run: npm test -w @warpcore/realmcore
+
+      # Composite packages (shared/realmcore) must emit fresh declarations
+      # first — the server and app projects resolve them via their dist outputs.
+      - name: Build shared declarations
+        run: npx tsc -b packages/shared packages/realmcore
+
+      - name: Typecheck server
+        run: npx tsc -p packages/server/tsconfig.json --noEmit
+
+      - name: Typecheck app
+        run: npx tsc -p packages/app/tsconfig.json --noEmit
+
+      - name: Build frontend
+        run: npx vite build
+        working-directory: packages/app

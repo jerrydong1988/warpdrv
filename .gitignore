@@ -10,10 +10,17 @@ lerna-debug.log*
 .warpcore-db
 
 packages/desktop/target/
-packages/desktop/target/
 packages/desktop/binaries/
 packages/desktop/app-dist/
 packages/server/dist/
+packages/app/dist/
+
+# TypeScript incremental build info (never commit)
+*.tsbuildinfo
+
+# Editor/agent-local state
+.easier-code/
+.claude/settings.local.json
 
 node_modules
 dist

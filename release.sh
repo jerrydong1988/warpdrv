@@ -8,7 +8,13 @@ set -e
 # Default bundle formats per platform (set after platform detection below).
 # Pass bundle formats as arguments to override: ./release.sh deb appimage
 # AppImage is excluded by default on Linux because it takes a long time to build.
-BUNDLE_FORMATS_ARGS=("$@")
+#
+# Non-interactive versioning (for CI):
+#   RELEASE_VERSION=0.4.22 ./release.sh deb appimage
+#   ./release.sh deb appimage v0.4.22        # version-like CLI arg
+#   RELEASE_NOTES="..." ./release.sh deb appimage
+# When stdin is not a TTY and no version is given, the current version is kept.
+BUNDLE_FORMATS_ARGS=()
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd -W 2>/dev/null || pwd)"
 RELEASE_JSON="$REPO_ROOT/release.json"
@@ -54,10 +60,16 @@ case "$PLATFORM" in
 	macos)   DEFAULT_FORMATS=("dmg") ;;
 	linux)   DEFAULT_FORMATS=("deb") ;;
 esac
-if [ ${#BUNDLE_FORMATS_ARGS[@]} -eq 0 ]; then
+# Bundle formats = non-version-like args; a leading "v" is allowed on versions
+BUNDLE_FORMATS=()
+for arg in "$@"; do
+	case "$arg" in
+		v[0-9]*|[0-9]*\.[0-9]*) ;; # version-like — handled below
+		*) BUNDLE_FORMATS+=("$arg") ;;
+	esac
+done
+if [ ${#BUNDLE_FORMATS[@]} -eq 0 ]; then
 	BUNDLE_FORMATS=("${DEFAULT_FORMATS[@]}")
-else
-	BUNDLE_FORMATS=("${BUNDLE_FORMATS_ARGS[@]}")
 fi
 echo "Bundle formats: ${BUNDLE_FORMATS[*]}"
 
@@ -65,13 +77,27 @@ echo "Bundle formats: ${BUNDLE_FORMATS[*]}"
 CURRENT_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$RELEASE_JSON','utf8')).version)")
 echo "Current version: $CURRENT_VERSION"
 
-# Ask for new version
-read -p "New version (Enter to keep $CURRENT_VERSION): " NEW_VERSION
+# Resolve new version: RELEASE_VERSION env > version-like CLI arg > TTY prompt > keep current
+NEW_VERSION="${RELEASE_VERSION:-}"
+for arg in "$@"; do
+	case "$arg" in
+		v[0-9]*|[0-9]*\.[0-9]*)
+			if [ -z "$NEW_VERSION" ]; then NEW_VERSION="${arg#v}"; fi
+			;;
+	esac
+done
+if [ -z "$NEW_VERSION" ] && [ -t 0 ]; then
+	read -p "New version (Enter to keep $CURRENT_VERSION): " NEW_VERSION
+fi
 if [ -z "$NEW_VERSION" ]; then
 	NEW_VERSION="$CURRENT_VERSION"
 fi
 
-read -p "Release notes: " NOTES
+# Release notes: RELEASE_NOTES env, else TTY prompt, else empty
+NOTES="${RELEASE_NOTES:-}"
+if [ -z "$NOTES" ] && [ -t 0 ]; then
+	read -p "Release notes: " NOTES
+fi
 
 # Bump versions everywhere
 node -e "
@@ -80,6 +106,7 @@ const files = [
 	['$RELEASE_JSON', (r) => { r.version = '$NEW_VERSION'; r.notes = '$NOTES'; return r; }],
 	['$DESKTOP_DIR/tauri.conf.json', (r) => { r.version = '$NEW_VERSION'; return r; }],
 	['$REPO_ROOT/package.json', (r) => { r.version = '$NEW_VERSION'; return r; }],
+	['$REPO_ROOT/package-lock.json', (r) => { r.version = '$NEW_VERSION'; if (r.packages && r.packages['']) r.packages[''].version = '$NEW_VERSION'; return r; }],
 ];
 for (const [path, transform] of files) {
 	if (fs.existsSync(path)) {
