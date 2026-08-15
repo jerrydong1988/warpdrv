@@ -90,6 +90,7 @@ import type { IAppletAPIFE } from "../lib/types";
 import { GuardrailBadge, GuardrailPicker } from "../ui/GuardrailBadge";
 import { ModeTabs } from "../ui/ModeTabs";
 import { MonitorButton } from "../ui/MonitorButton";
+import { SenderBadge } from "../ui/SenderBadge";
 
 const EMPTY_TODOS: ITodoItem[] = [];
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
@@ -3043,6 +3044,9 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, GuardrailResults, {
 			label: "GuardrailResults",
 		});
+		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE, SenderBadge, {
+			label: "SenderBadge",
+		});
 		api.registerUiSpaceComponent(EUISpaceLoc.MESSAGE_FOOTER, GuardrailShieldCheck, {
 			label: "GuardrailShieldCheck",
 		});
@@ -3155,5 +3159,5 @@ export const FEApplet: TAppletDefinition<IAppletAPIFE> = {
 	description: "Frontend applet",
 	fn,
 	hostType: EAppletHostType.FE,
-	scope: EAppletScope.THREAD,
+	scope: EAppletScope.GLOBAL,
 };

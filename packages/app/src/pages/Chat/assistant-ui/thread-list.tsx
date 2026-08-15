@@ -355,7 +355,7 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 										/>
 									</Box>
 								</Menu.Trigger>
-								<Menu.Positioner>
+								<Menu.Positioner portal>
 									<Menu.Content
 										bg="var(--wc-bg-elevated)"
 										borderWidth="1px"
@@ -427,7 +427,6 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 					pl="4"
 					my="1"
 					maxH="600px"
-					overflowY="auto"
 					css={{
 						"&::-webkit-scrollbar": { width: "4px" },
 						"&::-webkit-scrollbar-thumb": {
@@ -623,7 +622,7 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 							<MoreHorizontalIcon size={12} />
 						</Box>
 					</Menu.Trigger>
-					<Menu.Positioner>
+					<Menu.Positioner portal>
 						<Menu.Content
 							bg="var(--wc-bg-elevated)"
 							borderWidth="1px"

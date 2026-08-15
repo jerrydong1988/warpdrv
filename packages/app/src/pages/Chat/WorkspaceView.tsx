@@ -326,7 +326,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	return (
 		<div
 			className="mx-auto my-auto flex w-full max-w-(--thread-max-width) grow flex-col px-6"
-			style={{ maxWidth: "44rem" }}
+			style={{ maxWidth: "48rem" }}
 		>
 			<VStack align="stretch" gap="2" className="grow" py="4">
 				{/* Workspace name */}
@@ -679,7 +679,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 						gap="0"
 						align="stretch"
 						w="full"
-						maxHeight="calc(100vh - 800px)"
+						maxHeight="calc(100vh - 500px)"
 						minHeight="200px"
 						overflowY="auto"
 					>

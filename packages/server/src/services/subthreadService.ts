@@ -1,11 +1,18 @@
 import type { Orchestrator, SqlitePersistence, SseBroadcaster } from "@warpcore/bridge/server";
-import { EToolApprovalMode } from "@warpcore/bridge";
-import type { IAgent, IToolAttachment } from "@warpcore/shared";
+import {
+	EToolApprovalMode,
+	EChatRole,
+	EMessagePartType,
+	type IChatMessage,
+} from "@warpcore/bridge";
+import type { IAgent, IToolAttachment, INotification } from "@warpcore/shared";
 import {
 	EReasoningEffort,
 	EServerStatus,
 	EThreadHierarchyType,
 	genThreadId,
+	genMessageId,
+	genPartId,
 } from "@warpcore/shared";
 import type { IServer } from "@warpcore/shared";
 import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
@@ -294,7 +301,10 @@ export class SubthreadService {
 				? message +
 					"\n\n--- queued message boundary ---\n\n" +
 					parentMessages
-						.map((n) => (n.payload as { message?: string }).message)
+						.map(
+							(n) =>
+								`[${new Date(n.createdAt).toLocaleTimeString()}] ${(n.payload as { message?: string }).message}`,
+						)
 						.filter(Boolean)
 						.join("\n\n--- queued message boundary ---\n\n")
 				: message;
@@ -363,15 +373,161 @@ export class SubthreadService {
 		if (!thread || !thread.parentId) {
 			throw new Error(`Thread ${currentThreadId} has no parent`);
 		}
+		// Attach the sending subthread's agent info so the superthread can
+		// label the message sender without loading the subthread's state later.
+		const state = await this.persistence.getThreadState(currentThreadId);
+		const agent = (state as Record<string, unknown> | null)?.originalAgent ?? null;
 		const notification = await this.persistence.notificationCreate({
 			threadId: thread.parentId,
 			notificationType: "agent",
 			notificationSubtype: "message",
 			senderType: "thread",
 			senderId: currentThreadId,
-			payload: { message },
+			payload: { message, agent, title: thread.title },
 		});
 		this.broadcaster.emit({ type: "notification.created", notification });
 		return { notificationId: notification.id, threadId: thread.parentId };
+	}
+
+	// Consume notifications (messages sent up from subthreads) for a superthread.
+	// Groups them by sender (subthread), combines each group into a single USER
+	// message tagged with the sender's hierarchy + agent, chains them via
+	// parentId, marks them consumed, then triggers inference on the last message.
+	async consumeSubthreadMessages(
+		threadId: string,
+		ids: string[],
+		headMessageId: string | null,
+	): Promise<{
+		ok: boolean;
+		data?: { createdMessageIds: string[]; consumedNotificationIds: string[] };
+		error?: string;
+	}> {
+		// 1. Guard — do not consume while an inference is running on this thread.
+		if (this.orchestrator.isThreadRunningInference(threadId)) {
+			return { ok: false, error: "wait for the inference to finish" };
+		}
+
+		const thread = await this.persistence.getThread(threadId);
+		if (!thread) {
+			return { ok: false, error: "Thread not found" };
+		}
+
+		// 2. Fetch + validate + filter to subthread-originated messages.
+		const groups = new Map<string, INotification[]>();
+		for (const id of ids) {
+			const n = await this.persistence.notificationGet(id);
+			if (!n) continue;
+			if (n.threadId !== threadId) continue;
+			if (n.consumed) continue;
+			if (n.senderType !== "thread") continue;
+			if (n.senderId === threadId) continue;
+			// Hierarchy check: the sender must be a subthread of this thread.
+			const senderThread = await this.persistence.getThread(n.senderId);
+			if (!senderThread || senderThread.parentId !== threadId) continue;
+			const arr = groups.get(n.senderId) ?? [];
+			arr.push(n);
+			groups.set(n.senderId, arr);
+		}
+
+		if (groups.size === 0) {
+			return { ok: true, data: { createdMessageIds: [], consumedNotificationIds: [] } };
+		}
+
+		// 3. Process each group in order, chaining messages via parentId.
+		let currentParent = headMessageId;
+		const createdMessageIds: string[] = [];
+		const consumedNotificationIds: string[] = [];
+
+		for (const [subthreadId, notifications] of groups) {
+			// Preserve chronological order within the group.
+			notifications.sort((a, b) => a.createdAt - b.createdAt);
+
+			// Combine the group's messages, each prefixed with a timestamp.
+			const combined = notifications
+				.map(
+					(n) =>
+						`[${new Date(n.createdAt).toLocaleTimeString()}] ${(n.payload as { message?: string }).message}`,
+				)
+				.filter(Boolean)
+				.join("\n\n---\n\n");
+
+			const firstPayload = notifications[0]?.payload as
+				| { agent?: { id: string; name: string } | null; title?: string }
+				| undefined;
+			const agent = firstPayload?.agent ?? null;
+			const title = firstPayload?.title;
+
+			const msgId = genMessageId();
+			const msg: IChatMessage = {
+				id: msgId,
+				parentId: currentParent,
+				threadId,
+				role: EChatRole.USER,
+				content: [
+					{
+						id: genPartId(),
+						type: EMessagePartType.TEXT,
+						orderIndex: 0,
+						text: combined,
+					},
+				],
+				stats: null,
+				createdAt: Date.now(),
+			};
+			await this.persistence.createMessage(msg);
+			await this.persistence.updateMessageState(msgId, {
+				sender: {
+					threadId: subthreadId,
+					type: EThreadHierarchyType.SUBTHREAD,
+					agent,
+					title,
+				},
+			});
+			this.broadcaster.emit({ type: "message.created", message: msg });
+
+			createdMessageIds.push(msgId);
+			currentParent = msgId;
+
+			// Mark the group's notifications consumed.
+			for (const n of notifications) {
+				const updated = await this.persistence.notificationConsume(n.id);
+				this.broadcaster.emit({ type: "notification.updated", notification: updated });
+				consumedNotificationIds.push(n.id);
+			}
+		}
+
+		// 4. Trigger inference on the last created message (no new user message).
+		const lastMessageId = currentParent;
+		if (lastMessageId) {
+			const meta = JSON.parse(thread.meta || "{}") as { serverId: string | null };
+			if (meta.serverId) {
+				const server = await store.get<IServer>("servers:" + meta.serverId);
+				if (server) {
+					const inferenceUrl = `http://127.0.0.1:${server.port}`;
+					const config = await this.persistence.getThreadConfig(threadId);
+					const abortController = new AbortController();
+					this.orchestrator
+						.handleCompletionV2(
+							inferenceUrl,
+							{
+								threadId,
+								serverId: meta.serverId,
+								parentId: lastMessageId,
+								inferenceParams: (config?.params ?? {}) as Record<string, unknown>,
+								skipToolsSave: true,
+							},
+							abortController.signal,
+						)
+						.catch((err) => {
+							console.error(
+								`[Subthread] Consume inference failed for thread ${threadId}:`,
+								err,
+							);
+						});
+				}
+			}
+		}
+
+		return { ok: true, data: { createdMessageIds, consumedNotificationIds } };
 	}
 }

@@ -95,6 +95,7 @@ import { EmbeddingToggle } from "./EmbeddingToggle";
 import { KokoroTTSButton } from "./KokoroTTS";
 import { MarkdownText } from "./markdown-text";
 import { MonitorBox } from "@/applets/ui/MonitorBox";
+import { MonitorMiniBox } from "@/applets/ui/MonitorMiniBox";
 import { PendingToolCallsBox } from "./PendingToolCallsBox";
 import { SelectionPopover } from "./SelectionPopover";
 import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
@@ -231,6 +232,7 @@ export const Thread: FC<{
 										<ThreadScrollToBottom />
 										<Elicitation />
 										<AnnotationsBox />
+										<MonitorMiniBox />
 										<MonitorBox />
 										<PendingToolCallsBox />
 										<Composer />

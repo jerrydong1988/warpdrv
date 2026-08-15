@@ -461,6 +461,7 @@ export interface IChatMessageCreatePayload {
 export interface IThreadSenderInfo {
 	threadId: string;
 	agent?: { id: string; name: string };
+	title?: string;
 	type: EThreadHierarchyType;
 }
 

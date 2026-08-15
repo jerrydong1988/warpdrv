@@ -1,6 +1,6 @@
 import type { INotificationCreatePayload, INotificationUpdatePayload } from "@warpcore/shared";
 import { Router } from "express";
-import { broadcaster, persistence } from "../index";
+import { broadcaster, persistence, subthreadService } from "../index";
 
 export const notificationsRouter = Router();
 
@@ -66,6 +66,33 @@ notificationsRouter.patch("/:threadId/:id/payload", async (req, res) => {
 		const notification = await persistence.notificationUpdatePayload(req.params.id, payload);
 		broadcaster.emit({ type: "notification.updated", notification });
 		res.json({ ok: true, data: notification, error: null });
+	} catch (err) {
+		res.status(500).json({ ok: false, data: null, error: String(err) });
+	}
+});
+
+// POST /api/chat/notifications/:threadId/consume
+// Consume a batch of subthread-originated notifications (the superthread's
+// inbox). Combines them per sender into USER messages and triggers inference
+// on the last one. Body: { ids: string[], headMessageId: string | null }
+notificationsRouter.post("/:threadId/consume", async (req, res) => {
+	try {
+		const threadId = req.params.threadId;
+		const { ids, headMessageId } = req.body as { ids: string[]; headMessageId: string | null };
+		if (!Array.isArray(ids) || ids.length === 0) {
+			res.status(400).json({ ok: false, data: null, error: "ids array is required" });
+			return;
+		}
+		const result = await subthreadService.consumeSubthreadMessages(
+			threadId,
+			ids,
+			headMessageId ?? null,
+		);
+		if (!result.ok) {
+			res.status(409).json({ ok: false, data: null, error: result.error });
+			return;
+		}
+		res.json({ ok: true, data: result.data, error: null });
 	} catch (err) {
 		res.status(500).json({ ok: false, data: null, error: String(err) });
 	}

@@ -542,3 +542,13 @@ export async function fetchMessageStatesByThread(threadId: string) {
 		`/chat/threads/${threadId}/message-states`,
 	);
 }
+export async function consumeSubthreadNotifications(
+	threadId: string,
+	ids: string[],
+	headMessageId: string | null,
+) {
+	return api.post<{ createdMessageIds: string[]; consumedNotificationIds: string[] }>(
+		`/chat/notifications/${threadId}/consume`,
+		{ ids, headMessageId },
+	);
+}

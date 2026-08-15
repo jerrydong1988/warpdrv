@@ -31,8 +31,8 @@ export function useRealm(currentThreadId: string | null) {
 
 		const appletMgr = new AppletManager(
 			chatNode,
-			EAppletScope.THREAD,
-			currentThreadId ?? undefined,
+			EAppletScope.GLOBAL,
+			undefined,
 			{ [EAppletHostType.FE]: AppletHostFE },
 			feApplets,
 			{ FEApplet: true },
@@ -85,10 +85,10 @@ export function useRealm(currentThreadId: string | null) {
 		};
 	}, [isParentAttached]);
 
-	useEffect(() => {
-		if (!isParentAttached) return;
-		realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
-	}, [currentThreadId, isParentAttached]);
+	// useEffect(() => {
+	// 	if (!isParentAttached) return;
+	// 	realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
+	// }, [currentThreadId, isParentAttached]);
 
 	useEffect(() => {
 		const socket = realmRef.current?.socket;

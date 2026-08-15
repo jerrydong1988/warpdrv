@@ -14,9 +14,15 @@ import type {
 	IGuardrailIssue,
 	IMode,
 	IServer,
+	IThreadSenderInfo,
 	ITodoItem,
 } from "@warpcore/shared";
-import { parseMessyLLMArray, EThreadHierarchyType, EServerStatus } from "@warpcore/shared";
+import {
+	parseMessyLLMArray,
+	EThreadHierarchyType,
+	EServerStatus,
+	genPartId,
+} from "@warpcore/shared";
 import { getMode, listModes } from "../../services/modeStore";
 import { mergeWithInjectedTools } from "../../services/subthreadService";
 import { store } from "../../util/store";
@@ -114,6 +120,41 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			if (modeId) mode = await getMode(modeId);
 
 			let newResult = [...(eventApi.result as Array<IChatMessage>)];
+
+			// ---- SENDER HEADER INJECTION ----
+			// For USER messages with a sender in their state, prepend a text part
+			// identifying the origin and how to respond.
+			newResult = newResult.map((msg) => {
+				if (msg.role !== EChatRole.USER) return msg;
+
+				const sender = stateById[msg.id]?.sender as IThreadSenderInfo | undefined;
+				if (!sender) return msg;
+
+				let header: string | null = null;
+
+				if (sender.type === EThreadHierarchyType.SUBTHREAD) {
+					const agentName = sender.agent?.name ?? "Unknown";
+					const title = sender.title ?? "Untitled";
+					header = `[Message(s) from threadId: ${sender.threadId} (Title: ${title}, Agent: ${agentName})]`;
+				} else if (sender.type === EThreadHierarchyType.SUPERTHREAD) {
+					header = `[Message from parent thread. Use the superthread_send_message tool to respond when ready.]`;
+				}
+
+				if (!header) return msg;
+
+				return {
+					...msg,
+					content: [
+						{
+							id: genPartId(),
+							type: EMessagePartType.TEXT,
+							orderIndex: -1,
+							text: header,
+						} as IMessagePart,
+						...msg.content,
+					],
+				};
+			});
 
 			// ---- MODE INJECTION ----
 
@@ -789,7 +830,10 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			if (parentMessages.length === 0) return;
 
 			const combinedMessage = parentMessages
-				.map((n) => (n.payload as { message?: string }).message)
+				.map(
+					(n) =>
+						`[${new Date(n.createdAt).toLocaleTimeString()}] ${(n.payload as { message?: string }).message}`,
+				)
 				.filter(Boolean)
 				.join("\n\n--- queued message boundary ---\n\n");
 

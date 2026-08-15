@@ -79,7 +79,7 @@ export const MonitorBox = memo(() => {
 					fontWeight="600"
 					color="var(--wc-text-primary)"
 				>
-					Monitoring
+					Agent Monitor
 				</Text>
 				<Box flex="1" />
 				<Box
