@@ -19,6 +19,9 @@ import { FetchRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/Fetc
 import { ListRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/ListRenderer";
 import { ReadFileRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/ReadFileRenderer";
 import { RgRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/RgRenderer";
+import { ListSubthreadsRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/ListSubthreadsRenderer";
+import { SendSubthreadMessageRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SendSubthreadMessageRenderer";
+import { CreateSubthreadRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/CreateSubthreadRenderer";
 import { SearchRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SearchRenderer";
 import {
 	TodoItemRendererMeta,
@@ -185,6 +188,9 @@ export const useStore = create<AppState>()(
 					CodeGraphClearRenderer: CodeGraphClearRendererMeta,
 					RgRenderer: RgRendererMeta,
 					EmbeddingSearchRenderer: EmbeddingSearchRendererMeta,
+					ListSubthreadsRenderer: ListSubthreadsRendererMeta,
+					SendSubthreadMessageRenderer: SendSubthreadMessageRendererMeta,
+					CreateSubthreadRenderer: CreateSubthreadRendererMeta,
 				},
 				registerToolCallRenderer: (name, component) =>
 					set((state) => {
