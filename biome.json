@@ -28,7 +28,10 @@
 			"recommended": true,
 			"suspicious": { "noExplicitAny": "off" },
 			"style": { "noNonNullAssertion": "off" },
-			"a11y": { "noStaticElementInteractions": "off" }
+			"a11y": { "noStaticElementInteractions": "off" },
+			"correctness": {
+				"noUnusedImports": "error"
+			}
 		}
 	}
 }
