@@ -1,6 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
-import type { IToolAttachment } from "@warpcore/shared";
 import {
 	AlertCircle,
 	Ban,
@@ -22,7 +21,6 @@ import { useToast } from "@/components/ToastProvider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { computeModeUnionTools } from "@/lib/toolUtils";
 import { useStore } from "@/store";
-import type { IToolCallRenderer } from "@/store/types";
 import { MiniToolCallUiSpace } from "../ui-space/MiniToolCallUiSpace";
 import { ToolCallBlockBody } from "./ToolCallBlockBody";
 import { ServerStatusContext } from "./thread";

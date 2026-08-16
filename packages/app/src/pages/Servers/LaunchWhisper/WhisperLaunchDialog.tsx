@@ -18,8 +18,8 @@ import {
 	type IWhisperLaunchParams,
 	type IWhisperModel,
 } from "@warpcore/shared";
-import { Check, Mic, Package, Play, RotateCcw, X } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
+import { Mic, Package, Play, RotateCcw, X } from "lucide-react";
+import React, { useMemo, useState } from "react";
 import { createWhisperServer, updateWhisperServer } from "@/api/whisperServices";
 import { useToast } from "@/components/ToastProvider";
 import { ToggleChip } from "@/pages/Servers/LaunchServer/Helpers";

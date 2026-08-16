@@ -1,5 +1,5 @@
 import { Badge, Box, Checkbox, Flex, Spinner, Text } from "@chakra-ui/react";
-import type { IBackendAsset, IHardwareInfo, IKokoroStatus } from "@warpcore/shared";
+import type { IBackendAsset, IHardwareInfo } from "@warpcore/shared";
 import { useEffect, useState } from "react";
 import {
 	fetchHardware,

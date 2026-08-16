@@ -1,5 +1,5 @@
 import type { IWhisperBackend, IWhisperLaunchParams, IWhisperServer } from "@warpcore/shared";
-import { DEFAULT_WHISPER_LAUNCH_PARAMS, EWhisperServerStatus } from "@warpcore/shared";
+import { EWhisperServerStatus } from "@warpcore/shared";
 import { type ChildProcess, spawn } from "child_process";
 import net from "net";
 import { parse as shellParse } from "shell-quote";

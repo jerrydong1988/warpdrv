@@ -1,7 +1,5 @@
 import { Box, Button, Flex, HStack, Input, Portal, Spinner, Text, VStack } from "@chakra-ui/react";
 import type {
-	IBackend,
-	IBackendGroup,
 	IBackendGroupCreatePayload,
 	IBackendGroupUpdatePayload,
 	TBackendGroupId,

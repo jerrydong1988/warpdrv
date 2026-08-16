@@ -13,7 +13,6 @@ import type {
 	TBundleId,
 	TCheckpointId,
 	TFingerprintHash,
-	TServerId,
 	TSlotId,
 } from "@warpcore/shared";
 import { DEFAULT_SETTINGS, ECheckpointSaveMode } from "@warpcore/shared";

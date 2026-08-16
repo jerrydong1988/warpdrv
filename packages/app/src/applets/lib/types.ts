@@ -1,4 +1,3 @@
-import type { EventNode, TCallback } from "@warpcore/realmcore";
 import type { TAppletBaseAPI } from "@warpcore/realmcore/src/applet/types";
 import type React from "react";
 import type { useStore } from "@/store";

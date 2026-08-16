@@ -11,7 +11,6 @@ import { EventNode } from "@warpcore/realmcore";
 import type {
 	IBackend,
 	IBackendGroup,
-	IDevice,
 	IDownload,
 	IServer,
 	ISettings,
@@ -29,7 +28,6 @@ import {
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
-import os from "os";
 import path from "path";
 import { authMiddleware } from "./middleware/auth";
 import { serveStaticApp } from "./middleware/serveStatic";
@@ -76,12 +74,11 @@ import { initKokoroService } from "./services/kokoroService";
 import { runMigrations } from "./services/migrationRunner";
 import { getProxyStatus, startModelProxy } from "./services/modelProxy";
 import { listModes } from "./services/modeStore";
-import { getProjectRoot } from "./services/projectRoot";
 import { getActiveRun, setRecipeRunnerSSE } from "./services/recipeRunner";
 import { listRecipes } from "./services/recipeStore";
-import { getAllServerSlots, getServerSlots } from "./services/slotStateTracker";
+import { getAllServerSlots } from "./services/slotStateTracker";
 import { sseManager } from "./services/sseManagerInstance";
-import { getAllServerStats, getServerStats } from "./services/statsPoller";
+import { getServerStats } from "./services/statsPoller";
 import { TodoManager } from "./services/todoManager";
 import { SubthreadService } from "./services/subthreadService";
 import { ThreadStatusLineManager } from "./services/threadStatusLineManager";

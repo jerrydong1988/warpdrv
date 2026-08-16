@@ -1,13 +1,8 @@
 import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 import { Copy, Minus, Square, X } from "lucide-react";
 import type { ReactNode } from "react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { RiMenuFold3Line, RiMenuFold4Line } from "react-icons/ri";
-import { VscLayoutSidebarLeft, VscLayoutSidebarLeftOff } from "react-icons/vsc";
+import React from "react";
 import { useTauriWindow } from "@/hooks/useTauriWindow";
-import { updateSettings } from "../api/services";
-import { useDependantState } from "../hooks/useDependantState";
-import { useStore } from "../store";
 
 interface IPageHeaderProps {
 	title: string | ReactNode;

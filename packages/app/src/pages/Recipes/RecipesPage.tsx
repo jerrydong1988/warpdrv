@@ -15,10 +15,8 @@ import {
 } from "@chakra-ui/react";
 import { ERecipeRunStatus, type IRecipe, type TRecipeSortField } from "@warpcore/shared";
 import {
-	AlertCircle,
 	ArrowDownZA,
 	ArrowUpAZ,
-	CheckCircle,
 	ChevronDown,
 	Edit,
 	Lock,
@@ -27,7 +25,6 @@ import {
 	ScrollText,
 	Search,
 	Trash2,
-	XCircle,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { deleteRecipe, updateSettings } from "../../api/services";

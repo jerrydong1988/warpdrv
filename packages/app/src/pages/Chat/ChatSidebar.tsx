@@ -1,13 +1,11 @@
 import { Box, Flex } from "@chakra-ui/react";
 import type { IChatInferenceParams, IChatPreset } from "@warpcore/shared";
-import { ChevronRight, Bot, FileText, Plug, SearchIcon, Settings } from "lucide-react";
+import { ChevronRight, Bot, FileText, Plug, SearchIcon } from "lucide-react";
 import React, { useEffect } from "react";
 import { FaShieldAlt } from "react-icons/fa";
-import { LuListTodo, LuPlug, LuSlidersHorizontal } from "react-icons/lu";
+import { LuListTodo, LuSlidersHorizontal } from "react-icons/lu";
 import { TbApps } from "react-icons/tb";
 import { TiFlowSwitch } from "react-icons/ti";
-import { VscTools } from "react-icons/vsc";
-import { useShallow } from "zustand/react/shallow";
 import { useStore } from "@/store";
 import { EChatSidebarTab } from "@/store/slices/chatSidebar";
 import { EUISpaceLoc } from "@/store/slices/uiSpaces";

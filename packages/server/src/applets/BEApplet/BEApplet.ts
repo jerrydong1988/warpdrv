@@ -1,4 +1,3 @@
-import { text } from "node:stream/consumers";
 import {
 	EChatRole,
 	EMessagePartType,
@@ -15,7 +14,6 @@ import type {
 	IMode,
 	IServer,
 	IThreadSenderInfo,
-	ITodoItem,
 } from "@warpcore/shared";
 import {
 	parseMessyLLMArray,

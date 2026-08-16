@@ -1,5 +1,4 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { Database } from "lucide-react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import { extractResultText } from "./utils";

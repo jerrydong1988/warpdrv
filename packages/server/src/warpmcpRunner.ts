@@ -8,7 +8,6 @@ import {
 import {
 	chatSearchToolService,
 	codeGraphService,
-	getProjectRoot,
 	mcpClient,
 	subthreadService,
 	threadStatusLineManager,

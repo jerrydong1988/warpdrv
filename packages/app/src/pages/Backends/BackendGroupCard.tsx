@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
-import type { IBackend, IBackendGroup, TBackendGroupId, TBackendId } from "@warpcore/shared";
+import type { IBackend, TBackendGroupId, TBackendId } from "@warpcore/shared";
 import { Blocks, Edit, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { useStore } from "../../store";

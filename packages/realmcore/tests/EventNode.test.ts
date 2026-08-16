@@ -6,8 +6,6 @@ import {
 	type IEventApi,
 	matchAddr,
 	parsePath,
-	type TCallback,
-	type TCallbackId,
 } from "../src/events/EventNode";
 
 // Helpers

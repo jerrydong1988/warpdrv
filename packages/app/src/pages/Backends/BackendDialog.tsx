@@ -11,25 +11,10 @@ import {
 	VStack,
 } from "@chakra-ui/react";
 import type { TBackendId } from "@warpcore/shared";
-import {
-	ALL_COMMON_FLAGS,
-	EValidationStatus,
-	getFlagMapping,
-	TOGGLE_FLAG_MAPPINGS,
-} from "@warpcore/shared";
-import {
-	AlertCircle,
-	Blocks,
-	CheckCircle,
-	FileInput,
-	FolderSearch,
-	Plus,
-	Terminal,
-	X,
-} from "lucide-react";
+import { ALL_COMMON_FLAGS } from "@warpcore/shared";
+import { Blocks, CheckCircle, FileInput, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { createBackend, updateBackend } from "../../api/services";
-import { Card } from "../../components/Card";
 import { useToast } from "../../components/ToastProvider";
 import { useStore } from "../../store";
 

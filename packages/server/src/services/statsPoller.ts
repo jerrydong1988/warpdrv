@@ -1,4 +1,4 @@
-import type { IServer, IServerStats, ISlotStats } from "@warpcore/shared";
+import type { IServerStats, ISlotStats } from "@warpcore/shared";
 import http from "http";
 
 const statsMap = new Map<string, IServerStats>();

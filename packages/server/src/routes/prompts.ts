@@ -1,6 +1,5 @@
 import type { IChatPrompt, IChatPromptCreatePayload } from "@warpcore/shared";
 import { genPromptId } from "@warpcore/shared";
-import crypto from "crypto";
 import { Router } from "express";
 import { persistence } from "../index";
 import { sseManager } from "../services/sseManagerInstance";

@@ -6,7 +6,7 @@ import {
 	EMessagePartType,
 	type IChatMessage,
 } from "@warpcore/bridge";
-import type { IAgent, IToolAttachment, INotification } from "@warpcore/shared";
+import type { IToolAttachment, INotification } from "@warpcore/shared";
 import {
 	EReasoningEffort,
 	EServerStatus,

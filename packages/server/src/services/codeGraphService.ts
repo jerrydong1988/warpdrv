@@ -26,7 +26,6 @@ import { xxh64 } from "@node-rs/xxhash";
 import type { IPersistence } from "@warpcore/bridge";
 import type {
 	ICodeGraphEdge,
-	ICodeGraphFile,
 	ICodeGraphIngestResult,
 	ICodeGraphNode,
 	ICodeGraphSearchOptions,

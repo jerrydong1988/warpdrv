@@ -1,9 +1,8 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { EServerStatus, IModel, TServerId } from "@warpcore/shared";
+import { EServerStatus } from "@warpcore/shared";
 import { ChevronDown, Eye } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { updateThread } from "@/api/services";
-import { useDependantState } from "@/hooks/useDependantState";
 import { useStore } from "@/store";
 
 function ServerDot({ status }: { status: EServerStatus }) {

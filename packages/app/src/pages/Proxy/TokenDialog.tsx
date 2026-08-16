@@ -11,7 +11,6 @@ import {
 	DialogPositioner,
 	DialogRoot,
 	DialogTitle,
-	Flex,
 	HStack,
 	IconButton,
 	Input,
@@ -24,8 +23,8 @@ import type {
 	IAccessTokenInfo,
 	IAccessTokenUpdatePayload,
 } from "@warpcore/shared";
-import { AlertTriangle, Check, Copy, Cpu, Shield, Wrench, X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { AlertTriangle, Check, Copy, Cpu, Shield, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { createToken, updateToken } from "../../api/services";
 import { useToast } from "../../components/ToastProvider";
 import { useMutation } from "../../hooks/useQuery";

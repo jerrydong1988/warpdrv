@@ -26,11 +26,7 @@ import { EServerStatus, EWhisperServerStatus } from "@warpcore/shared";
 import { ArrowDownZA, ArrowUpAZ, ChevronDown, Play, Search, Server } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { removeServer, updateSettings } from "@/api/services";
-import {
-	removeWhisperServer,
-	restartWhisperServer,
-	stopWhisperServer,
-} from "@/api/whisperServices";
+import { removeWhisperServer } from "@/api/whisperServices";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { useDependantState } from "@/hooks/useDependantState";

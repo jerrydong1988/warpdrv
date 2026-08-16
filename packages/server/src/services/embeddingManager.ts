@@ -1,4 +1,3 @@
-import type { IBridgeEvent } from "@warpcore/bridge";
 import type { SqlitePersistence } from "@warpcore/bridge/persistence";
 import { EmbeddingService } from "@warpcore/bridge/persistence/embeddingService";
 import type { IBridgeBroadcaster } from "@warpcore/bridge/server";

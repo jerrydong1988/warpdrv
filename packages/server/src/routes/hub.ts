@@ -1,8 +1,6 @@
 import type { IDownloadRequestPayload, IHubFile, ISettings } from "@warpcore/shared";
 import { DEFAULT_SETTINGS } from "@warpcore/shared";
 import { Router } from "express";
-import fs from "fs";
-import path from "path";
 import {
 	cancelDownload,
 	clearDownloadHistory,

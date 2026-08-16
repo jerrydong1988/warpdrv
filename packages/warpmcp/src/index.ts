@@ -35,16 +35,8 @@ import { fileWriteDefinition, fileWriteHandler } from "./tools/file_write";
 import { rgDefinition, rgHandler } from "./tools/rg";
 import { shellExecDefinition, shellExecHandler } from "./tools/shell_exec";
 import {
-	todoAddDefinition,
-	todoAddHandler,
-	todoClearDefinition,
-	todoClearHandler,
 	todoReadDefinition,
 	todoReadHandler,
-	todoRemoveDefinition,
-	todoRemoveHandler,
-	todoUpdateDefinition,
-	todoUpdateHandler,
 	todoWriteDefinition,
 	todoWriteHandler,
 } from "./tools/todo";

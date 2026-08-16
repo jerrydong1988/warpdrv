@@ -26,8 +26,8 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
-import { FaBookOpen, FaBrain } from "react-icons/fa6";
+import React, { useCallback, useState } from "react";
+import { FaBrain } from "react-icons/fa6";
 import {
 	restartWhisperServer,
 	stopWhisperServer,

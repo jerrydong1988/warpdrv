@@ -1,5 +1,3 @@
-import type { IWhisperBackend } from "@warpcore/shared";
-import { EValidationStatus } from "@warpcore/shared";
 import { execFile } from "child_process";
 import fs from "fs/promises";
 import { promisify } from "util";

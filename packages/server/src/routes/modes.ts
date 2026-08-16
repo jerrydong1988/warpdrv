@@ -1,7 +1,7 @@
 import type { IMode, IModeCreatePayload, IToolAttachment } from "@warpcore/shared";
 import { Router } from "express";
 import { nanoid } from "nanoid";
-import { deleteMode, getMode, listModes, putMode } from "../services/modeStore";
+import { deleteMode, getMode, putMode } from "../services/modeStore";
 import { sseManager } from "../services/sseManagerInstance";
 
 export const modesRouter = Router();

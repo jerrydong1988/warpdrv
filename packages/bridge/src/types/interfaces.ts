@@ -42,7 +42,6 @@ import type {
 	IWorkspace,
 	TFolderId,
 	TMessageId,
-	TMessagePartId,
 	TThreadId,
 	TToolCallId,
 } from "./index";

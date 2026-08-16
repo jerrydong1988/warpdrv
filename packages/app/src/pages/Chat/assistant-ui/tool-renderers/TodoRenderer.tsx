@@ -1,5 +1,5 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { CheckSquare, Square, SquareCheck } from "lucide-react";
+import { CheckSquare, Square } from "lucide-react";
 import React, { useMemo } from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 

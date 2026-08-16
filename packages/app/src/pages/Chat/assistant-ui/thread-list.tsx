@@ -1,6 +1,6 @@
 import { ThreadListPrimitive } from "@assistant-ui/react";
 import { Box, HStack, Input, Menu, Portal, Text, VStack } from "@chakra-ui/react";
-import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from "@warpcore/bridge";
+import type { IChatThread as IBridgeChatThread } from "@warpcore/bridge";
 import { genThreadId } from "@warpcore/shared";
 import {
 	CheckIcon,

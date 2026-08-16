@@ -1,5 +1,4 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
-import { Globe } from "lucide-react";
+import { Box, Text } from "@chakra-ui/react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 

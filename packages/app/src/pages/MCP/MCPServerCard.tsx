@@ -3,7 +3,6 @@ import type { IMcpServerState } from "@warpcore/bridge";
 import { EMcpServerStatus } from "@warpcore/bridge";
 import type { IMcpServerEntry } from "@warpcore/shared";
 import { RefreshCw, RotateCcw, Trash2 } from "lucide-react";
-import React from "react";
 import { McpStatusDot } from "./McpStatusDot";
 
 export function MCPServerCard({

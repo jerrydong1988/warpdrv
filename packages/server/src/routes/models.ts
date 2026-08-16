@@ -1,4 +1,4 @@
-import type { IGgufFile, IModel, ISettings } from "@warpcore/shared";
+import type { IModel, ISettings } from "@warpcore/shared";
 import { DEFAULT_SETTINGS } from "@warpcore/shared";
 import { Router } from "express";
 import { parseGgufMetadata } from "../services/ggufParser";

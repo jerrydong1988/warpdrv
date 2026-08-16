@@ -1,5 +1,5 @@
 import { Box, HStack, Link, Text, VStack } from "@chakra-ui/react";
-import { ExternalLink, Search } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import { extractResultText } from "./utils";

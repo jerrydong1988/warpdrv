@@ -2,7 +2,7 @@ import { Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
 import type { EToolApprovalMode } from "@warpcore/bridge";
 import type { IMcpConfigFile, IMcpServerEntry } from "@warpcore/shared";
 import { Plug, Plus, RefreshCw } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	addMcpServer,
 	fetchMcpConfig,

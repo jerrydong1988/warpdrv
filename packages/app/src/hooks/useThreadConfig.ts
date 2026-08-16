@@ -1,4 +1,4 @@
-import { EReasoningEffort, type IChatInferenceParams, IThreadConfig } from "@warpcore/shared";
+import { EReasoningEffort, type IChatInferenceParams } from "@warpcore/shared";
 import { useCallback, useEffect, useRef } from "react";
 import { fetchThreadConfig, updateThreadConfig } from "@/api";
 import { fetchWorkspaceState } from "@/api/services";

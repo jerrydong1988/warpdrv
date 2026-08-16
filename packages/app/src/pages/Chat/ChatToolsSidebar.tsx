@@ -5,8 +5,7 @@
 // Thread overrides fetched on thread change, stored in Zustand.
 // ============================================================
 
-import { Badge, Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
-import type { IThreadToolPermission } from "@warpcore/bridge";
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { EMcpServerStatus, EToolApprovalMode } from "@warpcore/bridge";
 import {
 	ChevronDown,

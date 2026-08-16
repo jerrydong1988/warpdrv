@@ -1,6 +1,6 @@
-import { Box, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import { Box, HStack, Input, VStack } from "@chakra-ui/react";
 import type { IMcpServerEntry } from "@warpcore/shared";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export function AddServerForm({
 	onAdd,

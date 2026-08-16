@@ -1,6 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
-import type { IToolAttachment } from "@warpcore/shared";
 import { AlertCircle, Ban, Check, Loader, Lock, Wrench, X } from "lucide-react";
 import React, { useCallback, useContext, useMemo, useState } from "react";
 import {

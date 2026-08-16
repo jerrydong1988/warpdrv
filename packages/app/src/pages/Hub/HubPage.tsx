@@ -10,11 +10,10 @@ import {
 	Text,
 	VStack,
 } from "@chakra-ui/react";
-import type { IDownload, IHubModel, ISettings } from "@warpcore/shared";
+import type { IDownload, IHubModel } from "@warpcore/shared";
 import { EDownloadStatus } from "@warpcore/shared";
 import {
 	AlertCircle,
-	ArrowDownAZ,
 	ArrowDownZA,
 	ArrowUpAZ,
 	ArrowUpDown,
@@ -25,7 +24,7 @@ import {
 	Search,
 	Settings,
 } from "lucide-react";
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { searchHub } from "../../api/services";
 import { PageHeader } from "../../components/PageHeader";

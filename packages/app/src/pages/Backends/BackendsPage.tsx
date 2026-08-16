@@ -14,15 +14,8 @@ import {
 	Text,
 	VStack,
 } from "@chakra-ui/react";
-import type {
-	IBackend,
-	IBackendGroup,
-	IServer,
-	IWhisperBackend,
-	TBackendSortField,
-	TWhisperBackendId,
-} from "@warpcore/shared";
-import { EServerStatus, EValidationStatus } from "@warpcore/shared";
+import type { IBackend, IBackendGroup, IWhisperBackend, TBackendSortField } from "@warpcore/shared";
+import { EValidationStatus } from "@warpcore/shared";
 import {
 	AlertCircle,
 	ArrowDownZA,
@@ -40,18 +33,8 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import {
-	activateBackendInGroup,
-	createBackendGroup,
-	deleteBackend,
-	deleteBackendGroup,
-	restartServer,
-	updateBackendGroup,
-	updateSettings,
-	validateBackend,
-} from "../../api/services";
-import { createWhisperBackend, removeWhisperBackend } from "../../api/whisperServices";
-import { Card } from "../../components/Card";
+import { deleteBackend, deleteBackendGroup, updateSettings } from "../../api/services";
+import { removeWhisperBackend } from "../../api/whisperServices";
 import { ConfirmDialog } from "../../components/dialogs/ConfirmDialog";
 import { PageHeader } from "../../components/PageHeader";
 import { useDependantState } from "../../hooks/useDependantState";

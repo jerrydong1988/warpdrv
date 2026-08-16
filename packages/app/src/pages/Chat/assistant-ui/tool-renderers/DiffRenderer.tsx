@@ -1,5 +1,4 @@
-import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { FileText, Pencil } from "lucide-react";
+import { Box, Text, VStack } from "@chakra-ui/react";
 import React, { useMemo } from "react";
 import ReactDiffViewer from "react-diff-viewer-continued";
 import { useStore } from "@/store";

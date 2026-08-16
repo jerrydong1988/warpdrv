@@ -1,4 +1,3 @@
-import type { IAgent } from "@warpcore/shared";
 import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 export const agentsSlice = (

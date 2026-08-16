@@ -13,7 +13,7 @@ import { SlashCmdDirectoryPicker } from "./SlashCmdDirectoryPicker";
 import { SlashCmdDropdown } from "./SlashCmdDropdown";
 import { SlashCmdGuardrails } from "./SlashCmdGuardrails";
 import { SlashCmdServerSelector } from "./SlashCmdServerSelector";
-import { SlashCmdMessageType, SlashCmdToolSelector, SlashCmdTools } from "./SlashCmdToolSelector";
+import { SlashCmdMessageType, SlashCmdTools } from "./SlashCmdToolSelector";
 
 // paramType -> slot renderer; "default", "server", "dropdown", "directory", "color" wired, additional types added as needed
 type TSlotRendererProps = {

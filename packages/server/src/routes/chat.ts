@@ -1,9 +1,4 @@
-import {
-	type EChatRole,
-	EMessagePartType,
-	type ICompletionRequest,
-	type IFolder,
-} from "@warpcore/bridge";
+import { type EChatRole, type ICompletionRequest, type IFolder } from "@warpcore/bridge";
 import { folderNameToTopic } from "@warpcore/bridge/util/topic";
 import type {
 	IChatMessageCreatePayload,
@@ -12,7 +7,6 @@ import type {
 } from "@warpcore/shared";
 import { EServerStatus, genFolderId, genMessageId, genThreadId } from "@warpcore/shared";
 import { createSession } from "better-sse";
-import crypto from "crypto";
 import { Router } from "express";
 import { broadcaster, orchestrator, persistence } from "../index";
 import { embeddingManager } from "../services/embeddingManager";

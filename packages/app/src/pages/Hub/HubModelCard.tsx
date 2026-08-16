@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import type { IHubModel } from "@warpcore/shared";
 import { Clock, Download, Heart } from "lucide-react";
 import React from "react";

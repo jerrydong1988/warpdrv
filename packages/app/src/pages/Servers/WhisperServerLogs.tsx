@@ -1,5 +1,5 @@
 import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
-import { ArrowDown, Download, Mic, Terminal, Trash2, X } from "lucide-react";
+import { ArrowDown, Download, Mic, Trash2, X } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { clearWhisperServerLogs as clearLogsApi } from "@/api/whisperServices";
 import { useStore } from "@/store";

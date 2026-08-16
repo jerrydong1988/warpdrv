@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { AlertTriangle, Check, ChevronDown, ChevronRight, GitMerge } from "lucide-react";
+import { AlertTriangle, Check } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import { extractResultText } from "./utils";

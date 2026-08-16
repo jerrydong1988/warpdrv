@@ -1,7 +1,6 @@
-import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { Button, Flex, HStack, Text } from "@chakra-ui/react";
 import { ArrowUpCircle, ExternalLink, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useStore } from "@/store";
 import { openExternal } from "../utils/openExternal";
 
 interface IUpdateInfo {

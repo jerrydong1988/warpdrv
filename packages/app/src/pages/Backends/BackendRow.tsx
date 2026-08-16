@@ -10,7 +10,7 @@ import {
 	Text,
 	VStack,
 } from "@chakra-ui/react";
-import type { IBackend, IDevice, TBackendId } from "@warpcore/shared";
+import type { IBackend, TBackendId } from "@warpcore/shared";
 import { EServerStatus, EValidationStatus } from "@warpcore/shared";
 import {
 	AlertCircle,

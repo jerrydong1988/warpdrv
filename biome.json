@@ -30,7 +30,10 @@
 			"style": { "noNonNullAssertion": "off" },
 			"a11y": { "noStaticElementInteractions": "off" },
 			"correctness": {
-				"noUnusedImports": "error"
+				"noUnusedImports": {
+					"level": "error",
+					"fix": "safe"
+				}
 			}
 		}
 	}

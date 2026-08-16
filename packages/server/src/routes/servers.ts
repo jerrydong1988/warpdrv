@@ -1,24 +1,15 @@
-import type {
-	IBackend,
-	IBackendGroup,
-	IServer,
-	IServerCreatePayload,
-	ISettings,
-} from "@warpcore/shared";
-import { DEFAULT_SETTINGS, EServerStatus } from "@warpcore/shared";
+import type { IBackend, IBackendGroup, IServer, IServerCreatePayload } from "@warpcore/shared";
+import { EServerStatus } from "@warpcore/shared";
 import crypto from "crypto";
 import { Router } from "express";
 import { clearStickyRoute, getStickyRoutesResolved } from "../services/modelProxy";
 import {
-	buildServerArgs,
 	clearServerLogs,
 	findRandomAvailablePort,
 	getServerLogs,
-	isProcessAlive,
 	killServer,
 	launchServer,
 	SERVERS_PREFIX,
-	spawnServer,
 	usedPorts,
 } from "../services/processManager";
 import { sseManager } from "../services/sseManagerInstance";

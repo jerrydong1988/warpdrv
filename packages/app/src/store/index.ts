@@ -23,10 +23,7 @@ import { ListSubthreadsRendererMeta } from "@/pages/Chat/assistant-ui/tool-rende
 import { SendSubthreadMessageRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SendSubthreadMessageRenderer";
 import { CreateSubthreadRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/CreateSubthreadRenderer";
 import { SearchRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SearchRenderer";
-import {
-	TodoItemRendererMeta,
-	TodoListRendererMeta,
-} from "@/pages/Chat/assistant-ui/tool-renderers/TodoRenderer";
+import { TodoListRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/TodoRenderer";
 import { annotationsSlice } from "./slices/annotations";
 import { backendsSlice } from "./slices/backends";
 import { chatPresetsSlice } from "./slices/chatPresets";

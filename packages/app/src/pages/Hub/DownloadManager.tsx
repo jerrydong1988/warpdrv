@@ -1,16 +1,6 @@
-import { Badge, Box, Button, Flex, HStack, Spinner, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
 import { EDownloadStatus, type IDownload } from "@warpcore/shared";
-import {
-	AlertCircle,
-	CheckCircle,
-	Clock,
-	Download,
-	Pause,
-	Play,
-	Trash2,
-	X,
-	XCircle,
-} from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, Download, Pause, Play, X, XCircle } from "lucide-react";
 import React, { useState } from "react";
 import {
 	cancelHubDownload,

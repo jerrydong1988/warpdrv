@@ -1,6 +1,5 @@
 import type {
 	IAgent,
-	ERecipeStreamKind,
 	IBackend,
 	IBackendGroup,
 	IChatPreset,
@@ -33,8 +32,6 @@ import type {
 	TCheckpointId,
 	TDownloadId,
 	TModeId,
-	TModelId,
-	TRecipeId,
 	TServerId,
 	TWhisperBackendId,
 	TWhisperServerId,

@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Input, Separator, Text, Textarea, VStack } from "@chakra-ui/react";
-import type { IChatThread as IBridgeChatThread, IFolder as IChatFolder } from "@warpcore/bridge";
-import type { IMode, TModeId } from "@warpcore/shared";
+import type { IChatThread as IBridgeChatThread } from "@warpcore/bridge";
+import type { TModeId } from "@warpcore/shared";
 import { EReasoningEffort, EServerStatus } from "@warpcore/shared";
 import { CheckIcon, ChevronDown, Eye, FolderInput, PencilIcon, XIcon } from "lucide-react";
 import type React from "react";

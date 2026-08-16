@@ -1,5 +1,4 @@
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { FileCode } from "lucide-react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import { extractResultText } from "./utils";

@@ -1,4 +1,3 @@
-import type { IGuardrailDefinition } from "@warpcore/shared";
 import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 export const guardrailsSlice = (

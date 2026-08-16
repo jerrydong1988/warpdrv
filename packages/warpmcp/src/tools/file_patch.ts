@@ -1,5 +1,4 @@
 import fs from "fs/promises";
-import path from "path";
 import type { IWarpmcpDeps } from "../types";
 import { assertPathAllowed } from "../util/sandbox";
 

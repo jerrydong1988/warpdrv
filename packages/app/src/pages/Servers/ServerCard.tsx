@@ -12,15 +12,12 @@ import {
 	Text,
 	VStack,
 } from "@chakra-ui/react";
-import type { IBackend, IBackendGroup, IModel, IServer, TServerId } from "@warpcore/shared";
+import type { IModel, IServer, TServerId } from "@warpcore/shared";
 import { EServerStatus } from "@warpcore/shared";
 import {
-	Activity,
 	Blocks,
 	Clock,
-	Cpu,
 	Edit,
-	Gauge,
 	Play,
 	Plus,
 	RotateCcw,
@@ -35,7 +32,7 @@ import {
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { BsGpuCard } from "react-icons/bs";
-import { FaBookOpen, FaBrain, FaRegEye } from "react-icons/fa6";
+import { FaBrain, FaRegEye } from "react-icons/fa6";
 import { GoEyeClosed } from "react-icons/go";
 import { LuSaveOff } from "react-icons/lu";
 import { clearStickyRoute, restartServer, stopServer, updateServer } from "@/api/services";
@@ -45,7 +42,7 @@ import { useMutation } from "@/hooks/useQuery";
 import { ServerSlots } from "@/pages/Servers/SlotPill";
 import { StatusBadge } from "@/pages/Servers/StatusBadge";
 import { useStore } from "@/store";
-import { formatCount, formatLaunchCommand, formatUptime, QUANT_COLORS, StatPill } from "./utils";
+import { formatLaunchCommand, formatUptime, StatPill } from "./utils";
 
 interface IServerCardProps {
 	serverId: TServerId;

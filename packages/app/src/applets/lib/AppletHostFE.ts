@@ -1,4 +1,4 @@
-import { AppletHost, TCallback } from "@warpcore/realmcore";
+import { AppletHost } from "@warpcore/realmcore";
 import { nanoid } from "nanoid";
 import type React from "react";
 import { useStore } from "@/store";

@@ -1,10 +1,5 @@
 import { Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
-import {
-	EServerStatus,
-	type EWhisperServerStatus,
-	type IServer,
-	type IWhisperServer,
-} from "@warpcore/shared";
+import { EServerStatus, type EWhisperServerStatus, type IServer } from "@warpcore/shared";
 import { Mic, Play, Server } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";

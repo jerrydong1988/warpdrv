@@ -1,13 +1,11 @@
 import { Box, Flex, HStack, Image, Text, VStack } from "@chakra-ui/react";
 import {
 	Blocks,
-	Cpu,
 	FolderOpen,
 	Globe,
 	Home,
 	Info,
 	MessageSquare,
-	Play,
 	Plug,
 	Save,
 	ScrollText,
@@ -21,7 +19,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useTauriWindow } from "@/hooks/useTauriWindow";
 import { ServersPage } from "@/pages/Servers/ServersPage";
 import type { ISummaryData } from "../api/summary-services";
-import { useDependantState } from "../hooks/useDependantState";
 import { useSummary } from "../hooks/useSummary";
 import { AboutPage } from "../pages/About/AboutPage";
 import { BackendsPage } from "../pages/Backends/BackendsPage";
@@ -37,7 +34,6 @@ import { RecipesPage } from "../pages/Recipes/RecipesPage";
 import { SettingsPage } from "../pages/Settings/SettingsPage";
 import { useStore } from "../store";
 import { ResizeHandles } from "./ResizeHandles";
-import { UpdateBanner } from "./UpdateBanner";
 
 // Page lifecycle config: closeOnSwitch=false means page persists (hidden but not unmounted)
 type TPageConfig = {

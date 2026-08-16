@@ -1,4 +1,3 @@
-import type { IChatMessage } from "@warpcore/bridge";
 import type { SqlitePersistence } from "@warpcore/bridge/server";
 
 export interface IChatSearchResult {

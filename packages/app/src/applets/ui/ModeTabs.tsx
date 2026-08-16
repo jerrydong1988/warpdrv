@@ -1,4 +1,4 @@
-import { Box, Tabs } from "@chakra-ui/react";
+import { Tabs } from "@chakra-ui/react";
 import type { IMode, TModeId } from "@warpcore/shared";
 import { memo, useCallback } from "react";
 import { TiFlowSwitch } from "react-icons/ti";

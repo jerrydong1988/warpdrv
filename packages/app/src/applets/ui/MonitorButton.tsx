@@ -1,5 +1,5 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
-import { Bot, ChevronUp } from "lucide-react";
+import { Box } from "@chakra-ui/react";
+import { Bot } from "lucide-react";
 import React, { memo, useCallback } from "react";
 import { useStore } from "@/store";
 

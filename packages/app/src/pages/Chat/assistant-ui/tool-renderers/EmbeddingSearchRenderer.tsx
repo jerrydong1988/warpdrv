@@ -1,5 +1,4 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import { extractResultText } from "./utils";

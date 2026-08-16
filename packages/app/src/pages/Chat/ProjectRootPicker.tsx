@@ -1,6 +1,6 @@
 import { Button, HStack, Input, Text } from "@chakra-ui/react";
 import { FolderInput } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useDependantState } from "@/hooks/useDependantState";
 import { useStore } from "@/store";
 

@@ -1,5 +1,5 @@
 import { HStack, Text, VStack } from "@chakra-ui/react";
-import React, { useMemo } from "react";
+import React from "react";
 import { useStore } from "@/store";
 
 export const ThreadTitleDisplay = React.memo(() => {

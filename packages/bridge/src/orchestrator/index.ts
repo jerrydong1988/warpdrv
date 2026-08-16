@@ -10,7 +10,6 @@
 // ============================================================
 
 import type { EventNode } from "@warpcore/realmcore";
-import crypto from "crypto";
 import {
 	genMessageId,
 	genPartId,
@@ -29,14 +28,11 @@ import type {
 	IChatMessage,
 	IChatMessageStats,
 	ICompletionRequest,
-	IFolder,
 	IMessagePart,
 	IMessagePartToolCall,
 	IOpenAITool,
-	IToolAttachment,
 	IToolCall,
 	IToolDefinition,
-	IWorkspace,
 	TFolderId,
 	TMessageId,
 	TThreadId,
@@ -48,7 +44,6 @@ import type {
 	IPermissions,
 	IPersistence,
 } from "../types/interfaces";
-import { folderNameToTopic } from "../util/topic";
 import { cleanSchema, validateToolArgs } from "../validation";
 
 const MAX_PASSES = 10;

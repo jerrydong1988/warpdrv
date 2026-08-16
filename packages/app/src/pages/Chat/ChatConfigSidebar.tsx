@@ -1,25 +1,13 @@
-import {
-	Box,
-	Flex,
-	HStack,
-	IconButton,
-	Input,
-	SegmentGroup,
-	Text,
-	Textarea,
-	VStack,
-} from "@chakra-ui/react";
-import type { IChatInferenceParams, IChatPreset, IModel, ISettings } from "@warpcore/shared";
+import { Box, HStack, Input, SegmentGroup, Text, Textarea, VStack } from "@chakra-ui/react";
+import type { IChatInferenceParams, IChatPreset, ISettings } from "@warpcore/shared";
 import { EReasoningEffort, EReasoningFormat, EResponseFormat } from "@warpcore/shared";
-import { ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Settings, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronRight, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { LuCode, LuLayoutGrid } from "react-icons/lu";
-import { VscLayoutSidebarRightOff } from "react-icons/vsc";
 import { useDependantState } from "@/hooks/useDependantState";
 import { useJsonValidator } from "@/hooks/useJsonValidator";
-import { useListQuery, useQuery } from "@/hooks/useQuery";
 import { useStore } from "@/store";
-import { updateChatPreset as updateChatPresetApi, updateSettings } from "../../api/services";
+import { updateSettings } from "../../api/services";
 import { ProjectRootPicker } from "./ProjectRootPicker";
 
 // ============================================================

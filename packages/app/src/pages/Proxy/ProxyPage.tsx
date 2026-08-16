@@ -1,7 +1,7 @@
-import { Badge, Box, Button, Flex, HStack, Spinner, Switch, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, HStack, Switch, Text, VStack } from "@chakra-ui/react";
 import type { ISettings } from "@warpcore/shared";
 import { ArrowRight, Globe, Play, Server, Shield, Square, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { BsRouter } from "react-icons/bs";
 import type { IProxyStatus, IStickyRouteInfo } from "../../api/services";
 import {
@@ -14,7 +14,6 @@ import {
 import { Card } from "../../components/Card";
 import { ConfirmDialog } from "../../components/dialogs/ConfirmDialog";
 import { PageHeader } from "../../components/PageHeader";
-import { useToast } from "../../components/ToastProvider";
 import { useDependantState } from "../../hooks/useDependantState";
 import { useMutation } from "../../hooks/useQuery";
 import { useStore } from "../../store";

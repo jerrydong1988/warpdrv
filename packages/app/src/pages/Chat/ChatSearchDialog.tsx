@@ -1,5 +1,4 @@
 import { Box, Flex, Input, Portal, Text } from "@chakra-ui/react";
-import type { ISearchResult } from "@warpcore/bridge";
 import { SearchIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BsFillFileTextFill } from "react-icons/bs";

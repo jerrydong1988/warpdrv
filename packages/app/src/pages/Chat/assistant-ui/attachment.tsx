@@ -7,7 +7,7 @@ import {
 	useAui,
 	useAuiState,
 } from "@assistant-ui/react";
-import { type File, FileText, PlusIcon, XIcon } from "lucide-react";
+import { type File, FileText, XIcon } from "lucide-react";
 import { type FC, type PropsWithChildren, useEffect, useState } from "react";
 import { ImAttachment } from "react-icons/im";
 import { useShallow } from "zustand/shallow";

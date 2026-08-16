@@ -1,7 +1,7 @@
 import { Box, HStack, Slider, Text } from "@chakra-ui/react";
-import { EWhisperServerStatus, TWhisperServerId } from "@warpcore/shared";
+import { EWhisperServerStatus } from "@warpcore/shared";
 import { ChevronDown, Mic, MicOff } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { updateSettings } from "@/api/services";
 import { useStore } from "@/store";
 

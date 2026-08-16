@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { useState } from "react";
 import { updateSettings } from "@/api/services";
-import { useTauriWindow } from "@/hooks/useTauriWindow";
 import { StepBackends } from "./steps/StepBackends";
 import { StepDone } from "./steps/StepDone";
 import { StepGuide } from "./steps/StepGuide";

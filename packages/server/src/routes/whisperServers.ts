@@ -1,20 +1,14 @@
 import http from "node:http";
-import type {
-	IWhisperBackend,
-	IWhisperServer,
-	IWhisperServerCreatePayload,
-} from "@warpcore/shared";
+import type { IWhisperServer, IWhisperServerCreatePayload } from "@warpcore/shared";
 import { EWhisperServerStatus } from "@warpcore/shared";
 import crypto from "crypto";
 import { Router } from "express";
 import { sseManager } from "../services/sseManagerInstance";
 import {
-	buildWhisperArgs,
 	clearWhisperServerLogs,
 	getWhisperServerLogs,
 	killWhisperServer,
 	launchWhisperServer,
-	spawnWhisperServer,
 	WHISPER_SERVERS_PREFIX,
 } from "../services/whisperProcessManager";
 import { store } from "../util/store";

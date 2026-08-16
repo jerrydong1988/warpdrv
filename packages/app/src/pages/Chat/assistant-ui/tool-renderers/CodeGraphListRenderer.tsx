@@ -1,5 +1,4 @@
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { ChevronDown, ChevronRight, List } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { useStore } from "@/store";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";

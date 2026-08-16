@@ -1,7 +1,6 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import type { IMessagePartToolCall, IToolCall, TMessageId } from "@warpcore/bridge";
 import { EChatRole, EMessagePartType, EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
-import type { IToolAttachment } from "@warpcore/shared";
 import { Check, Loader, Lock, Wrench, X } from "lucide-react";
 import React, { useCallback, useContext, useMemo, useState } from "react";
 import {

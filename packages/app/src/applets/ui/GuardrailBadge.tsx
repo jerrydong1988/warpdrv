@@ -1,6 +1,6 @@
 import { Box, Text } from "@chakra-ui/react";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
-import type { IGuardrailDefinition, IMode, TModeId } from "@warpcore/shared";
+import type { IGuardrailDefinition, TModeId } from "@warpcore/shared";
 import { AlertTriangle, Check, ChevronDown } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";

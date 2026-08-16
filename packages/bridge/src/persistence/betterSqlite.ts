@@ -15,7 +15,7 @@ import type {
 	INotificationCreatePayload,
 	INotificationUpdatePayload,
 } from "@warpcore/shared";
-import { genAgentId, genNotificationId } from "@warpcore/shared";
+import { genNotificationId } from "@warpcore/shared";
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";

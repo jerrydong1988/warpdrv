@@ -1,9 +1,7 @@
 import {
-	ActionBarMorePrimitive,
 	ActionBarPrimitive,
 	AuiIf,
 	BranchPickerPrimitive,
-	ChainOfThoughtPrimitive,
 	ComposerPrimitive,
 	ErrorPrimitive,
 	MessagePrimitive,
@@ -12,7 +10,6 @@ import {
 	useAui,
 	useAuiEvent,
 	useAuiState,
-	useMessageTiming,
 } from "@assistant-ui/react";
 import {
 	AccordionItem as AccordionItemComp,
@@ -25,7 +22,6 @@ import {
 	Image,
 	Menu,
 	Popover,
-	Portal,
 	Switch,
 	Text,
 	VStack,
@@ -35,19 +31,12 @@ import { EReasoningEffort, EServerStatus, type TServerId } from "@warpcore/share
 import { encodingForModel } from "js-tiktoken";
 import {
 	ArrowDownIcon,
-	ArrowUpIcon,
 	Bot,
-	BrainCircuit,
-	BrainCircuitIcon,
 	CheckIcon,
 	ChevronDownIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
-	ClockIcon,
 	CopyIcon,
-	DownloadIcon,
-	Info,
-	MoreHorizontalIcon,
 	MoreVertical,
 	PencilIcon,
 	RefreshCwIcon,
@@ -68,7 +57,6 @@ import React, {
 	useState,
 } from "react";
 import { LuDatabaseZap } from "react-icons/lu";
-import { VscTools } from "react-icons/vsc";
 import { deleteMessage } from "@/api/services";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -82,12 +70,11 @@ import { useStore } from "@/store";
 import { ComposerUiSpace } from "../ui-space/ComposerUiSpace";
 import { MessageFooterUiSpace } from "../ui-space/MessageFooterUiSpace";
 import { MessageUiSpace } from "../ui-space/MessageUiSpace";
-import { ToolCallUiSpace } from "../ui-space/ToolCallUiSpace";
 import { WorkspaceView } from "../WorkspaceView";
 import { AnnotationsBox } from "./AnnotationsBox";
 import { ComposerAddAttachment, ComposerAttachments, UserMessageAttachments } from "./attachment";
 import { ComposerEditor, type IWarpComposerEditorRef } from "./ComposerEditor";
-import { clearComposerEditor, insertComposerText } from "./composerEditorRegistry";
+import { insertComposerText } from "./composerEditorRegistry";
 import { DictationProvider, useDictation } from "./DictationContext";
 import type { IExtractedSlashCommand } from "./docToString";
 import { Elicitation } from "./Elicitation";
@@ -100,7 +87,6 @@ import { PendingToolCallsBox } from "./PendingToolCallsBox";
 import { SelectionPopover } from "./SelectionPopover";
 import { ToolCallBlockCollapsible } from "./ToolCallBlockCollapsible";
 import { TTSFlameWaveform } from "./TTSFlameWaveform";
-import { ToolFallback } from "./tool-fallback";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import { VoiceWaveform } from "./VoiceWaveform";
 

@@ -18,7 +18,7 @@ import {
 	Text,
 	VStack,
 } from "@chakra-ui/react";
-import type { IChatPreset, IToolAttachment } from "@warpcore/shared";
+import type { IChatPreset } from "@warpcore/shared";
 import { EReasoningEffort, EServerStatus, genPartId } from "@warpcore/shared";
 import { ChevronDown, MessageSquare, Plus } from "lucide-react";
 import { nanoid } from "nanoid";
