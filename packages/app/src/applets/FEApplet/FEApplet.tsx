@@ -343,9 +343,17 @@ const AgentPicker = React.memo(
 
 		const selectedSet = useMemo(() => new Set(value), [value]);
 
+		// Count only ids that still exist (drop deleted agents)
+		const validCount = useMemo(() => {
+			const validIds = new Set(availableAgents.map((a) => a.id));
+			return [...selectedSet].filter((aid) => validIds.has(aid)).length;
+		}, [selectedSet, availableAgents]);
+
 		const handleToggle = useCallback(
 			(id: string) => {
-				const next = new Set(selectedSet);
+				// Reconstruct from live agents so deleted agent ids are dropped
+				const validIds = new Set(availableAgents.map((a) => a.id));
+				const next = new Set([...selectedSet].filter((aid) => validIds.has(aid)));
 				if (next.has(id)) {
 					next.delete(id);
 				} else {
@@ -353,7 +361,7 @@ const AgentPicker = React.memo(
 				}
 				onChange([...next]);
 			},
-			[selectedSet, onChange],
+			[selectedSet, onChange, availableAgents],
 		);
 
 		useEffect(() => {
@@ -389,13 +397,9 @@ const AgentPicker = React.memo(
 				>
 					<Text
 						fontSize="xs"
-						color={
-							selectedSet.size > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"
-						}
+						color={validCount > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"}
 					>
-						{selectedSet.size > 0
-							? `${selectedSet.size} agent(s)`
-							: "No agents allowed"}
+						{validCount > 0 ? `${validCount} agent(s)` : "No agents allowed"}
 					</Text>
 				</Box>
 				{isOpen && (
@@ -2430,9 +2434,9 @@ const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 	const [draftName, setDraftName] = useDependantState(agent.name);
 	const [draftDescription, setDraftDescription] = useDependantState(agent.description);
 	const [draftTools, setDraftTools] = useDependantState(agent.tools);
-	const [draftAutoApproveTools, setDraftAutoApproveTools] = useDependantState(
-		agent.autoApproveTools,
-	);
+	// const [draftAutoApproveTools, setDraftAutoApproveTools] = useDependantState(
+	// 	agent.autoApproveTools,
+	// );
 	const nameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const descSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -2578,7 +2582,7 @@ const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								value={draftTools}
 								onChange={(tools) => {
 									setDraftTools(tools);
-									updateAgent({ tools });
+									updateAgent({ tools, autoApproveTools: tools });
 								}}
 								onClick={(e) => e.stopPropagation()}
 							/>
@@ -2593,17 +2597,36 @@ const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Auto-approve tools
+								Pre-approved tools
 							</Text>
-							<GuardrailToolPicker
-								value={draftAutoApproveTools}
-								onChange={(tools) => {
-									setDraftAutoApproveTools(tools);
-									updateAgent({ autoApproveTools: tools });
-								}}
-								onClick={(e) => e.stopPropagation()}
-							/>
+							<Text fontSize="xs" color="var(--wc-text-faint)">
+								All tools are pre-approved
+							</Text>
 						</Box>
+
+						{/* Auto-approve tools picker temporarily removed — all tools are pre-approved via the
+								"Tools" picker above (which also writes to autoApproveTools).
+							<Box>
+								<Text
+									fontSize="9px"
+									fontWeight="600"
+									color="var(--wc-text-muted)"
+									textTransform="uppercase"
+									letterSpacing="0.04em"
+									mb="1"
+								>
+									Auto-approve tools
+								</Text>
+								<GuardrailToolPicker
+									value={draftAutoApproveTools}
+									onChange={(tools) => {
+										setDraftAutoApproveTools(tools);
+										updateAgent({ autoApproveTools: tools });
+									}}
+									onClick={(e) => e.stopPropagation()}
+								/>
+							</Box>
+							*/}
 
 						<Box>
 							<Text
@@ -2968,12 +2991,12 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					},
 				},
 				tools: { type: "tools", description: "Tools the agent can use", index: 3 },
-				autoApprove: { type: "tools", description: "Tools to auto-approve", index: 4 },
-				guardrails: { type: "guardrails", description: "Guardrails to attach", index: 5 },
+				// autoApprove: { type: "tools", description: "Tools to auto-approve", index: 4 },
+				guardrails: { type: "guardrails", description: "Guardrails to attach", index: 4 },
 				reasoningLevel: {
 					type: "dropdown",
 					description: "Reasoning level (none/low/medium/high)",
-					index: 6,
+					index: 5,
 					props: {
 						items: [
 							{ label: "none", value: EReasoningEffort.NONE },
@@ -2992,7 +3015,8 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 					serverId: params.server || "",
 					promptId: params.prompt || undefined,
 					tools: parseToolValue(params.tools || ""),
-					autoApproveTools: parseToolValue(params.autoApprove || ""),
+					// autoApproveTools: parseToolValue(params.autoApprove || ""),
+					autoApproveTools: parseToolValue(params.tools || ""),
 					description: extraParams?.prompt || "",
 					reasoningEffort: params.reasoningLevel,
 					guardrails: parseGuardrailValue(params.guardrails || ""),

@@ -62,10 +62,15 @@ export async function bootWarpmcp(): Promise<void> {
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
-		createSubthread: (threadId, agentName, message, title) =>
-			subthreadService.createSubthread(threadId, agentName, message, title),
-		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
-			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
+		createSubthread: (threadId, agentName, message, title, background) =>
+			subthreadService.createSubthread(threadId, agentName, message, title, background),
+		sendToSubthread: (parentThreadId, targetSubThreadId, message, background) =>
+			subthreadService.sendToSubthread(
+				parentThreadId,
+				targetSubThreadId,
+				message,
+				background,
+			),
 		sendToSuperthread: (currentThreadId, message) =>
 			subthreadService.sendToSuperthread(currentThreadId, message),
 		setCurrentStatus: (tid, status) => threadStatusLineManager.setCurrentStatus(tid, status),
@@ -139,10 +144,15 @@ export async function restartWarpmcpIfChanged(prev: ISettings, next: ISettings):
 			chatSearchToolService.searchMessages(q, threadId, limit, page),
 		chatGetMessage: (id) => chatSearchToolService.getMessage(id),
 		listSubthreads: (threadId) => subthreadService.listSubthreads(threadId),
-		createSubthread: (threadId, agentName, message, title) =>
-			subthreadService.createSubthread(threadId, agentName, message, title),
-		sendToSubthread: (parentThreadId, targetSubThreadId, message) =>
-			subthreadService.sendToSubthread(parentThreadId, targetSubThreadId, message),
+		createSubthread: (threadId, agentName, message, title, background) =>
+			subthreadService.createSubthread(threadId, agentName, message, title, background),
+		sendToSubthread: (parentThreadId, targetSubThreadId, message, background) =>
+			subthreadService.sendToSubthread(
+				parentThreadId,
+				targetSubThreadId,
+				message,
+				background,
+			),
 		sendToSuperthread: (currentThreadId, message) =>
 			subthreadService.sendToSuperthread(currentThreadId, message),
 		setCurrentStatus: (tid, status) => threadStatusLineManager.setCurrentStatus(tid, status),

@@ -177,7 +177,7 @@ async function main() {
 		broadcaster,
 		eventNode,
 	});
-	subthreadService = new SubthreadService(persistence, orchestrator, broadcaster);
+	subthreadService = new SubthreadService(persistence, orchestrator, broadcaster, eventNode);
 
 	// Initialize embedding manager
 	await embeddingManager.initialize(persistence, broadcaster, dataDir);

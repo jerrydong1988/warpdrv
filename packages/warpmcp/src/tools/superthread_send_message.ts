@@ -3,7 +3,8 @@ import type { IWarpmcpDeps } from "../types";
 export const superthreadSendMessageDefinition = {
 	name: "superthread_send_message",
 	description:
-		"Send a message to the superthread (parent thread). Creates a notification in the parent thread with the current thread as the sender.",
+		"Send a message to the superthread (parent thread). If a parent tool is actively waiting for this response, delivers it directly to that tool. " +
+		"Also creates a notification in the parent thread for UI visibility.",
 	inputSchema: {
 		type: "object",
 		properties: {

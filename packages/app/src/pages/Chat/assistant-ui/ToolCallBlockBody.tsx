@@ -57,13 +57,13 @@ export const ToolCallBlockBody = React.memo(
 				const { component: AutoComponent, props } = resolved;
 				return (
 					<WithErrorBoundary fallback={fallback}>
-						<AutoComponent {...props} result={result} />
+						<AutoComponent {...props} result={result} status={displayStatus} />
 					</WithErrorBoundary>
 				);
 			}
 			// Priority 3: default fallback
 			return fallback;
-		}, [serverState, toolName, toolCallRenderers, args, result]);
+		}, [serverState, toolName, toolCallRenderers, args, result, displayStatus]);
 
 		return (
 			<ToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>

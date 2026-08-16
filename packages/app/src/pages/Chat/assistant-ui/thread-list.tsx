@@ -29,6 +29,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { IoStarSharp } from "react-icons/io5";
+import { BsFillChatLeftFill } from "react-icons/bs";
 import { fetchWorkspace, reorderFolders } from "@/api/services";
 import { useThreadsAndFolders } from "@/hooks/useThreadsAndFolders";
 import { useStore } from "@/store";
@@ -312,6 +313,13 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 					<>
 						<Box flex="1" display="flex" flexDirection="column" overflow="hidden">
 							<HStack>
+								{!(node.children && node.children.length > 0) &&
+									!metaFields.starred && (
+										<BsFillChatLeftFill
+											size={14}
+											style={{ color: "var(--wc-text-muted)", flexShrink: 0 }}
+										/>
+									)}
 								{metaFields.starred && (
 									<IoStarSharp
 										size={12}

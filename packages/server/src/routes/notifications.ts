@@ -98,6 +98,18 @@ notificationsRouter.post("/:threadId/consume", async (req, res) => {
 	}
 });
 
+// POST /api/chat/notifications/:threadId/background
+// Background a waiting subthread tool call — resolves the pending wait with backgrounded: true
+notificationsRouter.post("/:threadId/background", async (req, res) => {
+	try {
+		const threadId = req.params.threadId;
+		subthreadService.backgroundSubthread(threadId);
+		res.json({ ok: true, data: { threadId }, error: null });
+	} catch (err) {
+		res.status(500).json({ ok: false, data: null, error: String(err) });
+	}
+});
+
 // POST /api/chat/notifications/:threadId/:id/consume
 notificationsRouter.post("/:threadId/:id/consume", async (req, res) => {
 	try {

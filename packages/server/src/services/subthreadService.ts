@@ -1,4 +1,5 @@
 import type { Orchestrator, SqlitePersistence, SseBroadcaster } from "@warpcore/bridge/server";
+import type { EventNode } from "@warpcore/realmcore";
 import {
 	EToolApprovalMode,
 	EChatRole,
@@ -42,19 +43,82 @@ export interface ISubThreadInfo {
 	pendingMessages: number;
 }
 
+export interface ISubthreadResponse {
+	threadId: string;
+	response?: string;
+	backgrounded?: boolean;
+	timedOut?: boolean;
+}
+
+const SUBTHREAD_WAIT_TIMEOUT = 270000; // 4.5 min — buffer below 5-min MCP client timeout
+
 export class SubthreadService {
 	private persistence: SqlitePersistence;
 	private orchestrator: Orchestrator;
 	private broadcaster: SseBroadcaster;
+	private eventNode: EventNode;
+	private pendingWaits: Map<
+		string,
+		{
+			resolve: (result: ISubthreadResponse) => void;
+			timer: NodeJS.Timeout;
+			requesterThreadId: string;
+		}
+	> = new Map();
+	// O(1) index: requester (superthread) -> subthread currently waiting for its response
+	private requesterIndex: Map<string, string> = new Map();
 
 	constructor(
 		persistence: SqlitePersistence,
 		orchestrator: Orchestrator,
 		broadcaster: SseBroadcaster,
+		eventNode: EventNode,
 	) {
 		this.persistence = persistence;
 		this.orchestrator = orchestrator;
 		this.broadcaster = broadcaster;
+		this.eventNode = eventNode;
+		this.setupResponseListeners();
+	}
+
+	private setupResponseListeners(): void {
+		this.eventNode.on("/warpcore", "subthread.response", (api) => {
+			const { threadId, message } = api.payload as { threadId: string; message: string };
+			this.resolveWait(threadId, { threadId, response: message });
+		});
+	}
+
+	// Resolve a pending wait for the given subthread and clean up both maps.
+	private resolveWait(subthreadId: string, result: ISubthreadResponse): void {
+		const pending = this.pendingWaits.get(subthreadId);
+		if (!pending) return;
+		clearTimeout(pending.timer);
+		pending.resolve(result);
+		this.pendingWaits.delete(subthreadId);
+		this.requesterIndex.delete(pending.requesterThreadId);
+	}
+
+	private waitForSubthreadResponse(
+		subthreadId: string,
+		requesterThreadId: string,
+		timeoutMs: number,
+	): Promise<ISubthreadResponse> {
+		return new Promise<ISubthreadResponse>((resolve) => {
+			const timer = setTimeout(() => {
+				this.resolveWait(subthreadId, { threadId: subthreadId, timedOut: true });
+			}, timeoutMs);
+			this.pendingWaits.set(subthreadId, { resolve, timer, requesterThreadId });
+			this.requesterIndex.set(requesterThreadId, subthreadId);
+		});
+	}
+
+	// Background a waiting tool call by the requester (superthread) ID. The FE
+	// knows the requester ID (current thread) but not the subthread ID, so we
+	// look it up via the requester index.
+	backgroundSubthread(requesterThreadId: string): void {
+		const subthreadId = this.requesterIndex.get(requesterThreadId);
+		if (!subthreadId) return;
+		this.resolveWait(subthreadId, { threadId: subthreadId, backgrounded: true });
 	}
 
 	async listSubthreads(parentThreadId: string): Promise<ISubThreadInfo[]> {
@@ -85,7 +149,8 @@ export class SubthreadService {
 		agentName: string,
 		message: string,
 		title: string,
-	): Promise<{ threadId: string }> {
+		background = false,
+	): Promise<ISubthreadResponse> {
 		// 1. Look up parent thread to get folderId
 		const parentThread = await this.persistence.getThread(parentThreadId);
 		if (!parentThread) {
@@ -256,14 +321,17 @@ export class SubthreadService {
 				console.error(`[Subthread] Inference failed for thread ${newThreadId}:`, err);
 			});
 
-		return { threadId: newThreadId };
+		// Background mode: return immediately with the thread ID; the response
+		// will arrive later as a notification. Otherwise wait for the response.
+		return this.finishSend(newThreadId, parentThreadId, background);
 	}
 
 	async sendToSubthread(
 		parentThreadId: string,
 		targetSubThreadId: string,
 		message: string,
-	): Promise<{ notificationId?: string; threadId: string }> {
+		background = false,
+	): Promise<ISubthreadResponse> {
 		// 1. Look up target thread to get serverId
 		const targetThread = await this.persistence.getThread(targetSubThreadId);
 		if (!targetThread) {
@@ -279,12 +347,14 @@ export class SubthreadService {
 		// 3. Check if server is running
 		const server = await store.get<IServer>("servers:" + meta.serverId);
 		if (!server || server.status !== EServerStatus.RUNNING) {
-			return this.queueNotification(parentThreadId, targetSubThreadId, message);
+			await this.queueNotification(parentThreadId, targetSubThreadId, message);
+			return this.finishSend(targetSubThreadId, parentThreadId, background);
 		}
 
 		// 4. Check if thread is currently running inference
 		if (this.orchestrator.isThreadRunningInference(targetSubThreadId)) {
-			return this.queueNotification(parentThreadId, targetSubThreadId, message);
+			await this.queueNotification(parentThreadId, targetSubThreadId, message);
+			return this.finishSend(targetSubThreadId, parentThreadId, background);
 		}
 
 		// 4.5. Fetch and flush pending parent notifications
@@ -345,7 +415,25 @@ export class SubthreadService {
 			await this.persistence.notificationConsume(n.id);
 		}
 
-		return { threadId: targetSubThreadId };
+		// Wait for the subthread to respond via superthread_send_message (or be backgrounded/timed out)
+		return this.finishSend(targetSubThreadId, parentThreadId, background);
+	}
+
+	// Shared tail for sendToSubthread: background mode returns immediately,
+	// otherwise wait for the subthread's response.
+	private finishSend(
+		targetSubThreadId: string,
+		parentThreadId: string,
+		background: boolean,
+	): Promise<ISubthreadResponse> {
+		if (background) {
+			return Promise.resolve({ threadId: targetSubThreadId, backgrounded: true });
+		}
+		return this.waitForSubthreadResponse(
+			targetSubThreadId,
+			parentThreadId,
+			SUBTHREAD_WAIT_TIMEOUT,
+		);
 	}
 
 	private async queueNotification(
@@ -386,6 +474,10 @@ export class SubthreadService {
 			payload: { message, agent, title: thread.title },
 		});
 		this.broadcaster.emit({ type: "notification.created", notification });
+
+		// Signal any waiting tool (create_subthread / subthread_send_message) with the response
+		this.eventNode.broadcast("subthread.response", { threadId: currentThreadId, message });
+
 		return { notificationId: notification.id, threadId: thread.parentId };
 	}
 

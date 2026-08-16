@@ -3,7 +3,9 @@ import type { IWarpmcpDeps } from "../types";
 export const createSubthreadDefinition = {
 	name: "create_subthread",
 	description:
-		"Create a subthread (child thread) under the current thread using the specified agent's configuration. Returns the ID of the created subthread.",
+		"Create a subthread (child thread) under the current thread using the specified agent's configuration. " +
+		"Posts the initial message and waits for the subthread to respond via superthread_send_message. " +
+		"Returns the subthread's response. If the user backgrounds the task, returns immediately with the thread ID.",
 	inputSchema: {
 		type: "object",
 		properties: {
@@ -19,6 +21,12 @@ export const createSubthreadDefinition = {
 				type: "string",
 				description: "The initial user message to seed the subthread with.",
 			},
+			background: {
+				type: "boolean",
+				description:
+					"If true, do not wait for the subthread's response; return immediately with the thread ID. " +
+					"The response will arrive later as a notification.",
+			},
 		},
 		required: ["agentName", "title", "message"],
 	},
@@ -27,10 +35,22 @@ export const createSubthreadDefinition = {
 
 export async function createSubthreadHandler(
 	deps: IWarpmcpDeps,
-	args: { threadId: string; agentName: string; title: string; message: string },
+	args: {
+		threadId: string;
+		agentName: string;
+		title: string;
+		message: string;
+		background?: boolean;
+	},
 ) {
 	if (!deps.createSubthread) {
 		throw "[warpmcp] createSubthread function not found";
 	}
-	return deps.createSubthread(args.threadId, args.agentName, args.message, args.title);
+	return deps.createSubthread(
+		args.threadId,
+		args.agentName,
+		args.message,
+		args.title,
+		args.background,
+	);
 }

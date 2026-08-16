@@ -1,7 +1,10 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import React, { useMemo } from "react";
+import { ArrowDown, ArrowUp, Loader, PauseCircle } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+import { EToolCallStatus } from "@warpcore/bridge";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
+import { useStore } from "@/store";
+import { backgroundSubthread } from "@/api/services";
 
 const TRUNCATE_AT = 80;
 
@@ -10,8 +13,39 @@ function truncate(s: string, n: number): string {
 }
 
 export const SendSubthreadMessageRenderer = React.memo(
-	({ message, subThreadId }: { message?: string; subThreadId?: string }) => {
+	({
+		message,
+		subThreadId,
+		status,
+	}: {
+		message?: string;
+		subThreadId?: string;
+		status?: EToolCallStatus;
+	}) => {
 		const isSub = subThreadId !== undefined;
+		const currentThreadId = useStore((s) => s.currentThreadId);
+		const [actioning, setActioning] = useState(false);
+
+		// Background button only applies to subthread_send_message (downward).
+		const showBackgroundBtn =
+			isSub && status === EToolCallStatus.EXECUTING && !!currentThreadId;
+
+		const handleBackground = useCallback(
+			async (e: React.MouseEvent) => {
+				e.stopPropagation();
+				if (actioning || !currentThreadId) return;
+				setActioning(true);
+				try {
+					await backgroundSubthread(currentThreadId);
+				} catch {
+					// ignore
+				} finally {
+					setActioning(false);
+				}
+			},
+			[currentThreadId, actioning],
+		);
+
 		return (
 			<Box px="3" py="2">
 				<HStack gap="2" align="center" mb="1.5">
@@ -23,6 +57,33 @@ export const SendSubthreadMessageRenderer = React.memo(
 					<Text fontWeight="600" color="var(--wc-text-secondary)">
 						{isSub ? "To subthread" : "To superthread"}
 					</Text>
+					{showBackgroundBtn && (
+						<Box
+							as="button"
+							ml="auto"
+							display="flex"
+							alignItems="center"
+							gap="1"
+							px="1.5"
+							py="0.5"
+							borderRadius="sm"
+							bg="var(--wc-bg-subtle)"
+							color="var(--wc-text-muted)"
+							fontSize="xs"
+							fontWeight="500"
+							cursor={actioning ? "not-allowed" : "pointer"}
+							_hover={{ bg: "var(--wc-bg-hover)" }}
+							onClick={handleBackground}
+							title="Background this task"
+						>
+							{actioning ? (
+								<Loader size={10} className="animate-spin" />
+							) : (
+								<PauseCircle size={10} />
+							)}
+							Background
+						</Box>
+					)}
 				</HStack>
 				<Box
 					bg="var(--wc-overlay-dim)"

@@ -552,3 +552,11 @@ export async function consumeSubthreadNotifications(
 		{ ids, headMessageId },
 	);
 }
+// Background a waiting subthread tool call (keyed by the requester/superthread ID).
+export async function backgroundSubthread(threadId: string) {
+	return api.post<{ threadId: string }>(`/chat/notifications/${threadId}/background`);
+}
+// Ignore (hide) a single subthread notification without turning it into a message.
+export async function hideSubthreadNotification(threadId: string, id: string) {
+	return api.post<null>(`/chat/notifications/${threadId}/${id}/hide`);
+}

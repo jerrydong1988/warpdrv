@@ -961,9 +961,11 @@ const AgentSelector: FC = React.memo(() => {
 	);
 
 	const activeAgentSet = useMemo(() => {
-		if (isModeActive && modeAgentSet) return modeAgentSet;
-		return new Set(threadAgents);
-	}, [isModeActive, modeAgentSet, threadAgents]);
+		const validIds = new Set(availableAgents.map((a) => a.id));
+		const raw = isModeActive && modeAgentSet ? modeAgentSet : new Set(threadAgents);
+		// Drop ids that no longer exist (e.g. deleted agents)
+		return new Set([...raw].filter((id) => validIds.has(id)));
+	}, [isModeActive, modeAgentSet, threadAgents, availableAgents]);
 
 	const activeAgentCount = activeAgentSet.size;
 
@@ -973,8 +975,12 @@ const AgentSelector: FC = React.memo(() => {
 
 	const handleAgentToggle = useCallback(
 		async (agentId: string, checked: boolean) => {
+			// Reconstruct from live agents so deleted agent ids are dropped
+			const validIds = new Set(availableAgents.map((a) => a.id));
 			if (isModeActive && currentMode) {
-				const currentAgents = currentMode.allowedAgents || [];
+				const currentAgents = (currentMode.allowedAgents || []).filter((id) =>
+					validIds.has(id),
+				);
 				let next: string[];
 				if (checked) {
 					next = [...currentAgents, agentId];
@@ -990,7 +996,7 @@ const AgentSelector: FC = React.memo(() => {
 				return;
 			}
 			// No mode — save to thread state
-			const current = threadAgents;
+			const current = threadAgents.filter((id) => validIds.has(id));
 			let next: string[];
 			if (checked) {
 				next = [...current, agentId];
@@ -999,7 +1005,7 @@ const AgentSelector: FC = React.memo(() => {
 			}
 			setThreadState(currentThreadId, { activeAgents: next });
 		},
-		[isModeActive, currentMode, threadAgents, currentThreadId, setThreadState],
+		[isModeActive, currentMode, threadAgents, currentThreadId, setThreadState, availableAgents],
 	);
 
 	return (

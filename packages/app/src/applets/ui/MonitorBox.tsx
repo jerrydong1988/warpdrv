@@ -1,9 +1,12 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Monitor, X } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { Monitor, Send, X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import type { TThreadId } from "@warpcore/bridge";
 import { SubthreadRow } from "./SubthreadRow";
+import { consumeSubthreadNotifications, hideSubthreadNotification } from "@/api/services";
+
+const EMPTY: Record<string, never> = {};
 
 export const MonitorBox = memo(() => {
 	const monitorBoxOpen = useStore((s) => s.monitorBoxOpen);
@@ -53,6 +56,92 @@ export const MonitorBox = memo(() => {
 		},
 		[setMonitorBoxOpen],
 	);
+
+	// ===== Selection state =====
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [busy, setBusy] = useState(false);
+	const headMessageId = useStore((s) =>
+		s.currentThreadId ? (s.headMessageIdByThread[s.currentThreadId] ?? null) : null,
+	);
+	const isRunning = useStore((s) =>
+		s.currentThreadId ? (s.isRunningByThread[s.currentThreadId] ?? false) : false,
+	);
+
+	// All pending notification ids across all children (for pruning stale selections).
+	// Use a stable EMPTY constant so the selector returns a consistent reference
+	// when the map is absent (prevents infinite re-render loops).
+	const threadNotifs = useStore((s) =>
+		s.currentThreadId ? (s.notificationsByThread[s.currentThreadId] ?? EMPTY) : EMPTY,
+	);
+	const allPendingIds = useMemo(() => {
+		if (!currentThreadId) return [] as string[];
+		const ids: string[] = [];
+		for (const id of Object.keys(threadNotifs)) {
+			const n = threadNotifs[id];
+			if (n.senderType === "thread" && n.senderId !== currentThreadId) {
+				ids.push(id);
+			}
+		}
+		return ids;
+	}, [threadNotifs, currentThreadId]);
+
+	// Prune selected ids that no longer exist (consumed/hidden).
+	useEffect(() => {
+		setSelected((prev) => {
+			const valid = new Set(allPendingIds);
+			let changed = false;
+			const next = new Set<string>();
+			for (const id of prev) {
+				if (valid.has(id)) next.add(id);
+				else changed = true;
+			}
+			return changed ? next : prev;
+		});
+	}, [allPendingIds]);
+
+	// Clear selection when the thread changes.
+	useEffect(() => {
+		setSelected(new Set());
+	}, [currentThreadId]);
+
+	const handleToggle = useCallback((id: string) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}, []);
+
+	const selectedIds = useMemo(() => Array.from(selected), [selected]);
+
+	const handleSendSelected = useCallback(async () => {
+		if (!currentThreadId || selectedIds.length === 0 || busy || isRunning) return;
+		setBusy(true);
+		try {
+			await consumeSubthreadNotifications(currentThreadId, selectedIds, headMessageId);
+			setSelected(new Set());
+		} catch (err) {
+			console.error("[MonitorBox] send selected failed:", err);
+		} finally {
+			setBusy(false);
+		}
+	}, [currentThreadId, selectedIds, headMessageId, busy, isRunning]);
+
+	const handleIgnoreSelected = useCallback(async () => {
+		if (!currentThreadId || selectedIds.length === 0 || busy) return;
+		setBusy(true);
+		try {
+			await Promise.all(
+				selectedIds.map((id) => hideSubthreadNotification(currentThreadId, id)),
+			);
+			setSelected(new Set());
+		} catch (err) {
+			console.error("[MonitorBox] ignore selected failed:", err);
+		} finally {
+			setBusy(false);
+		}
+	}, [currentThreadId, selectedIds, busy]);
 
 	if (!monitorBoxOpen) return null;
 
@@ -111,11 +200,85 @@ export const MonitorBox = memo(() => {
 								key={childId}
 								childThreadId={childId}
 								parentThreadId={currentThreadId}
+								selected={selected}
+								onToggle={handleToggle}
 							/>
 						))}
 					</VStack>
 				)}
 			</Box>
+
+			{/* Footer: selection count (left) + action buttons (right) */}
+			<HStack
+				gap="2"
+				px="3"
+				py="2"
+				borderTopWidth={1}
+				borderTopColor="var(--wc-border-subtle)"
+				align="center"
+			>
+				<Text fontSize="xs" color="var(--wc-text-muted)">
+					{selectedIds.length} selected
+				</Text>
+				<Box flex="1" />
+				<Box
+					as="button"
+					display="flex"
+					alignItems="center"
+					gap="1"
+					px="2"
+					py="1"
+					borderRadius="sm"
+					bg={busy ? "var(--wc-bg-subtle)" : "var(--wc-bg-subtle)"}
+					color={busy ? "var(--wc-text-muted)" : "var(--wc-text-muted)"}
+					fontSize="xs"
+					fontWeight="500"
+					opacity={selectedIds.length === 0 ? 0.4 : 1}
+					cursor={busy || selectedIds.length === 0 ? "not-allowed" : "pointer"}
+					_hover={
+						busy || selectedIds.length === 0
+							? undefined
+							: { bg: "var(--wc-bg-hover)", color: "var(--wc-text-primary)" }
+					}
+					onClick={handleIgnoreSelected}
+					disabled={busy || selectedIds.length === 0}
+					title="Ignore the selected messages"
+				>
+					Ignore selected
+				</Box>
+				<Box
+					as="button"
+					display="flex"
+					alignItems="center"
+					gap="1"
+					px="2"
+					py="1"
+					borderRadius="sm"
+					bg={busy ? "var(--wc-bg-subtle)" : "var(--wc-accent-green-bg-15)"}
+					color={busy ? "var(--wc-text-muted)" : "var(--wc-accent-green)"}
+					fontSize="xs"
+					fontWeight="600"
+					opacity={selectedIds.length === 0 ? 0.4 : 1}
+					cursor={
+						busy || selectedIds.length === 0 || isRunning ? "not-allowed" : "pointer"
+					}
+					_hover={
+						busy || selectedIds.length === 0 || isRunning
+							? undefined
+							: { bg: "var(--wc-accent-green-hover)" }
+					}
+					onClick={handleSendSelected}
+					disabled={busy || selectedIds.length === 0 || isRunning}
+					title={
+						isRunning
+							? "Wait for inference to finish"
+							: "Send the selected messages through"
+					}
+				>
+					<Send size={11} />
+					Send through selected
+				</Box>
+			</HStack>
 		</Box>
 	);
 });

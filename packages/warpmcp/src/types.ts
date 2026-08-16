@@ -19,6 +19,12 @@ export interface ISubThreadInfo {
 	title: string;
 	pendingMessages: number;
 }
+export interface ISubthreadResponse {
+	threadId: string;
+	response?: string;
+	backgrounded?: boolean;
+	timedOut?: boolean;
+}
 export interface IWarpmcpDeps {
 	isRemote: (req: { ip: string; connection: { remoteAddress: string } }) => boolean;
 	validateBearerToken: (authHeader: string | undefined) => Promise<IAccessToken | null>;
@@ -79,12 +85,14 @@ export interface IWarpmcpDeps {
 		agentName: string,
 		message: string,
 		title: string,
-	) => Promise<{ threadId: string }>;
+		background?: boolean,
+	) => Promise<ISubthreadResponse>;
 	sendToSubthread?: (
 		parentThreadId: string,
 		targetSubThreadId: string,
 		message: string,
-	) => Promise<{ notificationId: string; threadId: string }>;
+		background?: boolean,
+	) => Promise<ISubthreadResponse>;
 	sendToSuperthread?: (
 		currentThreadId: string,
 		message: string,

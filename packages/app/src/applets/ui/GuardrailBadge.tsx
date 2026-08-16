@@ -29,9 +29,18 @@ export const GuardrailPicker = memo(
 
 		const selectedSet = useMemo(() => new Set(value), [value]);
 
+		// Count only ids that still exist (drop deleted guardrails)
+		const validCount = useMemo(() => {
+			const validIds = new Set(guardrailList.map((g) => g.id));
+			return value.filter((n) => validIds.has(n)).length;
+		}, [value, guardrailList]);
+
 		const handleToggle = (e: React.MouseEvent, id: string) => {
 			e.stopPropagation();
-			const next = selectedSet.has(id) ? value.filter((n) => n !== id) : [...value, id];
+			// Reconstruct from live guardrails so deleted guardrail ids are dropped
+			const validIds = new Set(guardrailList.map((g) => g.id));
+			const current = value.filter((n) => validIds.has(n));
+			const next = current.includes(id) ? current.filter((n) => n !== id) : [...current, id];
 			onChange(next);
 		};
 
@@ -80,10 +89,10 @@ export const GuardrailPicker = memo(
 				>
 					<Text
 						fontSize="xs"
-						color={value.length > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"}
+						color={validCount > 0 ? "var(--wc-text-primary)" : "var(--wc-text-faint)"}
 					>
-						{value.length > 0
-							? `${value.length} guardrail${value.length > 1 ? "s" : ""}`
+						{validCount > 0
+							? `${validCount} guardrail${validCount > 1 ? "s" : ""}`
 							: "No guardrails"}
 					</Text>
 				</Box>
@@ -182,9 +191,13 @@ export const GuardrailBadge = memo(() => {
 	const currentMode = modeId ? modes[modeId] : null;
 
 	const activeNames = useMemo(() => {
-		if (currentMode) return currentMode.activeGuardrails || [];
-		return (threadState?.activeGuardrails as string[]) || [];
-	}, [currentMode, threadState?.activeGuardrails]);
+		const raw = currentMode
+			? currentMode.activeGuardrails || []
+			: (threadState?.activeGuardrails as string[]) || [];
+		// Drop ids that no longer exist (e.g. deleted guardrails)
+		const validIds = new Set(Object.keys(guardrails));
+		return raw.filter((n) => validIds.has(n));
+	}, [currentMode, threadState?.activeGuardrails, guardrails]);
 
 	const currentThreadId = useStore((s) => s.currentThreadId);
 	const thread = useStore((s) => (currentThreadId ? s.threads[currentThreadId] : null));
@@ -221,10 +234,13 @@ export const GuardrailBadge = memo(() => {
 			const ts = state.getCurrentThreadState(state);
 			const m = state.modes;
 			const tsModeId = ts?.modeId as TModeId | undefined;
-			const active =
+			const rawActive =
 				tsModeId && m[tsModeId]
 					? m[tsModeId].activeGuardrails || []
 					: (ts?.activeGuardrails as string[]) || [];
+			// Reconstruct from live guardrails so deleted guardrail ids are dropped
+			const validIds = new Set(Object.keys(state.guardrails || {}));
+			const active = rawActive.filter((n) => validIds.has(n));
 			const isActive = active.includes(id);
 			const newIds = isActive ? active.filter((n) => n !== id) : [...active, id];
 			if (tsModeId && m[tsModeId]) {
