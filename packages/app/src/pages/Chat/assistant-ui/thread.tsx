@@ -12,6 +12,7 @@ import { EmbeddingToggle } from "./EmbeddingToggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { VscTools } from "react-icons/vsc";
 import { LuDatabaseZap } from "react-icons/lu";
 import { Box, Image, Menu, Portal, Popover, Switch, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, HStack, VStack, Text } from '@chakra-ui/react';
@@ -490,6 +491,7 @@ const ReasoningEffortToggle: FC = () => {
 };
 
 const ToolsSelector: FC = React.memo(() => {
+	const { t } = useTranslation();
 	const attachAllTools = useStore(s => s.attachAllTools);
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
@@ -603,7 +605,7 @@ const ToolsSelector: FC = React.memo(() => {
 				>
 					<Popover.Body p="3">
 						{totalCount === 0 ? (
-							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">No tools available</Text>
+							<Text fontSize="12px" color="var(--wc-text-faint)" textAlign="center" py="4">{t('chat:toolList.noToolsAvailable')}</Text>
 						) : (
 							<VStack gap="3" align="stretch">
 								{!isModeActive && (

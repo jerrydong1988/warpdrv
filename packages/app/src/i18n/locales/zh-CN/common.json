@@ -255,6 +255,7 @@
     "draftModel": "草稿模型",
     "draftNMax": "草稿 N-Max",
     "draftingParameters": "草稿参数",
+    "draftingBlockSize": "草稿块大小",
     "editJsonDirectlyOnlyNonDefaultValuesAreSavedAsOverrides": "直接编辑 JSON。只有非默认值会保存为覆盖项。",
     "editServer": "编辑服务器",
     "embedding": "嵌入",

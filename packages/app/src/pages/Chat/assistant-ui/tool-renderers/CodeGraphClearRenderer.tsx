@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
 
@@ -26,7 +27,8 @@ export const CodeGraphClearRendererMeta: IToolCallRenderer = {
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		return {};
 	},
-  renderMini: React.memo(() => (
-    <Text whiteSpace="nowrap">Code Graph cleared</Text>
-  )),
+  renderMini: React.memo(() => {
+    const { t } = useTranslation();
+    return <Text whiteSpace="nowrap">{t('chat:tool.codeGraphCleared')}</Text>;
+  }),
 };

@@ -327,7 +327,7 @@ export const SpeculativeDecodingCard = React.memo(({
 							</Flex>
 
 							<Box>
-								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Drafting Block Size</Text>
+								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftingBlockSize')}</Text>
 								<Flex gap="4">
 									<NumberField label="N-Max" value={specDecode.specDraftNMax ?? 0} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
 									<NumberField label="N-Min" value={specDecode.specDraftNMin ?? 0} onChange={v => onSpecParamChange('specDraftNMin', v)} min={0} max={64} />

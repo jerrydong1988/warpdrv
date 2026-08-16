@@ -118,7 +118,8 @@
     "search": "搜索",
     "lines": "{{count}} 行",
     "read": "读取",
-    "output": "输出"
+    "output": "输出",
+    "codeGraphCleared": "代码图谱已清除"
   },
   "dynamic": {
     "attachmentAriaLabel": "{{type}}附件",

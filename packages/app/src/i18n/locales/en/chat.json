@@ -118,7 +118,8 @@
     "search": "Search",
     "lines": "{{count}} lines",
     "read": "Read",
-    "output": "Output"
+    "output": "Output",
+    "codeGraphCleared": "Code Graph cleared"
   },
   "dynamic": {
     "attachmentAriaLabel": "{{type}} attachment",

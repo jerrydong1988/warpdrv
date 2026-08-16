@@ -255,6 +255,7 @@
     "draftModel": "Draft Model",
     "draftNMax": "Draft N-Max",
     "draftingParameters": "Drafting Parameters",
+    "draftingBlockSize": "Drafting Block Size",
     "editJsonDirectlyOnlyNonDefaultValuesAreSavedAsOverrides": "Edit JSON directly. Only non-default values are saved as overrides.",
     "editServer": "Edit Server",
     "embedding": "Embedding",

@@ -21,6 +21,7 @@ import { createGuardrail as createGuardrailApi, updateGuardrail as updateGuardra
 import { parseToolValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdToolSelector';
 import { parseGuardrailValue } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdGuardrails';
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { TDropdownItem } from '@/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown';
 import { useDependantState } from '@/hooks/useDependantState';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
@@ -493,6 +494,7 @@ const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponent
 });
 
 const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinition }) => {
+	const { t } = useTranslation();
 	const [expanded, setExpanded] = useState(false);
 	const [editingName, setEditingName] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -648,7 +650,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Include root message</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">{t('common:ui.includeRootMessage')}</Text>
 					</Flex>
 
 					<Box>
