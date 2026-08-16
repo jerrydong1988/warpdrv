@@ -198,7 +198,7 @@ async function main() {
 	// CORS: restrict browser origins to the local dev/desktop origins rather
 	// than reflecting any origin.
 	app.use(cors({ origin: ['http://localhost:4400', 'http://127.0.0.1:4400', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
-	app.use(express.json({ limit: '50mb' }));
+	app.use(express.json({ limit: '32mb' }));
 	app.use(cookieParser());
 	// Auth routes (no middleware - public endpoints)
 	app.use('/api/auth', authRouter);
