@@ -18,6 +18,8 @@ function getLocalRelease(): IReleaseInfo {
 			path.join(process.env.WARPCORE_RESOURCE_DIR, 'release.json'),
 			path.join(process.env.WARPCORE_RESOURCE_DIR, '_up_', '_up_', 'release.json'),
 		] : []),
+		// Dev mode: the repo root release.json is the single source of truth.
+		path.join(process.cwd(), 'release.json'),
 	];
 	for (const p of candidates) {
 		if (fs.existsSync(p)) {
@@ -25,6 +27,15 @@ function getLocalRelease(): IReleaseInfo {
 		}
 	}
 	return { version: '0.0.0', updateCheckUrl: '', downloadUrl: '', notes: '' };
+}
+
+// Shared version accessor — used by /api/update/check and /api/health.
+export function getLocalVersion(): string {
+	try {
+		return getLocalRelease().version || '0.0.0';
+	} catch {
+		return '0.0.0';
+	}
 }
 
 // GET /api/update/check

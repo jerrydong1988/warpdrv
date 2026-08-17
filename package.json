@@ -12,17 +12,33 @@
 		"dev:desktop": "concurrently -n app,tauri -c green,blue \"cd packages/app && npm run dev -- --port 3000\" \"cd packages/desktop && npx @tauri-apps/cli dev\"",
 		"build": "npm run build -w @warpcore/app",
 		"build:desktop": "npm run build -w @warpcore/desktop",
+		"lint": "eslint packages/shared/src packages/realmcore/src",
 		"release": "bash release.sh",
 		"postinstall": "patch-package"
 	},
 	"devDependencies": {
 		"concurrently": "^9.2.4",
 		"cross-env": "^10.1.0",
-		"patch-package": "^8.0.1"
+		"eslint": "^9.39.5",
+		"patch-package": "^8.0.1",
+		"typescript-eslint": "^8.67.0"
 	},
 	"overrides": {
 		"express": {
 			"path-to-regexp": "^8.4.0"
-		}
+		},
+		"@huggingface/transformers": {
+			"sharp": "^0.35.3"
+		},
+		"@assistant-ui/core": "0.1.13",
+		"@assistant-ui/store": "0.2.6",
+		"@assistant-ui/tap": "0.5.7",
+		"@assistant-ui/react": "0.12.24",
+		"@assistant-ui/react-ai-sdk": "1.3.16",
+		"@assistant-ui/react-markdown": "0.12.7",
+		"i18next": "26.3.4",
+		"react-i18next": "17.0.8",
+		"shadcn": "4.1.1",
+		"typescript": "5.9.3"
 	}
 }

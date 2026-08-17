@@ -263,7 +263,10 @@ export function buildArgs(
 		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
 		args.push(...tokens);
 	}
-	args.push('--host', '0.0.0.0');
+	// Bind to loopback by default — the authenticated proxy reaches the
+	// server via 127.0.0.1, so remote access keeps working. Only bind
+	// 0.0.0.0 when the user explicitly opts into exposing inference ports.
+	args.push('--host', params.inferenceExposeExternal ? '0.0.0.0' : '127.0.0.1');
 	args.push('--port', String(params.port));
 	// Injected extra args (e.g., --slot-save-path)
 	if (extraArgs) {
@@ -822,6 +825,8 @@ export async function launchServer(server: IServer): Promise<void> {
 
 	// Append recommended inference params to extraArgs if enabled
 	const launchParams = { ...server.params };
+	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+	launchParams.inferenceExposeExternal = settings.inferenceExposeExternal ?? false;
 	if (server.useRecommendedInferenceParams && model?.recommendedInferenceParams) {
 		launchParams.extraArgs = mergeCliFlags(model.recommendedInferenceParams, server.params.extraArgs);
 	}

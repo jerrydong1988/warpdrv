@@ -196,6 +196,8 @@ export interface ILaunchParams {
 		mainGpu?: number; // -1 = default, >=0 = explicit GPU index
 		useEmbedding?: boolean; // enables --embedding flag for embedding-capable server
 		preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
+		/** Overrides the listen host for this instance; default loopback unless settings.inferenceExposeExternal. */
+		inferenceExposeExternal?: boolean;
 	}
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
@@ -338,6 +340,8 @@ export interface ISettings {
 	kokoroSpeed?: number; // kokoro TTS speed multiplier
 	builtinMcpPort?: number;
 	builtinMcpExposeExternal?: boolean;
+	/** If true, launched llama-server instances bind 0.0.0.0 instead of loopback. */
+	inferenceExposeExternal?: boolean;
 	fsAllowedRoots?: string[];
 	appZoomLevel?: number;
 	chatFontSize?: number;
@@ -383,6 +387,11 @@ export const DEFAULT_SETTINGS: ISettings = {
 	kokoroSpeed: 1.0,
 	builtinMcpPort: 11437,
 	builtinMcpExposeExternal: false,
+	// Bind launched llama-server instances to loopback by default. Remote
+	// (LAN/WAN) access goes through the authenticated OpenAI-compatible proxy,
+	// which dials 127.0.0.1 internally — flipping this exposes each inference
+	// server's own unauthenticated endpoint on 0.0.0.0.
+	inferenceExposeExternal: false,
 	fsAllowedRoots: [],
 	appZoomLevel: 1.0,
 	chatFontSize: 14,
@@ -447,7 +456,7 @@ export interface IChatThreadCreatePayload {
 	starred?: boolean;
 }
 
-import type { IMessagePart, TMessageId, EChatRole } from '@warpcore/bridge';
+import type { IMessagePart, TMessageId, EChatRole } from './chat-types';
 
 export interface IChatMessageCreatePayload {
 	id?: TMessageId,

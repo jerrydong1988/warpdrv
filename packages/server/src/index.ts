@@ -20,7 +20,7 @@ import type { ISettings, IServer, IDownload, IDevice, IBackend, IBackendGroup, I
 import type { TBackendId, TBackendGroupId } from '@warpcore/shared';
 import { DEFAULT_SETTINGS, EServerStatus, EDownloadStatus, SSE_CHANNELS_CHECKPOINT } from '@warpcore/shared';
 import { runMigrations } from './services/migrationRunner';
-import { updateRouter } from './routes/update';
+import { updateRouter, getLocalVersion } from './routes/update';
 import { chatRouter } from './routes/chat';
 import { mcpRouter } from './routes/mcp';
 import { proxyRouter } from './routes/proxy';
@@ -251,7 +251,7 @@ async function main() {
 
 	// Health check
 	app.get('/api/health', (_req, res) => {
-		res.json({ ok: true, version: '0.1.0' });
+		res.json({ ok: true, version: getLocalVersion() });
 	});
 
 	const currentSettings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;

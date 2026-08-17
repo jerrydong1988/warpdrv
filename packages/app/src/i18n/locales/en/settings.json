@@ -18,6 +18,7 @@
     "globalPTT": "Global PTT",
     "apiHost": "API Host",
     "builtinMcp": "Built-in MCP Server (warpmcp)",
+    "inferenceExpose": "Inference server exposure",
     "router": "Router",
     "launchOnStartup": "Launch on Startup",
     "startMinimized": "Start Minimized",
@@ -42,6 +43,7 @@
     "globalPtt": "OS-wide push-to-talk shortcut for dictation anywhere.",
     "apiHost": "WarpCore API listen address",
     "builtinMcp": "Exposes built-in tools (file_read, file_write, dir_list, shell_exec, fetch) via MCP. Restarts on port or exposure change.",
+    "inferenceExpose": "Launched llama-server instances bind to loopback by default. Enable to expose their unauthenticated endpoints on your network (remote access is served through the authenticated router either way).",
     "router": "OpenAI-compatible proxy for routing requests by server alias",
     "launchOnStartup": "Start WarpCore automatically when you log in",
     "startMinimized": "Start to tray without showing window (requires Launch on Startup)",
@@ -111,6 +113,7 @@
     "generateTitles": "Generate titles",
     "startRouterOnLaunch": "Start router on App launch",
     "exposeExternal": "Expose to external clients",
+    "exposeInference": "Expose inference servers on all network interfaces",
     "bindAll": "Bind on 0.0.0.0 (off = loopback only)",
     "pttHold": "Hold to record, release to stop",
     "pttToggle": "Toggle on/off"

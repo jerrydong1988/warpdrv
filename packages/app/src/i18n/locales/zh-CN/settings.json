@@ -18,6 +18,7 @@
     "globalPTT": "全局 PTT",
     "apiHost": "API 主机",
     "builtinMcp": "内置 MCP 服务器 (warpmcp)",
+    "inferenceExpose": "推理服务器网络暴露",
     "router": "路由器",
     "launchOnStartup": "开机自启",
     "startMinimized": "启动时最小化",
@@ -42,6 +43,7 @@
     "globalPtt": "系统全局 PTT 快捷键，随时进行语音输入。",
     "apiHost": "WarpCore API 监听地址",
     "builtinMcp": "通过 MCP 暴露内置工具（file_read、file_write、dir_list、shell_exec、fetch）。端口或暴露状态变更后需重启。",
+    "inferenceExpose": "启动的 llama-server 实例默认仅绑定回环地址。开启后将把它们无鉴权的端点暴露到你的网络（远程访问无论开关均通过带认证的路由器提供）。",
     "router": "兼容 OpenAI 的代理，按服务器别名路由请求",
     "launchOnStartup": "登录时自动启动 WarpCore",
     "startMinimized": "启动时最小化到托盘，不显示窗口（需要开启开机自启）",
@@ -111,6 +113,7 @@
     "generateTitles": "生成标题",
     "startRouterOnLaunch": "应用启动时启动路由器",
     "exposeExternal": "暴露给外部客户端",
+    "exposeInference": "在所有网络接口上暴露推理服务器",
     "bindAll": "绑定 0.0.0.0（关闭 = 仅本地回环）",
     "pttHold": "按住录音，松手停止",
     "pttToggle": "切换开/关"

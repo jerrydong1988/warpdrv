@@ -53,6 +53,7 @@ export function SettingsPage() {
 	const [kokoroSpeed, setKokoroSpeed] = useDependantState(settings.kokoroSpeed ?? 1);
 	const [builtinMcpPort, setBuiltinMcpPort] = useDependantState(settings.builtinMcpPort ?? 11437);
 	const [builtinMcpExposeExternal, setBuiltinMcpExposeExternal] = useDependantState(settings.builtinMcpExposeExternal ?? false);
+	const [inferenceExposeExternal, setInferenceExposeExternal] = useDependantState(settings.inferenceExposeExternal ?? false);
 	const [fsAllowedRoots, setFsAllowedRoots] = useDependantState<string[]>(settings.fsAllowedRoots ?? []);
 	const [newFsRoot, setNewFsRoot] = useState('');
 	const handleBrowseFsRoot = async () => {
@@ -310,6 +311,7 @@ kokoroVoice,
 			kokoroSpeed,
 			builtinMcpPort,
 			builtinMcpExposeExternal,
+			inferenceExposeExternal,
 			fsAllowedRoots,
 			appZoomLevel,
 			chatFontSize,
@@ -899,6 +901,27 @@ dictationPTTKey,
 								</VStack>
 							</Box>
 							*/}
+						</VStack>
+					</Card>
+
+					{/* Inference server exposure */}
+					<Card>
+						<VStack align="stretch" gap="4">
+							<Box>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.inferenceExpose')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.inferenceExpose')}</Text>
+							</Box>
+							<HStack gap="3">
+								<Switch.Root label={t('switches.exposeInference')} checked={inferenceExposeExternal} onCheckedChange={(details) => dirtySetter(setInferenceExposeExternal, details.checked)}>
+									<Switch.HiddenInput />
+									<Switch.Control css={{ bg: inferenceExposeExternal ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+									</Switch.Control>
+									<Switch.Label ml="2" fontSize="13px" userSelect="none">
+										{t('switches.bindAll')}
+									</Switch.Label>
+								</Switch.Root>
+							</HStack>
 						</VStack>
 					</Card>
 
