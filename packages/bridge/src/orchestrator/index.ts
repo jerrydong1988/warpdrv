@@ -251,13 +251,15 @@ export class Orchestrator {
 	): Promise<Array<TOpenAIMessage>> {
 		const baseMessages: Array<TOpenAIMessage> = [];
 
+		const systemParts: string[] = [];
 		if (request.folderId) {
 			const ctx = await this.buildWorkspaceContext(request.folderId);
-			if (ctx) baseMessages.push(ctx);
+			if (ctx) systemParts.push(ctx.content);
 		}
-
-		if (request.systemPrompt) {
-			baseMessages.push({ role: "system", content: request.systemPrompt });
+		const thread = await this.persistence.getThread(request.threadId);
+		if (thread?.systemPrompt) systemParts.push(thread.systemPrompt);
+		if (systemParts.length > 0) {
+			baseMessages.push({ role: "system", content: systemParts.join("\n\n") });
 		}
 
 		const allMessages = await this.persistence.getMessages(request.threadId);
@@ -702,6 +704,13 @@ export class Orchestrator {
 		)) as Array<TOpenAIMessage>;
 
 		this.checkMessageDivergence(request.threadId, finalMessages);
+
+		// this.eventNode.broadcast("console-log", {
+		// 	type: "inference_debug",
+		// 	threadId: request.threadId,
+		// 	messages: finalMessages,
+		// 	openAiTools
+		// });
 
 		const body: Record<string, unknown> = {
 			model: "model",

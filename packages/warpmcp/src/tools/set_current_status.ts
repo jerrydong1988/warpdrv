@@ -23,7 +23,8 @@ export const setCurrentStatusDefinition = {
 export async function setCurrentStatusHandler(
 	deps: IWarpmcpDeps,
 	args: { threadId: string; status: string },
-): Promise<{ currentStatus: string }> {
+): Promise<{ ok: boolean; status: string }> {
 	guard(deps, "setCurrentStatus");
-	return await deps.setCurrentStatus!(args.threadId, args.status);
+	await deps.setCurrentStatus!(args.threadId, args.status);
+	return { ok: true, status: args.status };
 }

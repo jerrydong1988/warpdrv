@@ -250,7 +250,11 @@ export const ToolCallBlockCollapsible = React.memo(
 							>
 								<MiniToolCallUiSpace toolCallId={toolCallId} messageId={messageId}>
 									{MiniComponent ? (
-										<MiniComponent args={args} result={result} />
+										<MiniComponent
+											args={args}
+											result={result}
+											status={displayStatus}
+										/>
 									) : (
 										<HStack gap="1" align="center">
 											<Wrench

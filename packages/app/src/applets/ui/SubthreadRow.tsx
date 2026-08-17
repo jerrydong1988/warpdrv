@@ -1,6 +1,6 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Bot, Loader } from "lucide-react";
-import React from "react";
+import { Bot, Check, Loader, Minus, Square } from "lucide-react";
+import React, { useCallback } from "react";
 import { useStore } from "@/store";
 import { useShallow } from "zustand/shallow";
 import { NotificationMessageRow } from "./NotificationMessageRow";
@@ -10,10 +10,11 @@ interface SubthreadRowProps {
 	parentThreadId: string;
 	selected: Set<string>;
 	onToggle: (id: string) => void;
+	onToggleMany: (ids: string[], select: boolean) => void;
 }
 
 export const SubthreadRow = React.memo(
-	({ childThreadId, parentThreadId, selected, onToggle }: SubthreadRowProps) => {
+	({ childThreadId, parentThreadId, selected, onToggle, onToggleMany }: SubthreadRowProps) => {
 		const threadTitle = useStore((s) => s.threads[childThreadId]?.title);
 		const originalAgent = useStore(
 			(s) =>
@@ -39,11 +40,57 @@ export const SubthreadRow = React.memo(
 			}),
 		);
 
+		const handleStop = useCallback(async () => {
+			await fetch(`/api/chat/cancel/${childThreadId}`, { method: "POST" });
+		}, [childThreadId]);
+
 		if (!isRunning && notificationIds.length === 0) return null;
+
+		const selectedCount = notificationIds.filter((id) => selected.has(id)).length;
+		const allSelected = notificationIds.length > 0 && selectedCount === notificationIds.length;
+		const someSelected = selectedCount > 0 && !allSelected;
 
 		return (
 			<VStack gap="2" align="stretch" w="full">
 				<HStack gap="2" align="flex-start">
+					{notificationIds.length > 0 && (
+						<Box
+							as="button"
+							type="button"
+							display="flex"
+							alignItems="center"
+							justifyContent="center"
+							width="16px"
+							height="16px"
+							flexShrink="0"
+							mt="0.5"
+							borderRadius="sm"
+							color={
+								allSelected || someSelected
+									? "var(--wc-accent-purple)"
+									: "var(--wc-text-muted)"
+							}
+							cursor="pointer"
+							_hover={{ color: "var(--wc-accent-purple)" }}
+							onClick={(e: React.MouseEvent) => {
+								e.stopPropagation();
+								onToggleMany(notificationIds, !allSelected);
+							}}
+							title={
+								allSelected
+									? "Deselect all messages in this thread"
+									: "Select all messages in this thread"
+							}
+						>
+							{allSelected ? (
+								<Check size={14} />
+							) : someSelected ? (
+								<Minus size={14} />
+							) : (
+								<Square size={14} />
+							)}
+						</Box>
+					)}
 					<Box flex="1" minWidth="0">
 						<HStack gap="1.5" align="center">
 							{originalAgent ? (
@@ -89,6 +136,25 @@ export const SubthreadRow = React.memo(
 								>
 									{currentStatus ?? "Running…"}
 								</Text>
+								<Box
+									as="button"
+									type="button"
+									aria-label="Stop subthread"
+									title="Stop subthread"
+									onClick={handleStop}
+									cursor="pointer"
+									display="flex"
+									alignItems="center"
+									justifyContent="center"
+									ml="auto"
+									_hover={{ color: "var(--wc-accent-red)" }}
+								>
+									<Square
+										size={12}
+										fill="currentColor"
+										color="var(--wc-text-muted)"
+									/>
+								</Box>
 							</HStack>
 						)}
 					</Box>

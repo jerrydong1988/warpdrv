@@ -42,6 +42,7 @@ import type { IProxyStatus, IStickyRouteInfo } from "@/api/services";
 import type { IExtractedSlashCommand } from "@/pages/Chat/assistant-ui/docToString";
 
 export type { ImmerGet, ImmerSet } from "@warpcore/bridge";
+import type { EToolCallStatus } from "@warpcore/bridge";
 
 export type TCanRenderResult = Record<string, unknown> | false;
 
@@ -49,7 +50,11 @@ export interface IToolCallRenderer {
 	component: React.ComponentType<any>;
 	keywords: string[];
 	canRender: (args: Record<string, unknown>) => TCanRenderResult;
-	renderMini?: React.ComponentType<{ args: Record<string, unknown>; result?: unknown }>;
+	renderMini?: React.ComponentType<{
+		args: Record<string, unknown>;
+		result?: unknown;
+		status?: EToolCallStatus;
+	}>;
 }
 
 import type {

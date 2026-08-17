@@ -39,7 +39,7 @@ export const SenderBadge = React.memo(
 					bg="var(--wc-bg-elevated)"
 					borderRadius="md"
 					borderWidth="1px"
-					borderColor="var(--wc-border-subtle)"
+					borderColor="var(--wc-border-default)"
 				>
 					<Bot size={16} color="var(--wc-text-muted)" />
 					{label}

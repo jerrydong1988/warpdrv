@@ -20,7 +20,7 @@ export const ThreadTitleDisplay = React.memo(() => {
 	});
 
 	return (
-		<VStack align="start" gap={0} className="drag">
+		<VStack align="center" gap={0} className="drag">
 			<HStack gap="2" className="drag">
 				{workspaceName && (
 					<Text

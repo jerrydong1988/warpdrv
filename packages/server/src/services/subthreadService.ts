@@ -18,6 +18,7 @@ import {
 import type { IServer } from "@warpcore/shared";
 import { SUBAGENT_SYSTEM_PROMPT } from "../applets/BEApplet/prompts";
 import { getMode } from "./modeStore";
+import { clearIfSame, registerAbort } from "./abortRegistry";
 import { store } from "../util/store";
 
 export const INJECTED_TOOLS: IToolAttachment[] = [
@@ -50,7 +51,7 @@ export interface ISubthreadResponse {
 	timedOut?: boolean;
 }
 
-const SUBTHREAD_WAIT_TIMEOUT = 270000; // 4.5 min — buffer below 5-min MCP client timeout
+const SUBTHREAD_WAIT_TIMEOUT = 30000; // 30s — auto-background long-running subthread calls
 
 export class SubthreadService {
 	private persistence: SqlitePersistence;
@@ -291,6 +292,7 @@ export class SubthreadService {
 		// 9. Trigger inference via handleCompletionV2
 		const inferenceUrl = `http://127.0.0.1:${server.port}`;
 		const abortController = new AbortController();
+		registerAbort(newThreadId, abortController);
 
 		this.orchestrator
 			.handleCompletionV2(
@@ -319,6 +321,9 @@ export class SubthreadService {
 			)
 			.catch((err) => {
 				console.error(`[Subthread] Inference failed for thread ${newThreadId}:`, err);
+			})
+			.finally(() => {
+				clearIfSame(newThreadId, abortController);
 			});
 
 		// Background mode: return immediately with the thread ID; the response
@@ -382,9 +387,12 @@ export class SubthreadService {
 		// 5. Send directly via handleCompletionV2
 		const inferenceUrl = `http://127.0.0.1:${server.port}`;
 		const abortController = new AbortController();
+		registerAbort(targetSubThreadId, abortController);
 
 		const savedTools = await this.persistence.getThreadAttachedTools(targetSubThreadId);
 		const attachedTools = mergeWithInjectedTools(savedTools?.tools ?? []);
+
+		const headMessage = await this.persistence.getHeadMessage(targetSubThreadId);
 
 		this.orchestrator
 			.handleCompletionV2(
@@ -392,6 +400,7 @@ export class SubthreadService {
 				{
 					threadId: targetSubThreadId,
 					serverId: meta.serverId,
+					parentId: headMessage?.id ?? null,
 					userMessage: { content: combinedMessage },
 					attachedTools,
 					skipToolsSave: true,
@@ -408,6 +417,9 @@ export class SubthreadService {
 			)
 			.catch((err) => {
 				console.error(`[Subthread] Inference failed for thread ${targetSubThreadId}:`, err);
+			})
+			.finally(() => {
+				clearIfSame(targetSubThreadId, abortController);
 			});
 
 		// Consume the flushed notifications
@@ -598,6 +610,7 @@ export class SubthreadService {
 					const inferenceUrl = `http://127.0.0.1:${server.port}`;
 					const config = await this.persistence.getThreadConfig(threadId);
 					const abortController = new AbortController();
+					registerAbort(threadId, abortController);
 					this.orchestrator
 						.handleCompletionV2(
 							inferenceUrl,
@@ -615,6 +628,9 @@ export class SubthreadService {
 								`[Subthread] Consume inference failed for thread ${threadId}:`,
 								err,
 							);
+						})
+						.finally(() => {
+							clearIfSame(threadId, abortController);
 						});
 				}
 			}

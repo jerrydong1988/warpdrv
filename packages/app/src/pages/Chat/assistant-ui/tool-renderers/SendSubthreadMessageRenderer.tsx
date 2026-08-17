@@ -109,23 +109,76 @@ export const SendSubthreadMessageRendererMeta: IToolCallRenderer = {
 			subThreadId: args.subThreadId,
 		};
 	},
-	renderMini: React.memo(({ args }) => {
-		const { label, dir } = useMemo(() => {
+	renderMini: React.memo(({ args, status }) => {
+		const { label, dir, isSub } = useMemo(() => {
 			const message = String(args?.message ?? "");
 			const isSub = args?.subThreadId !== undefined;
 			return {
 				label: truncate(message, TRUNCATE_AT),
 				dir: isSub ? "↓ " : "↑ ",
+				isSub,
 			};
 		}, [args]);
+		const currentThreadId = useStore((s) => s.currentThreadId);
+		const [actioning, setActioning] = useState(false);
+
+		// Background button only applies to subthread_send_message (downward).
+		const showBackgroundBtn =
+			isSub && status === EToolCallStatus.EXECUTING && !!currentThreadId;
+
+		const handleBackground = useCallback(
+			async (e: React.MouseEvent) => {
+				e.stopPropagation();
+				if (actioning || !currentThreadId) return;
+				setActioning(true);
+				try {
+					await backgroundSubthread(currentThreadId);
+				} catch {
+					// ignore
+				} finally {
+					setActioning(false);
+				}
+			},
+			[currentThreadId, actioning],
+		);
+
 		return (
-			<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
-				Send{" "}
-				<Text as="span" color="var(--wc-text-muted)">
-					{dir}
-					{label}
+			<HStack gap="2" align="center" flex="1" minW="0">
+				<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
+					Send{" "}
+					<Text as="span" color="var(--wc-text-muted)">
+						{dir}
+						{label}
+					</Text>
 				</Text>
-			</Text>
+				{showBackgroundBtn && (
+					<Box
+						as="button"
+						flexShrink={0}
+						display="flex"
+						alignItems="center"
+						gap="1"
+						px="1.5"
+						py="0.5"
+						borderRadius="sm"
+						bg="var(--wc-bg-subtle)"
+						color="var(--wc-text-muted)"
+						fontSize="xs"
+						fontWeight="500"
+						cursor={actioning ? "not-allowed" : "pointer"}
+						_hover={{ bg: "var(--wc-bg-hover)" }}
+						onClick={handleBackground}
+						title="Background this task"
+					>
+						{actioning ? (
+							<Loader size={10} className="animate-spin" />
+						) : (
+							<PauseCircle size={10} />
+						)}
+						Background
+					</Box>
+				)}
+			</HStack>
 		);
 	}),
 };

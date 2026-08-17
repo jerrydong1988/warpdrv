@@ -190,6 +190,8 @@ export async function startServer(args: IStartArgs): Promise<IStartResult> {
 			resolve({ port, bindHost });
 		});
 		srv.on("error", reject);
+		srv.timeout = 0;
+		srv.requestTimeout = 0;
 	});
 }
 export async function stopServer(): Promise<void> {

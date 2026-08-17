@@ -21,9 +21,10 @@ export const superthreadSendMessageDefinition = {
 export async function superthreadSendMessageHandler(
 	deps: IWarpmcpDeps,
 	args: { threadId: string; message: string },
-) {
+): Promise<{ ok: boolean; message: string }> {
 	if (!deps.sendToSuperthread) {
 		throw "[warpmcp] sendToSuperthread function not found";
 	}
-	return deps.sendToSuperthread(args.threadId, args.message);
+	await deps.sendToSuperthread(args.threadId, args.message);
+	return { ok: true, message: "Message sent." };
 }

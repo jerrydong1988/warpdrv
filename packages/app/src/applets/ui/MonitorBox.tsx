@@ -1,5 +1,5 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Monitor, Send, X } from "lucide-react";
+import { Check, Minus, Monitor, Send, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import type { TThreadId } from "@warpcore/bridge";
@@ -113,6 +113,20 @@ export const MonitorBox = memo(() => {
 		});
 	}, []);
 
+	const handleToggleMany = useCallback((ids: string[], select: boolean) => {
+		setSelected((prev) => {
+			const next = new Set(prev);
+			for (const id of ids) {
+				if (select) next.add(id);
+				else next.delete(id);
+			}
+			return next;
+		});
+	}, []);
+
+	const allSelected = allPendingIds.length > 0 && allPendingIds.every((id) => selected.has(id));
+	const someSelected = !allSelected && allPendingIds.some((id) => selected.has(id));
+
 	const selectedIds = useMemo(() => Array.from(selected), [selected]);
 
 	const handleSendSelected = useCallback(async () => {
@@ -202,13 +216,14 @@ export const MonitorBox = memo(() => {
 								parentThreadId={currentThreadId}
 								selected={selected}
 								onToggle={handleToggle}
+								onToggleMany={handleToggleMany}
 							/>
 						))}
 					</VStack>
 				)}
 			</Box>
 
-			{/* Footer: selection count (left) + action buttons (right) */}
+			{/* Footer: select-all (left) + selection count (center) + action buttons (right) */}
 			<HStack
 				gap="2"
 				px="3"
@@ -217,6 +232,34 @@ export const MonitorBox = memo(() => {
 				borderTopColor="var(--wc-border-subtle)"
 				align="center"
 			>
+				<Box
+					as="button"
+					type="button"
+					display="flex"
+					alignItems="center"
+					justifyContent="center"
+					width="16px"
+					height="16px"
+					flexShrink="0"
+					borderRadius="sm"
+					color={
+						allSelected || someSelected
+							? "var(--wc-accent-purple)"
+							: "var(--wc-text-muted)"
+					}
+					cursor="pointer"
+					_hover={{ color: "var(--wc-accent-purple)" }}
+					onClick={() => handleToggleMany(allPendingIds, !allSelected)}
+					title={allSelected ? "Deselect all messages" : "Select all messages"}
+				>
+					{allSelected ? (
+						<Check size={14} />
+					) : someSelected ? (
+						<Minus size={14} />
+					) : (
+						<Square size={14} />
+					)}
+				</Box>
 				<Text fontSize="xs" color="var(--wc-text-muted)">
 					{selectedIds.length} selected
 				</Text>

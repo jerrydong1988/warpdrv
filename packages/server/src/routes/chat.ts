@@ -10,11 +10,11 @@ import { createSession } from "better-sse";
 import { Router } from "express";
 import { broadcaster, orchestrator, persistence } from "../index";
 import { embeddingManager } from "../services/embeddingManager";
+import { abortThread, clearIfSame, registerAbort } from "../services/abortRegistry";
 import { sseManager } from "../services/sseManagerInstance";
 import { store } from "../util/store";
 
 export const chatRouter = Router();
-const activeAborts = new Map<string, AbortController>();
 
 // ============================================================
 // Threads
@@ -639,9 +639,7 @@ chatRouter.post("/completions", async (req, res) => {
 
 	const abortController = new AbortController();
 	// Cancel any previous in-flight completion for this thread
-	const previous = activeAborts.get(body.threadId);
-	if (previous) previous.abort();
-	activeAborts.set(body.threadId, abortController);
+	registerAbort(body.threadId, abortController);
 
 	const server = await store.get<IServer>("servers:" + body.serverId);
 	if (!server) {
@@ -659,22 +657,14 @@ chatRouter.post("/completions", async (req, res) => {
 			console.error("[Completions] orchestrator error:", err);
 		})
 		.finally(() => {
-			if (activeAborts.get(body.threadId) === abortController) {
-				activeAborts.delete(body.threadId);
-			}
+			clearIfSame(body.threadId, abortController);
 		});
 });
 
 // POST /api/chat/cancel/:threadId — cancel in-flight completion
 chatRouter.post("/cancel/:threadId", (req, res) => {
-	const ac = activeAborts.get(req.params.threadId);
-	if (ac) {
-		ac.abort();
-		activeAborts.delete(req.params.threadId);
-		res.json({ ok: true, data: null, error: null });
-	} else {
-		res.json({ ok: true, data: null, error: "No active completion" });
-	}
+	const aborted = abortThread(req.params.threadId);
+	res.json({ ok: true, data: null, error: aborted ? null : "No active completion" });
 });
 
 // GET /api/chat/events — global SSE channel for all bridge events
@@ -819,9 +809,7 @@ chatRouter.post("/tool-calls/:id/resume", async (req, res) => {
 
 	// Track abort for this resume — same pattern as completions route
 	const abortController = new AbortController();
-	const previous = activeAborts.get(threadId);
-	if (previous) previous.abort();
-	activeAborts.set(threadId, abortController);
+	registerAbort(threadId, abortController);
 
 	// Fire-and-forget — return immediately, all updates flow via broadcaster
 	res.json({ ok: true, data: null, error: null });
@@ -838,8 +826,6 @@ chatRouter.post("/tool-calls/:id/resume", async (req, res) => {
 			console.error("[Resume] orchestrator error:", err);
 		})
 		.finally(() => {
-			if (activeAborts.get(threadId) === abortController) {
-				activeAborts.delete(threadId);
-			}
+			clearIfSame(threadId, abortController);
 		});
 });

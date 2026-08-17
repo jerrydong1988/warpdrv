@@ -99,7 +99,7 @@ export const CreateSubthreadRendererMeta: IToolCallRenderer = {
 			message: args.message,
 		};
 	},
-	renderMini: React.memo(({ args }) => {
+	renderMini: React.memo(({ args, status }) => {
 		const { agentName, title } = useMemo(
 			() => ({
 				agentName: String(args?.agentName ?? "unknown"),
@@ -107,13 +107,63 @@ export const CreateSubthreadRendererMeta: IToolCallRenderer = {
 			}),
 			[args],
 		);
+		const currentThreadId = useStore((s) => s.currentThreadId);
+		const [actioning, setActioning] = useState(false);
+
+		const showBackgroundBtn = status === EToolCallStatus.EXECUTING && !!currentThreadId;
+
+		const handleBackground = useCallback(
+			async (e: React.MouseEvent) => {
+				e.stopPropagation();
+				if (actioning || !currentThreadId) return;
+				setActioning(true);
+				try {
+					await backgroundSubthread(currentThreadId);
+				} catch {
+					// ignore
+				} finally {
+					setActioning(false);
+				}
+			},
+			[currentThreadId, actioning],
+		);
+
 		return (
-			<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
-				{agentName}
-				<Text as="span" color="var(--wc-text-muted)">
-					: {title}
+			<HStack gap="2" align="center" flex="1" minW="0">
+				<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
+					{agentName}
+					<Text as="span" color="var(--wc-text-muted)">
+						: {title}
+					</Text>
 				</Text>
-			</Text>
+				{showBackgroundBtn && (
+					<Box
+						as="button"
+						flexShrink={0}
+						display="flex"
+						alignItems="center"
+						gap="1"
+						px="1.5"
+						py="0.5"
+						borderRadius="sm"
+						bg="var(--wc-bg-subtle)"
+						color="var(--wc-text-muted)"
+						fontSize="xs"
+						fontWeight="500"
+						cursor={actioning ? "not-allowed" : "pointer"}
+						_hover={{ bg: "var(--wc-bg-hover)" }}
+						onClick={handleBackground}
+						title="Background this task"
+					>
+						{actioning ? (
+							<Loader size={10} className="animate-spin" />
+						) : (
+							<PauseCircle size={10} />
+						)}
+						Background
+					</Box>
+				)}
+			</HStack>
 		);
 	}),
 };

@@ -23,6 +23,7 @@ import { ListSubthreadsRendererMeta } from "@/pages/Chat/assistant-ui/tool-rende
 import { SendSubthreadMessageRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SendSubthreadMessageRenderer";
 import { CreateSubthreadRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/CreateSubthreadRenderer";
 import { SearchRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SearchRenderer";
+import { SetCurrentStatusRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/SetCurrentStatusRenderer";
 import { TodoListRendererMeta } from "@/pages/Chat/assistant-ui/tool-renderers/TodoRenderer";
 import { annotationsSlice } from "./slices/annotations";
 import { backendsSlice } from "./slices/backends";
@@ -188,6 +189,7 @@ export const useStore = create<AppState>()(
 					ListSubthreadsRenderer: ListSubthreadsRendererMeta,
 					SendSubthreadMessageRenderer: SendSubthreadMessageRendererMeta,
 					CreateSubthreadRenderer: CreateSubthreadRendererMeta,
+					SetCurrentStatusRenderer: SetCurrentStatusRendererMeta,
 				},
 				registerToolCallRenderer: (name, component) =>
 					set((state) => {

@@ -998,6 +998,14 @@ export class SqlitePersistence implements IPersistence {
 		return this.hydrateMessage(row);
 	}
 
+	async getHeadMessage(threadId: TThreadId): Promise<IChatMessage | null> {
+		const row = this.db!.prepare(
+			`SELECT * FROM ${this.t.messages} WHERE threadId = ? ORDER BY createdAt DESC LIMIT 1`,
+		).get(threadId) as Record<string, unknown> | undefined;
+		if (!row) return null;
+		return this.hydrateMessage(row);
+	}
+
 	async updateMessage(
 		id: TMessageId,
 		updates: Partial<Pick<IChatMessage, "stats">>,

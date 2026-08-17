@@ -93,6 +93,7 @@ export interface IPersistence {
 	createMessage(message: IChatMessage): Promise<void>;
 	getMessages(threadId: TThreadId): Promise<IChatMessage[]>;
 	getMessage(id: TMessageId): Promise<IChatMessage | null>;
+	getHeadMessage(threadId: TThreadId): Promise<IChatMessage | null>;
 	updateMessage(id: TMessageId, updates: Partial<Pick<IChatMessage, "stats">>): Promise<void>;
 	replaceMessageParts(messageId: TMessageId, parts: IMessagePart[]): Promise<void>;
 	appendMessagePart(messageId: TMessageId, part: IMessagePart): Promise<void>;

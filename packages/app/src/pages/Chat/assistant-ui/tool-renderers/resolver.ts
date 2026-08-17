@@ -1,5 +1,6 @@
 import type React from "react";
 import type { IToolCallRenderer } from "@/store/types";
+import type { EToolCallStatus } from "@warpcore/bridge";
 
 export interface IResolvedRenderer {
 	component: React.ComponentType<any>;
@@ -77,7 +78,11 @@ export function autoResolveMiniRenderer(
 	args: Record<string, unknown>,
 	result: unknown,
 	registry: Record<string, IToolCallRenderer>,
-): React.ComponentType<{ args: Record<string, unknown>; result?: unknown }> | null {
+): React.ComponentType<{
+	args: Record<string, unknown>;
+	result?: unknown;
+	status?: EToolCallStatus;
+}> | null {
 	const match = findMatchingRenderer(toolName, args, registry);
 	if (!match || !match.entry.renderMini) return null;
 	return match.entry.renderMini;

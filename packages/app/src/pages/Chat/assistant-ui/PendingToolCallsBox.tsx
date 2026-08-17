@@ -331,7 +331,11 @@ export const PendingToolCallsBox = React.memo(() => {
 			>
 				<MiniToolCallUiSpace toolCallId={currentCall.id} messageId={anchorMessageId}>
 					{MiniComponent ? (
-						<MiniComponent args={args} result={currentCall?.result} />
+						<MiniComponent
+							args={args}
+							result={currentCall?.result}
+							status={currentCall?.status}
+						/>
 					) : (
 						<HStack gap="1" align="center">
 							<Wrench size={chatFontSize} color="var(--wc-text-muted)" />

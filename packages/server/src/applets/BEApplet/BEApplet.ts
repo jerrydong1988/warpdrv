@@ -432,6 +432,8 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 					return newMessages;
 				} else return messages;
 			}
+
+			return messages;
 		});
 
 		api.eventNode.hook("/warpcore", "bridge.preConvertNewMsg", async (eventApi) => {
@@ -466,6 +468,33 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 								type: EMessagePartType.TEXT,
 								text: `<system-reminder>ACTIVE MODE: ${modeMarker.name}</system-reminder>`,
 							} as IMessagePart,
+						],
+					};
+				}
+			}
+
+			// ---- SENDER HEADER INJECTION (for the new message) ----
+			const sender = payload.request.messageState?.sender as IThreadSenderInfo | undefined;
+			if (sender) {
+				let header: string | null = null;
+				if (sender.type === EThreadHierarchyType.SUBTHREAD) {
+					const agentName = sender.agent?.name ?? "Unknown";
+					const title = sender.title ?? "Untitled";
+					header = `[Message(s) from threadId: ${sender.threadId} (Title: ${title}, Agent: ${agentName})]`;
+				} else if (sender.type === EThreadHierarchyType.SUPERTHREAD) {
+					header = `[Message from parent thread. Use the superthread_send_message tool to respond when ready.]`;
+				}
+				if (header) {
+					userMsg = {
+						...userMsg,
+						content: [
+							{
+								id: genPartId(),
+								type: EMessagePartType.TEXT,
+								orderIndex: -1,
+								text: header,
+							} as IMessagePart,
+							...userMsg.content,
 						],
 					};
 				}
@@ -630,14 +659,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 									: "";
 						let result = `[${m.role}]: ${content}`;
 						if (m.tool_calls?.length) {
-							result +=
-								"\n" +
-								m.tool_calls
-									.map(
-										(tc) =>
-											`toolCallId=${tc.id}\ntoolName=${tc.function.name}\nbody=${tc.function.arguments}`,
-									)
-									.join("\n");
+							result += "\ntool_calls=" + JSON.stringify(m.tool_calls);
 						}
 						return result;
 					};
