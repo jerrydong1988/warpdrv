@@ -178,8 +178,8 @@ warpdrv checks for updates on startup and shows a banner if a new version is ava
 - [Recipes](docs/guides/recipes.md) — automating llama.cpp builds and other LLM-related bash tasks
 - [Aliases](docs/guides/aliases.md) — routing addresses for servers behind the OpenAI-compatible proxy
 - [Backend Groups](docs/guides/backend-groups.md) — swapping llama.cpp builds without re-configuring servers
-- [Proxy, Remote Access, and Authentication](docs/guides/proxy-auth.md) — direct vs proxied access, bearer tokens, accessing warpdrv from another machine
-- [KV Cache Checkpoints](docs/guides/kv-checkpoints.md) — saving and restoring slot state to skip prompt prefill
+- [Proxy, Remote Access, and Authentication](docs/guides/proxy.md) — direct vs proxied access, bearer tokens, accessing warpdrv from another machine
+- [KV Cache Checkpoints](docs/guides/checkpoints.md) — saving and restoring slot state to skip prompt prefill
 
 ---
 
@@ -266,7 +266,7 @@ warpdrv is a Tauri desktop app wrapping a Node.js server and a React frontend. T
 ### Tech Stack
 
 - **Desktop shell** — Tauri 2 (Rust)
-- **Frontend** — React 19, Chakra UI v3, Vite, Zustand, assistant-ui
+- **Frontend** — React 19, Chakra UI v3, Vite, Zustand, assistant-ui, i18next (en + zh-CN)
 - **Server** — Node 24, Express 5, better-sqlite3, better-sse
 - **Bundling** — esbuild + `@yao-pkg/pkg` (server binary), Vite (frontend)
 - **Shared types** — TypeScript-only `@warpcore/shared` package
@@ -275,11 +275,13 @@ warpdrv is a Tauri desktop app wrapping a Node.js server and a React frontend. T
 
 ```
 packages/
-  shared/   @warpcore/shared   — Types, enums, utilities. No runtime deps.
-  app/      @warpcore/app      — React frontend.
-  server/   @warpcore/server   — Express + SQLite. Process management, GGUF parsing, recipes.
-  bridge/   @warpcore/bridge   — Composable chat engine (extracted, used internally).
-  desktop/                     — Tauri shell + release scripts.
+  shared/    @warpcore/shared    — Types, enums, utilities. No runtime deps.
+  app/       @warpcore/app       — React frontend.
+  server/    @warpcore/server    — Express + SQLite. Process management, GGUF parsing, recipes.
+  bridge/    @warpcore/bridge    — Composable chat engine (extracted, used internally).
+  realmcore/ @warpcore/realmcore — Event-node / applet framework used by server + app.
+  warpmcp/   @warpcore/warpmcp   — Built-in MCP server (tools exposed via MCP).
+  desktop/                       — Tauri shell + release scripts.
 ```
 
 ### Build From Source

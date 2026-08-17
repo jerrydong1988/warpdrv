@@ -61,7 +61,8 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 			{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
 			{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
 		];
-	const server = new McpServer({ name: SERVER_NAME, version: '0.1.0' }, { capabilities: { tools: {} } });
+	// Keep in sync with release.json / root package.json version.
+	const server = new McpServer({ name: SERVER_NAME, version: '0.5.8' }, { capabilities: { tools: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;
