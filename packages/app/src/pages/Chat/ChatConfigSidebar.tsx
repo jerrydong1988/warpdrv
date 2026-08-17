@@ -31,8 +31,10 @@ export const DEFAULT_INFERENCE_PARAMS: IChatInferenceParams = {
 	stopSequences: [],
 	seed: -1,
 	responseFormat: EResponseFormat.TEXT,
-	reasoningFormat: EReasoningFormat.NONE,
+	reasoningFormat: EReasoningFormat.AUTO,
 	enableThinking: false,
+	reasoningBudgetTokens: -1,
+	reasoningBudgetMessage: '',
 	mirostatMode: 0,
 	mirostatTau: 5.0,
 	mirostatEta: 0.1,
@@ -248,16 +250,24 @@ export function ChatConfigContentPanel({
 	}, []);
 
 	const displayParams = useMemo((): IChatInferenceParams => {
-		return { ...DEFAULT_INFERENCE_PARAMS, ...params };
+		const merged = { ...DEFAULT_INFERENCE_PARAMS, ...params };
+		// Migrate the two values persisted by WarpCore <= 0.5.8 in memory so
+		// the selector and outgoing request use llama.cpp's accepted names.
+		if ((merged.reasoningFormat as string) === 'parsed') merged.reasoningFormat = EReasoningFormat.DEEPSEEK;
+		if ((merged.reasoningFormat as string) === 'raw') merged.reasoningFormat = EReasoningFormat.NONE;
+		return merged;
 	}, [params]);
 
 	const { error: jsonError, validateAndParse, clearError } = useJsonValidator<Partial<IChatInferenceParams>>();
 
 	const presets = chatPresets;
 
-	const updateParam = useCallback((key: keyof IChatInferenceParams, value: IChatInferenceParams[keyof IChatInferenceParams]) => {
-		onParamsChange({ ...params, [key]: value });
+	const updateParams = useCallback((updates: Partial<IChatInferenceParams>) => {
+		onParamsChange({ ...params, ...updates });
 	}, [params, onParamsChange]);
+	const updateParam = useCallback((key: keyof IChatInferenceParams, value: IChatInferenceParams[keyof IChatInferenceParams]) => {
+		updateParams({ [key]: value });
+	}, [updateParams]);
 
 	async function handleSavePreset() {
 		if (!savePresetName.trim()) return;
@@ -514,19 +524,54 @@ export function ChatConfigContentPanel({
 							/>
 
 						<Box>
-							<ParamToggle label={t('common:ui.enableThinking2')} value={displayParams.enableThinking} onChange={(v) => updateParam('enableThinking', v)} />
+							<ParamToggle
+								label={t('common:ui.enableThinking2')}
+								value={displayParams.enableThinking}
+								onChange={(enabled) => updateParams({
+									enableThinking: enabled,
+									reasoningEffort: enabled
+										? (displayParams.reasoningEffort === EReasoningEffort.NONE ? EReasoningEffort.LOW : displayParams.reasoningEffort)
+										: EReasoningEffort.NONE,
+								})}
+							/>
 							{displayParams.enableThinking && (
-								<ParamSelect
-									label={t('common:ui.reasoningEffort2')}
-									value={displayParams.reasoningEffort}
-									options={[
-										{ value: EReasoningEffort.NONE, label: 'None' },
-										{ value: EReasoningEffort.LOW, label: 'Low' },
-										{ value: EReasoningEffort.MEDIUM, label: 'Medium' },
-										{ value: EReasoningEffort.HIGH, label: 'High' },
-									]}
-									onChange={(v) => updateParam('reasoningEffort', v as EReasoningEffort)}
-								/>
+								<VStack gap="2.5" align="stretch" mt="2">
+									<ParamSelect
+										label={t('common:ui.reasoningEffort2')}
+										value={displayParams.reasoningEffort}
+										options={[
+											{ value: EReasoningEffort.NONE, label: 'None' },
+											{ value: EReasoningEffort.DEFAULT, label: 'Default' },
+											{ value: EReasoningEffort.MINIMAL, label: 'Minimal' },
+											{ value: EReasoningEffort.LOW, label: 'Low' },
+											{ value: EReasoningEffort.MEDIUM, label: 'Medium' },
+											{ value: EReasoningEffort.HIGH, label: 'High' },
+											{ value: EReasoningEffort.XHIGH, label: 'XHigh' },
+											{ value: EReasoningEffort.MAX, label: 'Max' },
+										]}
+										onChange={(v) => {
+											const reasoningEffort = v as EReasoningEffort;
+											updateParams({
+												reasoningEffort,
+												enableThinking: reasoningEffort !== EReasoningEffort.NONE,
+											});
+										}}
+									/>
+									<Box>
+										<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">{t('common:ui.reasoningBudget')}</Text>
+										<Input size="xs" type="number" min={-1} fontFamily="mono" fontSize="12px"
+											value={displayParams.reasoningBudgetTokens}
+											onChange={(e) => { const value = parseInt(e.target.value); if (!isNaN(value) && value >= -1) updateParam('reasoningBudgetTokens', value); }}
+											bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" h="28px" />
+										<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">{t('common:ui.reasoningBudgetHint')}</Text>
+									</Box>
+									<Box>
+										<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">{t('common:ui.reasoningBudgetMessage')}</Text>
+										<Input size="xs" value={displayParams.reasoningBudgetMessage}
+											onChange={(e) => updateParam('reasoningBudgetMessage', e.target.value)}
+											bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" h="28px" />
+									</Box>
+								</VStack>
 							)}
 						</Box>
 
@@ -535,9 +580,10 @@ export function ChatConfigContentPanel({
 								label={t('common:ui.reasoningFormat')}
 								value={displayParams.reasoningFormat}
 								options={[
-									{ value: EReasoningFormat.NONE, label: 'None' },
-									{ value: EReasoningFormat.PARSED, label: 'Parsed' },
-									{ value: EReasoningFormat.RAW, label: 'Raw' },
+									{ value: EReasoningFormat.AUTO, label: 'Auto' },
+									{ value: EReasoningFormat.NONE, label: 'None (raw content)' },
+									{ value: EReasoningFormat.DEEPSEEK, label: 'DeepSeek' },
+									{ value: EReasoningFormat.DEEPSEEK_LEGACY, label: 'DeepSeek Legacy' },
 								]}
 								onChange={(v) => updateParam('reasoningFormat', v as EReasoningFormat)}
 							/>

@@ -4,6 +4,8 @@ import {
 	EValidationStatus,
 	EDeviceBackendType,
 	ESplitMode,
+	ELlamaLoadMode,
+	ELlamaFlashAttentionMode,
 	ESpecType,
 	EResponseFormat,
 	EReasoningFormat,
@@ -34,6 +36,17 @@ export interface IDevice {
 // ============================================================
 // Backends
 // ============================================================
+export interface ILlamaBackendCapabilities {
+	schemaVersion: 1;
+	probedAt: number;
+	supportedFlags: string[];
+	deprecatedFlags: string[];
+	removedFlags: string[];
+	flashAttentionModes: ELlamaFlashAttentionMode[];
+	loadModes: ELlamaLoadMode[];
+	specTypes: string[];
+}
+
 export interface IBackend {
 	id: TBackendId;
 	name: string;
@@ -44,6 +57,7 @@ export interface IBackend {
 	version: string; // compiled GPU backends (e.g. 'CUDA, Vulkan')
 	buildNumber: string; // llama.cpp build number (e.g. '9293')
 	gitCommit: string; // git commit hash of this build (e.g. '1acee6bf8')
+	capabilities?: ILlamaBackendCapabilities; // lazily refreshed from llama-server -h
 	detectedDevices: IDevice[];
 	createdAt: number;
 	updatedAt: number;
@@ -139,9 +153,9 @@ export interface ISpecDecodeParams {
 	draftModelPath: string; // path to draft GGUF file
 	draftDevice: string; // empty = same as target, e.g. "CUDA0", "Vulkan0"
 	draftGpuLayers: number;
-	draftContextSize: number; // 0 = loaded from model
+	draftContextSize: number; // legacy only; --ctx-size-draft was removed in current llama.cpp
 	draftPMin: number; // acceptance probability threshold (0.0-1.0)
-	// Spec type for draft/MTP mode (e.g. "mtp" for Mamba Transition Prediction)
+	// Exact llama.cpp speculative implementation name for the selected mode.
 	specType?: ESpecType;
 	// MTP-specific: max draft tokens per step (maps to --spec-draft-n-max)
 	specDraftNMax?: number;
@@ -174,6 +188,8 @@ export interface ILaunchParams {
 	threads: number; // 0 = auto
 	threadsBatch: number; // 0 = auto
 	flashAttn: boolean;
+	flashAttnMode?: ELlamaFlashAttentionMode; // modern on/off/auto value; boolean retained for stored-server compatibility
+	loadMode?: ELlamaLoadMode; // modern llama.cpp; legacy booleans below remain for stored-server compatibility
 	mlock: boolean;
 	mmap: boolean;
 	directIo: boolean;
@@ -208,6 +224,8 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	threads: 0,
 	threadsBatch: 0,
 	flashAttn: true,
+	flashAttnMode: ELlamaFlashAttentionMode.ON,
+	loadMode: ELlamaLoadMode.MMAP_MLOCK,
 	mlock: true,
 	mmap: true,
 	directIo: false,
@@ -492,6 +510,8 @@ export interface IChatInferenceParams {
 	reasoningFormat: EReasoningFormat;
 	enableThinking: boolean;
 	reasoningEffort: EReasoningEffort;
+	reasoningBudgetTokens: number; // -1 = unlimited, 0 = end reasoning immediately, >0 = token budget
+	reasoningBudgetMessage: string;
 	mirostatMode: number;
 	mirostatTau: number;
 	mirostatEta: number;

@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, VStack, HStack, Flex, Text, Input } from '@chakra-ui/react';
-import { type ILaunchParams } from '@warpcore/shared';
+import { ELlamaFlashAttentionMode, ELlamaLoadMode, type ILaunchParams } from '@warpcore/shared';
 import { Card } from '@/components/Card';
-import { ToggleChip, NumberField } from './Helpers';
+import { ToggleChip, NumberField, SelectField } from './Helpers';
 
 export const OptionsCard = React.memo(({
 	params,
@@ -13,15 +13,45 @@ export const OptionsCard = React.memo(({
 	onParamChange: (key: keyof ILaunchParams, value: ILaunchParams[keyof ILaunchParams]) => void;
 }) => {
 	const { t } = useTranslation();
+	const loadMode = params.loadMode ?? (params.directIo
+		? ELlamaLoadMode.DIO
+		: params.mmap && params.mlock
+			? ELlamaLoadMode.MMAP_MLOCK
+			: params.mmap
+				? ELlamaLoadMode.MMAP
+				: params.mlock ? ELlamaLoadMode.MLOCK : ELlamaLoadMode.NONE);
+	const flashAttnMode = params.flashAttnMode ?? (params.flashAttn ? ELlamaFlashAttentionMode.ON : ELlamaFlashAttentionMode.OFF);
 	return (
 		<Card>
 			<VStack align="stretch" gap="3">
 				<Text fontSize="11px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.options')}</Text>
+				<SelectField
+					label={t('common:ui.flashAttention')}
+					value={flashAttnMode}
+					options={Object.values(ELlamaFlashAttentionMode)}
+					onChange={value => {
+						const mode = value as ELlamaFlashAttentionMode;
+						onParamChange('flashAttnMode', mode);
+						onParamChange('flashAttn', mode !== ELlamaFlashAttentionMode.OFF);
+					}}
+					mono
+				/>
+				<SelectField
+					label={t('common:ui.loadMode')}
+					value={loadMode}
+					options={Object.values(ELlamaLoadMode)}
+					onChange={value => onParamChange('loadMode', value as ELlamaLoadMode)}
+					mono
+					optionLabels={{
+						[ELlamaLoadMode.AUTO]: t('common:ui.loadModeAuto'),
+						[ELlamaLoadMode.NONE]: t('common:ui.loadModeNone'),
+						[ELlamaLoadMode.MMAP]: t('common:ui.loadModeMmap'),
+						[ELlamaLoadMode.MLOCK]: t('common:ui.loadModeMlock'),
+						[ELlamaLoadMode.MMAP_MLOCK]: t('common:ui.loadModeMmapMlock'),
+						[ELlamaLoadMode.DIO]: t('common:ui.loadModeDio'),
+					}}
+				/>
 				<HStack gap="2" flexWrap="wrap">
-					<ToggleChip label={t('common:ui.flashAttention')} active={params.flashAttn} onClick={() => onParamChange('flashAttn', !params.flashAttn)} />
-					<ToggleChip label={t('common:ui.mlock')} active={params.mlock} onClick={() => onParamChange('mlock', !params.mlock)} />
-					<ToggleChip label={t('common:ui.mmap')} active={params.mmap} onClick={() => onParamChange('mmap', !params.mmap)} />
-					<ToggleChip label={t('common:ui.directIO')} active={params.directIo} onClick={() => onParamChange('directIo', !params.directIo)} />
 					<ToggleChip label={t('common:ui.noWarmup')} active={params.noWarmup} onClick={() => onParamChange('noWarmup', !params.noWarmup)} />
 					<ToggleChip label={t('common:ui.jinja')} active={params.jinja} onClick={() => onParamChange('jinja', !params.jinja)} />
 					<ToggleChip label={t('common:ui.swaFull')} active={params.swaFull} onClick={() => onParamChange('swaFull', !params.swaFull)} />

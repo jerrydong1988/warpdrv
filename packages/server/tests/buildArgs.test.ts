@@ -4,7 +4,16 @@
 // of user extraArgs, and dedupe of -fa/-ngl.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildArgs } from '../src/services/processManager';
-import { DEFAULT_LAUNCH_PARAMS, EKvQuantType, type ILaunchParams } from '@warpcore/shared';
+import {
+	DEFAULT_LAUNCH_PARAMS,
+	EKvQuantType,
+	ELlamaFlashAttentionMode,
+	ELlamaLoadMode,
+	ESpecType,
+	parseDefaultArgsToParams,
+	type ILaunchParams,
+	type ILlamaBackendCapabilities,
+} from '@warpcore/shared';
 
 // Mock the JSON store so importing processManager never touches the
 // developer's real warpcore-data.json.
@@ -22,6 +31,43 @@ function makeParams(overrides: Partial<ILaunchParams> = {}): ILaunchParams {
 }
 
 const indexOfPair = (args: string[], flag: string): number => args.indexOf(flag);
+
+const B10453_CAPABILITIES: ILlamaBackendCapabilities = {
+	schemaVersion: 1,
+	probedAt: 0,
+	supportedFlags: [
+		'-fa', '--load-mode', '--spec-type', '--spec-draft-model', '--spec-draft-device', '--spec-draft-ngl',
+		'--spec-draft-n-max', '--spec-draft-n-min', '--spec-draft-p-min',
+		'--spec-ngram-mod-n-max', '--spec-ngram-mod-n-min', '--spec-ngram-mod-n-match',
+		'--spec-ngram-simple-size-n', '--spec-ngram-simple-size-m', '--spec-ngram-simple-min-hits',
+		'--spec-ngram-map-k-size-n', '--spec-ngram-map-k-size-m', '--spec-ngram-map-k-min-hits',
+		'--spec-ngram-map-k4v-size-n', '--spec-ngram-map-k4v-size-m', '--spec-ngram-map-k4v-min-hits',
+	],
+	deprecatedFlags: ['--mlock', '--mmap', '--no-mmap', '-dio'],
+	removedFlags: ['--draft', '--draft-n', '--draft-max', '--draft-min', '--draft-n-min', '--spec-ngram-size-n', '--spec-ngram-size-m', '--spec-ngram-min-hits'],
+	flashAttentionModes: Object.values(ELlamaFlashAttentionMode),
+	loadModes: Object.values(ELlamaLoadMode),
+	specTypes: ['none', 'draft-simple', 'draft-eagle3', 'draft-mtp', 'draft-dflash', 'draft-dspark', 'ngram-simple', 'ngram-map-k', 'ngram-map-k4v', 'ngram-mod', 'ngram-cache'],
+};
+
+describe('backend default argument migration', () => {
+	it('parses current flash-attention values without treating off as enabled', () => {
+		expect(parseDefaultArgsToParams(['-fa', 'off'])).toMatchObject({ flashAttnMode: ELlamaFlashAttentionMode.OFF, flashAttn: false });
+		expect(parseDefaultArgsToParams(['--flash-attn=auto'])).toMatchObject({ flashAttnMode: ELlamaFlashAttentionMode.AUTO, flashAttn: true });
+		expect(parseDefaultArgsToParams(['-fa', '--no-warmup'])).toMatchObject({ flashAttnMode: ELlamaFlashAttentionMode.ON, flashAttn: true });
+	});
+
+	it('parses explicit modern load modes', () => {
+		expect(parseDefaultArgsToParams(['--load-mode', 'dio']).loadMode).toBe(ELlamaLoadMode.DIO);
+		expect(parseDefaultArgsToParams(['-lm=mmap+mlock']).loadMode).toBe(ELlamaLoadMode.MMAP_MLOCK);
+	});
+
+	it('translates legacy loader flag combinations without changing their behavior', () => {
+		expect(parseDefaultArgsToParams(['--no-mmap']).loadMode).toBe(ELlamaLoadMode.NONE);
+		expect(parseDefaultArgsToParams(['--no-mmap', '--mlock']).loadMode).toBe(ELlamaLoadMode.MLOCK);
+		expect(parseDefaultArgsToParams(['--mlock']).loadMode).toBe(ELlamaLoadMode.MMAP_MLOCK);
+	});
+});
 
 describe('buildArgs host binding', () => {
 	it('binds 127.0.0.1 by default (loopback only)', () => {
@@ -64,7 +110,7 @@ describe('buildArgs flag ordering (server-controlled flags win)', () => {
 
 	it('injects --slot-save-path after --port', () => {
 		const params = makeParams({ port: 8080 });
-		const args = buildArgs('/models/m.gguf', null, params, [], 0, { 'slot-save-path': '/tmp/checkpoints' });
+		const args = buildArgs('/models/m.gguf', null, params, [], 0, undefined, { 'slot-save-path': '/tmp/checkpoints' });
 		expect(args[args.length - 2]).toBe('--slot-save-path');
 		expect(args[args.length - 1]).toBe('/tmp/checkpoints');
 	});
@@ -78,11 +124,36 @@ describe('buildArgs dedupe and flags', () => {
 		expect(args[args.indexOf('-fa') + 1]).toBe('on');
 	});
 
+	it('emits the current flash-attention value and forces on for block drafting', () => {
+		const autoArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ flashAttnMode: ELlamaFlashAttentionMode.AUTO }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		const dflashArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({
+				flashAttn: false,
+				flashAttnMode: ELlamaFlashAttentionMode.OFF,
+				specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'dflash' },
+			}),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		expect(autoArgs[autoArgs.indexOf('-fa') + 1]).toBe('auto');
+		expect(dflashArgs[dflashArgs.indexOf('-fa') + 1]).toBe('on');
+	});
+
 	it('dedupes -ngl from defaultArgs and applies gpuLayers', () => {
 		const args = buildArgs('/models/m.gguf', null, makeParams({ gpuLayers: 24 }), ['-ngl', '99'], 0);
 		const nglCount = args.filter(a => a === '-ngl').length;
 		expect(nglCount).toBe(1);
 		expect(args[args.indexOf('-ngl') + 1]).toBe('24');
+	});
+
+	it('does not swallow the flag after a malformed -ngl without a value', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({ gpuLayers: 24 }), ['-ngl', '--threads', '8'], 0);
+		expect(args).toContain('--threads');
+		expect(args[args.indexOf('--threads') + 1]).toBe('8');
 	});
 
 	it('omits -ngl when gpuLayersAuto is true', () => {
@@ -100,7 +171,7 @@ describe('buildArgs dedupe and flags', () => {
 		const args = buildArgs(
 			'/models/m.gguf',
 			null,
-			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: 'ngram', ngramSizeN: 4, ngramSizeM: 3, ngramMinHits: 2 } }),
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: ESpecType.NGRAM_SIMPLE, ngramSizeN: 4, ngramSizeM: 3, ngramMinHits: 2 } }),
 			[],
 			9000,
 		);
@@ -112,7 +183,7 @@ describe('buildArgs dedupe and flags', () => {
 		const args = buildArgs(
 			'/models/m.gguf',
 			null,
-			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: 'ngram', ngramSizeN: 4 } }),
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: ESpecType.NGRAM_SIMPLE, ngramSizeN: 4 } }),
 			[],
 			10000,
 		);
@@ -126,5 +197,159 @@ describe('buildArgs dedupe and flags', () => {
 		const args = buildArgs('/models/m.gguf', null, makeParams({ kvQuantK: EKvQuantType.Q8_0, kvQuantV: EKvQuantType.Q8_0 }), [], 0);
 		expect(args[args.indexOf('--cache-type-k') + 1]).toBe(EKvQuantType.Q8_0);
 		expect(args[args.indexOf('--cache-type-v') + 1]).toBe(EKvQuantType.Q8_0);
+	});
+
+	it('normalizes deprecated loader defaults to one b10453 --load-mode without dropping adjacent flags', () => {
+		const params = makeParams({
+			loadMode: ELlamaLoadMode.NONE,
+			noWarmup: true,
+			jinja: true,
+			swaFull: true,
+		});
+		const args = buildArgs(
+			'/models/m.gguf',
+			null,
+			params,
+			['-ngl', '999', '-fa', '--no-warmup', '--jinja', '--swa-full', '--no-mmap'],
+			0,
+			B10453_CAPABILITIES,
+		);
+
+		expect(args[args.indexOf('--load-mode') + 1]).toBe('none');
+		expect(args).not.toContain('--no-mmap');
+		expect(args).not.toContain('--mlock');
+		expect(args).not.toContain('-dio');
+		expect(args).toContain('--no-warmup');
+		expect(args).toContain('--jinja');
+		expect(args).toContain('--swa-full');
+		expect(args[args.indexOf('-fa') + 1]).toBe('on');
+	});
+
+	it('removes controlled legacy flags from stored free-form arguments on current backends', () => {
+		const args = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ extraArgs: '--draft-max 8 --no-mmap --threads 4' }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		expect(args).not.toContain('--draft-max');
+		expect(args).not.toContain('--no-mmap');
+		expect(args[args.indexOf('--threads') + 1]).toBe('4');
+	});
+
+	it('uses current MTP flags even when a previously unparsed build number is zero', () => {
+		const args = buildArgs(
+			'/models/m.gguf',
+			null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'mtp', specDraftNMax: 3 } }),
+			[],
+			0,
+			B10453_CAPABILITIES,
+		);
+		expect(args[args.indexOf('--spec-draft-n-max') + 1]).toBe('3');
+		expect(args).not.toContain('--draft-max');
+		expect(args).not.toContain('--draft-min');
+	});
+
+	it('maps ngram-mod controls to the mod n-match/min/max family', () => {
+		const args = buildArgs(
+			'/models/m.gguf',
+			null,
+			makeParams({ specDecode: {
+				...DEFAULT_LAUNCH_PARAMS.specDecode,
+				enabled: true,
+				mode: 'ngram',
+				specType: ESpecType.NGRAM_MOD,
+				ngramSizeN: 24,
+				draftMin: 48,
+				draftMax: 64,
+			} }),
+			[],
+			10453,
+			B10453_CAPABILITIES,
+		);
+		expect(args[args.indexOf('--spec-ngram-mod-n-match') + 1]).toBe('24');
+		expect(args[args.indexOf('--spec-ngram-mod-n-min') + 1]).toBe('48');
+		expect(args[args.indexOf('--spec-ngram-mod-n-max') + 1]).toBe('64');
+		expect(args).not.toContain('--spec-ngram-mod-size-n');
+		expect(args).not.toContain('--spec-draft-n-max');
+	});
+
+	it('does not attach unrelated size or draft flags to ngram-cache', () => {
+		const args = buildArgs(
+			'/models/m.gguf',
+			null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: ESpecType.NGRAM_CACHE } }),
+			[],
+			10453,
+			B10453_CAPABILITIES,
+		);
+		expect(args[args.indexOf('--spec-type') + 1]).toBe('ngram-cache');
+		expect(args.some(arg => arg.startsWith('--spec-ngram-'))).toBe(false);
+		expect(args).not.toContain('--spec-draft-n-max');
+	});
+
+	it('uses canonical draft-model flags and omits the removed draft context option', () => {
+		const args = buildArgs(
+			'/models/m.gguf',
+			null,
+			makeParams({ specDecode: {
+				...DEFAULT_LAUNCH_PARAMS.specDecode,
+				enabled: true,
+				mode: 'draft',
+				draftModelPath: '/models/draft.gguf',
+				draftContextSize: 4096,
+			} }),
+			[],
+			10453,
+			B10453_CAPABILITIES,
+		);
+		expect(args[args.indexOf('--spec-type') + 1]).toBe('draft-simple');
+		expect(args[args.indexOf('--spec-draft-model') + 1]).toBe('/models/draft.gguf');
+		expect(args).toContain('--spec-draft-ngl');
+		expect(args).not.toContain('--ctx-size-draft');
+		expect(args).not.toContain('--model-draft');
+	});
+
+	it('normalizes stale speculative types when users switch mode families', () => {
+		const ngramArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'ngram', specType: ESpecType.DFLASH } }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		const dflashArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'dflash', specType: ESpecType.NGRAM_MOD } }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		expect(ngramArgs[ngramArgs.indexOf('--spec-type') + 1]).toBe('ngram-simple');
+		expect(dflashArgs[dflashArgs.indexOf('--spec-type') + 1]).toBe('draft-dflash');
+	});
+
+	it('supports the b10453 Eagle3 and DSpark draft implementations', () => {
+		const eagleArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'draft', specType: ESpecType.DRAFT_EAGLE3 } }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		const dsparkArgs = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'dflash', specType: ESpecType.DRAFT_DSPARK } }),
+			[], 10453, B10453_CAPABILITIES,
+		);
+		expect(eagleArgs[eagleArgs.indexOf('--spec-type') + 1]).toBe('draft-eagle3');
+		expect(dsparkArgs[dsparkArgs.indexOf('--spec-type') + 1]).toBe('draft-dspark');
+	});
+
+	it('falls back when an older capable backend does not accept a newly selected spec value', () => {
+		const capabilities = {
+			...B10453_CAPABILITIES,
+			specTypes: B10453_CAPABILITIES.specTypes.filter(type => type !== 'draft-dspark'),
+		};
+		const args = buildArgs(
+			'/models/m.gguf', null,
+			makeParams({ specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, enabled: true, mode: 'dflash', specType: ESpecType.DRAFT_DSPARK } }),
+			[], 10453, capabilities,
+		);
+		expect(args[args.indexOf('--spec-type') + 1]).toBe('draft-dflash');
 	});
 });

@@ -106,6 +106,12 @@ export const SpeculativeDecodingCard = React.memo(({
 	ubatchSize: number;
 }) => {
 	const { t } = useTranslation();
+	const ngramTypes = [ESpecType.NGRAM_SIMPLE, ESpecType.NGRAM_CACHE, ESpecType.NGRAM_MAP_K, ESpecType.NGRAM_MAP_K4V, ESpecType.NGRAM_MOD];
+	const draftModelTypes = [ESpecType.DRAFT_SIMPLE, ESpecType.DRAFT_EAGLE3];
+	const blockDraftTypes = [ESpecType.DFLASH, ESpecType.DRAFT_DSPARK];
+	const ngramSpecType = ngramTypes.includes(specDecode.specType as ESpecType) ? specDecode.specType! : ESpecType.NGRAM_SIMPLE;
+	const draftModelSpecType = draftModelTypes.includes(specDecode.specType as ESpecType) ? specDecode.specType! : ESpecType.DRAFT_SIMPLE;
+	const blockDraftSpecType = blockDraftTypes.includes(specDecode.specType as ESpecType) ? specDecode.specType! : ESpecType.DFLASH;
 	return (
 		<Card bg={specDecode.enabled ? 'var(--wc-accent-purple-bg-8)' : undefined} borderColor={specDecode.enabled ? 'var(--wc-accent-purple-border)' : undefined}>
 			<HStack justify="space-between" align="center">
@@ -116,7 +122,7 @@ export const SpeculativeDecodingCard = React.memo(({
 					</Flex>
 					<VStack align="start" gap="0.5">
 <Text fontSize="12px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('common:ui.speculativeDecoding')}</Text>
-					<Text fontSize="11px" color="var(--wc-text-tertiary)">{specDecode.mode === 'ngram' ? t('common:ui.draftlessNGramSpeculation') : specDecode.mode === 'mtp' ? t('common:ui.mambaTransitionPrediction') : specDecode.mode === 'dflash' ? 'D-Flash block-wise draft speculation' : t('common:ui.useASmallerModelAsTheDraftDriver')}</Text>
+					<Text fontSize="11px" color="var(--wc-text-tertiary)">{specDecode.mode === 'ngram' ? t('common:ui.draftlessNGramSpeculation') : specDecode.mode === 'mtp' ? t('common:ui.mambaTransitionPrediction') : specDecode.mode === 'dflash' ? `${blockDraftSpecType} block-wise draft speculation` : t('common:ui.useASmallerModelAsTheDraftDriver')}</Text>
 					</VStack>
 				</HStack>
 				<Switch.Root label={t('common:ui.enableSpeculativeDecoding')} checked={specDecode.enabled} onCheckedChange={(d) => onSpecParamChange('enabled', d.checked)} color={specDecode.enabled ? 'var(--wc-accent-purple)' : 'var(--wc-text-tertiary)'}>
@@ -166,6 +172,9 @@ export const SpeculativeDecodingCard = React.memo(({
 
 					{specDecode.mode === 'draft' && (
 						<VStack align="stretch" gap="4">
+							<SelectField label={t('common:ui.specType')} value={draftModelSpecType}
+								options={draftModelTypes}
+								onChange={v => onSpecParamChange('specType', v as ESpecType)} mono />
 							<Box>
 								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftModel')}</Text>
 								{!targetArchitecture ? (
@@ -210,7 +219,6 @@ export const SpeculativeDecodingCard = React.memo(({
 								) : (
 									<NumberField label={t('common:ui.gpuLayers')} value={specDecode.draftGpuLayers} onChange={v => onSpecParamChange('draftGpuLayers', v)} min={0} max={999} />
 								)}
-								<NumberField label={t('common:ui.contextSize')} value={specDecode.draftContextSize} onChange={v => onSpecParamChange('draftContextSize', v)} min={0} step={1024} suffix={t('common:ui.0Auto')} />
 							</Flex>
 
 							<Box>
@@ -243,7 +251,7 @@ export const SpeculativeDecodingCard = React.memo(({
 
 					{specDecode.mode === 'ngram' && (
 						<VStack align="stretch" gap="4">
-							<SelectField label={t('common:ui.specType')} value={specDecode.specType ?? ESpecType.NGRAM_SIMPLE}
+							<SelectField label={t('common:ui.specType')} value={ngramSpecType}
 								options={[ESpecType.NGRAM_SIMPLE, ESpecType.NGRAM_CACHE, ESpecType.NGRAM_MAP_K, ESpecType.NGRAM_MAP_K4V, ESpecType.NGRAM_MOD]}
 								onChange={v => onSpecParamChange('specType', v as ESpecType)}
 								optionLabels={{
@@ -251,23 +259,34 @@ export const SpeculativeDecodingCard = React.memo(({
 									[ESpecType.NGRAM_MAP_K]: t('common:ui.ngramMapKHashMap'), [ESpecType.NGRAM_MAP_K4V]: t('common:ui.ngramMapK4vMultiValue'),
 									[ESpecType.NGRAM_MOD]: t('common:ui.ngramModBestMoeCode'),
 								}} />
-							<Flex gap="4">
-								<NumberField label={t('common:ui.nGramSizeN')} value={specDecode.ngramSizeN ?? 12} onChange={v => onSpecParamChange('ngramSizeN', v)} min={1} max={64} />
-								<NumberField label={t('common:ui.mGramSizeM')} value={specDecode.ngramSizeM ?? 48} onChange={v => onSpecParamChange('ngramSizeM', v)} min={1} max={256} />
-							</Flex>
-							{(specDecode.specType === ESpecType.NGRAM_MAP_K || specDecode.specType === ESpecType.NGRAM_MAP_K4V) && (
-								<NumberField label={t('common:ui.minHits')} value={specDecode.ngramMinHits ?? 1} onChange={v => onSpecParamChange('ngramMinHits', v)} min={1} max={32} />
+							{ngramSpecType === ESpecType.NGRAM_MOD ? (
+								<Flex gap="4">
+									<NumberField label="N-Match" value={specDecode.ngramSizeN ?? 24} onChange={v => onSpecParamChange('ngramSizeN', v)} min={1} max={128} />
+									<NumberField label="N-Min" value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={256} />
+									<NumberField label="N-Max" value={specDecode.draftMax} onChange={v => onSpecParamChange('draftMax', v)} min={1} max={256} />
+								</Flex>
+							) : ngramSpecType !== ESpecType.NGRAM_CACHE && (
+								<>
+									<Flex gap="4">
+										<NumberField label={t('common:ui.nGramSizeN')} value={specDecode.ngramSizeN ?? 12} onChange={v => onSpecParamChange('ngramSizeN', v)} min={1} max={64} />
+										<NumberField label={t('common:ui.mGramSizeM')} value={specDecode.ngramSizeM ?? 48} onChange={v => onSpecParamChange('ngramSizeM', v)} min={1} max={256} />
+									</Flex>
+									<NumberField label={t('common:ui.minHits')} value={specDecode.ngramMinHits ?? 1} onChange={v => onSpecParamChange('ngramMinHits', v)} min={1} max={32} />
+								</>
 							)}
 						</VStack>
 					)}
 
 					{specDecode.mode === 'dflash' && (
 						<VStack align="stretch" gap="4">
+							<SelectField label={t('common:ui.specType')} value={blockDraftSpecType}
+								options={blockDraftTypes}
+								onChange={v => onSpecParamChange('specType', v as ESpecType)} mono />
 							{!flashAttn && (
 								<Box px="3" py="2" bg="var(--wc-bg-subtle)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-border-default)">
 									<HStack gap="2">
 										<AlertTriangle size={14} color="var(--wc-text-warning)" />
-										<Text fontSize="11px" color="var(--wc-text-warning)">DFlash requires Flash Attention. Enable it in Options.</Text>
+									<Text fontSize="11px" color="var(--wc-text-warning)">DFlash/DSpark require Flash Attention. Enable it in Options.</Text>
 									</HStack>
 								</Box>
 							)}
@@ -323,7 +342,6 @@ export const SpeculativeDecodingCard = React.memo(({
 								) : (
 									<NumberField label="GPU Layers" value={specDecode.draftGpuLayers} onChange={v => onSpecParamChange('draftGpuLayers', v)} min={0} max={999} />
 								)}
-								<NumberField label="Context Size" value={specDecode.draftContextSize} onChange={v => onSpecParamChange('draftContextSize', v)} min={0} step={1024} suffix="0 = auto" />
 							</Flex>
 
 							<Box>
@@ -336,7 +354,7 @@ export const SpeculativeDecodingCard = React.memo(({
 						</VStack>
 					)}
 
-					{specDecode.mode !== 'mtp' && specDecode.mode !== 'dflash' && (
+					{(specDecode.mode === 'draft' || specDecode.mode === undefined) && (
 						<Box>
 							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftingParameters')}</Text>
 							<Flex gap="4">

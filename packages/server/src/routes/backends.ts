@@ -72,6 +72,7 @@ backendsRouter.post('/', async (req, res) => {
 		version: validation.version,
 		buildNumber: validation.buildInfo?.buildNumber ?? '',
 		gitCommit: validation.buildInfo?.gitCommit ?? '',
+		capabilities: validation.capabilities ?? undefined,
 		detectedDevices: validation.devices,
 		createdAt: now,
 		updatedAt: now,
@@ -110,6 +111,7 @@ backendsRouter.put('/:id', async (req, res) => {
 		updated.version = validation.version;
 		updated.buildNumber = validation.buildInfo?.buildNumber ?? '';
 		updated.gitCommit = validation.buildInfo?.gitCommit ?? '';
+		updated.capabilities = validation.capabilities ?? undefined;
 		updated.detectedDevices = validation.devices;
 	}
 
@@ -145,6 +147,7 @@ backendsRouter.post('/:id/validate', async (req, res) => {
 	existing.version = validation.version;
 	existing.buildNumber = validation.buildInfo?.buildNumber ?? '';
 	existing.gitCommit = validation.buildInfo?.gitCommit ?? '';
+	existing.capabilities = validation.capabilities ?? undefined;
 	existing.detectedDevices = validation.devices;
 	existing.updatedAt = Date.now();
 

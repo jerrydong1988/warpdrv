@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
 	type ILaunchParams, type ISpecDecodeParams,
 	DEFAULT_LAUNCH_PARAMS, DEFAULT_SPEC_DECODE_PARAMS,
+	ELlamaFlashAttentionMode,
 } from '@warpcore/shared';
 
 import { launchServer, updateServer, updateModel } from '@/api/services';
@@ -225,7 +226,7 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 								specDecode={params.specDecode} onSpecParamChange={updateSpecParam}
 								targetArchitecture={targetArchitecture} draftModelEntries={draftModelEntries} selectedDraftEntry={selectedDraftEntry ?? null}
 								deviceOptions={deviceOptions} deviceIdToName={deviceIdToName}
-								flashAttn={params.flashAttn} ubatchSize={params.ubatchSize}
+								flashAttn={(params.flashAttnMode ?? (params.flashAttn ? ELlamaFlashAttentionMode.ON : ELlamaFlashAttentionMode.OFF)) !== ELlamaFlashAttentionMode.OFF} ubatchSize={params.ubatchSize}
 							/>
 						</VStack>
 

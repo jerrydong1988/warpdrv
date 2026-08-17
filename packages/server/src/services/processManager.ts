@@ -1,8 +1,8 @@
 import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import http from 'http';
 import net from 'net';
-import type { IServer, ILaunchParams, IChatInferenceParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams } from '@warpcore/shared';
-import { EServerStatus, EKvQuantType, DEFAULT_SETTINGS } from '@warpcore/shared';
+import type { IServer, ILaunchParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams, ILlamaBackendCapabilities } from '@warpcore/shared';
+import { EServerStatus, EKvQuantType, ELlamaFlashAttentionMode, ELlamaLoadMode, DEFAULT_SETTINGS } from '@warpcore/shared';
 import { parse as shellParse } from 'shell-quote';
 import { bootstrapServer, teardownServer, parseLogLine } from './slotStateTracker';
 import { listCheckpoints, restoreCheckpoint, saveCheckpoint, getCheckpointsDir } from './checkpointService';
@@ -11,6 +11,7 @@ import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { getCachedModels } from '../routes/models';
 import { startStatsPolling, stopStatsPolling } from './statsPoller';
+import { refreshBackendCompatibility } from './backendValidator';
 
 export const SERVERS_PREFIX = 'servers:';
 const SETTINGS_KEY = 'settings:general';
@@ -84,17 +85,59 @@ async function emitServerUpdate(serverId: string, status: EServerStatus, error: 
 		// Ignore errors - SSE is optional
 	}
 }
-// Build speculative decoding args for pre-9100 llama.cpp builds
-function buildSpecDecodeArgsPre9100(sd: ISpecDecodeParams): string[] {
+const NGRAM_SPEC_TYPES = new Set(['ngram-simple', 'ngram-cache', 'ngram-map-k', 'ngram-map-k4v', 'ngram-mod']);
+const DRAFT_MODEL_SPEC_TYPES = new Set(['draft-simple', 'draft-eagle3']);
+const BLOCK_DRAFT_SPEC_TYPES = new Set(['draft-dflash', 'draft-dspark']);
+
+function normalizeNgramSpecType(specType: string | undefined): string {
+	// "ngram" was stored by early WarpCore builds but current llama.cpp calls
+	// this implementation "ngram-simple".
+	return specType && NGRAM_SPEC_TYPES.has(specType) ? specType : 'ngram-simple';
+}
+
+function normalizeDraftModelSpecType(specType: string | undefined): string {
+	return specType && DRAFT_MODEL_SPEC_TYPES.has(specType) ? specType : 'draft-simple';
+}
+
+function normalizeBlockDraftSpecType(specType: string | undefined): string {
+	return specType && BLOCK_DRAFT_SPEC_TYPES.has(specType) ? specType : 'draft-dflash';
+}
+
+function acceptedSpecType(
+	capabilities: ILlamaBackendCapabilities | undefined,
+	requested: string,
+	fallback?: string,
+): string | null {
+	if (!capabilities || capabilities.specTypes.length === 0 || capabilities.specTypes.includes(requested)) return requested;
+	return fallback && capabilities.specTypes.includes(fallback) ? fallback : null;
+}
+
+function supportedFlag(capabilities: ILlamaBackendCapabilities | undefined, candidates: string[]): string | null {
+	if (!capabilities) return candidates[0] ?? null;
+	return candidates.find(flag => capabilities.supportedFlags.includes(flag)) ?? null;
+}
+
+function pushSupportedOption(
+	args: string[],
+	capabilities: ILlamaBackendCapabilities | undefined,
+	candidates: string[],
+	value: string,
+): void {
+	const flag = supportedFlag(capabilities, candidates);
+	if (flag) args.push(flag, value);
+}
+
+// Build speculative decoding args for older llama.cpp builds.
+function buildSpecDecodeArgsLegacy(sd: ISpecDecodeParams): string[] {
 	const args: string[] = [];
 	const isNgram = sd.mode === 'ngram';
 	const isMtp = sd.mode === 'mtp';
-	// Ngram mode — draftless speculative decoding
-	if (isNgram && sd.specType && sd.specType !== 'none') {
-		args.push('--spec-type', sd.specType);
+	if (isNgram) {
+		const specType = normalizeNgramSpecType(sd.specType);
+		args.push('--spec-type', specType);
 		if (sd.ngramSizeN) args.push('--spec-ngram-size-n', String(sd.ngramSizeN));
 		if (sd.ngramSizeM) args.push('--spec-ngram-size-m', String(sd.ngramSizeM));
-		if ((sd.specType === 'ngram-map-k' || sd.specType === 'ngram-map-k4v') && sd.ngramMinHits) {
+		if ((specType === 'ngram-map-k' || specType === 'ngram-map-k4v') && sd.ngramMinHits) {
 			args.push('--spec-ngram-min-hits', String(sd.ngramMinHits));
 		}
 	}
@@ -105,78 +148,158 @@ function buildSpecDecodeArgsPre9100(sd: ISpecDecodeParams): string[] {
 		if (sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
 		if (sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
 	}
-		// DFlash mode
-		if (sd.mode === 'dflash') {
-			args.push('--spec-type', sd.specType ?? 'draft-dflash');
-			if (sd.draftModelPath) args.push('--spec-draft-model', sd.draftModelPath);
-			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
-			if (sd.draftGpuLayers > 0) args.push('--n-gpu-layers-draft', String(sd.draftGpuLayers));
-			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-			if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
-			if (sd.specDraftNMin) args.push('--spec-draft-n-min', String(sd.specDraftNMin));
-		}
-		// Draft model mode
-		if (!isNgram && !isMtp && sd.mode !== 'dflash' && sd.draftModelPath) {
-			args.push('--model-draft', sd.draftModelPath);
-			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-			if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
-			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
-		}
-		// Shared across modes
-		if (sd.draftMax > 0 && sd.mode !== 'dflash') args.push('--draft-max', String(sd.draftMax));
-		if (!isMtp && sd.mode !== 'dflash' && sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
-		// Draft-model-only
-		if (!isMtp && !isNgram && sd.mode !== 'dflash' && sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
-		return args;
+	if (sd.mode === 'dflash') {
+		args.push('--spec-type', 'draft-dflash');
+		if (sd.draftModelPath) args.push('--spec-draft-model', sd.draftModelPath);
+		if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		if (sd.draftGpuLayers > 0) args.push('--n-gpu-layers-draft', String(sd.draftGpuLayers));
+		if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+		if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
+		if (sd.specDraftNMin) args.push('--spec-draft-n-min', String(sd.specDraftNMin));
 	}
+	if (!isNgram && !isMtp && sd.mode !== 'dflash' && sd.draftModelPath) {
+		args.push('--model-draft', sd.draftModelPath);
+		if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+		if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
+		if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+	}
+	if (sd.draftMax > 0 && sd.mode !== 'dflash') args.push('--draft-max', String(sd.draftMax));
+	if (!isMtp && sd.mode !== 'dflash' && sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
+	if (!isMtp && !isNgram && sd.mode !== 'dflash' && sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
+	return args;
+}
 
-	// Build speculative decoding args for post-9100 llama.cpp builds
-function buildSpecDecodeArgsPost9100(sd: ISpecDecodeParams): string[] {
+// Build speculative decoding args using the b10453 parameter families.
+function buildSpecDecodeArgsModern(sd: ISpecDecodeParams, capabilities?: ILlamaBackendCapabilities): string[] {
 	const args: string[] = [];
 	const isNgram = sd.mode === 'ngram';
 	const isMtp = sd.mode === 'mtp';
-	// Ngram mode — per-type args based on specType
-	if (isNgram && sd.specType && sd.specType !== 'none') {
-		args.push('--spec-type', sd.specType);
-		// NOTE: 'ngram-mod' (not 'ngram-mod-n') is the enum value; the mod
-		// spec family uses the 'mod' prefix in llama.cpp flag names.
-		const prefix = sd.specType === 'ngram-mod' ? 'mod'
-			: sd.specType === 'ngram-map-k4v' ? 'map-k4v'
-			: sd.specType === 'ngram-map-k' ? 'map-k' : 'simple';
-		if (sd.ngramSizeN) args.push(`--spec-ngram-${prefix}-size-n`, String(sd.ngramSizeN));
-		if (sd.ngramSizeM) args.push(`--spec-ngram-${prefix}-size-m`, String(sd.ngramSizeM));
-		if (sd.ngramMinHits) args.push(`--spec-ngram-${prefix}-min-hits`, String(sd.ngramMinHits));
-	}
-	// MTP mode
-	if (isMtp) {
-		args.push('--spec-type', 'draft-mtp');
-		if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
-		if (sd.draftMin > 0) args.push('--spec-draft-n-min', String(sd.draftMin));
-		if (sd.draftPMin > 0) args.push('--spec-draft-p-min', String(sd.draftPMin));
-	}
-		// DFlash mode
-		if (sd.mode === 'dflash') {
-			args.push('--spec-type', sd.specType ?? 'draft-dflash');
-			if (sd.draftModelPath) args.push('--spec-draft-model', sd.draftModelPath);
-			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
-			if (sd.draftGpuLayers > 0) args.push('--n-gpu-layers-draft', String(sd.draftGpuLayers));
-			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-			if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
-			if (sd.specDraftNMin) args.push('--spec-draft-n-min', String(sd.specDraftNMin));
+	if (isNgram) {
+		const specType = acceptedSpecType(capabilities, normalizeNgramSpecType(sd.specType), 'ngram-simple');
+		if (!specType) return args;
+		if (specType !== 'none') args.push('--spec-type', specType);
+		if (specType === 'ngram-mod') {
+			if (sd.draftMax > 0) pushSupportedOption(args, capabilities, ['--spec-ngram-mod-n-max'], String(sd.draftMax));
+			if (sd.draftMin >= 0) pushSupportedOption(args, capabilities, ['--spec-ngram-mod-n-min'], String(sd.draftMin));
+			if (sd.ngramSizeN) pushSupportedOption(args, capabilities, ['--spec-ngram-mod-n-match'], String(sd.ngramSizeN));
+		} else if (specType !== 'ngram-cache') {
+			const prefix = specType === 'ngram-map-k4v' ? 'map-k4v'
+				: specType === 'ngram-map-k' ? 'map-k' : 'simple';
+			if (sd.ngramSizeN) pushSupportedOption(args, capabilities, [`--spec-ngram-${prefix}-size-n`], String(sd.ngramSizeN));
+			if (sd.ngramSizeM) pushSupportedOption(args, capabilities, [`--spec-ngram-${prefix}-size-m`], String(sd.ngramSizeM));
+			if (sd.ngramMinHits) pushSupportedOption(args, capabilities, [`--spec-ngram-${prefix}-min-hits`], String(sd.ngramMinHits));
 		}
-		// Draft model mode
-		if (!isNgram && !isMtp && sd.mode !== 'dflash' && sd.draftModelPath) {
-			args.push('--model-draft', sd.draftModelPath);
-			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
-			if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
-			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
-		}
-		// Shared new args
-		if (!isMtp && sd.mode !== 'dflash' && sd.draftMax > 0) args.push('--spec-draft-n-max', String(sd.draftMax));
-		if (!isMtp && sd.mode !== 'dflash' && sd.draftMin > 0) args.push('--spec-draft-n-min', String(sd.draftMin));
-		if (!isMtp && !isNgram && sd.mode !== 'dflash' && sd.draftPMin > 0) args.push('--spec-draft-p-min', String(sd.draftPMin));
 		return args;
 	}
+	if (isMtp) {
+		const specType = acceptedSpecType(capabilities, 'draft-mtp');
+		if (!specType) return args;
+		args.push('--spec-type', specType);
+		if (sd.specDraftNMax) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.specDraftNMax));
+		if (sd.draftMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.draftMin));
+		if (sd.draftPMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-p-min', '--draft-p-min'], String(sd.draftPMin));
+		return args;
+	}
+	if (sd.mode === 'dflash') {
+		const specType = acceptedSpecType(capabilities, normalizeBlockDraftSpecType(sd.specType), 'draft-dflash');
+		if (!specType) return args;
+		args.push('--spec-type', specType);
+		if (sd.draftModelPath) pushSupportedOption(args, capabilities, ['--spec-draft-model', '--model-draft'], sd.draftModelPath);
+		if (sd.draftContextSize > 0 && capabilities?.supportedFlags.includes('--ctx-size-draft')) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		if (sd.draftGpuLayers > 0) pushSupportedOption(args, capabilities, ['--spec-draft-ngl', '--n-gpu-layers-draft', '--gpu-layers-draft'], String(sd.draftGpuLayers));
+		if (sd.draftDevice) pushSupportedOption(args, capabilities, ['--spec-draft-device', '--device-draft'], sd.draftDevice);
+		if (sd.specDraftNMax) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.specDraftNMax));
+		if (sd.specDraftNMin) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.specDraftNMin));
+		return args;
+	}
+	const specType = acceptedSpecType(capabilities, normalizeDraftModelSpecType(sd.specType), 'draft-simple');
+	if (!specType) return args;
+	args.push('--spec-type', specType);
+	if (sd.draftModelPath) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-model', '--model-draft'], sd.draftModelPath);
+		if (sd.draftDevice) pushSupportedOption(args, capabilities, ['--spec-draft-device', '--device-draft'], sd.draftDevice);
+		if (sd.draftGpuLayers > 0) pushSupportedOption(args, capabilities, ['--spec-draft-ngl', '--gpu-layers-draft', '--n-gpu-layers-draft'], String(sd.draftGpuLayers));
+		if (sd.draftContextSize > 0 && capabilities?.supportedFlags.includes('--ctx-size-draft')) args.push('--ctx-size-draft', String(sd.draftContextSize));
+	}
+	if (sd.draftMax > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.draftMax));
+	if (sd.draftMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.draftMin));
+	if (sd.draftPMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-p-min', '--draft-p-min'], String(sd.draftPMin));
+	return args;
+}
+
+const LOAD_MODE_FLAGS = new Set(['--load-mode', '-lm', '--mlock', '--mmap', '--no-mmap', '-dio', '--direct-io', '-ndio', '--no-direct-io']);
+const REMOVED_SPEC_FLAGS_WITH_VALUE = new Set(['--draft', '--draft-n', '--draft-max', '--draft-min', '--draft-n-min', '--spec-ngram-size-n', '--spec-ngram-size-m', '--spec-ngram-min-hits']);
+
+function stripControlledDefaultArgs(defaultArgs: string[], capabilities?: ILlamaBackendCapabilities): string[] {
+	const args: string[] = [];
+	for (let index = 0; index < defaultArgs.length; index++) {
+		const arg = defaultArgs[index]!;
+		const flag = arg.split('=', 1)[0]!;
+		if (LOAD_MODE_FLAGS.has(flag)) {
+			const next = defaultArgs[index + 1];
+			if (!arg.includes('=') && (flag === '--load-mode' || flag === '-lm') && next && Object.values(ELlamaLoadMode).includes(next as ELlamaLoadMode)) index++;
+			continue;
+		}
+		if (flag === '-fa' || flag === '--flash-attn') {
+			const next = defaultArgs[index + 1];
+			if (!arg.includes('=') && next && ['on', 'off', 'auto'].includes(next)) index++;
+			continue;
+		}
+		if (flag === '-ngl' || flag === '--gpu-layers' || flag === '--n-gpu-layers') {
+			const next = defaultArgs[index + 1];
+			if (!arg.includes('=') && next && (/^-?\d+$/.test(next) || next === 'auto' || next === 'all')) index++;
+			continue;
+		}
+		if (capabilities?.removedFlags.includes(flag) && REMOVED_SPEC_FLAGS_WITH_VALUE.has(flag)) {
+			const next = defaultArgs[index + 1];
+			if (!arg.includes('=') && next && /^-?\d+(?:\.\d+)?$/.test(next)) index++;
+			continue;
+		}
+		args.push(arg);
+	}
+	return args;
+}
+
+function resolveLoadMode(params: ILaunchParams): ELlamaLoadMode {
+	if (params.loadMode) return params.loadMode;
+	if (params.directIo) return ELlamaLoadMode.DIO;
+	if (params.mmap && params.mlock) return ELlamaLoadMode.MMAP_MLOCK;
+	if (params.mmap) return ELlamaLoadMode.MMAP;
+	if (params.mlock) return ELlamaLoadMode.MLOCK;
+	return ELlamaLoadMode.NONE;
+}
+
+function appendLegacyLoadMode(args: string[], loadMode: ELlamaLoadMode): void {
+	switch (loadMode) {
+		case ELlamaLoadMode.NONE:
+			args.push('--no-mmap');
+			break;
+		case ELlamaLoadMode.MLOCK:
+			args.push('--no-mmap', '--mlock');
+			break;
+		case ELlamaLoadMode.MMAP_MLOCK:
+			args.push('--mlock');
+			break;
+		case ELlamaLoadMode.DIO:
+			args.push('-dio');
+			break;
+		default:
+			break;
+	}
+}
+
+function appendLoadMode(args: string[], params: ILaunchParams, capabilities?: ILlamaBackendCapabilities): void {
+	const requested = resolveLoadMode(params);
+	if (!capabilities?.supportedFlags.includes('--load-mode')) {
+		appendLegacyLoadMode(args, requested);
+		return;
+	}
+	const accepted = capabilities.loadModes.length === 0 || capabilities.loadModes.includes(requested);
+	const loadMode = accepted ? requested
+		: capabilities.loadModes.includes(ELlamaLoadMode.AUTO) ? ELlamaLoadMode.AUTO
+			: null;
+	if (loadMode) args.push('--load-mode', loadMode);
+}
 
 // Build the llama-server command line args from params
 export function buildArgs(
@@ -185,39 +308,32 @@ export function buildArgs(
 	params: ILaunchParams,
 	defaultArgs: string[],
 	buildNumber: number,
+	capabilities?: ILlamaBackendCapabilities,
 	extraArgs?: Record<string, string>,
-	inferenceParams?: Partial<IChatInferenceParams>,
 ): string[] {
-	const args: string[] = [...defaultArgs];
-	const argsSet = new Set(defaultArgs);
-	// Remove -fa and its value from defaultArgs if present (will add properly formatted version below)
-	if (argsSet.has('-fa')) {
-		const idx = args.indexOf('-fa');
-		if (idx !== -1) {
-			args.splice(idx, 2); // remove -fa and its following value
-			argsSet.delete('-fa');
-		}
-	}
-	// Remove -ngl and its value from defaultArgs if present (slider controls gpuLayers)
-	if (argsSet.has('-ngl')) {
-		const idx = args.indexOf('-ngl');
-		if (idx !== -1) {
-			args.splice(idx, 2); // remove -ngl and its following value
-			argsSet.delete('-ngl');
-		}
-	}
+	const args = stripControlledDefaultArgs(defaultArgs, capabilities);
+	const argsSet = new Set(args);
 	args.push('-m', modelPath);
 	if (mmprojPath) args.push('--mmproj', mmprojPath);
-	if (params.gpuLayersAuto !== true && params.gpuLayers > 0 && !argsSet.has('-ngl')) args.push('-ngl', String(params.gpuLayers));
+	if (params.gpuLayersAuto !== true && params.gpuLayers > 0) args.push('-ngl', String(params.gpuLayers));
 	if (params.contextSize > 0 && !argsSet.has('-c')) args.push('-c', String(params.contextSize));
 	if (params.batchSize > 0 && !argsSet.has('-b')) args.push('-b', String(params.batchSize));
 	if (params.ubatchSize > 0 && !argsSet.has('-ub')) args.push('-ub', String(params.ubatchSize));
 	if (params.threads > 0 && !argsSet.has('-t')) args.push('-t', String(params.threads));
 	if (params.threadsBatch > 0 && !argsSet.has('-tb')) args.push('-tb', String(params.threadsBatch));
-	if (params.flashAttn && !argsSet.has('-fa')) args.push('-fa', 'on');
-	if (params.mlock && !argsSet.has('--mlock')) args.push('--mlock');
-	if (!params.mmap && !argsSet.has('--no-mmap') && !argsSet.has('--mmap')) args.push('--no-mmap');
-	if (params.directIo && !argsSet.has('-dio')) args.push('-dio');
+	const requestedFlashAttn = params.flashAttnMode ?? (params.flashAttn ? ELlamaFlashAttentionMode.ON : ELlamaFlashAttentionMode.OFF);
+	const effectiveFlashAttn = params.specDecode?.enabled && params.specDecode.mode === 'dflash'
+		? ELlamaFlashAttentionMode.ON
+		: requestedFlashAttn;
+	const flashFlag = supportedFlag(capabilities, ['-fa', '--flash-attn']);
+	const flashAttentionModes = capabilities?.flashAttentionModes ?? [];
+	const acceptedFlashAttn = !capabilities || flashAttentionModes.length === 0 || flashAttentionModes.includes(effectiveFlashAttn)
+		? effectiveFlashAttn
+		: flashAttentionModes.includes(ELlamaFlashAttentionMode.AUTO) ? ELlamaFlashAttentionMode.AUTO
+			: flashAttentionModes.includes(ELlamaFlashAttentionMode.ON) ? ELlamaFlashAttentionMode.ON : null;
+	if (capabilities && flashFlag && acceptedFlashAttn) args.push(flashFlag, acceptedFlashAttn);
+	else if (!capabilities && effectiveFlashAttn === ELlamaFlashAttentionMode.ON) args.push('-fa', 'on');
+	appendLoadMode(args, params, capabilities);
 	if (params.noWarmup && !argsSet.has('--no-warmup')) args.push('--no-warmup');
 	if (params.jinja && !argsSet.has('--jinja')) args.push('--jinja');
 	if (params.swaFull && !argsSet.has('--swa-full')) args.push('--swa-full');
@@ -247,21 +363,23 @@ export function buildArgs(
 	// Speculative decoding
 	if (params.specDecode?.enabled) {
 		const sd = params.specDecode;
-		const specArgs = buildNumber >= 9100
-			? buildSpecDecodeArgsPost9100(sd)
-			: buildSpecDecodeArgsPre9100(sd);
+		const modernSpecArgs = capabilities
+			? capabilities.supportedFlags.includes('--spec-draft-n-max')
+			: buildNumber >= 9100;
+		const specArgs = modernSpecArgs
+			? buildSpecDecodeArgsModern(sd, capabilities)
+			: buildSpecDecodeArgsLegacy(sd);
 		args.push(...specArgs);
-		// DFlash requires flash attention
-		if (sd.mode === 'dflash' && !argsSet.has('-fa')) {
-			args.push('-fa', 'on');
-		}
 	}
 	// User extra args — placed BEFORE the server-controlled flags below so a
 	// user value can never override --host/--port/--slot-save-path (previously
 	// a crafted extraArgs could redirect checkpoint writes to any directory).
 	if (params.extraArgs.trim()) {
 		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
-		args.push(...tokens);
+		// Stored free-form flags can contain the same removed/deprecated options as
+		// backend defaults. Strip only the parameter families controlled above so
+		// upgrading a backend cannot reintroduce a fatal parser error from old data.
+		args.push(...stripControlledDefaultArgs(tokens, capabilities));
 	}
 	// Bind to loopback by default — the authenticated proxy reaches the
 	// server via 127.0.0.1, so remote access keeps working. Only bind
@@ -283,9 +401,10 @@ export async function buildServerArgs(
 	params: ILaunchParams,
 	defaultArgs: string[],
 	buildNumber: number,
+	capabilities?: ILlamaBackendCapabilities,
 ): Promise<string[]> {
 	const checkpointDir = await getCheckpointsDir();
-	return buildArgs(modelPath, mmprojPath, params, defaultArgs, buildNumber, { 'slot-save-path': checkpointDir });
+	return buildArgs(modelPath, mmprojPath, params, defaultArgs, buildNumber, capabilities, { 'slot-save-path': checkpointDir });
 }
 // Spawn a llama-server process
 export function spawnServer(
@@ -849,9 +968,28 @@ export async function launchServer(server: IServer): Promise<void> {
 		usedPorts.add(server.port);
 	}
 
-	const buildNumber = backend.buildNumber
-		? parseInt(backend.buildNumber, 10)
-		: 0;
+	// Binary paths are commonly replaced in place. Refresh cheap version metadata
+	// on every launch and re-probe -h only when the build changed or capabilities
+	// are missing. This also repairs records created while the new version format
+	// was not understood.
+	const compatibility = await refreshBackendCompatibility(
+		backend.path,
+		backend.buildNumber && backend.gitCommit
+			? { buildNumber: backend.buildNumber, gitCommit: backend.gitCommit }
+			: null,
+		backend.capabilities,
+	);
+	if (compatibility.changed) {
+		backend.buildNumber = compatibility.buildInfo?.buildNumber ?? backend.buildNumber;
+		backend.gitCommit = compatibility.buildInfo?.gitCommit ?? backend.gitCommit;
+		backend.capabilities = compatibility.capabilities ?? undefined;
+		backend.updatedAt = Date.now();
+		await store.put('backends:' + backend.id, backend);
+		sseManager.emit('backends:update', backend);
+	}
+
+	const parsedBuildNumber = backend.buildNumber ? parseInt(backend.buildNumber, 10) : 0;
+	const buildNumber = Number.isFinite(parsedBuildNumber) ? parsedBuildNumber : 0;
 
 	const args = await buildServerArgs(
 		server.modelPath,
@@ -859,6 +997,7 @@ export async function launchServer(server: IServer): Promise<void> {
 		launchParams,
 		backend.defaultArgs,
 		buildNumber,
+		backend.capabilities,
 	);
 
 	const pid = spawnServer(

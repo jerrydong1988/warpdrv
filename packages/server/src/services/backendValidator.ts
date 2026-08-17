@@ -1,42 +1,180 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import type { IDevice } from '@warpcore/shared';
-import { EDeviceBackendType } from '@warpcore/shared';
+import type { IDevice, ILlamaBackendCapabilities } from '@warpcore/shared';
+import { EDeviceBackendType, ELlamaFlashAttentionMode, ELlamaLoadMode } from '@warpcore/shared';
 const execFileAsync = promisify(execFile);
-interface IBuildInfo {
+
+export interface IBuildInfo {
 	buildNumber: string;
 	gitCommit: string;
 }
 
-interface IValidationResult {
+export interface IValidationResult {
 	valid: boolean;
 	version: string;
 	buildInfo: IBuildInfo | null;
+	capabilities: ILlamaBackendCapabilities | null;
 	devices: IDevice[];
 	error: string | null;
 }
 
+const CAPABILITY_SCHEMA_VERSION = 1 as const;
+const KNOWN_SPEC_TYPES = [
+	'none',
+	'draft-simple',
+	'draft-eagle3',
+	'draft-mtp',
+	'draft-dflash',
+	'draft-dspark',
+	'ngram-simple',
+	'ngram-map-k',
+	'ngram-map-k4v',
+	'ngram-mod',
+	'ngram-cache',
+];
+
+export function parseLlamaBuildInfo(output: string): IBuildInfo | null {
+	const modern = output.match(/version:\s*[^\r\n]*?\(\s*build\s+(\d+)\s*,\s*commit\s+([a-f0-9]+)\s*\)/i);
+	if (modern) {
+		return { buildNumber: modern[1]!, gitCommit: modern[2]! };
+	}
+
+	const legacy = output.match(/version:\s*(\d+)\s*\(\s*([a-f0-9]+)\s*\)/i);
+	return legacy ? { buildNumber: legacy[1]!, gitCommit: legacy[2]! } : null;
+}
+
+function splitHelpBlocks(output: string): string[] {
+	const blocks: string[] = [];
+	let current = '';
+	for (const line of output.replace(/\r/g, '').split('\n')) {
+		if (/^\s{0,8}-{1,2}[A-Za-z]/.test(line)) {
+			if (current) blocks.push(current);
+			current = line;
+		} else if (current) {
+			current += `\n${line}`;
+		}
+	}
+	if (current) blocks.push(current);
+	return blocks;
+}
+
+function flagsInHelpBlock(block: string): string[] {
+	// Only the option signature declares flags. Replacement names mentioned in
+	// a removed option's explanation must not themselves be marked as removed.
+	const firstLine = (block.split('\n', 1)[0] ?? '').trimStart();
+	let signature = firstLine;
+	for (const gap of firstLine.matchAll(/\s{2,}(?=\S)/g)) {
+		const prefix = firstLine.slice(0, gap.index).trimEnd();
+		// llama.cpp aligns aliases after a comma with extra spaces. The first
+		// non-alias alignment gap separates the signature from its description.
+		if (prefix.endsWith(',')) continue;
+		signature = prefix;
+		break;
+	}
+	return Array.from(signature.matchAll(/(?:^|[\s,])(-{1,2}[A-Za-z][A-Za-z0-9-]*)/g), match => match[1]!);
+}
+
+export function parseLlamaHelpCapabilities(output: string, probedAt = Date.now()): ILlamaBackendCapabilities {
+	const supported = new Set<string>();
+	const deprecated = new Set<string>();
+	const removed = new Set<string>();
+	const blocks = splitHelpBlocks(output);
+
+	for (const block of blocks) {
+		const blockFlags = flagsInHelpBlock(block);
+		const lower = block.toLowerCase();
+		if (lower.includes('argument has been removed')) {
+			for (const flag of blockFlags) removed.add(flag);
+			continue;
+		}
+		for (const flag of blockFlags) supported.add(flag);
+		if (lower.includes('deprecated')) {
+			for (const flag of blockFlags) deprecated.add(flag);
+		}
+	}
+
+	const loadModeBlock = blocks.find(block => flagsInHelpBlock(block).includes('--load-mode')) ?? '';
+	const loadModes = (Object.values(ELlamaLoadMode) as ELlamaLoadMode[]).filter(mode =>
+		new RegExp(`^\\s*-\\s+${mode.replace('+', '\\+')}\\s*:`, 'm').test(loadModeBlock)
+	);
+	const flashAttentionBlock = blocks.find(block => {
+		const flags = flagsInHelpBlock(block);
+		return flags.includes('-fa') || flags.includes('--flash-attn');
+	}) ?? '';
+	const flashAttentionModes = (Object.values(ELlamaFlashAttentionMode) as ELlamaFlashAttentionMode[])
+		.filter(mode => flashAttentionBlock.includes(mode));
+	const specTypeBlock = blocks.find(block => flagsInHelpBlock(block).includes('--spec-type')) ?? '';
+	const specTypes = KNOWN_SPEC_TYPES.filter(type => specTypeBlock.includes(type));
+
+	return {
+		schemaVersion: CAPABILITY_SCHEMA_VERSION,
+		probedAt,
+		supportedFlags: [...supported].sort(),
+		deprecatedFlags: [...deprecated].sort(),
+		removedFlags: [...removed].sort(),
+		flashAttentionModes,
+		loadModes,
+		specTypes,
+	};
+}
+
 // Run llama-server --version to get build number and git commit hash
-async function getBuildInfo(binaryPath: string): Promise<IBuildInfo | null> {
+export async function getBuildInfo(binaryPath: string): Promise<IBuildInfo | null> {
 	try {
 		const { stdout, stderr } = await execFileAsync(binaryPath, ['--version'], {
 			timeout: 10000,
 		});
 		const output = stderr + stdout;
-		console.log(`[getBuildInfo] output for ${binaryPath}:`, JSON.stringify(output));
-		const match = output.match(/version:\s*(\d+)\s*\(([a-f0-9]+)\)/);
-		if (match) {
-			const info = { buildNumber: match[1]!, gitCommit: match[2]! };
-			console.log(`[getBuildInfo] matched:`, info);
-			return info;
-		}
-		console.log(`[getBuildInfo] no match for ${binaryPath}`);
-		return null;
+		return parseLlamaBuildInfo(output);
 	} catch (err) {
 		console.log(`[getBuildInfo] error for ${binaryPath}:`, String(err));
 		return null;
 	}
+}
+
+export async function getBackendCapabilities(binaryPath: string): Promise<ILlamaBackendCapabilities | null> {
+	try {
+		const { stdout, stderr } = await execFileAsync(binaryPath, ['-h'], {
+			timeout: 10000,
+			maxBuffer: 2 * 1024 * 1024,
+		});
+		return parseLlamaHelpCapabilities(stderr + stdout);
+	} catch (err) {
+		console.log(`[getBackendCapabilities] error for ${binaryPath}:`, String(err));
+		return null;
+	}
+}
+
+export async function refreshBackendCompatibility(
+	binaryPath: string,
+	currentBuildInfo: IBuildInfo | null,
+	currentCapabilities?: ILlamaBackendCapabilities,
+): Promise<{ buildInfo: IBuildInfo | null; capabilities: ILlamaBackendCapabilities | null; changed: boolean }> {
+	const buildInfo = await getBuildInfo(binaryPath);
+	if (!buildInfo) {
+		const capabilitiesMissing = !currentCapabilities || currentCapabilities.schemaVersion !== CAPABILITY_SCHEMA_VERSION;
+		if (!capabilitiesMissing) {
+			return { buildInfo: currentBuildInfo, capabilities: currentCapabilities, changed: false };
+		}
+		const capabilities = await getBackendCapabilities(binaryPath);
+		return { buildInfo: currentBuildInfo, capabilities, changed: capabilities !== null };
+	}
+
+	const buildChanged = !currentBuildInfo
+		|| currentBuildInfo.buildNumber !== buildInfo.buildNumber
+		|| currentBuildInfo.gitCommit !== buildInfo.gitCommit;
+	const capabilitiesMissing = !currentCapabilities || currentCapabilities.schemaVersion !== CAPABILITY_SCHEMA_VERSION;
+	if (!buildChanged && !capabilitiesMissing) {
+		return { buildInfo, capabilities: currentCapabilities, changed: false };
+	}
+
+	const capabilities = await getBackendCapabilities(binaryPath);
+	return { buildInfo, capabilities, changed: true };
+}
+
+export function resolveLlamaCliPath(binaryPath: string): string {
+	return binaryPath.replace(/llama-server(?=\.exe$|$)/i, 'llama-cli');
 }
 
 // Run llama-cli --list-devices to detect compiled backends
@@ -44,7 +182,7 @@ async function getBuildInfo(binaryPath: string): Promise<IBuildInfo | null> {
 // Old builds show verbose CUDA/ROCm/Vulkan init lines
 async function getVersion(binaryPath: string, buildNumber: number): Promise<string | null> {
 	try {
-		const cliPath = binaryPath.replace(/llama-server$/, 'llama-cli');
+		const cliPath = resolveLlamaCliPath(binaryPath);
 		const { stdout, stderr } = await execFileAsync(cliPath, ['--list-devices'], {
 			timeout: 10000,
 		});
@@ -86,7 +224,7 @@ async function getVersion(binaryPath: string, buildNumber: number): Promise<stri
 // Run llama-cli --list-devices to discover available GPUs
 async function listDevices(binaryPath: string, backendId: string): Promise<IDevice[]> {
 	// llama-cli is in the same directory as llama-server
-	const cliPath = binaryPath.replace(/llama-server$/, 'llama-cli');
+	const cliPath = resolveLlamaCliPath(binaryPath);
 	const devices: IDevice[] = [];
 	try {
 		const { stdout, stderr } = await execFileAsync(cliPath, ['--list-devices'], {
@@ -221,20 +359,21 @@ export async function validateBackend(binaryPath: string, backendId: string): Pr
 	try {
 		await fs.access(binaryPath, fs.constants.X_OK);
 	} catch {
-		return { valid: false, version: '', buildInfo: null, devices: [], error: 'Binary not found or not executable' };
+		return { valid: false, version: '', buildInfo: null, capabilities: null, devices: [], error: 'Binary not found or not executable' };
 	}
 	// Get build info first (needed for version detection logic)
 	const buildInfo = await getBuildInfo(binaryPath);
 	const buildNumber = buildInfo ? parseInt(buildInfo.buildNumber, 10) : 0;
+	const capabilities = await getBackendCapabilities(binaryPath);
 	// console.log(`[validateBackend] binary=${binaryPath}, buildNumber=${buildNumber}`);
 	// Get GPU backend version (uses buildNumber to choose detection logic)
 	const version = await getVersion(binaryPath, buildNumber);
 	if (!version) {
-		return { valid: false, version: '', buildInfo, devices: [], error: 'Failed to get version — binary may be invalid' };
+		return { valid: false, version: '', buildInfo, capabilities, devices: [], error: 'Failed to get version — binary may be invalid' };
 	}
 	// Discover devices
 	const devices = await listDevices(binaryPath, backendId);
-	const result = { valid: true, version, buildInfo, devices, error: null };
+	const result = { valid: true, version, buildInfo, capabilities, devices, error: null };
 	// console.log(`[validateBackend] result for ${binaryPath}:`, JSON.stringify({ ...result, devices: result.devices.map(d => ({ ...d, backendId: d.backendId })) }));
 	return result;
 }

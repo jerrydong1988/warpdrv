@@ -6,7 +6,7 @@ import {
 	X, Blocks, Terminal, FolderSearch, Plus, CheckCircle, AlertCircle, FileInput,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EValidationStatus, ALL_COMMON_FLAGS, TOGGLE_FLAG_MAPPINGS, getFlagMapping } from '@warpcore/shared';
+import { EValidationStatus, ALL_COMMON_FLAGS } from '@warpcore/shared';
 import { Card } from '../../components/Card';
 import { createBackend, updateBackend } from '../../api/services';
 import { useToast } from '../../components/ToastProvider';
@@ -26,7 +26,9 @@ const FLAG_VALUE_PAIRS: Record<string, RegExp> = {
 	'-ub': /^\d+$/,
 	'-t': /^\d+$/,
 	'-tb': /^\d+$/,
-	'-fa': /^\d+$/,
+	'-fa': /^(on|off|auto)$/,
+	'--load-mode': /^(auto|none|mmap|mlock|mmap\+mlock|dio)$/,
+	'-lm': /^(auto|none|mmap|mlock|mmap\+mlock|dio)$/,
 };
 
 export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {

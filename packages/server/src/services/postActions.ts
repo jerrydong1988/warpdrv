@@ -150,6 +150,7 @@ async function registerLlamaBackend(_dl: IDownload, payload: Record<string, unkn
 		version: validation.version,
 		buildNumber: validation.buildInfo?.buildNumber ?? '',
 		gitCommit: validation.buildInfo?.gitCommit ?? '',
+		capabilities: validation.capabilities ?? undefined,
 		detectedDevices: validation.devices,
 		createdAt: now,
 		updatedAt: now,

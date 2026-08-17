@@ -39,15 +39,34 @@ export enum ESplitMode {
 	TENSOR = 'tensor',
 }
 
+// Model loading modes supported by modern llama.cpp (--load-mode).
+export enum ELlamaLoadMode {
+	AUTO = 'auto',
+	NONE = 'none',
+	MMAP = 'mmap',
+	MLOCK = 'mlock',
+	MMAP_MLOCK = 'mmap+mlock',
+	DIO = 'dio',
+}
+
+export enum ELlamaFlashAttentionMode {
+	AUTO = 'auto',
+	ON = 'on',
+	OFF = 'off',
+}
+
 // Speculative decoding types for llama.cpp
 export enum ESpecType {
 	NONE = 'none',
+	DRAFT_SIMPLE = 'draft-simple',
+	DRAFT_EAGLE3 = 'draft-eagle3',
+	DRAFT_DSPARK = 'draft-dspark',
 	NGRAM_SIMPLE = 'ngram-simple',
 	NGRAM_CACHE = 'ngram-cache',
 	NGRAM_MAP_K = 'ngram-map-k',
 	NGRAM_MAP_K4V = 'ngram-map-k4v',
 	NGRAM_MOD = 'ngram-mod',
-	MTP = 'mtp',
+	MTP = 'draft-mtp',
 	DFLASH = 'draft-dflash',
 }
 
@@ -66,15 +85,20 @@ export enum EResponseFormat {
 
 export enum EReasoningFormat {
 	NONE = 'none',
-	PARSED = 'parsed',
-	RAW = 'raw',
+	AUTO = 'auto',
+	DEEPSEEK = 'deepseek',
+	DEEPSEEK_LEGACY = 'deepseek-legacy',
 }
 
 export enum EReasoningEffort {
 	NONE = 'none',
+	DEFAULT = 'default',
+	MINIMAL = 'minimal',
 	LOW = 'low',
 	MEDIUM = 'medium',
 	HIGH = 'high',
+	XHIGH = 'xhigh',
+	MAX = 'max',
 }
 
 // App theme

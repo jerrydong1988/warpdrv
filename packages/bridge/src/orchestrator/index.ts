@@ -10,6 +10,7 @@
 // ============================================================
 import crypto from 'crypto';
 import type { EventNode } from '@warpcore/realmcore';
+import { buildLlamaInferenceParams } from './inferenceParams';
 import type { IMcpClient, IPermissions, IPersistence, IBridgeBroadcaster } from '../types/interfaces';
 import type {
 	ICompletionRequest,
@@ -1173,49 +1174,7 @@ export class Orchestrator {
 	}
 
 	private buildInferenceParams(params: Record<string, unknown>): Record<string, unknown> {
-		const p = params as any;
-		return {
-			...(p.temperature !== undefined ? { temperature: p.temperature } : {}),
-			...(p.topP !== undefined ? { top_p: p.topP } : {}),
-			...(p.topK !== undefined ? { top_k: p.topK } : {}),
-			...(p.maxTokens > 0 ? { max_tokens: p.maxTokens } : {}),
-			...(p.frequencyPenalty ? { frequency_penalty: p.frequencyPenalty } : {}),
-			...(p.presencePenalty ? { presence_penalty: p.presencePenalty } : {}),
-			...(p.seed >= 0 ? { seed: p.seed } : {}),
-			...(p.repeatPenalty !== 1.0 ? { repeat_penalty: p.repeatPenalty } : {}),
-			...(p.minP > 0 ? { min_p: p.minP } : {}),
-			...(p.mirostatMode > 0 ? { mirostat: p.mirostatMode, mirostat_tau: p.mirostatTau, mirostat_eta: p.mirostatEta } : {}),
-			...(p.cachePrompt ? { cache_prompt: true } : {}),
-			...(p.responseFormat && p.responseFormat !== 'text' ? { response_format: { type: p.responseFormat } } : {}),
-			...(p.reasoningFormat && p.reasoningFormat !== 'none' ? { reasoning_format: p.reasoningFormat } : {}),
-			...(p.enableThinking !== undefined || p.reasoningEffort !== undefined
-				? { chat_template_kwargs: {
-					...(p.enableThinking !== undefined ? { enable_thinking: p.enableThinking } : {}),
-					...(p.reasoningEffort !== undefined ? { reasoning_effort: p.reasoningEffort } : {}),
-				} }
-				: {}),
-			...(p.typicalP !== undefined ? { typical_p: p.typicalP } : {}),
-			...(p.ignoreEos !== undefined ? { ignore_eos: p.ignoreEos } : {}),
-			...(p.logitBias && p.logitBias.length ? { logit_bias: p.logitBias } : {}),
-			...(p.dryMultiplier ? { dry_multiplier: p.dryMultiplier } : {}),
-			...(p.dryBase ? { dry_base: p.dryBase } : {}),
-			...(p.dryAllowedLength ? { dry_allowed_length: p.dryAllowedLength } : {}),
-			...(p.dryPenaltyLastN ? { dry_penalty_last_n: p.dryPenaltyLastN } : {}),
-			...(p.topNSigma !== undefined ? { top_n_sigma: p.topNSigma } : {}),
-			...(p.xtcProbability ? { xtc_probability: p.xtcProbability } : {}),
-			...(p.xtcThreshold ? { xtc_threshold: p.xtcThreshold } : {}),
-			...(p.dynatempRange ? { dynatemp_range: p.dynatempRange } : {}),
-			...(p.dynatempExponent ? { dynatemp_exponent: p.dynatempExponent } : {}),
-			...(p.repeatLastN !== undefined ? { repeat_last_n: p.repeatLastN } : {}),
-			...(p.n_probs !== undefined ? { n_probs: p.n_probs } : {}),
-			...(p.samplers && p.samplers.length ? { samplers: p.samplers } : {}),
-			...(p.grammar ? { grammar: p.grammar } : {}),
-			...(p.jsonSchema ? { json_schema: p.jsonSchema } : {}),
-			...(p.adaptiveTarget ? { adaptive_target: p.adaptiveTarget } : {}),
-			...(p.adaptiveDecay ? { adaptive_decay: p.adaptiveDecay } : {}),
-			...(p.extraSamplingParams ? { ...p.extraSamplingParams } : {}),
-			...(p.stopSequences && p.stopSequences.length ? { stop: p.stopSequences } : {}),
-		};
+		return buildLlamaInferenceParams(params);
 	}
 
 	private async resolveEnabledTools(request: ICompletionRequest): Promise<IToolDefinition[]> {
