@@ -1,18 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::env;
+use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::Mutex;
-use std::time::Duration;
 use std::thread;
-use std::path::PathBuf;
-use std::env;
+use std::time::Duration;
 
 use tauri::{
     image::Image,
     menu::{MenuBuilder, MenuItemBuilder},
     tray::TrayIconBuilder,
-    Emitter,
-    Manager,
+    Emitter, Manager,
 };
 
 struct ServerProcess(Mutex<Option<Child>>);
@@ -29,15 +28,16 @@ fn is_server_running(port: u16) -> bool {
 fn find_server_binary() -> Option<(String, Vec<String>)> {
     if let Ok(exe_path) = env::current_exe() {
         let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
-        for entry in std::fs::read_dir(exe_dir).ok()? {
-            if let Ok(entry) = entry {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with("warpcore-server") && !name.ends_with(".sig") {
-                    let path_str = entry.path().to_string_lossy().to_string();
-                    // Strip Windows \\?\ UNC prefix that crashes Node.js realpathSync
-                    let cleaned = path_str.strip_prefix(r"\\?\").unwrap_or(&path_str).to_string();
-                    return Some((cleaned, vec![]));
-                }
+        for entry in std::fs::read_dir(exe_dir).ok()?.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("warpcore-server") && !name.ends_with(".sig") {
+                let path_str = entry.path().to_string_lossy().to_string();
+                // Strip Windows \\?\ UNC prefix that crashes Node.js realpathSync
+                let cleaned = path_str
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(&path_str)
+                    .to_string();
+                return Some((cleaned, vec![]));
             }
         }
     }
@@ -53,7 +53,11 @@ fn find_server_binary() -> Option<(String, Vec<String>)> {
             "npx".to_string(),
             vec![
                 "tsx".to_string(),
-                dev_index.canonicalize().unwrap_or(dev_index).to_string_lossy().to_string(),
+                dev_index
+                    .canonicalize()
+                    .unwrap_or(dev_index)
+                    .to_string_lossy()
+                    .to_string(),
             ],
         ));
     }
@@ -62,86 +66,102 @@ fn find_server_binary() -> Option<(String, Vec<String>)> {
 }
 
 fn get_server_port() -> u16 {
-	// Check env var first (for dev/override), then read from settings, default to 4400
-	if let Ok(env_port) = std::env::var("CONTROL_API_PORT") {
-		if let Ok(port) = env_port.parse::<u16>() {
-			if port >= 1 && port <= 65535 {
-				return port;
-			}
-		}
-	}
+    // Check env var first (for dev/override), then read from settings, default to 4400
+    if let Ok(env_port) = std::env::var("CONTROL_API_PORT") {
+        if let Ok(port) = env_port.parse::<u16>() {
+            if port != 0 {
+                return port;
+            }
+        }
+    }
 
-	// Try to read from settings file
-	let config_dir = match std::env::var("XDG_CONFIG_HOME") {
-		Ok(path) if !path.is_empty() => PathBuf::from(path),
-		_ => std::env::var_os("HOME")
-			.map(|h| PathBuf::from(h).join(".config"))
-			.filter(|p| p.exists())
-			.unwrap_or_else(|| std::env::current_dir().ok().unwrap()),
-	};
+    // Try to read from the settings file (warpcore-data.json) via serde_json.
+    let config_dir = match std::env::var("XDG_CONFIG_HOME") {
+        Ok(path) if !path.is_empty() => PathBuf::from(path),
+        _ => std::env::var_os("HOME")
+            .map(|h| PathBuf::from(h).join(".config"))
+            .filter(|p| p.exists())
+            .unwrap_or_else(|| std::env::current_dir().ok().unwrap()),
+    };
 
-	let data_path = config_dir.join("warpcore").join("warpcore-data.json");
-	if !data_path.exists() {
-		return 4400;
-	}
+    let data_path = config_dir.join("warpcore").join("warpcore-data.json");
+    if !data_path.exists() {
+        return 4400;
+    }
 
-	if let Ok(content) = std::fs::read_to_string(&data_path) {
-		// Simple JSON parsing - look for "apiPort":NUMBER pattern
-		if let Some(api_port_str) = content.split("\"apiPort\"").nth(1).and_then(|s| s.split(':').next()) {
-			let trimmed = api_port_str.trim().split(',').next().unwrap_or("").split('}').next().unwrap_or("").trim();
-			if let Ok(port) = trimmed.parse::<u16>() {
-				if port >= 1 && port <= 65535 {
-					return port;
-				}
-			}
-		}
-	}
+    if let Ok(content) = std::fs::read_to_string(&data_path) {
+        // The store persists values as JSON-encoded strings, so the settings
+        // live at "settings:general" -> "<json string>".
+        if let Ok(root) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(settings_json) = root.get("settings:general").and_then(|v| v.as_str()) {
+                if let Ok(settings) = serde_json::from_str::<serde_json::Value>(settings_json) {
+                    if let Some(port) = settings
+                        .get("apiPort")
+                        .and_then(|v| v.as_u64())
+                        .and_then(|p| u16::try_from(p).ok())
+                    {
+                        if port != 0 {
+                            return port;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-	4400
+    4400
 }
 
 fn spawn_server(app: &tauri::AppHandle) -> Option<Child> {
-	let (bin, args) = find_server_binary()?;
+    let (bin, args) = find_server_binary()?;
     let log_dir = std::env::temp_dir();
-	let log_path = log_dir.join("warpcore-server.log");
-	let log_file = std::fs::File::create(&log_path).unwrap();
-	let err_file = log_file.try_clone().unwrap();
-	// Resolve resource dir via Tauri API - works cross-platform
-    let resource_dir = app.path().resource_dir()
-		.map(|p| {
-			let s = p.to_string_lossy().to_string();
-			s.strip_prefix(r"\\?\").unwrap_or(&s).to_string()
-		})
-		.unwrap_or_else(|_| ".".to_string());
+    let log_path = log_dir.join("warpcore-server.log");
+    let log_file = std::fs::File::create(&log_path).unwrap();
+    let err_file = log_file.try_clone().unwrap();
+    // Resolve resource dir via Tauri API - works cross-platform
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map(|p| {
+            let s = p.to_string_lossy().to_string();
+            s.strip_prefix(r"\\?\").unwrap_or(&s).to_string()
+        })
+        .unwrap_or_else(|_| ".".to_string());
 
-	// Get port from env var or settings, and pass to server process
+    // Get port from env var or settings, and pass to server process
     let server_port = get_server_port();
-	let rust_path = env::var("PATH").unwrap_or_else(|_| "(not set)".to_string());
-	println!("[WarpCore] Rust PATH: {}", rust_path);
-	let mut cmd = Command::new(&bin);
-	cmd.args(&args)
-		.env("WARPCORE_RESOURCE_DIR", &resource_dir)
-		.env("CONTROL_API_PORT", server_port.to_string())
-		.stdout(log_file)
-		.stderr(err_file);
+    let rust_path = env::var("PATH").unwrap_or_else(|_| "(not set)".to_string());
+    println!("[WarpCore] Rust PATH: {}", rust_path);
+    let mut cmd = Command::new(&bin);
+    cmd.args(&args)
+        .env("WARPCORE_RESOURCE_DIR", &resource_dir)
+        .env("CONTROL_API_PORT", server_port.to_string())
+        .stdout(log_file)
+        .stderr(err_file);
 
-	#[cfg(windows)]
-	{
-		use std::os::windows::process::CommandExt;
-		const CREATE_NO_WINDOW: u32 = 0x08000000;
-		cmd.creation_flags(CREATE_NO_WINDOW);
-	}
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
-	match cmd.spawn() {
-		Ok(c) => {
-			println!("[WarpCore] Server spawned: {} {:?} (PID {}) on port {}", bin, args, c.id(), server_port);
-			Some(c)
-		}
-		Err(e) => {
-			eprintln!("[WarpCore] Failed to spawn server: {}", e);
-			None
-		}
-	}
+    match cmd.spawn() {
+        Ok(c) => {
+            println!(
+                "[WarpCore] Server spawned: {} {:?} (PID {}) on port {}",
+                bin,
+                args,
+                c.id(),
+                server_port
+            );
+            Some(c)
+        }
+        Err(e) => {
+            eprintln!("[WarpCore] Failed to spawn server: {}", e);
+            None
+        }
+    }
 }
 
 fn wait_for_server(port: u16, timeout_secs: u64) -> bool {
@@ -163,7 +183,8 @@ fn navigate_to_app(app: &tauri::AppHandle, port: u16) {
 }
 
 fn loading_html(port: u16) -> String {
-    format!(r#"
+    format!(
+        r#"
         <html>
         <head><style>
             * {{ box-sizing: border-box; }}
@@ -201,7 +222,9 @@ fn loading_html(port: u16) -> String {
             </script>
         </body>
         </html>
-    "#, port = port)
+    "#,
+        port = port
+    )
 }
 
 // Autostart is handled by the tauri-plugin-autostart built-in commands:
@@ -222,8 +245,16 @@ fn base64_encode(data: &[u8]) -> String {
         let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | (b[2] as u32);
         result.push(CHARS[((n >> 18) & 0x3F) as usize] as char);
         result.push(CHARS[((n >> 12) & 0x3F) as usize] as char);
-        if chunk.len() > 1 { result.push(CHARS[((n >> 6) & 0x3F) as usize] as char); } else { result.push('='); }
-        if chunk.len() > 2 { result.push(CHARS[(n & 0x3F) as usize] as char); } else { result.push('='); }
+        if chunk.len() > 1 {
+            result.push(CHARS[((n >> 6) & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
+        if chunk.len() > 2 {
+            result.push(CHARS[(n & 0x3F) as usize] as char);
+        } else {
+            result.push('=');
+        }
     }
     result
 }
@@ -248,7 +279,8 @@ fn read_start_minimized_setting() -> bool {
     match std::fs::read_to_string(&data_path) {
         Ok(content) => {
             // Simple JSON parsing without external deps - look for "startMinimized":true pattern
-            content.contains("\"startMinimized\":true") || content.contains("\"startMinimized\": true")
+            content.contains("\"startMinimized\":true")
+                || content.contains("\"startMinimized\": true")
         }
         Err(_) => false,
     }
@@ -296,8 +328,14 @@ fn read_window_size_settings() -> Option<(u32, u32)> {
                 }
             };
 
-            let width = settings.get("windowWidth").and_then(|v| v.as_u64()).map(|w| w as u32)?;
-            let height = settings.get("windowHeight").and_then(|v| v.as_u64()).map(|h| h as u32)?;
+            let width = settings
+                .get("windowWidth")
+                .and_then(|v| v.as_u64())
+                .map(|w| w as u32)?;
+            let height = settings
+                .get("windowHeight")
+                .and_then(|v| v.as_u64())
+                .map(|h| h as u32)?;
 
             // Validate reasonable bounds (min window size is 800x600 per tauri.conf.json)
             if width >= 800 && height >= 600 {
@@ -346,11 +384,14 @@ fn save_window_size(width: u32, height: u32) -> bool {
                     match serde_json::from_str::<serde_json::Value>(settings_str) {
                         Ok(mut settings_obj) => {
                             if let Some(settings_map) = settings_obj.as_object_mut() {
-                                settings_map.insert("windowWidth".to_string(), serde_json::json!(width));
-                                settings_map.insert("windowHeight".to_string(), serde_json::json!(height));
+                                settings_map
+                                    .insert("windowWidth".to_string(), serde_json::json!(width));
+                                settings_map
+                                    .insert("windowHeight".to_string(), serde_json::json!(height));
                                 // Re-stringify and update back to the parent JSON
                                 *settings_value = serde_json::Value::String(
-                                    serde_json::to_string(&settings_obj).unwrap_or_else(|_| settings_str.to_string())
+                                    serde_json::to_string(&settings_obj)
+                                        .unwrap_or_else(|_| settings_str.to_string()),
                                 );
                             }
                         }
@@ -361,7 +402,10 @@ fn save_window_size(width: u32, height: u32) -> bool {
                 }
             }
 
-            match std::fs::write(&data_path, serde_json::to_string_pretty(&json).unwrap_or(content)) {
+            match std::fs::write(
+                &data_path,
+                serde_json::to_string_pretty(&json).unwrap_or(content),
+            ) {
                 Ok(_) => true,
                 Err(e) => {
                     eprintln!("[WarpCore] Failed to save window size: {}", e);
@@ -377,45 +421,54 @@ fn save_window_size(width: u32, height: u32) -> bool {
 }
 
 fn main() {
-	let server_port = get_server_port();
-	println!("[WarpCore] Using API port: {} (from env or settings)", server_port);
+    let server_port = get_server_port();
+    println!(
+        "[WarpCore] Using API port: {} (from env or settings)",
+        server_port
+    );
 
     // Check if launched with --hidden flag (from autostart)
     let launched_hidden = std::env::args().any(|arg| arg == "--hidden");
 
- #[tauri::command]
-fn type_text(text: String) {
-    // Reject excessively long input and control characters to prevent injection abuse
-    if text.is_empty() || text.len() > 10_000 {
-        eprintln!("[WarpCore] type_text: input rejected (length={})", text.len());
-        return;
-    }
-    for ch in text.chars() {
-        // Allow printable ASCII, common Unicode, and whitespace — reject control characters except tab/newline
-        if ch.is_control() && ch != '\t' && ch != '\n' && ch != '\r' {
-            eprintln!("[WarpCore] type_text: rejected control character U+{:04X}", ch as u32);
+    #[tauri::command]
+    fn type_text(text: String) {
+        // Reject excessively long input and control characters to prevent injection abuse
+        if text.is_empty() || text.len() > 10_000 {
+            eprintln!(
+                "[WarpCore] type_text: input rejected (length={})",
+                text.len()
+            );
             return;
         }
-    }
-    use enigo::{Enigo, Keyboard, Settings};
-    match Enigo::new(&Settings::default()) {
-        Ok(mut enigo) => {
-            if let Err(e) = enigo.text(&text) {
-                eprintln!("[WarpCore] type_text failed: {:?}", e);
+        for ch in text.chars() {
+            // Allow printable ASCII, common Unicode, and whitespace — reject control characters except tab/newline
+            if ch.is_control() && ch != '\t' && ch != '\n' && ch != '\r' {
+                eprintln!(
+                    "[WarpCore] type_text: rejected control character U+{:04X}",
+                    ch as u32
+                );
+                return;
             }
         }
-        Err(e) => eprintln!("[WarpCore] enigo init failed: {:?}", e),
+        use enigo::{Enigo, Keyboard, Settings};
+        match Enigo::new(&Settings::default()) {
+            Ok(mut enigo) => {
+                if let Err(e) = enigo.text(&text) {
+                    eprintln!("[WarpCore] type_text failed: {:?}", e);
+                }
+            }
+            Err(e) => eprintln!("[WarpCore] enigo init failed: {:?}", e),
+        }
     }
-}
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         // .plugin(tauri_plugin_devtools::init())
         .plugin(tauri_plugin_autostart::init(
-		tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-		Some(vec!["--hidden"]),
-	))
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--hidden"]),
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -447,27 +500,27 @@ fn type_text(text: String) {
                         saved_width as f64,
                         saved_height as f64,
                     )));
-                    println!("[WarpCore] Restored window size: {}x{}", saved_width, saved_height);
+                    println!(
+                        "[WarpCore] Restored window size: {}x{}",
+                        saved_width, saved_height
+                    );
                 }
 
                 let html = loading_html(server_port);
-                let data_url = format!(
-                    "data:text/html;base64,{}",
-                    base64_encode(html.as_bytes())
-                );
+                let data_url = format!("data:text/html;base64,{}", base64_encode(html.as_bytes()));
                 let _ = window.navigate(data_url.parse().unwrap());
 
-				#[cfg(target_os = "linux")]
-				{
-					use webkit2gtk::WebViewExt;
-					use webkit2gtk::PermissionRequestExt;
-					let _ = window.with_webview(|webview| {
-						webview.inner().connect_permission_request(|_, request| {
-							request.allow();
-							true
-						});
-					});
-				}
+                #[cfg(target_os = "linux")]
+                {
+                    use webkit2gtk::PermissionRequestExt;
+                    use webkit2gtk::WebViewExt;
+                    let _ = window.with_webview(|webview| {
+                        webview.inner().connect_permission_request(|_, request| {
+                            request.allow();
+                            true
+                        });
+                    });
+                }
                 if !should_start_minimized {
                     let _ = window.show();
                 } else {
@@ -484,7 +537,10 @@ fn type_text(text: String) {
                         rdev::EventType::KeyRelease(k) => (format!("{:?}", k), false),
                         _ => return,
                     };
-                    let _ = hk_handle.emit("hotkey://key", serde_json::json!({ "code": code, "down": down }));
+                    let _ = hk_handle.emit(
+                        "hotkey://key",
+                        serde_json::json!({ "code": code, "down": down }),
+                    );
                 });
             });
             // Spawn server in background
@@ -492,7 +548,7 @@ fn type_text(text: String) {
             thread::spawn(move || {
                 let port = server_port;
 
-               if !is_server_running(port) {
+                if !is_server_running(port) {
                     let child = spawn_server(&app_handle);
                     if let Some(c) = child {
                         *app_handle.state::<ServerProcess>().0.lock().unwrap() = Some(c);
@@ -541,7 +597,8 @@ fn type_text(text: String) {
             let open_item = MenuItemBuilder::with_id("open", "Show warpdrv").build(app)?;
             let hide_item = MenuItemBuilder::with_id("hide", "Hide warpdrv").build(app)?;
             let restart_item = MenuItemBuilder::with_id("restart", "Restart Server").build(app)?;
-            let devtools_item = MenuItemBuilder::with_id("devtools", "Toggle DevTools").build(app)?;
+            let devtools_item =
+                MenuItemBuilder::with_id("devtools", "Toggle DevTools").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
             let menu = MenuBuilder::new(app)
@@ -566,22 +623,24 @@ fn type_text(text: String) {
                             let _ = window.set_focus();
                         }
                     }
-"hide" => {
-			if let Some(window) = app.get_webview_window("main") {
-				let _ = window.hide();
-			}
-		}
-		"devtools" => {
-			if let Some(window) = app.get_webview_window("main") {
-				if window.is_devtools_open() {
-					window.close_devtools();
-				} else {
-					window.open_devtools();
-				}
-			}
-		}
+                    "hide" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
+                        }
+                    }
+                    "devtools" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_devtools_open() {
+                                window.close_devtools();
+                            } else {
+                                window.open_devtools();
+                            }
+                        }
+                    }
                     "restart" => {
-                        if let Some(mut child) = app.state::<ServerProcess>().0.lock().unwrap().take() {
+                        if let Some(mut child) =
+                            app.state::<ServerProcess>().0.lock().unwrap().take()
+                        {
                             let _ = child.kill();
                         }
                         let child = spawn_server(app);
@@ -597,30 +656,41 @@ fn type_text(text: String) {
                             });
                         }
                     }
-"quit" => {
-			// Save current window size before quitting
-			if let Some(window) = app.get_webview_window("main") {
-				if let Ok(size) = window.inner_size() {
-					let _ = save_window_size(size.width, size.height);
-					println!("[WarpCore] Saved window size: {}x{}", size.width, size.height);
-				}
-			}
+                    "quit" => {
+                        // Save current window size before quitting
+                        if let Some(window) = app.get_webview_window("main") {
+                            if let Ok(size) = window.inner_size() {
+                                let _ = save_window_size(size.width, size.height);
+                                println!(
+                                    "[WarpCore] Saved window size: {}x{}",
+                                    size.width, size.height
+                                );
+                            }
+                        }
 
-			// Stop all llama-server instances via API
-			if is_server_running(server_port) {
-				let _ = reqwest::blocking::Client::new()
-					.post(format!("http://localhost:{}/api/servers/stop-all", server_port))
-					.send();
-				thread::sleep(Duration::from_millis(500));
-				// Stop all whisper-server instances via API
-				let _ = reqwest::blocking::Client::new()
-					.post(format!("http://localhost:{}/api/whisper-servers/stop-all", server_port))
-					.send();
-				thread::sleep(Duration::from_millis(500));
-			}
+                        // Stop all llama-server instances via API
+                        if is_server_running(server_port) {
+                            let _ = reqwest::blocking::Client::new()
+                                .post(format!(
+                                    "http://localhost:{}/api/servers/stop-all",
+                                    server_port
+                                ))
+                                .send();
+                            thread::sleep(Duration::from_millis(500));
+                            // Stop all whisper-server instances via API
+                            let _ = reqwest::blocking::Client::new()
+                                .post(format!(
+                                    "http://localhost:{}/api/whisper-servers/stop-all",
+                                    server_port
+                                ))
+                                .send();
+                            thread::sleep(Duration::from_millis(500));
+                        }
 
                         // Then kill the Node.js server process
-                        if let Some(mut child) = app.state::<ServerProcess>().0.lock().unwrap().take() {
+                        if let Some(mut child) =
+                            app.state::<ServerProcess>().0.lock().unwrap().take()
+                        {
                             let _ = child.kill();
                             println!("[WarpCore] Server process killed");
                         }
@@ -653,7 +723,10 @@ fn type_text(text: String) {
                         // Save current window size before hiding to tray
                         if let Ok(size) = w.inner_size() {
                             let _ = save_window_size(size.width, size.height);
-                            println!("[WarpCore] Saved window size: {}x{}", size.width, size.height);
+                            println!(
+                                "[WarpCore] Saved window size: {}x{}",
+                                size.width, size.height
+                            );
                         }
                         api.prevent_close();
                         let _ = w.hide();

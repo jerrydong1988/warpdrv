@@ -26,8 +26,17 @@ jobs:
       - name: Validate translations
         run: npm run i18n:check -w @warpcore/app
 
+      - name: Lint core packages
+        run: npm run lint
+
       - name: Run core tests
         run: npm test -w @warpcore/realmcore
+
+      - name: Run server tests
+        run: npm test -w @warpcore/server
+
+      - name: Run warpmcp tests
+        run: npm test -w @warpcore/warpmcp
 
       # Composite packages (shared/realmcore) must emit fresh declarations
       # first — the server and app projects resolve them via their dist outputs.
@@ -43,3 +52,60 @@ jobs:
       - name: Build frontend
         run: npx vite build
         working-directory: packages/app
+
+  rust-check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/desktop/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/desktop/Cargo.lock') }}
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            file
+
+      - name: Check formatting
+        run: cargo fmt --check
+        working-directory: packages/desktop
+
+      # The Tauri build script requires the sidecar resources to exist even
+      # for `cargo clippy`. Placeholder files satisfy the existence checks;
+      # real binaries are produced by release.sh during actual builds.
+      - name: Create sidecar stubs
+        run: |
+          TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
+          mkdir -p packages/desktop/binaries/node_modules packages/desktop/app-dist
+          touch "packages/desktop/binaries/warpcore-server-$TRIPLE"
+          touch "packages/desktop/binaries/better_sqlite3.node-$TRIPLE"
+          touch packages/desktop/binaries/node_modules/.placeholder
+          touch packages/desktop/app-dist/.placeholder
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy -- -D warnings
+        working-directory: packages/desktop
