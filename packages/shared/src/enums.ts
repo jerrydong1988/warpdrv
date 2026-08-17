@@ -55,8 +55,9 @@ export enum ESpecType {
 export { EDownloadStatus } from './hub-types';
 
 // Chat inference enums (kept in shared - not chat-specific)
-// Note: EChatRole, EMcpTransportType, EMcpServerStatus, EToolApprovalMode,
-// and EToolCallStatus have been moved to @warpcore/bridge
+// Note: EChatRole now lives in ./chat-types (re-exported by @warpcore/bridge).
+// EMcpTransportType, EMcpServerStatus, EToolApprovalMode and EToolCallStatus
+// are defined in @warpcore/bridge.
 export enum EResponseFormat {
 	TEXT = 'text',
 	JSON_OBJECT = 'json_object',

@@ -4,7 +4,7 @@ import type { useStore } from '@/store';
 import type { ISlashCommand } from '@/store/slices/slashCommands';
 import type { TUISpaceComponentId, TUISpaceComponent } from '@/store/slices/uiSpaces';
 import type { AppState } from '@/store/types';
-import { TAppletBaseAPI } from '@warpcore/realmcore/src/applet/types';
+import { TAppletBaseAPI } from '@warpcore/realmcore';
 
 export interface IAppletAPIFE extends TAppletBaseAPI {
 	useStore: typeof useStore;

@@ -1,5 +1,5 @@
 import type { TServerId } from './types';
-import type { TThreadId, TMessageId } from '@warpcore/bridge';
+import type { TThreadId, TMessageId } from './chat-types';
 
 export type TCheckpointId = string;
 export type TBundleId = string;

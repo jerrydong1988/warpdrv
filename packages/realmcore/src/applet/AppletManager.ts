@@ -6,12 +6,13 @@ import { EventNode as EventNodeClass } from '../events/EventNode';
 
 export class AppletManager {
 	private activeApplets: Record<string, { host: AppletHost; eventNode: EventNode }> = {};
-	private terminatingHosts: Record<string, Promise<void>> = {};
+	private terminatingHosts: Record<string, Promise<void> | undefined> = {};
 
 constructor(
 		public eventNode: EventNode,
 		protected scope: EAppletScope,
 		protected scopeValue: string | undefined,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- heterogeneous host classes; see types.ts.
 		protected hostClasses: Partial<Record<EAppletHostType, typeof AppletHost<any>>>,
 		protected applets: Record<string, TAppletDefinition>,
 		protected autoStart: Record<string, boolean> = {},
@@ -89,7 +90,7 @@ constructor(
 	}
 
 	public terminate(appletName: string): Promise<void> {
-		if (!!this.terminatingHosts[appletName]) return this.terminatingHosts[appletName];
+		if (this.terminatingHosts[appletName]) return this.terminatingHosts[appletName];
 
 		const entry = this.activeApplets[appletName];
 		if (!entry) return Promise.resolve();

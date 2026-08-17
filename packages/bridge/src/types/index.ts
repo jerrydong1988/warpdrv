@@ -9,29 +9,45 @@ export type { ImmerSet, ImmerGet } from '../store';
 // ============================================================
 // Identifiers
 // ============================================================
-export type TThreadId = string;
-export type TMessageId = string;
-export type TMessagePartId = string;
-export type TToolCallId = string;
+// Chat identifiers, roles and message-part types live in
+// @warpcore/shared (shared must not depend on bridge). Re-exported
+// here so existing `@warpcore/bridge` consumers keep working.
+import {
+	EChatRole,
+	EMessagePartType,
+	type IMessagePart,
+	type IMessagePartAttachment,
+	type IMessagePartBase,
+	type IMessagePartReasoning,
+	type IMessagePartText,
+	type IMessagePartToolCall,
+	type TMessageId,
+	type TMessagePartId,
+	type TThreadId,
+	type TToolCallId,
+} from '@warpcore/shared';
+export {
+	EChatRole,
+	EMessagePartType,
+	type IMessagePart,
+	type IMessagePartAttachment,
+	type IMessagePartBase,
+	type IMessagePartReasoning,
+	type IMessagePartText,
+	type IMessagePartToolCall,
+	type TMessageId,
+	type TMessagePartId,
+	type TThreadId,
+	type TToolCallId,
+} from '@warpcore/shared';
+
 export type TFolderId = string;
 export type TMcpServerId = string;
 
 // ============================================================
 // Enums
 // ============================================================
-export enum EChatRole {
-	SYSTEM = 'system',
-	USER = 'user',
-	ASSISTANT = 'assistant',
-	TOOL = 'tool',
-}
-
-export enum EMessagePartType {
-	TEXT = 'text',
-	REASONING = 'reasoning',
-	TOOL_CALL = 'tool_call',
-	ATTACHMENT = 'attachment',
-}
+// EChatRole / EMessagePartType are re-exported from @warpcore/shared above.
 
 export enum EToolCallStatus {
 	PENDING = 'PENDING',
@@ -216,42 +232,10 @@ export interface IChatMessageCreatePayload {
 	stats?: string; // JSON string of IChatMessageStats
 }
 
-export type IMessagePart =
-	| IMessagePartText
-	| IMessagePartReasoning
-	| IMessagePartToolCall
-	| IMessagePartAttachment;
-
-export interface IMessagePartAttachment extends IMessagePartBase {
-	type: EMessagePartType.ATTACHMENT;
-	data: string;
-	mimeType: string;
-	fileName: string;
-	fileSize: number;
-	extractedText?: string;
-}
-
-export interface IMessagePartBase {
-	id: TMessagePartId;
-	type: EMessagePartType;
-	orderIndex: number;
-}
-
-export interface IMessagePartText extends IMessagePartBase {
-	type: EMessagePartType.TEXT;
-	text: string;
-}
-
-export interface IMessagePartReasoning extends IMessagePartBase {
-	type: EMessagePartType.REASONING;
-	text: string;
-}
-
-export interface IMessagePartToolCall extends IMessagePartBase {
-	type: EMessagePartType.TOOL_CALL;
-	toolCallId: TToolCallId;
-}
-
+// ============================================================
+// Message Parts
+// IMessagePart* types are re-exported from @warpcore/shared above.
+// ============================================================
 export interface IChatMessageStats {
 	promptTokens?: number;
 	completionTokens?: number;
