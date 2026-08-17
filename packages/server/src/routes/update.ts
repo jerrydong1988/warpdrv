@@ -11,15 +11,28 @@ interface IReleaseInfo {
 	notes: string;
 }
 
+function getDevReleaseCandidates(): string[] {
+	// npm workspace scripts run with the package directory as their CWD, while
+	// Tauri development starts from packages/desktop. Walk up a bounded number
+	// of levels so both modes resolve the repository-level release.json.
+	const candidates: string[] = [];
+	let directory = process.cwd();
+	for (let depth = 0; depth < 4; depth++) {
+		candidates.push(path.join(directory, 'release.json'));
+		const parent = path.dirname(directory);
+		if (parent === directory) break;
+		directory = parent;
+	}
+	return candidates;
+}
+
 function getLocalRelease(): IReleaseInfo {
-	// Walk up from server/src/routes to repo root
 	const candidates = [
 		...(process.env.WARPCORE_RESOURCE_DIR ? [
 			path.join(process.env.WARPCORE_RESOURCE_DIR, 'release.json'),
 			path.join(process.env.WARPCORE_RESOURCE_DIR, '_up_', '_up_', 'release.json'),
 		] : []),
-		// Dev mode: the repo root release.json is the single source of truth.
-		path.join(process.cwd(), 'release.json'),
+		...getDevReleaseCandidates(),
 	];
 	for (const p of candidates) {
 		if (fs.existsSync(p)) {
