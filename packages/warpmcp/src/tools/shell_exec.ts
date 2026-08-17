@@ -10,6 +10,13 @@ const ALLOWED_COMMANDS = new Set([
 	'git','gh',
 	'cat','head','tail','wc','sort','uniq','grep','sed','awk','find','ls','mkdir','cp','mv','rm','touch','chmod','chown','ln',
 	'dir','type','echo','printenv','env','which','where','whoami','hostname','date','time',
+	// Read-only system inspection commands. Pipelines, redirects, subshells and
+	// statement separators remain blocked below, so these cannot be chained
+	// into mutation commands.
+	'top','free','df','du','ps','uptime','vmstat','iostat','lscpu','nproc','vm_stat',
+	'systeminfo','tasklist',
+	'get-date','get-process','get-ciminstance','get-counter','get-psdrive','get-computerinfo',
+	'get-volume','get-nettcpconnection','get-netadapterstatistics',
 ]);
 
 // Flags that make the (still allowlisted) runtimes evaluate arbitrary code
@@ -17,11 +24,11 @@ const EVAL_FLAGS = ['-e', '-p', '--eval', '--print', '-c', '--check', '-i', '--i
 
 export const shellExecDefinition = {
 	name: 'shell_exec',
-	description: 'Execute a shell command. Uses bash on linux/mac, PowerShell on Windows.',
+	description: 'Execute one allowlisted command. Uses bash on Linux/macOS and PowerShell on Windows. For Windows resource inspection, use commands such as Get-Process, Get-CimInstance, Get-Counter and Get-PSDrive; for Linux/macOS, use commands such as top, free, df, ps and uptime. Pipelines, redirects, command chaining and shell interpreters are rejected.',
 	inputSchema: {
 		type: 'object',
 		properties: {
-			command: { type: 'string', description: 'Command string to execute.' },
+			command: { type: 'string', description: 'One allowlisted command with arguments. On Windows, prefer PowerShell-native read-only inspection commands instead of Unix commands.' },
 			cwd: { type: 'string', description: 'Working directory (optional).' },
 			timeout: { type: 'number', description: 'Timeout in milliseconds (default 60000).', default: 60000 },
 		},

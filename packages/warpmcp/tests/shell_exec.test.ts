@@ -22,6 +22,16 @@ describe('validateShellCommand — allowlist', () => {
 		expect(() => validateShellCommand('npm run build')).not.toThrow();
 	});
 
+	it('accepts read-only resource inspection commands across platforms', () => {
+		expect(() => validateShellCommand('Get-Process')).not.toThrow();
+		expect(() => validateShellCommand('Get-CimInstance Win32_OperatingSystem')).not.toThrow();
+		expect(() => validateShellCommand('systeminfo')).not.toThrow();
+		expect(() => validateShellCommand('top -bn1')).not.toThrow();
+		expect(() => validateShellCommand('free -h')).not.toThrow();
+		expect(() => validateShellCommand('df -h')).not.toThrow();
+		expect(() => validateShellCommand('uptime')).not.toThrow();
+	});
+
 	it('rejects non-allowlisted executables', () => {
 		expectRejected('python3 script.py', /not in the allowed list/);
 		expectRejected('curl https://example.com', /not in the allowed list/);

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { McpStatusDot } from './McpStatusDot';
 import type { IMcpServerState, IToolPermission, IServerPermission as IMcpServerPermission } from '@warpcore/bridge';
 import { EMcpServerStatus, EToolApprovalMode } from '@warpcore/bridge';
+import { isMcpServerEnabled } from '../../utils/mcpPermissions';
 
 function ApprovalModeButton({ mode, currentMode, onSelect }: {
 	mode: EToolApprovalMode;
@@ -59,7 +60,6 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 	const { t } = useTranslation('mcp');
 	const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
 
-	const serverPermMap = new Map(serverPermissions.map(p => [p.serverName, p.enabled]));
 	const toolPermMap = new Map(toolPermissions.map(p => [`${p.serverName}:${p.toolName}`, p]));
 
 	function toggleExpand(name: string) {
@@ -81,7 +81,7 @@ export function ToolListSidebar({ serverNames, mcpServers, serverPermissions, to
 
 			{serverNames.map(name => {
 				const state = mcpServers[name];
-				const serverEnabled = serverPermMap.get(name) ?? true;
+				const serverEnabled = isMcpServerEnabled(name, serverPermissions);
 				const isExpanded = expandedServers[name] ?? false;
 
 				return (

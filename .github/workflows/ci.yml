@@ -39,6 +39,9 @@ jobs:
       - name: Run warpmcp tests
         run: npm test -w @warpcore/warpmcp
 
+      - name: Run app tests
+        run: npm test -w @warpcore/app
+
       # Composite packages (shared/realmcore) must emit fresh declarations
       # first — the server and app projects resolve them via their dist outputs.
       - name: Build shared declarations
