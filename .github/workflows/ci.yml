@@ -103,7 +103,7 @@ jobs:
           TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
           mkdir -p packages/desktop/binaries/node_modules packages/desktop/app-dist
           touch "packages/desktop/binaries/warpcore-server-$TRIPLE"
-          touch "packages/desktop/binaries/better_sqlite3.node-$TRIPLE"
+          touch packages/desktop/binaries/better_sqlite3.node
           touch packages/desktop/binaries/node_modules/.placeholder
           touch packages/desktop/app-dist/.placeholder
 
