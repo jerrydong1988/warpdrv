@@ -150,7 +150,7 @@
 	border-radius: inherit;
 	padding: 2px;
 	background: radial-gradient(
-		ellipse 65% 150% at 50% 0%,
+		ellipse 75% 150% at 50% 0%,
 		var(--composer-border-color) 0%,
 		transparent 75%
 	);

@@ -72,6 +72,11 @@ export const OptionsCard = React.memo(
 								)
 							}
 						/>
+						<ToggleChip
+							label="KV Unified"
+							active={params.kvUnified ?? false}
+							onClick={() => onParamChange("kvUnified", !(params.kvUnified ?? false))}
+						/>
 					</HStack>
 					<Flex gap="4">
 						<NumberField

@@ -1265,7 +1265,7 @@ const StatsTooltip = React.memo((): React.ReactNode => {
 			arr.push({ label: "c", value: `${actualTokens} tks` });
 		if (predictedMs > 0)
 			arr.push({ label: "tt", value: `${(predictedMs / 1000).toFixed(1)} s` });
-		// if (finishReason) arr.push({ label: "fr", value: finishReason });
+		if (finishReason) arr.push({ label: "fr", value: finishReason });
 		return arr;
 	}, [promptPerSecond, predictedPerSecond, actualTokens, predictedMs, finishReason]);
 

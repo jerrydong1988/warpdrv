@@ -26,7 +26,10 @@ async function getBuildInfo(binaryPath: string): Promise<IBuildInfo | null> {
 		});
 		const output = stderr + stdout;
 		console.log(`[getBuildInfo] output for ${binaryPath}:`, JSON.stringify(output));
-		const match = output.match(/version:\s*(\d+)\s*\(([a-f0-9]+)\)/);
+		// New format: "version: 0.1.1-dev (build 10470, commit 34af94cd9)"
+		let match = output.match(/version:.*\(build\s*(\d+),\s*commit\s*([a-f0-9]+)\)/);
+		// Fallback for old format: "version: 9100 (abc123456)"
+		if (!match) match = output.match(/version:\s*(\d+)\s*\(([a-f0-9]+)\)/);
 		if (match) {
 			const info = { buildNumber: match[1]!, gitCommit: match[2]! };
 			console.log(`[getBuildInfo] matched:`, info);

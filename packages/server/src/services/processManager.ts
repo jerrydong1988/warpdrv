@@ -141,7 +141,8 @@ function buildSpecDecodeArgsPre9100(sd: ISpecDecodeParams): string[] {
 		if (sd.draftContextSize > 0) args.push("--ctx-size-draft", String(sd.draftContextSize));
 	}
 	// Shared across modes
-	if (sd.draftMax > 0 && sd.mode !== "dflash") args.push("--draft-max", String(sd.draftMax));
+	if (!isMtp && sd.draftMax > 0 && sd.mode !== "dflash")
+		args.push("--draft-max", String(sd.draftMax));
 	if (!isMtp && sd.mode !== "dflash" && sd.draftMin > 0)
 		args.push("--draft-min", String(sd.draftMin));
 	// Draft-model-only
@@ -271,7 +272,7 @@ export function buildArgs(
 	// Parallel slots - add --kv-unified to share context across all slots instead of splitting it
 	if (params.parallelSlots > 0) {
 		args.push("-np", String(params.parallelSlots));
-		args.push("--kv-unified");
+		if (params.kvUnified) args.push("--kv-unified");
 	}
 	// Speculative decoding
 	if (params.specDecode?.enabled) {

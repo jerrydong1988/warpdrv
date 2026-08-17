@@ -187,6 +187,7 @@ export interface ILaunchParams {
 	device: string; // empty = default, e.g. "CUDA0", "Vulkan1"
 	extraArgs: string; // free-form additional flags
 	parallelSlots: number; // number of concurrent slots, 0 = server default
+	kvUnified?: boolean; // enables --kv-unified (share context across parallel slots)
 	specDecode: ISpecDecodeParams;
 	// Multi-GPU split (optional for backward compatibility)
 	gpuLayersAuto?: boolean; // true = autofit (omit -ngl), false/undefined = manual
@@ -222,6 +223,7 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	device: "",
 	extraArgs: "",
 	parallelSlots: 4,
+	kvUnified: false,
 	specDecode: { ...DEFAULT_SPEC_DECODE_PARAMS },
 	useEmbedding: false,
 	preserveThinking: false,
