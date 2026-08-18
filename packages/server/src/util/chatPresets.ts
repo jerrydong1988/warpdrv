@@ -1,16 +1,17 @@
-import path from 'path';
-import os from 'os';
-import fs from 'fs';
-import crypto from 'crypto';
-import type { IChatPreset, IChatPresetCreatePayload } from '@warpcore/shared';
+import type { IChatPreset, IChatPresetCreatePayload } from "@warpcore/shared";
+import { genPresetId } from "@warpcore/shared";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 function getPresetsDir(): string {
 	const platform = os.platform();
 	let base: string;
-	if (platform === 'win32') base = path.join(os.homedir(), 'AppData', 'Roaming', 'warpcore');
-	else if (platform === 'darwin') base = path.join(os.homedir(), 'Library', 'Application Support', 'warpcore');
-	else base = path.join(os.homedir(), '.config', 'warpcore');
-	return path.join(base, 'chat-presets');
+	if (platform === "win32") base = path.join(os.homedir(), "AppData", "Roaming", "warpcore");
+	else if (platform === "darwin")
+		base = path.join(os.homedir(), "Library", "Application Support", "warpcore");
+	else base = path.join(os.homedir(), ".config", "warpcore");
+	return path.join(base, "chat-presets");
 }
 
 function ensureDir(): string {
@@ -21,11 +22,11 @@ function ensureDir(): string {
 
 export function listChatPresets(): IChatPreset[] {
 	const dir = ensureDir();
-	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+	const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
 	const presets: IChatPreset[] = [];
 	for (const file of files) {
 		try {
-			const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
+			const raw = fs.readFileSync(path.join(dir, file), "utf-8");
 			presets.push(JSON.parse(raw) as IChatPreset);
 		} catch {
 			// skip malformed files
@@ -38,7 +39,7 @@ export function getChatPreset(id: string): IChatPreset | null {
 	const filePath = path.join(ensureDir(), `${id}.json`);
 	if (!fs.existsSync(filePath)) return null;
 	try {
-		return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as IChatPreset;
+		return JSON.parse(fs.readFileSync(filePath, "utf-8")) as IChatPreset;
 	} catch {
 		return null;
 	}
@@ -48,18 +49,21 @@ export function createChatPreset(payload: IChatPresetCreatePayload): IChatPreset
 	const dir = ensureDir();
 	const now = Date.now();
 	const preset: IChatPreset = {
-		id: crypto.randomUUID(),
+		id: genPresetId(),
 		name: payload.name,
 		systemPrompt: payload.systemPrompt,
 		params: payload.params,
 		createdAt: now,
 		updatedAt: now,
 	};
-	fs.writeFileSync(path.join(dir, `${preset.id}.json`), JSON.stringify(preset, null, '\t'));
+	fs.writeFileSync(path.join(dir, `${preset.id}.json`), JSON.stringify(preset, null, "\t"));
 	return preset;
 }
 
-export function updateChatPreset(id: string, payload: Partial<IChatPresetCreatePayload>): IChatPreset | null {
+export function updateChatPreset(
+	id: string,
+	payload: Partial<IChatPresetCreatePayload>,
+): IChatPreset | null {
 	const existing = getChatPreset(id);
 	if (!existing) return null;
 	const updated: IChatPreset = {
@@ -68,7 +72,7 @@ export function updateChatPreset(id: string, payload: Partial<IChatPresetCreateP
 		params: payload.params ? payload.params : existing.params,
 		updatedAt: Date.now(),
 	};
-	fs.writeFileSync(path.join(ensureDir(), `${id}.json`), JSON.stringify(updated, null, '\t'));
+	fs.writeFileSync(path.join(ensureDir(), `${id}.json`), JSON.stringify(updated, null, "\t"));
 	return updated;
 }
 

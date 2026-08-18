@@ -1,24 +1,33 @@
-import { Box, Text, HStack, Flex, Badge, Button, Spinner, Input } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, HStack, Input, Spinner, Text } from "@chakra-ui/react";
+import type { IModel, IWhisperModel } from "@warpcore/shared";
 import {
-	FolderOpen, Search, MoreVertical, ExternalLink, Eye, RefreshCw,
-	FolderOpen as FolderIcon, Trash2, ChevronUp, ChevronDown, Mic,
-} from 'lucide-react';
-import { BsFillChatLeftTextFill } from 'react-icons/bs';
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { PageHeader } from '../../components/PageHeader';
-import { useMutation } from '../../hooks/useQuery';
-import { useStore } from '../../store';
-import { scanModels, scanWhisperModels, reparseModel } from '../../api/services';
-import { openExternal } from '../../utils/openExternal';
-import type { IModel, IWhisperModel } from '@warpcore/shared';
+	ChevronDown,
+	ChevronUp,
+	ExternalLink,
+	Eye,
+	FolderOpen as FolderIcon,
+	FolderOpen,
+	Mic,
+	MoreVertical,
+	RefreshCw,
+	Search,
+	Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BsFillChatLeftTextFill } from "react-icons/bs";
+import { reparseModel, scanModels, scanWhisperModels } from "../../api/services";
+import { PageHeader } from "../../components/PageHeader";
+import { useMutation } from "../../hooks/useQuery";
+import { useStore } from "../../store";
+import { openExternal } from "../../utils/openExternal";
 
 // ============================================================
 // Helpers
 // ============================================================
 
-import { QUANT_COLORS } from '@/lib/constants';
+import { QUANT_COLORS } from "@/lib/constants";
 
-type TModelType = 'llama' | 'whisper';
+type TModelType = "llama" | "whisper";
 
 interface IDisplayModel extends IModel {
 	_modelType: TModelType;
@@ -32,44 +41,49 @@ function normalizeWhisper(m: IWhisperModel): IDisplayModel {
 		user: m.user,
 		name: m.name,
 		dirPath: m.dirPath,
-		_modelType: 'whisper',
-		files: m.files.map(f => ({
-			...f,
-			shardIndex: null,
-			shardTotal: null,
-			isMmproj: false,
-			parentModel: null,
-		}) as any),
-		primaryFile: m.primaryFile ? ({
-			...m.primaryFile,
-			shardIndex: null,
-			shardTotal: null,
-			isMmproj: false,
-			parentModel: null,
-			metadata: {
-				quantType: meta?.ftype ?? '-',
-				architecture: `whisper (${meta?.modelSize ?? 'unknown'})`,
-				paramCount: meta?.modelSize ?? '-',
-				contextLength: meta?.contextLength ?? 0,
-			},
-		} as any) : null,
+		_modelType: "whisper",
+		files: m.files.map(
+			(f) =>
+				({
+					...f,
+					shardIndex: null,
+					shardTotal: null,
+					isMmproj: false,
+					parentModel: null,
+				}) as any,
+		),
+		primaryFile: m.primaryFile
+			? ({
+					...m.primaryFile,
+					shardIndex: null,
+					shardTotal: null,
+					isMmproj: false,
+					parentModel: null,
+					metadata: {
+						quantType: meta?.ftype ?? "-",
+						architecture: `whisper (${meta?.modelSize ?? "unknown"})`,
+						paramCount: meta?.modelSize ?? "-",
+						contextLength: meta?.contextLength ?? 0,
+					},
+				} as any)
+			: null,
 		mmprojFile: null,
 		totalSizeMb: m.totalSizeMb,
 	};
 }
 
 function tagLlama(m: IModel): IDisplayModel {
-	return { ...m, _modelType: 'llama' };
+	return { ...m, _modelType: "llama" };
 }
 
 function formatSize(mb: number): string {
-	if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB';
-	return mb + ' MB';
+	if (mb >= 1024) return (mb / 1024).toFixed(1) + " GB";
+	return mb + " MB";
 }
 
 function formatContext(ctx: number): string {
-	if (ctx <= 0) return '-';
-	if (ctx >= 1024) return (ctx / 1024).toFixed(0) + 'k';
+	if (ctx <= 0) return "-";
+	if (ctx >= 1024) return (ctx / 1024).toFixed(0) + "k";
 	return String(ctx);
 }
 
@@ -77,7 +91,16 @@ function formatContext(ctx: number): string {
 // Sort
 // ============================================================
 
-type TSortKey = 'type' | 'name' | 'user' | 'quant' | 'params' | 'size' | 'context' | 'files' | 'vision';
+type TSortKey =
+	| "type"
+	| "name"
+	| "user"
+	| "quant"
+	| "params"
+	| "size"
+	| "context"
+	| "files"
+	| "vision";
 
 interface ISortState {
 	key: TSortKey;
@@ -87,19 +110,27 @@ interface ISortState {
 function getSortValue(model: IDisplayModel, key: TSortKey): string | number {
 	const meta = model.primaryFile?.metadata;
 	switch (key) {
-		case 'type': return model._modelType === 'llama' ? 0 : 1;
-		case 'name': return model.name.toLowerCase();
-		case 'user': return model.user.toLowerCase();
-		case 'quant': return meta?.quantType?.toLowerCase() ?? '';
-		case 'params': {
-			const raw = meta?.paramCount ?? '';
+		case "type":
+			return model._modelType === "llama" ? 0 : 1;
+		case "name":
+			return model.name.toLowerCase();
+		case "user":
+			return model.user.toLowerCase();
+		case "quant":
+			return meta?.quantType?.toLowerCase() ?? "";
+		case "params": {
+			const raw = meta?.paramCount ?? "";
 			const match = raw.match(/([\d.]+)/);
 			return match ? parseFloat(match[1]!) : 0;
 		}
-		case 'size': return model.totalSizeMb;
-		case 'context': return meta?.contextLength ?? 0;
-		case 'files': return model.files.length;
-		case 'vision': return model.mmprojFile ? 1 : 0;
+		case "size":
+			return model.totalSizeMb;
+		case "context":
+			return meta?.contextLength ?? 0;
+		case "files":
+			return model.files.length;
+		case "vision":
+			return model.mmprojFile ? 1 : 0;
 	}
 }
 
@@ -117,15 +148,23 @@ function sortModels(models: IDisplayModel[], sort: ISortState): IDisplayModel[] 
 // Row Menu
 // ============================================================
 
-function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose: () => void; onReparse: (id: string) => void }) {
+function RowMenu({
+	model,
+	onClose,
+	onReparse,
+}: {
+	model: IDisplayModel;
+	onClose: () => void;
+	onReparse: (id: string) => void;
+}) {
 	const menuRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		function handleClick(e: MouseEvent) {
 			if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
 		}
-		document.addEventListener('mousedown', handleClick);
-		return () => document.removeEventListener('mousedown', handleClick);
+		document.addEventListener("mousedown", handleClick);
+		return () => document.removeEventListener("mousedown", handleClick);
 	}, [onClose]);
 
 	const hfUrl = `https://huggingface.co/${model.user}/${model.name}`;
@@ -152,7 +191,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				py="2"
 				cursor="pointer"
 				color="var(--wc-text-secondary)"
-				_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-heading)' }}
+				_hover={{ bg: "var(--wc-bg-card)", color: "var(--wc-text-heading)" }}
 				transition="all 0.1s ease"
 				onClick={() => {
 					openExternal(hfUrl);
@@ -168,7 +207,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				py="2"
 				cursor="pointer"
 				color="var(--wc-text-secondary)"
-				_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-heading)' }}
+				_hover={{ bg: "var(--wc-bg-card)", color: "var(--wc-text-heading)" }}
 				transition="all 0.1s ease"
 				onClick={() => {
 					navigator.clipboard.writeText(model.dirPath);
@@ -178,14 +217,14 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				<FolderIcon size={14} />
 				<Text fontSize="12px">Copy folder path</Text>
 			</HStack>
-			{model._modelType === 'llama' && (
+			{model._modelType === "llama" && (
 				<HStack
 					gap="2"
 					px="3"
 					py="2"
 					cursor="pointer"
 					color="var(--wc-text-secondary)"
-					_hover={{ bg: 'var(--wc-bg-card)', color: 'var(--wc-text-heading)' }}
+					_hover={{ bg: "var(--wc-bg-card)", color: "var(--wc-text-heading)" }}
 					transition="all 0.1s ease"
 					onClick={() => {
 						onReparse(model.id);
@@ -197,13 +236,7 @@ function RowMenu({ model, onClose, onReparse }: { model: IDisplayModel; onClose:
 				</HStack>
 			)}
 			<Box h="1px" bg="var(--wc-border-subtle)" my="1" />
-			<	HStack
-				gap="2"
-				px="3"
-				py="2"
-				cursor="not-allowed"
-				color="var(--wc-text-disabled)"
-			>
+			<HStack gap="2" px="3" py="2" cursor="not-allowed" color="var(--wc-text-disabled)">
 				<Trash2 size={14} />
 				<Text fontSize="12px">Delete</Text>
 			</HStack>
@@ -226,26 +259,24 @@ function SortHeader({
 	sortKey: TSortKey;
 	sort: ISortState;
 	onSort: (key: TSortKey) => void;
-	align?: 'left' | 'right';
+	align?: "left" | "right";
 }) {
 	const isActive = sort.key === sortKey;
 	return (
 		<HStack
 			gap="1"
 			cursor="pointer"
-			color={isActive ? 'var(--wc-text-secondary)' : 'var(--wc-text-muted)'}
-			_hover={{ color: 'var(--wc-text-secondary)' }}
+			color={isActive ? "var(--wc-text-secondary)" : "var(--wc-text-muted)"}
+			_hover={{ color: "var(--wc-text-secondary)" }}
 			transition="color 0.1s ease"
 			onClick={() => onSort(sortKey)}
 			userSelect="none"
-			justifyContent={align === 'right' ? 'flex-end' : 'flex-start'}
+			justifyContent={align === "right" ? "flex-end" : "flex-start"}
 		>
 			<Text fontSize="11px" fontWeight="600" textTransform="uppercase" letterSpacing="0.04em">
 				{label}
 			</Text>
-			{isActive && (
-				sort.desc ? <ChevronDown size={12} /> : <ChevronUp size={12} />
-			)}
+			{isActive && (sort.desc ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
 		</HStack>
 	);
 }
@@ -255,29 +286,32 @@ function SortHeader({
 // ============================================================
 
 export function ModelsPage() {
-	const modelsRecord = useStore(s => s.models);
-	const whisperModelsRecord = useStore(s => s.whisperModels);
-	const allModels: IDisplayModel[] = useMemo(() => [
-		...Object.values(modelsRecord).map(tagLlama),
-		...Object.values(whisperModelsRecord || {}).map(normalizeWhisper),
-	], [modelsRecord, whisperModelsRecord]);
+	const modelsRecord = useStore((s) => s.models);
+	const whisperModelsRecord = useStore((s) => s.whisperModels);
+	const allModels: IDisplayModel[] = useMemo(
+		() => [
+			...Object.values(modelsRecord).map(tagLlama),
+			...Object.values(whisperModelsRecord || {}).map(normalizeWhisper),
+		],
+		[modelsRecord, whisperModelsRecord],
+	);
 	const scanMut = useMutation<void, IModel[]>(
-		useCallback(() => scanModels() as Promise<any>, [])
+		useCallback(() => scanModels() as Promise<any>, []),
 	);
 	const scanWhisperMut = useMutation<void, any[]>(
-		useCallback(() => scanWhisperModels() as Promise<any>, [])
+		useCallback(() => scanWhisperModels() as Promise<any>, []),
 	);
 	const reparseMut = useMutation<string, IModel>(
-		useCallback((id: string) => reparseModel(id) as Promise<any>, [])
+		useCallback((id: string) => reparseModel(id) as Promise<any>, []),
 	);
 
-const [search, setSearch] = useState('');
-	const [sort, setSort] = useState<ISortState>({ key: 'type', desc: false });
+	const [search, setSearch] = useState("");
+	const [sort, setSort] = useState<ISortState>({ key: "type", desc: false });
 	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 	const getMenuKey = (m: IDisplayModel) => `${m.id}-${m._modelType}`;
 
 	const handleSort = useCallback((key: TSortKey) => {
-		setSort(prev => prev.key === key ? { key, desc: !prev.desc } : { key, desc: false });
+		setSort((prev) => (prev.key === key ? { key, desc: !prev.desc } : { key, desc: false }));
 	}, []);
 
 	const handleScan = async () => {
@@ -291,12 +325,13 @@ const [search, setSearch] = useState('');
 		const q = search.toLowerCase().trim();
 		let result = allModels;
 		if (q) {
-			result = result.filter(m =>
-				m.name.toLowerCase().includes(q)
-				|| m.user.toLowerCase().includes(q)
-				|| (m.primaryFile?.metadata?.quantType?.toLowerCase().includes(q))
-				|| (m.primaryFile?.metadata?.paramCount?.toLowerCase().includes(q))
-				|| (m.primaryFile?.metadata?.architecture?.toLowerCase().includes(q))
+			result = result.filter(
+				(m) =>
+					m.name.toLowerCase().includes(q) ||
+					m.user.toLowerCase().includes(q) ||
+					m.primaryFile?.metadata?.quantType?.toLowerCase().includes(q) ||
+					m.primaryFile?.metadata?.paramCount?.toLowerCase().includes(q) ||
+					m.primaryFile?.metadata?.architecture?.toLowerCase().includes(q),
 			);
 		}
 		return sortModels(result, sort);
@@ -304,23 +339,23 @@ const [search, setSearch] = useState('');
 
 	// Column widths
 	const cols = {
-		type: '50px',
-		name: '1',      // flex
-		user: '140px',
-		quant: '90px',
-		params: '60px',
-		size: '80px',
-		context: '70px',
-		files: '50px',
-		vision: '50px',
-		actions: '40px',
+		type: "50px",
+		name: "1", // flex
+		user: "140px",
+		quant: "90px",
+		params: "60px",
+		size: "80px",
+		context: "70px",
+		files: "50px",
+		vision: "50px",
+		actions: "40px",
 	};
 
 	return (
 		<Box>
-<PageHeader
+			<PageHeader
 				title="Models"
-				subtitle={`${allModels.length} model${allModels.length !== 1 ? 's' : ''}`}
+				subtitle={`${allModels.length} model${allModels.length !== 1 ? "s" : ""}`}
 				icon={<FolderOpen size={20} />}
 				actions={
 					<HStack gap="3">
@@ -328,18 +363,20 @@ const [search, setSearch] = useState('');
 							<Search
 								size={14}
 								style={{
-									position: 'absolute',
-									left: '10px',
-									top: '50%',
-									transform: 'translateY(-50%)',
-									color: 'var(--wc-text-muted)',
-									pointerEvents: 'none',
+									position: "absolute",
+									left: "10px",
+									top: "50%",
+									transform: "translateY(-50%)",
+									color: "var(--wc-text-muted)",
+									pointerEvents: "none",
 								}}
 							/>
 							<Input
 								placeholder="Search models..."
 								value={search}
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									setSearch(e.target.value)
+								}
 								size="sm"
 								pl="8"
 								w="220px"
@@ -348,9 +385,12 @@ const [search, setSearch] = useState('');
 								borderRadius="lg"
 								fontSize="13px"
 								color="var(--wc-text-primary)"
-								_placeholder={{ color: 'var(--wc-text-faint)' }}
-								_hover={{ borderColor: 'var(--wc-border-hover)' }}
-								_focus={{ borderColor: 'var(--wc-accent-blue-focus)', boxShadow: 'none' }}
+								_placeholder={{ color: "var(--wc-text-faint)" }}
+								_hover={{ borderColor: "var(--wc-border-hover)" }}
+								_focus={{
+									borderColor: "var(--wc-accent-blue-focus)",
+									boxShadow: "none",
+								}}
 							/>
 						</Box>
 					</HStack>
@@ -362,7 +402,7 @@ const [search, setSearch] = useState('');
 						color="var(--wc-accent-blue)"
 						borderWidth="1px"
 						borderColor="var(--wc-accent-blue-border)"
-						_hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }}
+						_hover={{ bg: "var(--wc-accent-blue-hover-bg)" }}
 						borderRadius="lg"
 						fontSize="13px"
 						fontWeight="500"
@@ -384,15 +424,61 @@ const [search, setSearch] = useState('');
 					borderBottomWidth="1px"
 					borderColor="var(--wc-border-subtle)"
 				>
-					<Box w={cols.type}><SortHeader label="Type" sortKey="type" sort={sort} onSort={handleSort} /></Box>
-					<Box flex={cols.name}><SortHeader label="Model" sortKey="name" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.user}><SortHeader label="User" sortKey="user" sort={sort} onSort={handleSort} /></Box>
-<Box w={cols.quant}><SortHeader label="Quant" sortKey="quant" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.vision}><SortHeader label="Vision" sortKey="vision" sort={sort} onSort={handleSort} /></Box>
-				<Box w={cols.params}><SortHeader label="Params" sortKey="params" sort={sort} onSort={handleSort} /></Box>
-					<Box w={cols.size}><SortHeader label="Size" sortKey="size" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.context}><SortHeader label="Context" sortKey="context" sort={sort} onSort={handleSort} align="right" /></Box>
-					<Box w={cols.files}><SortHeader label="Files" sortKey="files" sort={sort} onSort={handleSort} align="right" /></Box>
+					<Box w={cols.type}>
+						<SortHeader label="Type" sortKey="type" sort={sort} onSort={handleSort} />
+					</Box>
+					<Box flex={cols.name}>
+						<SortHeader label="Model" sortKey="name" sort={sort} onSort={handleSort} />
+					</Box>
+					<Box w={cols.user}>
+						<SortHeader label="User" sortKey="user" sort={sort} onSort={handleSort} />
+					</Box>
+					<Box w={cols.quant}>
+						<SortHeader label="Quant" sortKey="quant" sort={sort} onSort={handleSort} />
+					</Box>
+					<Box w={cols.vision}>
+						<SortHeader
+							label="Vision"
+							sortKey="vision"
+							sort={sort}
+							onSort={handleSort}
+						/>
+					</Box>
+					<Box w={cols.params}>
+						<SortHeader
+							label="Params"
+							sortKey="params"
+							sort={sort}
+							onSort={handleSort}
+						/>
+					</Box>
+					<Box w={cols.size}>
+						<SortHeader
+							label="Size"
+							sortKey="size"
+							sort={sort}
+							onSort={handleSort}
+							align="right"
+						/>
+					</Box>
+					<Box w={cols.context}>
+						<SortHeader
+							label="Context"
+							sortKey="context"
+							sort={sort}
+							onSort={handleSort}
+							align="right"
+						/>
+					</Box>
+					<Box w={cols.files}>
+						<SortHeader
+							label="Files"
+							sortKey="files"
+							sort={sort}
+							onSort={handleSort}
+							align="right"
+						/>
+					</Box>
 					<Box w={cols.actions} />
 				</Flex>
 
@@ -416,29 +502,32 @@ const [search, setSearch] = useState('');
 
 				{/* Rows */}
 				<Box>
-					{filtered.map(model => {
+					{filtered.map((model) => {
 						const meta = model.primaryFile?.metadata;
-						const quantType = meta?.quantType ?? '-';
-						const quantColor = QUANT_COLORS[quantType] ?? 'var(--wc-text-tertiary)';
+						const quantType = meta?.quantType ?? "-";
+						const quantColor = QUANT_COLORS[quantType] ?? "var(--wc-text-tertiary)";
 
 						return (
 							<Flex
-								key={model.id + '-' + model._modelType}
+								key={model.id + "-" + model._modelType}
 								px="4"
 								py="3"
 								gap="4"
 								alignItems="center"
 								borderBottomWidth="1px"
-borderColor="var(--wc-border-subtle)"
-				_hover={{ bg: 'var(--wc-bg-surface)' }}
+								borderColor="var(--wc-border-subtle)"
+								_hover={{ bg: "var(--wc-bg-surface)" }}
 								transition="background 0.1s ease"
 							>
 								{/* Type */}
 								<Box w={cols.type} display="flex" justifyContent="center">
-									{model._modelType === 'llama'
-										? <BsFillChatLeftTextFill style={{ fontSize: 16, color: 'var(--wc-accent-blue)' }} />
-										: <Mic size={16} color="var(--wc-accent-green)" />
-									}
+									{model._modelType === "llama" ? (
+										<BsFillChatLeftTextFill
+											style={{ fontSize: 16, color: "var(--wc-accent-blue)" }}
+										/>
+									) : (
+										<Mic size={16} color="var(--wc-accent-green)" />
+									)}
 								</Box>
 
 								{/* Model name */}
@@ -460,7 +549,11 @@ borderColor="var(--wc-border-subtle)"
 
 								{/* User */}
 								<Box w={cols.user}>
-									<Text fontSize="12px" color="var(--wc-text-muted)" lineClamp={1}>
+									<Text
+										fontSize="12px"
+										color="var(--wc-text-muted)"
+										lineClamp={1}
+									>
 										{model.user}
 									</Text>
 								</Box>
@@ -484,26 +577,40 @@ borderColor="var(--wc-border-subtle)"
 
 								{/* Vision */}
 								<Box w={cols.vision} display="flex" justifyContent="center">
-									{model.mmprojFile && <Eye size={16} color="var(--wc-accent-yellow)" />}
+									{model.mmprojFile && (
+										<Eye size={16} color="var(--wc-accent-yellow)" />
+									)}
 								</Box>
 
 								{/* Params */}
 								<Box w={cols.params}>
-									<Text fontSize="12px" color="var(--wc-text-tertiary)" fontFamily='"Geist Mono", monospace'>
-										{meta?.paramCount ?? '-'}
+									<Text
+										fontSize="12px"
+										color="var(--wc-text-tertiary)"
+										fontFamily='"Geist Mono", monospace'
+									>
+										{meta?.paramCount ?? "-"}
 									</Text>
 								</Box>
 
 								{/* Size */}
 								<Box w={cols.size} textAlign="right">
-									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
+									<Text
+										fontSize="12px"
+										color="var(--wc-text-muted)"
+										fontFamily='"Geist Mono", monospace'
+									>
 										{formatSize(model.totalSizeMb)}
 									</Text>
 								</Box>
 
 								{/* Context */}
 								<Box w={cols.context} textAlign="right">
-									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
+									<Text
+										fontSize="12px"
+										color="var(--wc-text-muted)"
+										fontFamily='"Geist Mono", monospace'
+									>
 										{formatContext(meta?.contextLength ?? 0)}
 									</Text>
 								</Box>
@@ -526,14 +633,27 @@ borderColor="var(--wc-border-subtle)"
 										borderRadius="md"
 										cursor="pointer"
 										color="var(--wc-text-faint)"
-										_hover={{ color: 'var(--wc-text-secondary)', bg: 'var(--wc-bg-card)' }}
+										_hover={{
+											color: "var(--wc-text-secondary)",
+											bg: "var(--wc-bg-card)",
+										}}
 										transition="all 0.1s ease"
-										onClick={() => setOpenMenuId(openMenuId === getMenuKey(model) ? null : getMenuKey(model))}
+										onClick={() =>
+											setOpenMenuId(
+												openMenuId === getMenuKey(model)
+													? null
+													: getMenuKey(model),
+											)
+										}
 									>
 										<MoreVertical size={14} />
 									</Flex>
 									{openMenuId === getMenuKey(model) && (
-										<RowMenu model={model} onClose={() => setOpenMenuId(null)} onReparse={(id) => reparseMut.mutate(id)} />
+										<RowMenu
+											model={model}
+											onClose={() => setOpenMenuId(null)}
+											onReparse={(id) => reparseMut.mutate(id)}
+										/>
 									)}
 								</Box>
 							</Flex>

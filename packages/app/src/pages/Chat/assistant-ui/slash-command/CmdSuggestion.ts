@@ -1,5 +1,5 @@
+import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { ReactRenderer } from "@tiptap/react";
-import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import type { SuggestionOptions } from "@tiptap/suggestion";
 import { useStore } from "@/store";
 import type { ISlashCommand } from "@/store/slices/slashCommands";
@@ -21,8 +21,10 @@ export const commandSuggestion: Omit<SuggestionOptions, "editor"> = {
 		const q = query.toLowerCase();
 		const matched = new Set<ISlashCommand>();
 		for (const c of Object.values(useStore.getState().slashCommands)) {
-			if (fuzzyMatch(c.name.toLowerCase(), q) ||
-				c.tags?.some(tag => fuzzyMatch(tag.toLowerCase(), q))) {
+			if (
+				fuzzyMatch(c.name.toLowerCase(), q) ||
+				c.tags?.some((tag) => fuzzyMatch(tag.toLowerCase(), q))
+			) {
 				matched.add(c);
 			}
 		}

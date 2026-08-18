@@ -1,12 +1,12 @@
-import { nanoid } from 'nanoid';
-import type React from 'react';
-import { AppletHost, TCallback } from '@warpcore/realmcore';
-import { useStore } from '@/store';
-import type { ISlashCommand } from '@/store/slices/slashCommands';
-import { EUISpaceLoc } from '@/store/slices/uiSpaces';
-import type { TUISpaceComponentId, TUISpaceComponent } from '@/store/slices/uiSpaces';
-import type { IAppletAPIFE } from './types';
-import { UiSpaceChip } from '../ui/UiSpaceChip';
+import { AppletHost } from "@warpcore/realmcore";
+import { nanoid } from "nanoid";
+import type React from "react";
+import { useStore } from "@/store";
+import type { ISlashCommand } from "@/store/slices/slashCommands";
+import type { TUISpaceComponent, TUISpaceComponentId } from "@/store/slices/uiSpaces";
+import { EUISpaceLoc } from "@/store/slices/uiSpaces";
+import { UiSpaceChip } from "../ui/UiSpaceChip";
+import type { IAppletAPIFE } from "./types";
 
 export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 	protected override buildApi(): IAppletAPIFE {
@@ -24,11 +24,16 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 				useStore.getState().unregisterSlashCommand(name, appletName);
 			},
 
-			registerUiSpaceComponent: (spaceId: string, component: TUISpaceComponent, opts: {
-				label: string,
-				componentId?: string,
-				icon?: React.ComponentType<any>,
-			}) => {
+			registerUiSpaceComponent: (
+				spaceId: string,
+				component: TUISpaceComponent,
+				opts: {
+					label: string;
+					componentId?: string;
+					icon?: React.ComponentType<any>;
+					align?: "start" | "end";
+				},
+			) => {
 				return useStore.getState().registerUiSpaceComponent({
 					location: spaceId as EUISpaceLoc,
 					component,
@@ -36,6 +41,7 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					appletName,
 					componentId: opts.componentId,
 					icon: opts.icon,
+					align: opts.align,
 				});
 			},
 			unregisterUiSpaceComponent: (id: TUISpaceComponentId) => {
@@ -47,7 +53,7 @@ export class AppletHostFE extends AppletHost<IAppletAPIFE> {
 					componentId: id,
 					location: EUISpaceLoc.COMPOSER,
 					component: UiSpaceChip,
-					label: 'UiSpaceChip',
+					label: "UiSpaceChip",
 					appletName,
 					props: options,
 					icon: options.icon,

@@ -1,12 +1,11 @@
-import { useState } from 'react';
-import { Box } from '@chakra-ui/react';
-import { updateSettings } from '@/api/services';
-import { StepWelcome } from './steps/StepWelcome';
-import { StepModelFolders } from './steps/StepModelFolders';
-import { StepBackends } from './steps/StepBackends';
-import { StepGuide } from './steps/StepGuide';
-import { StepDone } from './steps/StepDone';
-import { useTauriWindow } from '@/hooks/useTauriWindow';
+import { Box } from "@chakra-ui/react";
+import { useState } from "react";
+import { updateSettings } from "@/api/services";
+import { StepBackends } from "./steps/StepBackends";
+import { StepDone } from "./steps/StepDone";
+import { StepGuide } from "./steps/StepGuide";
+import { StepModelFolders } from "./steps/StepModelFolders";
+import { StepWelcome } from "./steps/StepWelcome";
 
 const STEPS = [StepWelcome, StepModelFolders, StepBackends, StepGuide, StepDone];
 const TOTAL_STEPS = STEPS.length;
@@ -21,11 +20,11 @@ export function OnboardingPage() {
 	const [currentStep, setCurrentStep] = useState(0);
 
 	const goNext = () => {
-		setCurrentStep(prev => Math.min(TOTAL_STEPS - 1, prev + 1));
+		setCurrentStep((prev) => Math.min(TOTAL_STEPS - 1, prev + 1));
 	};
 
 	const goPrev = () => {
-		setCurrentStep(prev => Math.max(0, prev - 1));
+		setCurrentStep((prev) => Math.max(0, prev - 1));
 	};
 
 	const finishOnboarding = async () => {

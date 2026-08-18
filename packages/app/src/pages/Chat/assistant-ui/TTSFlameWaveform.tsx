@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { subscribeTTSAnalyser } from './KokoroTTS';
+import { useEffect, useRef, useState } from "react";
+import { subscribeTTSAnalyser } from "./KokoroTTS";
+
 interface ITTSFlameWaveformProps {
 	height?: number;
 }
@@ -16,7 +17,7 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		const canvas = canvasRef.current;
 		const wrap = wrapRef.current;
 		if (!canvas || !wrap) return;
-		const ctx = canvas.getContext('2d');
+		const ctx = canvas.getContext("2d");
 		if (!ctx) return;
 		const dpr = window.devicePixelRatio || 1;
 		let width = wrap.clientWidth;
@@ -39,7 +40,12 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		const binEnd = Math.floor(bufferLength * 0.6);
 		const usableBins = binEnd - binStart;
 		let phase = 0;
-		const drawPass = (pts: Array<{ x: number; y: number }>, hueShift: number, alpha: number, yScale: number) => {
+		const drawPass = (
+			pts: Array<{ x: number; y: number }>,
+			hueShift: number,
+			alpha: number,
+			yScale: number,
+		) => {
 			ctx.beginPath();
 			ctx.moveTo(0, height);
 			ctx.lineTo(pts[0].x, height - pts[0].y * yScale);
@@ -53,10 +59,10 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 			ctx.lineTo(width, height);
 			ctx.closePath();
 			const grad = ctx.createLinearGradient(0, height, width, 0);
-			grad.addColorStop(0,    `hsla(${(190 + hueShift) % 360}, 90%, 65%, ${alpha})`);
+			grad.addColorStop(0, `hsla(${(190 + hueShift) % 360}, 90%, 65%, ${alpha})`);
 			grad.addColorStop(0.33, `hsla(${(270 + hueShift) % 360}, 85%, 65%, ${alpha})`);
 			grad.addColorStop(0.66, `hsla(${(320 + hueShift) % 360}, 90%, 65%, ${alpha})`);
-			grad.addColorStop(1,    `hsla(${(20  + hueShift) % 360}, 95%, 65%, ${alpha})`);
+			grad.addColorStop(1, `hsla(${(20 + hueShift) % 360}, 95%, 65%, ${alpha})`);
 			ctx.fillStyle = grad;
 			ctx.fill();
 		};
@@ -69,21 +75,21 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 			for (let i = 0; i <= samples; i++) {
 				const binIndex = binStart + Math.floor((i / samples) * usableBins);
 				const v = data[binIndex] / 255;
-				const envelope = 1 - Math.pow(Math.abs(i - cx) / cx, 1.6);
+				const envelope = 1 - (Math.abs(i - cx) / cx) ** 1.6;
 				const amp = v * envelope;
 				const y = Math.max(2, amp * height * 0.95);
 				const x = (i / samples) * width;
 				pts.push({ x, y });
 			}
-			ctx.globalCompositeOperation = 'lighter';
-			ctx.filter = 'blur(14px)';
+			ctx.globalCompositeOperation = "lighter";
+			ctx.filter = "blur(14px)";
 			drawPass(pts, phase, 0.35, 1.15);
-			ctx.filter = 'blur(7px)';
-			drawPass(pts, phase + 60, 0.30, 1.0);
-			ctx.filter = 'blur(2px)';
+			ctx.filter = "blur(7px)";
+			drawPass(pts, phase + 60, 0.3, 1.0);
+			ctx.filter = "blur(2px)";
 			drawPass(pts, phase + 120, 0.25, 0.85);
-			ctx.filter = 'none';
-			ctx.globalCompositeOperation = 'source-over';
+			ctx.filter = "none";
+			ctx.globalCompositeOperation = "source-over";
 			rafRef.current = requestAnimationFrame(draw);
 		};
 		draw();
@@ -96,16 +102,16 @@ export function TTSFlameWaveform({ height = 64 }: ITTSFlameWaveformProps) {
 		<div
 			ref={wrapRef}
 			style={{
-				position: 'absolute',
-				bottom: '100%',
+				position: "absolute",
+				bottom: "100%",
 				left: 0,
 				right: 0,
 				height,
-				pointerEvents: 'none',
+				pointerEvents: "none",
 				zIndex: 1,
-				overflow: 'hidden',
-				borderBottomLeftRadius: 'var(--composer-radius, 24px)',
-				borderBottomRightRadius: 'var(--composer-radius, 24px)',
+				overflow: "hidden",
+				borderBottomLeftRadius: "var(--composer-radius, 24px)",
+				borderBottomRightRadius: "var(--composer-radius, 24px)",
 			}}
 		>
 			<canvas ref={canvasRef} />

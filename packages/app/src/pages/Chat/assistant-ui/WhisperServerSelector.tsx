@@ -1,9 +1,9 @@
-import { Box, Text, HStack, Slider } from '@chakra-ui/react';
-import { Mic, ChevronDown, MicOff } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useStore } from '@/store';
-import { EWhisperServerStatus, TWhisperServerId } from '@warpcore/shared';
-import { updateSettings } from '@/api/services';
+import { Box, HStack, Slider, Text } from "@chakra-ui/react";
+import { EWhisperServerStatus } from "@warpcore/shared";
+import { ChevronDown, Mic, MicOff } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+import { updateSettings } from "@/api/services";
+import { useStore } from "@/store";
 
 // COMMENTED OUT: per-thread whisper server selection no longer used
 // export function parseWhisperThreadMeta(meta: string): { whisperServerId: string | null } {
@@ -18,17 +18,21 @@ import { updateSettings } from '@/api/services';
 export const ThreadWhisperServerSelector = React.memo(() => {
 	const [open, setOpen] = useState(false);
 
-	const whisperServersMap = useStore(s => s.whisperServers);
-	const whisperServers = useMemo(() => Object.values(whisperServersMap).sort((a, b) => {
-		const isARunning = a.status === EWhisperServerStatus.RUNNING;
-		const isBRunning = b.status === EWhisperServerStatus.RUNNING;
-		if (isARunning && !isBRunning) return -1;
-		if (!isARunning && isBRunning) return 1;
-		return 0;
-	}), [whisperServersMap]);
+	const whisperServersMap = useStore((s) => s.whisperServers);
+	const whisperServers = useMemo(
+		() =>
+			Object.values(whisperServersMap).sort((a, b) => {
+				const isARunning = a.status === EWhisperServerStatus.RUNNING;
+				const isBRunning = b.status === EWhisperServerStatus.RUNNING;
+				if (isARunning && !isBRunning) return -1;
+				if (!isARunning && isBRunning) return 1;
+				return 0;
+			}),
+		[whisperServersMap],
+	);
 
-	const selectedWhisperServerId = useStore(s => s.selectedWhisperServerId);
-	const setSelectedWhisperServerId = useStore(s => s.setSelectedWhisperServerId);
+	const selectedWhisperServerId = useStore((s) => s.selectedWhisperServerId);
+	const setSelectedWhisperServerId = useStore((s) => s.setSelectedWhisperServerId);
 
 	// COMMENTED OUT: per-thread whisper server reading no longer used
 	// const thread = useStore(s => threadId ? s.threads[threadId] : undefined);
@@ -37,20 +41,23 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 	// 	[thread]
 	// );
 
-	const displayServer = useMemo(() => selectedWhisperServerId ? whisperServersMap[selectedWhisperServerId] : null, [
-		selectedWhisperServerId,
-		whisperServersMap
-	]);
+	const displayServer = useMemo(
+		() => (selectedWhisperServerId ? whisperServersMap[selectedWhisperServerId] : null),
+		[selectedWhisperServerId, whisperServersMap],
+	);
 
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
-	const kokoroSpeed = useStore(s => s.settings.kokoroSpeed ?? 1);
+	const kokoroSpeed = useStore((s) => s.settings.kokoroSpeed ?? 1);
 
-	const handleSelect = useCallback(async (serverId: string) => {
-		setOpen(false);
-		setSelectedWhisperServerId(serverId);
-		// COMMENTED OUT: per-thread whisper server writing no longer used
-		// if (threadId) await updateThread(threadId, { whisperServerId: serverId });
-	}, [setSelectedWhisperServerId]);
+	const handleSelect = useCallback(
+		async (serverId: string) => {
+			setOpen(false);
+			setSelectedWhisperServerId(serverId);
+			// COMMENTED OUT: per-thread whisper server writing no longer used
+			// if (threadId) await updateThread(threadId, { whisperServerId: serverId });
+		},
+		[setSelectedWhisperServerId],
+	);
 
 	return (
 		<Box position="relative">
@@ -61,17 +68,18 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 				borderRadius="lg"
 				borderWidth="1px"
 				borderColor="var(--wc-border-default)"
-				_hover={{ bg: 'var(--wc-bg-hover)' }}
+				_hover={{ bg: "var(--wc-bg-hover)" }}
 				onClick={() => setOpen(!open)}
 				fontSize="12px"
 				color="var(--wc-text-primary)"
 				minW="55px"
 				maxW="55px"
 			>
-				{displayServer?.status === EWhisperServerStatus.RUNNING ? 
-					<Mic size={14} color={'var(--wc-accent-green)'} /> :
-					<MicOff size={14} color={'var(--wc-text-muted)'} />
-				}
+				{displayServer?.status === EWhisperServerStatus.RUNNING ? (
+					<Mic size={14} color={"var(--wc-accent-green)"} />
+				) : (
+					<MicOff size={14} color={"var(--wc-text-muted)"} />
+				)}
 				<ChevronDown size={12} style={{ opacity: 0.4 }} />
 			</HStack>
 			{open && (
@@ -95,8 +103,12 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 						<>
 							<Box px="3" py="2">
 								<HStack justify="space-between" mb="1">
-									<Text fontSize="11px" color="var(--wc-text-muted)">TTS Speed</Text>
-									<Text fontSize="11px" color="var(--wc-text-tertiary)">{kokoroSpeed.toFixed(1)}x</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">
+										TTS Speed
+									</Text>
+									<Text fontSize="11px" color="var(--wc-text-tertiary)">
+										{kokoroSpeed.toFixed(1)}x
+									</Text>
 								</HStack>
 								<Slider.Root
 									w="full"
@@ -106,7 +118,9 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 									min={0.5}
 									max={3}
 									step={0.1}
-									onValueChange={(details) => updateSettings({ kokoroSpeed: details.value[0] })}
+									onValueChange={(details) =>
+										updateSettings({ kokoroSpeed: details.value[0] })
+									}
 								>
 									<Slider.Control>
 										<Slider.Track>
@@ -126,24 +140,44 @@ export const ThreadWhisperServerSelector = React.memo(() => {
 							px="3"
 							py="2"
 							cursor="pointer"
-							bg={selectedWhisperServerId === s.id ? 'var(--wc-bg-selected)' : 'transparent'}
-							_hover={{ bg: 'var(--wc-bg-card)' }}
+							bg={
+								selectedWhisperServerId === s.id
+									? "var(--wc-bg-selected)"
+									: "transparent"
+							}
+							_hover={{ bg: "var(--wc-bg-card)" }}
 							onClick={() => handleSelect(s.id)}
 							fontSize="12px"
 							color="var(--wc-text-primary)"
 						>
-							<Box w="8px" h="8px" borderRadius="full"
-								bg={s.status === EWhisperServerStatus.RUNNING ? 'var(--wc-accent-green-icon)' :
-									s.status === EWhisperServerStatus.LOADING ? 'var(--wc-accent-yellow-strong)' :
-									s.status === EWhisperServerStatus.ERROR ? 'var(--wc-accent-red)' : 'var(--wc-text-disabled)'}
+							<Box
+								w="8px"
+								h="8px"
+								borderRadius="full"
+								bg={
+									s.status === EWhisperServerStatus.RUNNING
+										? "var(--wc-accent-green-icon)"
+										: s.status === EWhisperServerStatus.LOADING
+											? "var(--wc-accent-yellow-strong)"
+											: s.status === EWhisperServerStatus.ERROR
+												? "var(--wc-accent-red)"
+												: "var(--wc-text-disabled)"
+								}
 							/>
-							<Text flex="1" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+							<Text
+								flex="1"
+								overflow="hidden"
+								textOverflow="ellipsis"
+								whiteSpace="nowrap"
+							>
 								{s.serverName}
 							</Text>
 						</HStack>
 					))}
 					{whisperServers.length === 0 && (
-						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">No servers</Text>
+						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">
+							No servers
+						</Text>
 					)}
 				</Box>
 			)}

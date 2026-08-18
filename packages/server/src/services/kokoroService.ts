@@ -1,20 +1,22 @@
-import path from 'path';
-import os from 'os';
-import { createRequire } from 'node:module';
-import { store } from '../util/store';
-import type { ISettings } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
-const SETTINGS_KEY = 'settings:general';
+import { createRequire } from "node:module";
+import type { ISettings } from "@warpcore/shared";
+import { DEFAULT_SETTINGS } from "@warpcore/shared";
+import os from "os";
+import path from "path";
+import { store } from "../util/store";
+
+const SETTINGS_KEY = "settings:general";
 declare const __filename: string | undefined;
-const requireFn = (process as any).pkg && process.env.WARPCORE_RESOURCE_DIR
-	? createRequire(path.join(process.env.WARPCORE_RESOURCE_DIR, 'binaries', 'index.js'))
-	: createRequire(typeof __filename !== 'undefined' ? __filename : import.meta.url);
+const requireFn =
+	(process as any).pkg && process.env.WARPCORE_RESOURCE_DIR
+		? createRequire(path.join(process.env.WARPCORE_RESOURCE_DIR, "binaries", "index.js"))
+		: createRequire(typeof __filename !== "undefined" ? __filename : import.meta.url);
 let kokoroInstance: any = null;
 let isReady = false;
-const KOKORO_AUTHOR = 'onnx-community';
-const KOKORO_MODEL = 'Kokoro-82M-v1.0-ONNX';
+const KOKORO_AUTHOR = "onnx-community";
+const KOKORO_MODEL = "Kokoro-82M-v1.0-ONNX";
 function kokoroBasePath(): string {
-	return path.join(os.homedir(), '.config', 'warpcore', 'kokoro', KOKORO_AUTHOR, KOKORO_MODEL);
+	return path.join(os.homedir(), ".config", "warpcore", "kokoro", KOKORO_AUTHOR, KOKORO_MODEL);
 }
 export interface IPendingStream {
 	text: string;
@@ -33,23 +35,23 @@ setInterval(() => {
 export async function initKokoroService(): Promise<void> {
 	if (isReady) return;
 	try {
-		const kokoroLib = requireFn('kokoro-js');
-		const transformersLib = requireFn('@huggingface/transformers');
+		const kokoroLib = requireFn("kokoro-js");
+		const transformersLib = requireFn("@huggingface/transformers");
 		const { KokoroTTS, setVoiceDataUrl } = kokoroLib;
 		const { env } = transformersLib;
 		const basePath = kokoroBasePath();
 		env.allowLocalModels = true;
-		env.localModelPath = path.join(os.homedir(), '.config', 'warpcore', 'kokoro');
+		env.localModelPath = path.join(os.homedir(), ".config", "warpcore", "kokoro");
 		env.allowRemoteModels = false;
-		setVoiceDataUrl(path.join(basePath, 'voices'));
+		setVoiceDataUrl(path.join(basePath, "voices"));
 		kokoroInstance = await KokoroTTS.from_pretrained(`${KOKORO_AUTHOR}/${KOKORO_MODEL}`, {
-			dtype: 'fp32',
-			device: 'cpu',
+			dtype: "fp32",
+			device: "cpu",
 		});
 		isReady = true;
-		console.log('[Kokoro] Model loaded');
+		console.log("[Kokoro] Model loaded");
 	} catch (err) {
-		console.error('[Kokoro] Init failed:', err);
+		console.error("[Kokoro] Init failed:", err);
 		throw err;
 	}
 }
@@ -68,12 +70,12 @@ export function abortStream(streamId: string): void {
 }
 export async function* consumeStream(streamId: string): AsyncGenerator<Buffer> {
 	const p = pendingStreams[streamId];
-	if (!p) throw new Error('stream not found');
+	if (!p) throw new Error("stream not found");
 	delete pendingStreams[streamId];
-	if (!isReady || !kokoroInstance) throw new Error('kokoro not ready');
-	const { TextSplitterStream } = requireFn('kokoro-js');
+	if (!isReady || !kokoroInstance) throw new Error("kokoro not ready");
+	const { TextSplitterStream } = requireFn("kokoro-js");
 	const splitter = new TextSplitterStream();
-	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 	const speed = settings.kokoroSpeed ?? 1;
 	const stream = kokoroInstance.stream(splitter, { voice: p.voice, speed });
 	splitter.push(p.text);

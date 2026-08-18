@@ -3,8 +3,10 @@
 // Core types. Universal — no Node or browser dependencies.
 // ============================================================
 
+import type { INotification } from "@warpcore/shared";
+
 // Re-export Immer types from store (needed for slice integration)
-export type { ImmerSet, ImmerGet } from '../store';
+export type { ImmerGet, ImmerSet } from "../store";
 
 // ============================================================
 // Identifiers
@@ -20,51 +22,51 @@ export type TMcpServerId = string;
 // Enums
 // ============================================================
 export enum EChatRole {
-	SYSTEM = 'system',
-	USER = 'user',
-	ASSISTANT = 'assistant',
-	TOOL = 'tool',
+	SYSTEM = "system",
+	USER = "user",
+	ASSISTANT = "assistant",
+	TOOL = "tool",
 }
 
 export enum EMessagePartType {
-	TEXT = 'text',
-	REASONING = 'reasoning',
-	TOOL_CALL = 'tool_call',
-	ATTACHMENT = 'attachment',
+	TEXT = "text",
+	REASONING = "reasoning",
+	TOOL_CALL = "tool_call",
+	ATTACHMENT = "attachment",
 }
 
 export enum EToolCallStatus {
-	PENDING = 'PENDING',
-	EXECUTING = 'EXECUTING',
-	COMPLETED = 'COMPLETED',
-	DENIED = 'DENIED',
-	ERROR = 'ERROR',
+	PENDING = "PENDING",
+	EXECUTING = "EXECUTING",
+	COMPLETED = "COMPLETED",
+	DENIED = "DENIED",
+	ERROR = "ERROR",
 }
 
 export enum EToolApprovalMode {
-	ASK = 'ASK',
-	ALLOWED = 'ALLOWED',
-	DENIED = 'DENIED',
+	ASK = "ASK",
+	ALLOWED = "ALLOWED",
+	DENIED = "DENIED",
 }
 
 export enum EMcpServerStatus {
-	DISCONNECTED = 'DISCONNECTED',
-	CONNECTING = 'CONNECTING',
-	CONNECTED = 'CONNECTED',
-	ERROR = 'ERROR',
+	DISCONNECTED = "DISCONNECTED",
+	CONNECTING = "CONNECTING",
+	CONNECTED = "CONNECTED",
+	ERROR = "ERROR",
 }
 
 export enum EMcpTransportType {
-	STDIO = 'STDIO',
-	HTTP = 'HTTP',
+	STDIO = "STDIO",
+	HTTP = "HTTP",
 }
 
 export enum EStreamStatus {
-	IDLE = 'IDLE',
-	STREAMING = 'STREAMING',
-	TOOL_CALLING = 'TOOL_CALLING',
-	WAITING_APPROVAL = 'WAITING_APPROVAL',
-	ERROR = 'ERROR',
+	IDLE = "IDLE",
+	STREAMING = "STREAMING",
+	TOOL_CALLING = "TOOL_CALLING",
+	WAITING_APPROVAL = "WAITING_APPROVAL",
+	ERROR = "ERROR",
 }
 
 // ============================================================
@@ -119,6 +121,7 @@ export interface IChatThread {
 	id: TThreadId;
 	title: string;
 	folderId: TFolderId | null;
+	parentId: TThreadId | null;
 	systemPrompt: string;
 	meta: string; // JSON blob — opaque to bridge
 	totalPromptTokens: number;
@@ -131,6 +134,7 @@ export interface IChatThreadCreatePayload {
 	id?: TThreadId;
 	title?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 	systemPrompt?: string;
 	meta?: string;
 }
@@ -138,12 +142,13 @@ export interface IChatThreadCreatePayload {
 export interface IListThreadsOptions {
 	query?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 }
 
 // ============================================================
 // FTS Search
 // ============================================================
-export type ESearchMode = 'everywhere' | 'threads' | 'thread';
+export type ESearchMode = "everywhere" | "threads" | "thread";
 
 export interface ISearchOptions {
 	mode: ESearchMode;
@@ -153,7 +158,7 @@ export interface ISearchOptions {
 }
 
 export interface ISearchResult {
-	type: 'message' | 'thread';
+	type: "message" | "thread";
 	threadId: string;
 	threadTitle: string;
 	messageId?: string;
@@ -175,6 +180,7 @@ export interface ISearchThreadResult {
 export interface IThreadPatch {
 	title?: string;
 	folderId?: TFolderId | null;
+	parentId?: TThreadId | null;
 	systemPrompt?: string;
 	meta?: string; // JSON blob replacement
 	totalPromptTokens?: number;
@@ -261,6 +267,7 @@ export interface IChatMessageStats {
 	predictedPerSecond?: number;
 	promptMs?: number;
 	predictedMs?: number;
+	finishReason?: string;
 }
 
 // ============================================================
@@ -327,11 +334,14 @@ export interface IMcpServerEntry {
 	timeout?: number;
 	warpdrv?: {
 		argDefaults?: Record<string, Record<string, string>>;
-		renderers?: Record<string, {
-			component: string;
-			propsMap?: Record<string, string>;
-			props?: Record<string, unknown>;
-		}>;
+		renderers?: Record<
+			string,
+			{
+				component: string;
+				propsMap?: Record<string, string>;
+				props?: Record<string, unknown>;
+			}
+		>;
 	};
 }
 
@@ -346,7 +356,7 @@ export interface IMcpServerState {
 	error: string | null;
 	tools: IToolDefinition[];
 	connectedAt: number | null;
-	warpdrv?: IMcpServerEntry['warpdrv'];
+	warpdrv?: IMcpServerEntry["warpdrv"];
 }
 
 // ============================================================
@@ -366,6 +376,7 @@ export interface ICompletionRequest {
 	threadId: TThreadId;
 	userMessage?: ICompletionUserMessage;
 	parentId?: TMessageId | null;
+	threadParentId?: TThreadId | null;
 	serverId?: string;
 	whisperServerId?: string;
 	enableAutoEmbed?: boolean;
@@ -388,7 +399,7 @@ export interface ICompletionRequest {
 // OpenAI-compatible wire format
 // ============================================================
 export interface IOpenAITool {
-	type: 'function';
+	type: "function";
 	function: {
 		name: string;
 		description: string;
@@ -398,7 +409,7 @@ export interface IOpenAITool {
 
 export interface IOpenAIToolCall {
 	id: string;
-	type: 'function';
+	type: "function";
 	function: {
 		name: string;
 		arguments: string;
@@ -412,38 +423,62 @@ export interface IElicitationRequest {
 	id: string;
 	serverName: string;
 	message: string;
-	mode: 'form' | 'url';
+	mode: "form" | "url";
 	url?: string;
 	requestedSchema?: Record<string, unknown>;
 }
 
 export interface IElicitationResponse {
-	action: 'accept' | 'decline' | 'cancel';
+	action: "accept" | "decline" | "cancel";
 	content?: Record<string, unknown>;
 }
 
 export type IBridgeEvent =
-	| { type: 'thread.created'; thread: IChatThread }
-	| { type: 'thread.updated'; threadId: TThreadId; updates: IThreadPatch }
-	| { type: 'thread.deleted'; threadId: TThreadId }
-	| { type: 'message.created'; message: IChatMessage }
-	| { type: 'message.patched'; messageId: TMessageId; threadId: TThreadId; updates: IMessagePatch }
-	| { type: 'message.deleted'; messageId: TMessageId; threadId: TThreadId }
-	| { type: 'message.chunk'; messageId: TMessageId; threadId: TThreadId; partId: TMessagePartId; partType: EMessagePartType.TEXT | EMessagePartType.REASONING; deltaText: string }
-	| { type: 'tool_call.starting'; threadId: TThreadId; messageId: TMessageId; name: string }
-	| { type: 'tool_call.created'; toolCall: IToolCall }
-	| { type: 'tool_call.updated'; toolCall: IToolCall }
-	| { type: 'inference.started'; threadId: TThreadId; messageId: TMessageId }
-	| { type: 'inference.ended'; threadId: TThreadId; messageId: TMessageId }
-	| { type: 'inference.error'; threadId: TThreadId; messageId: TMessageId; error: string }
-	| { type: 'elicitation_request'; threadId: string; request: IElicitationRequest }
-	| { type: 'elicitation_resolved'; id: string }
-	| { type: 'embedding.error'; error: string }
-	| { type: 'embedding.embedded'; messageId: TMessageId; threadId: TThreadId; modelId: string; topic: string }
-	| { type: 'embedding.removed'; messageId: TMessageId; modelId: string; topic: string }
-	| { type: 'workspace_state.updated'; folderId: TFolderId; data: Record<string, unknown> }
-	| { type: 'thread_state.updated'; threadId: TThreadId; data: Record<string, unknown> }
-	| { type: 'message_state.updated'; messageId: TMessageId; data: Record<string, unknown> };
+	| { type: "thread.created"; thread: IChatThread }
+	| { type: "thread.updated"; threadId: TThreadId; updates: IThreadPatch }
+	| { type: "thread.deleted"; threadId: TThreadId }
+	| { type: "message.created"; message: IChatMessage }
+	| {
+			type: "message.patched";
+			messageId: TMessageId;
+			threadId: TThreadId;
+			updates: IMessagePatch;
+	  }
+	| { type: "message.deleted"; messageId: TMessageId; threadId: TThreadId }
+	| {
+			type: "message.chunk";
+			messageId: TMessageId;
+			threadId: TThreadId;
+			partId: TMessagePartId;
+			partType: EMessagePartType.TEXT | EMessagePartType.REASONING;
+			deltaText: string;
+	  }
+	| { type: "tool_call.starting"; threadId: TThreadId; messageId: TMessageId; name: string }
+	| { type: "tool_call.created"; toolCall: IToolCall }
+	| { type: "tool_call.updated"; toolCall: IToolCall }
+	| { type: "inference.started"; threadId: TThreadId; messageId: TMessageId }
+	| { type: "inference.ended"; threadId: TThreadId; messageId: TMessageId }
+	| { type: "inference.error"; threadId: TThreadId; messageId: TMessageId; error: string }
+	| { type: "elicitation_request"; threadId: string; request: IElicitationRequest }
+	| { type: "elicitation_resolved"; id: string }
+	| { type: "embedding.error"; error: string }
+	| {
+			type: "embedding.embedded";
+			messageId: TMessageId;
+			threadId: TThreadId;
+			modelId: string;
+			topic: string;
+	  }
+	| { type: "embedding.removed"; messageId: TMessageId; modelId: string; topic: string }
+	| { type: "workspace_state.updated"; folderId: TFolderId; data: Record<string, unknown> }
+	| { type: "thread_state.updated"; threadId: TThreadId; data: Record<string, unknown> }
+	| { type: "message_state.updated"; messageId: TMessageId; data: Record<string, unknown> }
+	| { type: "folder.created"; folder: IFolder }
+	| { type: "folder.updated"; folderId: TFolderId; updates: Partial<IFolder> }
+	| { type: "folder.deleted"; folderId: TFolderId }
+	| { type: "folder.reordered"; folders: IFolder[] }
+	| { type: "notification.created"; notification: INotification }
+	| { type: "notification.updated"; notification: INotification };
 
 export interface IMessagePatch {
 	stats?: IChatMessageStats;
@@ -477,4 +512,4 @@ export interface ISSEChunk {
 }
 
 // Message conversion utilities
-export { convertMessagesToOpenAIFormat, type TOpenAIMessage } from '../messageConverter';
+export { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";

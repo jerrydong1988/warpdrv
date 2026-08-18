@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { ISlashCommandApi } from '@/hooks/useSlashCommandProcessor';
+import type { ISlashCommandApi } from "@/hooks/useSlashCommandProcessor";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 export interface ISlashCommandParam {
 	type: string;
@@ -13,7 +13,13 @@ export interface ISlashCommand {
 	description: string;
 	params: Record<string, ISlashCommandParam>;
 	tags?: string[];
-	execute: (api: ISlashCommandApi, params: Record<string, string | number>, extraParams?: Record<string, string>) => Promise<void>;
+	consumesInput?: boolean;
+	inputPlaceholder?: string;
+	execute: (
+		api: ISlashCommandApi,
+		params: Record<string, string | number>,
+		extraParams?: Record<string, string>,
+	) => Promise<void>;
 }
 
 export const slashCommandsSlice = (
@@ -23,7 +29,7 @@ export const slashCommandsSlice = (
 	slashCommands: {},
 	slashCommandsByApplet: {},
 	registerSlashCommand: (command, appletName) => {
-		setState(draft => {
+		setState((draft) => {
 			draft.slashCommands[command.name] = command;
 			if (appletName) {
 				if (!draft.slashCommandsByApplet[appletName]) {
@@ -34,7 +40,7 @@ export const slashCommandsSlice = (
 		});
 	},
 	unregisterSlashCommand: (name, appletName) => {
-		setState(draft => {
+		setState((draft) => {
 			delete draft.slashCommands[name];
 			if (appletName && draft.slashCommandsByApplet[appletName]) {
 				delete draft.slashCommandsByApplet[appletName][name];

@@ -1,15 +1,15 @@
-import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Shell } from './components/Shell';
-import { useToast } from './components/ToastProvider';
-import { useEventSource } from './hooks/useEventSource';
-import { useChatEventsStream } from './hooks/useChatEventsStream';
-import { useStore } from './store';
-import { fetchKokoroStatus, updateSettings } from './api/services';
-import { ETheme } from '@warpcore/shared';
+import { ETheme } from "@warpcore/shared";
+import { useEffect } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { fetchKokoroStatus, updateSettings } from "./api/services";
+import { Shell } from "./components/Shell";
+import { useToast } from "./components/ToastProvider";
+import { useChatEventsStream } from "./hooks/useChatEventsStream";
+import { useEventSource } from "./hooks/useEventSource";
+import { useStore } from "./store";
 export function App() {
 	const { toast } = useToast();
-	const theme = useStore(s => s.settings.theme ?? ETheme.DARK);
+	const theme = useStore((s) => s.settings.theme ?? ETheme.DARK);
 
 	// Initialize SSE connection for control plane
 	useEventSource();
@@ -23,9 +23,9 @@ export function App() {
 	}, [theme]);
 
 	// Apply app zoom level
-	const zoomLevel = useStore(s => s.settings.appZoomLevel ?? 1.0);
+	const zoomLevel = useStore((s) => s.settings.appZoomLevel ?? 1.0);
 	useEffect(() => {
-		const root = document.getElementById('root');
+		const root = document.getElementById("root");
 		if (root) root.style.zoom = String(zoomLevel);
 	}, [zoomLevel]);
 
@@ -40,8 +40,8 @@ export function App() {
 			const next = Math.min(3, Math.max(0.5, current + delta));
 			updateSettings({ appZoomLevel: next });
 		};
-		document.addEventListener('wheel', handler, { passive: false });
-		return () => document.removeEventListener('wheel', handler);
+		document.addEventListener("wheel", handler, { passive: false });
+		return () => document.removeEventListener("wheel", handler);
 	}, []);
 
 	// Expose store to window for debugging
@@ -51,14 +51,16 @@ export function App() {
 	}, []);
 
 	// disable rightclick
-	useEffect(() => {
-		const handler = (e: MouseEvent) => e.preventDefault();
-		document.addEventListener('contextmenu', handler);
-		return () => document.removeEventListener('contextmenu', handler);
-	}, []);
+	// useEffect(() => {
+	// 	const handler = (e: MouseEvent) => e.preventDefault();
+	// 	document.addEventListener('contextmenu', handler);
+	// 	return () => document.removeEventListener('contextmenu', handler);
+	// }, []);
 
 	// Fetch kokoro status on mount
-	useEffect(() => { fetchKokoroStatus(); }, []);
+	useEffect(() => {
+		fetchKokoroStatus();
+	}, []);
 
 	return (
 		<Routes>

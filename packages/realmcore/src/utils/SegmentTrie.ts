@@ -50,12 +50,10 @@ export class SegmentTrie<T> {
 			if (seg === STARSTAR) {
 				if (!node.starstar) node.starstar = makeNode<T>();
 				node = node.starstar;
-			}
-			else if (seg === STAR) {
+			} else if (seg === STAR) {
 				if (!node.star) node.star = makeNode<T>();
 				node = node.star;
-			}
-			else {
+			} else {
 				if (!node.named[seg]) node.named[seg] = makeNode<T>();
 				node = node.named[seg];
 			}
@@ -77,7 +75,58 @@ export class SegmentTrie<T> {
 			node = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 		}
 		if (!node || !node.terminal) return [];
-		return node.terminal.slice().sort((a, b) => a.seq - b.seq).map((e) => e.value);
+		return node.terminal
+			.slice()
+			.sort((a, b) => a.seq - b.seq)
+			.map((e) => e.value);
+	}
+
+	// gather every value stored at the prefix node and anywhere beneath it, in
+	// install order. the prefix is treated as literal segments (no glob); *
+	// and ** in the prefix address their literal edges. used to collect all
+	// concrete subscriber addrs under a detaching branch in one walk.
+	public retrieveBranch(prefix: string): Array<T> {
+		const segs = this.split(prefix);
+		let node: ITrieNode<T> | undefined = this.root;
+		for (const seg of segs) {
+			if (!node) return [];
+			node = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
+		}
+		if (!node) return [];
+		const found: Array<ITrieEntry<T>> = [];
+		this.gather(node, found);
+		found.sort((a, b) => a.seq - b.seq);
+		return found.map((e) => e.value);
+	}
+
+	// recurse a node collecting terminals from it and all descendants, across
+	// named, star, and starstar edges.
+	private gather(node: ITrieNode<T>, found: Array<ITrieEntry<T>>): void {
+		if (node.terminal) for (const e of node.terminal) found.push(e);
+		for (const key in node.named) this.gather(node.named[key], found);
+		if (node.star) this.gather(node.star, found);
+		if (node.starstar) this.gather(node.starstar, found);
+	}
+
+	// remove the entire branch at the prefix node and beneath it, pruning the
+	// path down to the prefix. the prefix is treated as literal segments.
+	public removeBranch(prefix: string): void {
+		const segs = this.split(prefix);
+		this.removeBranchAt(this.root, segs, 0);
+	}
+
+	private removeBranchAt(node: ITrieNode<T>, segs: Array<string>, i: number): boolean {
+		if (i >= segs.length) return true;
+		const seg = segs[i];
+		const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
+		if (!child) return false;
+		const cut = this.removeBranchAt(child, segs, i + 1);
+		if (cut) {
+			if (seg === STARSTAR) delete node.starstar;
+			else if (seg === STAR) delete node.star;
+			else delete node.named[seg];
+		}
+		return this.isEmpty(node);
 	}
 
 	// match a concrete (wildcard-free) key, returning values whose pattern matches,
@@ -98,11 +147,15 @@ export class SegmentTrie<T> {
 		return out;
 	}
 
-	private walk(node: ITrieNode<T>, segs: Array<string>, i: number, found: Array<ITrieEntry<T>>): void {
+	private walk(
+		node: ITrieNode<T>,
+		segs: Array<string>,
+		i: number,
+		found: Array<ITrieEntry<T>>,
+	): void {
 		if (i >= segs.length) {
 			if (node.terminal) for (const e of node.terminal) found.push(e);
-		}
-		else {
+		} else {
 			const seg = segs[i];
 			if (node.named[seg]) this.walk(node.named[seg], segs, i + 1, found);
 			if (node.star) this.walk(node.star, segs, i + 1, found);
@@ -127,10 +180,10 @@ export class SegmentTrie<T> {
 				node.terminal = node.terminal.filter((e) => e.value !== value);
 				if (node.terminal.length === 0) delete node.terminal;
 			}
-		}
-		else {
+		} else {
 			const seg = segs[i];
-			const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
+			const child =
+				seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 			if (child && this.removeAt(child, segs, i + 1, value)) {
 				if (seg === STARSTAR) delete node.starstar;
 				else if (seg === STAR) delete node.star;
@@ -141,9 +194,8 @@ export class SegmentTrie<T> {
 	}
 
 	private isEmpty(node: ITrieNode<T>): boolean {
-		return !node.terminal
-			&& !node.star
-			&& !node.starstar
-			&& Object.keys(node.named).length === 0;
+		return (
+			!node.terminal && !node.star && !node.starstar && Object.keys(node.named).length === 0
+		);
 	}
 }

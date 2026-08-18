@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { TRecipeId, IRecipe, IRecipeRunState, TStepId } from '@warpcore/shared';
+import type { IRecipe, IRecipeRunState, TRecipeId, TStepId } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface RecipesSlice {
 	recipes: Record<TRecipeId, IRecipe>;

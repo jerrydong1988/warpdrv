@@ -1,6 +1,7 @@
-import { store } from '../util/store';
-import { DEFAULT_SPEC_DECODE_PARAMS } from '@warpcore/shared';
-const SCHEMA_KEY = '_schemaVersion';
+import { DEFAULT_SPEC_DECODE_PARAMS } from "@warpcore/shared";
+import { store } from "../util/store";
+
+const SCHEMA_KEY = "_schemaVersion";
 const CURRENT_SCHEMA = 9;
 // Each migration transforms data from version N to N+1
 // Add new migrations as the data shape evolves
@@ -9,114 +10,118 @@ const migrations: Record<number, TMigrationFn> = {
 	// Example: migration from schema 0 (no version) to 1
 	// Adds schema version marker, ensures settings have modelRoots array
 	1: async () => {
-		const settings = await store.get<Record<string, unknown>>('settings:general');
+		const settings = await store.get<Record<string, unknown>>("settings:general");
 		if (settings) {
 			// Ensure modelRoots exists (renamed from modelDirs in early versions)
 			if (!settings.modelRoots && settings.modelDirs) {
 				settings.modelRoots = settings.modelDirs;
 				delete settings.modelDirs;
-				await store.put('settings:general', settings);
+				await store.put("settings:general", settings);
 			}
 		}
 	},
 	// Migration v2: rename modelAlias to serverName for existing servers
 	2: async () => {
-		const servers = await store.list<Record<string, unknown>>('servers:');
+		const servers = await store.list<Record<string, unknown>>("servers:");
 		for (const server of servers) {
 			if (server.modelAlias) {
 				server.serverName = server.modelAlias;
 				delete server.modelAlias;
-				await store.put('servers:' + server.id, server);
+				await store.put("servers:" + server.id, server);
 			}
 		}
 	},
 	// Migration v3: add serverAlias to servers, add proxy settings
 	3: async () => {
-		const servers = await store.list<Record<string, unknown>>('servers:');
+		const servers = await store.list<Record<string, unknown>>("servers:");
 		for (const server of servers) {
 			if (!server.serverAlias) {
 				server.serverAlias = [];
-				await store.put('servers:' + server.id, server);
+				await store.put("servers:" + server.id, server);
 			}
 		}
-		const settings = await store.get<Record<string, unknown>>('settings:general');
+		const settings = await store.get<Record<string, unknown>>("settings:general");
 		if (settings) {
 			if (settings.proxyPort === undefined) settings.proxyPort = 1234;
 			if (settings.proxyEnabled === undefined) settings.proxyEnabled = true;
-			await store.put('settings:general', settings);
+			await store.put("settings:general", settings);
 		}
 	},
 	// Migration v4: add servers sort settings
 	4: async () => {
-		const settings = await store.get<Record<string, unknown>>('settings:general');
+		const settings = await store.get<Record<string, unknown>>("settings:general");
 		if (settings) {
-			if (settings.serversSortField === undefined) settings.serversSortField = 'name';
-			if (settings.serversSortOrder === undefined) settings.serversSortOrder = 'asc';
-			await store.put('settings:general', settings);
+			if (settings.serversSortField === undefined) settings.serversSortField = "name";
+			if (settings.serversSortOrder === undefined) settings.serversSortOrder = "asc";
+			await store.put("settings:general", settings);
 		}
 	},
 	// Migration v5: add parallelSlots and specDecode to server launch params, add vocabSize to presets
 	5: async () => {
 		// Update all servers — add parallelSlots and specDecode to params
-		const servers = await store.list<Record<string, unknown>>('servers:');
+		const servers = await store.list<Record<string, unknown>>("servers:");
 		for (const server of servers) {
 			const params = server.params as Record<string, unknown> | undefined;
 			if (params) {
 				if (params.parallelSlots === undefined) params.parallelSlots = 4;
-				if (params.specDecode === undefined) params.specDecode = { ...DEFAULT_SPEC_DECODE_PARAMS };
-				await store.put('servers:' + server.id, server);
+				if (params.specDecode === undefined)
+					params.specDecode = { ...DEFAULT_SPEC_DECODE_PARAMS };
+				await store.put("servers:" + server.id, server);
 			}
 		}
 		// Update all presets — add parallelSlots and specDecode to params
-		const presets = await store.list<Record<string, unknown>>('presets:');
+		const presets = await store.list<Record<string, unknown>>("presets:");
 		for (const preset of presets) {
 			const params = preset.params as Record<string, unknown> | undefined;
 			if (params) {
 				if (params.parallelSlots === undefined) params.parallelSlots = 4;
-				if (params.specDecode === undefined) params.specDecode = { ...DEFAULT_SPEC_DECODE_PARAMS };
-				await store.put('presets:' + preset.id, preset);
+				if (params.specDecode === undefined)
+					params.specDecode = { ...DEFAULT_SPEC_DECODE_PARAMS };
+				await store.put("presets:" + preset.id, preset);
 			}
 		}
 	},
 	// Migration v6: remove autoLaunch from settings (now managed by OS autostart directly)
 	6: async () => {
-		const settings = await store.get<Record<string, unknown>>('settings:general');
-		if (settings && 'autoLaunch' in settings) {
+		const settings = await store.get<Record<string, unknown>>("settings:general");
+		if (settings && "autoLaunch" in settings) {
 			delete settings.autoLaunch;
-			await store.put('settings:general', settings);
+			await store.put("settings:general", settings);
 		}
 	},
 	// Migration v7: add backendGroupId to servers, add backendGroups namespace
 	7: async () => {
-		const servers = await store.list<Record<string, unknown>>('servers:');
+		const servers = await store.list<Record<string, unknown>>("servers:");
 		for (const server of servers) {
 			if (server.backendId && !server.backendGroupId) {
 				server.backendGroupId = undefined;
-				await store.put('servers:' + server.id, server);
+				await store.put("servers:" + server.id, server);
 			}
 		}
 	},
 	// Migration v8: clear model cache for parentModel grouping fix
 	8: async () => {
-		await store.del('models:cache');
-		console.log('[migration] Cleared model cache for parentModel grouping fix');
+		await store.del("models:cache");
+		console.log("[migration] Cleared model cache for parentModel grouping fix");
 	},
 	// Migration v9: add buildNumber and gitCommit to backends
 	9: async () => {
-		const backends = await store.list<Record<string, unknown>>('backends:');
+		const backends = await store.list<Record<string, unknown>>("backends:");
 		for (const backend of backends) {
 			if (!backend.buildNumber || !backend.gitCommit) {
-				backend.buildNumber = '';
-				backend.gitCommit = '';
-				await store.put('backends:' + backend.id, backend);
+				backend.buildNumber = "";
+				backend.gitCommit = "";
+				await store.put("backends:" + backend.id, backend);
 			}
 		}
 	},
 };
 export async function runMigrations(): Promise<void> {
-	const currentVersion = await store.get<number>(SCHEMA_KEY) ?? 0;
+	const currentVersion = (await store.get<number>(SCHEMA_KEY)) ?? 0;
 	if (currentVersion >= CURRENT_SCHEMA) return;
-	console.log(`[WarpCore] Running migrations from schema v${currentVersion} to v${CURRENT_SCHEMA}`);
+	console.log(
+		`[WarpCore] Running migrations from schema v${currentVersion} to v${CURRENT_SCHEMA}`,
+	);
 	for (let v = currentVersion + 1; v <= CURRENT_SCHEMA; v++) {
 		const migrate = migrations[v];
 		if (migrate) {

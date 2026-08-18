@@ -1,11 +1,11 @@
-import { Router } from 'express';
-import { store } from '../util/store';
-import { validateBearerToken } from './tokens';
-import type { IAccessToken, IAccessTokenInfo, ISettings } from '@warpcore/shared';
-import { isRemote } from '../middleware/auth';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import type { IAccessToken, IAccessTokenInfo, ISettings } from "@warpcore/shared";
+import { DEFAULT_SETTINGS } from "@warpcore/shared";
+import { Router } from "express";
+import { isRemote } from "../middleware/auth";
+import { store } from "../util/store";
+import { validateBearerToken } from "./tokens";
 
-const SETTINGS_KEY = 'settings:general';
+const SETTINGS_KEY = "settings:general";
 
 async function getSettings(): Promise<ISettings> {
 	return (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
@@ -13,7 +13,7 @@ async function getSettings(): Promise<ISettings> {
 
 export const authRouter = Router();
 
-const COOKIE_NAME = 'warpcore_auth';
+const COOKIE_NAME = "warpcore_auth";
 
 // Helper to strip tokenHash
 function toInfo(token: IAccessToken): IAccessTokenInfo {
@@ -30,21 +30,21 @@ function toInfo(token: IAccessToken): IAccessTokenInfo {
 }
 
 // POST /api/auth/login - validate token, set cookie
-authRouter.post('/login', async (req, res) => {
+authRouter.post("/login", async (req, res) => {
 	const authHeader = req.headers.authorization;
 	const token = await validateBearerToken(authHeader);
 
 	if (!token) {
-		res.status(401).json({ ok: false, data: null, error: 'Invalid token' });
+		res.status(401).json({ ok: false, data: null, error: "Invalid token" });
 		return;
 	}
 
 	// Set HttpOnly cookie with token ID
-	const isSecure = process.env.NODE_ENV === 'production';
+	const isSecure = process.env.NODE_ENV === "production";
 	res.cookie(COOKIE_NAME, token.id, {
 		httpOnly: true,
 		secure: isSecure,
-		sameSite: 'strict' as const,
+		sameSite: "strict" as const,
 		maxAge: undefined, // no expiry
 	});
 
@@ -56,7 +56,7 @@ authRouter.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/check - check auth status
-authRouter.get('/check', async (req, res) => {
+authRouter.get("/check", async (req, res) => {
 	// Check if auth is actually required
 	const settings = await getSettings();
 	const authRequired = isRemote(req) && settings.apiAuthEnabled;
@@ -75,8 +75,8 @@ authRouter.get('/check', async (req, res) => {
 	}
 
 	// Look up token by ID
-	const tokens = await store.list<IAccessToken>('tokens:');
-	const token = tokens.find(t => t.id === tokenId);
+	const tokens = await store.list<IAccessToken>("tokens:");
+	const token = tokens.find((t) => t.id === tokenId);
 
 	if (!token) {
 		// Cookie exists but token doesn't, clear it
@@ -93,21 +93,21 @@ authRouter.get('/check', async (req, res) => {
 });
 
 // GET /api/auth/me - get current token info
-authRouter.get('/me', async (req, res) => {
+authRouter.get("/me", async (req, res) => {
 	const tokenId = req.cookies?.[COOKIE_NAME];
 
 	if (!tokenId) {
-		res.status(401).json({ ok: false, data: null, error: 'Not authenticated' });
+		res.status(401).json({ ok: false, data: null, error: "Not authenticated" });
 		return;
 	}
 
 	// Look up token by ID
-	const tokens = await store.list<IAccessToken>('tokens:');
-	const token = tokens.find(t => t.id === tokenId);
+	const tokens = await store.list<IAccessToken>("tokens:");
+	const token = tokens.find((t) => t.id === tokenId);
 
 	if (!token) {
 		res.clearCookie(COOKIE_NAME);
-		res.status(401).json({ ok: false, data: null, error: 'Token not found' });
+		res.status(401).json({ ok: false, data: null, error: "Token not found" });
 		return;
 	}
 
@@ -119,7 +119,7 @@ authRouter.get('/me', async (req, res) => {
 });
 
 // POST /api/auth/logout - clear cookie
-authRouter.post('/logout', (_req, res) => {
+authRouter.post("/logout", (_req, res) => {
 	res.clearCookie(COOKIE_NAME);
 	res.json({ ok: true, data: null, error: null });
 });

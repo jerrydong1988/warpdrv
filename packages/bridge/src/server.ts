@@ -3,34 +3,31 @@
 // Backend entry point — exports everything.
 // ============================================================
 
-// Types
-export * from './types';
-export * from './types/interfaces';
-
-// Parser (universal)
-export * from './parser';
-
-// Validation (universal)
-export { validateToolArgs, isSafePath, cleanSchema } from './validation';
-
-// Permissions (universal)
-export { PermissionManager } from './permissions';
-
-// MCP (Node only)
-export { McpClientManager } from './mcp/client';
-export { McpConfig } from './mcp/config';
-
-// Orchestrator (Node only)
-export { Orchestrator, type IOrchestratorConfig, type IPureCompletionResult, type TPureCompletionChunkHandler } from './orchestrator';
-
-// Persistence (Node only)
-export { SqlitePersistence } from './persistence/betterSqlite';
-export { SqlitePersistenceWithBroadcast } from './persistence/sqliteBroadcast';
-export type { IBetterSqlitePersistenceOptions } from './persistence/betterSqlite';
-
-// Store (universal)
-export { createChatStoreSlice, type IChatStoreState, type ImmerSet, type ImmerGet } from './store';
-
 // sse broadcaster
-export { SseBroadcaster } from './broadcaster/sseBroadcaster';
-export type { IBridgeBroadcaster } from './types/interfaces';
+export { SseBroadcaster } from "./broadcaster/sseBroadcaster";
+// MCP (Node only)
+export { McpClientManager } from "./mcp/client";
+export { McpConfig } from "./mcp/config";
+// Orchestrator (Node only)
+export {
+	type IOrchestratorConfig,
+	type IPureCompletionResult,
+	Orchestrator,
+	type TPureCompletionChunkHandler,
+} from "./orchestrator";
+// Parser (universal)
+export * from "./parser";
+// Permissions (universal)
+export { PermissionManager } from "./permissions";
+export type { IBetterSqlitePersistenceOptions } from "./persistence/betterSqlite";
+// Persistence (Node only)
+export { SqlitePersistence } from "./persistence/betterSqlite";
+export { SqlitePersistenceWithBroadcast } from "./persistence/sqliteBroadcast";
+// Store (universal)
+export { createChatStoreSlice, type IChatStoreState, type ImmerGet, type ImmerSet } from "./store";
+// Types
+export * from "./types";
+export type { IBridgeBroadcaster } from "./types/interfaces";
+export * from "./types/interfaces";
+// Validation (universal)
+export { cleanSchema, isSafePath, validateToolArgs } from "./validation";

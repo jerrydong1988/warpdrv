@@ -1,15 +1,15 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Box, Flex, Input, Text } from '@chakra-ui/react';
-import { SearchIcon, XIcon } from 'lucide-react';
-import { searchChatMessages } from '@/api/services';
-import type { ISearchResult } from '@warpcore/bridge';
+import { Box, Flex, Input, Text } from "@chakra-ui/react";
+import type { ISearchResult } from "@warpcore/bridge";
+import { SearchIcon, XIcon } from "lucide-react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { searchChatMessages } from "@/api/services";
 
 // ============================================================
 // Types
 // ============================================================
 
 interface SearchResultEntry {
-	type: 'message' | 'thread';
+	type: "message" | "thread";
 	threadId: string;
 	threadTitle: string;
 	messageId?: string;
@@ -25,7 +25,7 @@ interface SearchResultEntry {
 function timeAgo(ts: number): string {
 	const diff = Date.now() - ts;
 	const mins = Math.floor(diff / 60000);
-	if (mins < 1) return 'now';
+	if (mins < 1) return "now";
 	if (mins < 60) return `${mins}m`;
 	const hrs = Math.floor(mins / 60);
 	if (hrs < 24) return `${hrs}h`;
@@ -41,11 +41,29 @@ function renderSnippet(text: string): React.ReactNode {
 	let elemIdx = 0;
 	for (let i = 0; i < parts.length; i++) {
 		const part = parts[i];
-		if (part === '<mark>') { inMark = true; continue; }
-		if (part === '</mark>') { inMark = false; continue; }
+		if (part === "<mark>") {
+			inMark = true;
+			continue;
+		}
+		if (part === "</mark>") {
+			inMark = false;
+			continue;
+		}
 		if (!part) continue;
 		if (inMark) {
-			elements.push(<mark key={elemIdx++} style={{ background: 'var(--wc-accent-yellow-hover-bg)', color: 'var(--wc-accent-yellow-strong)', borderRadius: '2px', padding: '0 1px' }}>{part}</mark>);
+			elements.push(
+				<mark
+					key={elemIdx++}
+					style={{
+						background: "var(--wc-accent-yellow-hover-bg)",
+						color: "var(--wc-accent-yellow-strong)",
+						borderRadius: "2px",
+						padding: "0 1px",
+					}}
+				>
+					{part}
+				</mark>,
+			);
 		} else {
 			elements.push(<span key={elemIdx++}>{part}</span>);
 		}
@@ -58,7 +76,7 @@ function renderSnippet(text: string): React.ReactNode {
 // ============================================================
 
 export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
-	const [query, setQuery] = useState('');
+	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<SearchResultEntry[]>([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,44 +84,49 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 	// Clear on thread switch
 	useLayoutEffect(() => {
 		if (timerRef.current) clearTimeout(timerRef.current);
-		setQuery('');
+		setQuery("");
 		setResults([]);
 		setIsLoading(false);
 	}, [threadId]);
 
 	// Debounced search
-	const handleSearch = useCallback((q: string) => {
-		if (timerRef.current) clearTimeout(timerRef.current);
-		if (!q.trim()) {
-			setResults([]);
-			setIsLoading(false);
-			return;
-		}
-		timerRef.current = setTimeout(async () => {
-			setIsLoading(true);
-			try {
-				const res = await searchChatMessages(q, 'thread', { threadId, limit: 50 });
-				if (res.ok && res.data) {
-					const entries: SearchResultEntry[] = res.data.map((item: ISearchResult) =>
-						item as unknown as SearchResultEntry
-					);
-					setResults(entries);
-				} else {
-					setResults([]);
-				}
-			} catch {
+	const handleSearch = useCallback(
+		(q: string) => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+			if (!q.trim()) {
 				setResults([]);
-			} finally {
 				setIsLoading(false);
+				return;
 			}
-		}, 300);
-	}, [threadId]);
+			timerRef.current = setTimeout(async () => {
+				setIsLoading(true);
+				try {
+					const res = await searchChatMessages(q, "thread", { threadId, limit: 50 });
+					if (res.ok && res.data) {
+						const entries: SearchResultEntry[] = res.data.map(
+							(item: ISearchResult) => item as unknown as SearchResultEntry,
+						);
+						setResults(entries);
+					} else {
+						setResults([]);
+					}
+				} catch {
+					setResults([]);
+				} finally {
+					setIsLoading(false);
+				}
+			}, 300);
+		},
+		[threadId],
+	);
 
 	const handleResultClick = (result: SearchResultEntry) => {
 		if (result.messageId) {
 			setTimeout(() => {
-				const el = document.querySelector(`[data-message-id="${result.messageId}"]`) as HTMLElement | null;
-				if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				const el = document.querySelector(
+					`[data-message-id="${result.messageId}"]`,
+				) as HTMLElement | null;
+				if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 			}, 100);
 		}
 	};
@@ -112,7 +135,13 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 
 	return (
 		<Box h="full" display="flex" flexDirection="column">
-			<Flex alignItems="center" gap="2" px="3" py="2" borderBottom="1px solid var(--wc-border-subtle)">
+			<Flex
+				alignItems="center"
+				gap="2"
+				px="3"
+				py="2"
+				borderBottom="1px solid var(--wc-border-subtle)"
+			>
 				<SearchIcon size={14} style={{ opacity: 0.4, flexShrink: 0 }} />
 				<Input
 					id="chat-thread-search-input"
@@ -128,44 +157,71 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 					fontSize="13px"
 					h="28px"
 					border="none"
-					_focus={{ borderColor: 'transparent', outline: 'none', boxShadow: 'none' }}
+					_focus={{ borderColor: "transparent", outline: "none", boxShadow: "none" }}
 				/>
 				{query && (
-					<Box as="button" cursor="pointer" opacity={0.4} _hover={{ opacity: 0.7 }} onClick={() => {
-						setQuery('');
-						setResults([]);
-						setIsLoading(false);
-					}}>
+					<Box
+						as="button"
+						cursor="pointer"
+						opacity={0.4}
+						_hover={{ opacity: 0.7 }}
+						onClick={() => {
+							setQuery("");
+							setResults([]);
+							setIsLoading(false);
+						}}
+					>
 						<XIcon size={14} />
 					</Box>
 				)}
 			</Flex>
 
-			<Box flex="1" overflowY="auto" py="2" css={{
-				'&::-webkit-scrollbar': { width: '4px' },
-				'&::-webkit-scrollbar-thumb': { background: 'var(--wc-text-disabled)', borderRadius: '2px' },
-			}}>
+			<Box
+				flex="1"
+				overflowY="auto"
+				py="2"
+				css={{
+					"&::-webkit-scrollbar": { width: "4px" },
+					"&::-webkit-scrollbar-thumb": {
+						background: "var(--wc-text-disabled)",
+						borderRadius: "2px",
+					},
+				}}
+			>
 				{isLoading && results.length === 0 && (
 					<Flex justifyContent="center" py="8">
-						<Box w="20px" h="20px" borderRadius="full" border="2px solid var(--wc-text-disabled)" borderTopColor="var(--wc-accent-blue)" animation="spin 0.6s linear infinite" />
+						<Box
+							w="20px"
+							h="20px"
+							borderRadius="full"
+							border="2px solid var(--wc-text-disabled)"
+							borderTopColor="var(--wc-accent-blue)"
+							animation="spin 0.6s linear infinite"
+						/>
 					</Flex>
 				)}
 
 				{!isLoading && hasQuery && results.length === 0 && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-muted)">No results</Text>
+						<Text fontSize="13px" color="var(--wc-text-muted)">
+							No results
+						</Text>
 					</Flex>
 				)}
 
 				{!hasQuery && !isLoading && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-disabled)">Type to search this chat</Text>
+						<Text fontSize="13px" color="var(--wc-text-disabled)">
+							Type to search this chat
+						</Text>
 					</Flex>
 				)}
 
 				{!threadId && (
 					<Flex justifyContent="center" py="8">
-						<Text fontSize="13px" color="var(--wc-text-disabled)">No chat selected</Text>
+						<Text fontSize="13px" color="var(--wc-text-disabled)">
+							No chat selected
+						</Text>
 					</Flex>
 				)}
 
@@ -177,15 +233,24 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 						cursor="pointer"
 						borderRadius="md"
 						mx="1"
-						_hover={{ bg: 'var(--wc-bg-hover)' }}
+						_hover={{ bg: "var(--wc-bg-hover)" }}
 						onClick={() => handleResultClick(result)}
 					>
-						{result.type === 'message' && (
+						{result.type === "message" && (
 							<Flex flexDirection="column" gap="0.5">
 								<Flex alignItems="flex-start" gap="1.5">
-									<Text fontSize="12px" opacity={0.5} mt="1">💬</Text>
-									<Text fontSize="12px" color="var(--wc-text-primary)" lineClamp={2} overflow="hidden">
-										{result.snippet ? renderSnippet(result.snippet) : result.threadTitle}
+									<Text fontSize="12px" opacity={0.5} mt="1">
+										💬
+									</Text>
+									<Text
+										fontSize="12px"
+										color="var(--wc-text-primary)"
+										lineClamp={2}
+										overflow="hidden"
+									>
+										{result.snippet
+											? renderSnippet(result.snippet)
+											: result.threadTitle}
 									</Text>
 								</Flex>
 								<Text fontSize="11px" color="var(--wc-text-muted)" ml="5">
@@ -198,8 +263,16 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 			</Box>
 
 			{results.length > 0 && (
-				<Flex justifyContent="space-between" alignItems="center" px="3" py="1.5" borderTop="1px solid var(--wc-border-subtle)">
-					<Text fontSize="11px" color="var(--wc-text-muted)">{results.length} result{results.length > 1 ? 's' : ''}</Text>
+				<Flex
+					justifyContent="space-between"
+					alignItems="center"
+					px="3"
+					py="1.5"
+					borderTop="1px solid var(--wc-border-subtle)"
+				>
+					<Text fontSize="11px" color="var(--wc-text-muted)">
+						{results.length} result{results.length > 1 ? "s" : ""}
+					</Text>
 				</Flex>
 			)}
 		</Box>

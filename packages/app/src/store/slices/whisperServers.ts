@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { TWhisperServerId, IWhisperServer, IWhisperModel } from '@warpcore/shared';
+import type { IWhisperModel, IWhisperServer, TWhisperServerId } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface WhisperServersSlice {
 	whisperServers: Record<TWhisperServerId, IWhisperServer>;
@@ -9,7 +9,7 @@ interface WhisperServersSlice {
 
 export const whisperServersSlice = (
 	_setState: ImmerSet<AppState>,
-	_getState: ImmerGet<AppState>
+	_getState: ImmerGet<AppState>,
 ): Partial<AppState> => ({
 	whisperServers: {},
 	whisperServerLogs: {},

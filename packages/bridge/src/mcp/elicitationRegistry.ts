@@ -1,4 +1,4 @@
-import type { IElicitationResponse } from '../types';
+import type { IElicitationResponse } from "../types";
 
 interface IPendingElicitation {
 	resolve: (response: IElicitationResponse) => void;
@@ -28,7 +28,7 @@ export class ElicitationRegistry {
 		const cancelled: string[] = [];
 		for (const [id, entry] of Object.entries(this.pending)) {
 			if (entry.serverName === serverName) {
-				entry.reject(new Error('Cancelled'));
+				entry.reject(new Error("Cancelled"));
 				delete this.pending[id];
 				cancelled.push(id);
 			}

@@ -48,18 +48,24 @@ export interface ICodeGraphIngestResult {
 }
 
 export type TCodeGraphKind =
-	| 'function'
-	| 'class'
-	| 'interface'
-	| 'type'
-	| 'variable'
-	| 'method'
-	| 'enum'
-	| 'module'
-	| 'namespace'
-	| 'property'
-	| 'parameter'
-	| 'const'
-	| 'struct';
+	| "function"
+	| "class"
+	| "interface"
+	| "type"
+	| "variable"
+	| "method"
+	| "enum"
+	| "module"
+	| "namespace"
+	| "property"
+	| "parameter"
+	| "const"
+	| "struct";
 
-export type TCodeGraphEdgeType = 'calls' | 'extends' | 'implements' | 'imports' | 'references' | 'contains';
+export type TCodeGraphEdgeType =
+	| "calls"
+	| "extends"
+	| "implements"
+	| "imports"
+	| "references"
+	| "contains";

@@ -1,18 +1,19 @@
+import { computePosition, flip, offset, shift } from "@floating-ui/dom";
+import { mergeAttributes, Node } from "@tiptap/core";
+import { type NodeViewProps, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
+import Suggestion from "@tiptap/suggestion";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { computePosition, flip, shift, offset } from "@floating-ui/dom";
-import { Node, mergeAttributes } from "@tiptap/core";
-import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import Suggestion from "@tiptap/suggestion";
 import { useStore } from "@/store";
 import { commandSuggestion } from "./CmdSuggestion";
-import { SlashCmdServerSelector } from "./SlashCmdServerSelector";
-import { SlashCmdDropdown } from "./SlashCmdDropdown";
-import { SlashCmdDefaultInput } from "./SlashCmdDefaultInput";
-import { SlashCmdToolSelector, SlashCmdMessageType, SlashCmdTools } from "./SlashCmdToolSelector";
-import { SlashCmdDirectoryPicker } from "./SlashCmdDirectoryPicker";
+import { SlashCmdAgentSelector } from "./SlashCmdAgentSelector";
 import { SlashCmdColorPicker } from "./SlashCmdColorPicker";
+import { SlashCmdDefaultInput } from "./SlashCmdDefaultInput";
+import { SlashCmdDirectoryPicker } from "./SlashCmdDirectoryPicker";
+import { SlashCmdDropdown } from "./SlashCmdDropdown";
 import { SlashCmdGuardrails } from "./SlashCmdGuardrails";
+import { SlashCmdServerSelector } from "./SlashCmdServerSelector";
+import { SlashCmdMessageType, SlashCmdTools } from "./SlashCmdToolSelector";
 
 // paramType -> slot renderer; "default", "server", "dropdown", "directory", "color" wired, additional types added as needed
 type TSlotRendererProps = {
@@ -25,16 +26,17 @@ type TSlotRendererProps = {
 	onBlur: (e: React.FocusEvent) => void;
 };
 type TSlotRenderer = React.FC<TSlotRendererProps & Record<string, unknown>>;
-		const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
-			default: SlashCmdDefaultInput,
-			server: SlashCmdServerSelector,
-			dropdown: SlashCmdDropdown,
-			message_type: SlashCmdMessageType,
-			tools: SlashCmdTools,
-			guardrails: SlashCmdGuardrails,
-			directory: SlashCmdDirectoryPicker,
-			color: SlashCmdColorPicker,
-		};
+const SLOT_RENDERERS: Record<string, TSlotRenderer> = {
+	default: SlashCmdDefaultInput,
+	server: SlashCmdServerSelector,
+	dropdown: SlashCmdDropdown,
+	message_type: SlashCmdMessageType,
+	tools: SlashCmdTools,
+	guardrails: SlashCmdGuardrails,
+	directory: SlashCmdDirectoryPicker,
+	color: SlashCmdColorPicker,
+	agents: SlashCmdAgentSelector,
+};
 
 const parseArgs = (raw: string): Record<string, string> => {
 	try {
@@ -51,60 +53,96 @@ interface ICommandCardProps {
 	focusedKey: string | null;
 	cardRef: (el: HTMLDivElement | null) => void;
 }
-const CommandCard: React.FC<ICommandCardProps> = (p) => createPortal(
-	<div
-		ref={p.cardRef}
-		contentEditable={false}
-		style={{
-			position: "absolute",
-			zIndex: 9999,
-			minWidth: "320px",
-			maxWidth: "480px",
-			borderRadius: "8px",
-			border: "1px solid var(--wc-border-default)",
-			background: "var(--wc-bg-elevated)",
-			boxShadow: "0px 8px 24px rgba(0,0,0,0.25)",
-			padding: "10px 12px",
-			fontSize: "0.8125rem",
-			fontWeight: 400,
-			lineHeight: "1.4",
-			color: "var(--wc-text-primary)",
-			userSelect: "none",
-		}}
-	>
-		<div style={{ fontWeight: 600 }}>/{p.name}</div>
-		{p.description ? (
-			<div style={{ color: "var(--wc-text-tertiary)", marginTop: "2px" }}>{p.description}</div>
-		) : null}
-{p.params.length > 0 ? (
-			<div style={{ marginTop: "8px", border: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))", borderRadius: "6px" }}>
-				{p.params
-					.filter(([key, _]) => key === p.focusedKey)
-					.map(([key, param]) => {
-						const active = key === p.focusedKey;
-						return (
-							<div
-								key={key}
-								style={{
-									background: active ? "var(--wc-bg-hover, rgba(255,255,255,0.06))" : "transparent",
-								}}
-							>
-								<div style={{ display: "flex", flexDirection: "row", padding: "4px 8px", verticalAlign: "top", whiteSpace: "nowrap"}}>
-									<div style={{ fontWeight: 600, marginRight: "10px" }}>{key}</div>
-									<div style={{ color: "var(--wc-text-tertiary)", fontStyle: "italic", fontSize: "0.75rem", fontFamily: "var(--wc-font-mono, monospace)" }}>({param.type})</div>
+const CommandCard: React.FC<ICommandCardProps> = (p) =>
+	createPortal(
+		<div
+			ref={p.cardRef}
+			contentEditable={false}
+			style={{
+				position: "absolute",
+				zIndex: 9999,
+				minWidth: "320px",
+				maxWidth: "480px",
+				borderRadius: "8px",
+				border: "1px solid var(--wc-border-default)",
+				background: "var(--wc-bg-elevated)",
+				boxShadow: "0px 8px 24px rgba(0,0,0,0.25)",
+				padding: "10px 12px",
+				fontSize: "0.8125rem",
+				fontWeight: 400,
+				lineHeight: "1.4",
+				color: "var(--wc-text-primary)",
+				userSelect: "none",
+			}}
+		>
+			<div style={{ fontWeight: 600 }}>/{p.name}</div>
+			{p.description ? (
+				<div style={{ color: "var(--wc-text-tertiary)", marginTop: "2px" }}>
+					{p.description}
+				</div>
+			) : null}
+			{p.params.length > 0 ? (
+				<div
+					style={{
+						marginTop: "8px",
+						border: "1px solid var(--wc-border-subtle, rgba(255,255,255,0.08))",
+						borderRadius: "6px",
+					}}
+				>
+					{p.params
+						.filter(([key, _]) => key === p.focusedKey)
+						.map(([key, param]) => {
+							const active = key === p.focusedKey;
+							return (
+								<div
+									key={key}
+									style={{
+										background: active
+											? "var(--wc-bg-hover, rgba(255,255,255,0.06))"
+											: "transparent",
+									}}
+								>
+									<div
+										style={{
+											display: "flex",
+											flexDirection: "row",
+											padding: "4px 8px",
+											verticalAlign: "top",
+											whiteSpace: "nowrap",
+										}}
+									>
+										<div style={{ fontWeight: 600, marginRight: "10px" }}>
+											{key}
+										</div>
+										<div
+											style={{
+												color: "var(--wc-text-tertiary)",
+												fontStyle: "italic",
+												fontSize: "0.75rem",
+												fontFamily: "var(--wc-font-mono, monospace)",
+											}}
+										>
+											({param.type})
+										</div>
+									</div>
+
+									<div
+										style={{
+											padding: "4px 8px",
+											verticalAlign: "top",
+											color: "var(--wc-text-secondary)",
+										}}
+									>
+										{param.description ?? ""}
+									</div>
 								</div>
-								
-								<div style={{ padding: "4px 8px", verticalAlign: "top", color: "var(--wc-text-secondary)"}}>
-									{param.description ?? ""}
-								</div>
-							</div>
-						);
-					})}
-			</div>
-		) : null}
-	</div>,
-	document.body,
-);
+							);
+						})}
+				</div>
+			) : null}
+		</div>,
+		document.body,
+	);
 const SlashPill: React.FC<NodeViewProps> = (props) => {
 	const name = props.node.attrs.name as string;
 	const args = parseArgs(props.node.attrs.args as string);
@@ -130,7 +168,10 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 			else props.editor.commands.focus();
 		} else if (e.key === "Tab" && e.shiftKey) {
 			const prev = slotRefs.current[i - 1];
-			if (prev) { e.preventDefault(); prev.focus(); }
+			if (prev) {
+				e.preventDefault();
+				prev.focus();
+			}
 		}
 	};
 	const setArg = (key: string, next: string) => {
@@ -159,9 +200,12 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 		if (next && slotRefs.current.includes(next as HTMLInputElement)) return;
 		setFocusedSlot(null);
 	};
-	const focusedKey = focusedSlot !== null ? paramEntries[focusedSlot]?.[0] ?? null : null;
+	const focusedKey = focusedSlot !== null ? (paramEntries[focusedSlot]?.[0] ?? null) : null;
 	return (
-		<NodeViewWrapper className="inline" style={{ position: "relative", display: "inline-flex" }}>
+		<NodeViewWrapper
+			className="inline"
+			style={{ position: "relative", display: "inline-flex" }}
+		>
 			<span
 				ref={wrapRef}
 				contentEditable={false}
@@ -192,7 +236,9 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 							<Renderer
 								value={args[key] ?? ""}
 								placeholder={key}
-								inputRef={(el) => { slotRefs.current[i] = el; }}
+								inputRef={(el) => {
+									slotRefs.current[i] = el;
+								}}
 								onChange={(next) => setArg(key, next)}
 								onKeyDown={(e) => onSlotKeyDown(i, e)}
 								onFocus={() => onSlotFocus(i)}
@@ -209,7 +255,9 @@ const SlashPill: React.FC<NodeViewProps> = (props) => {
 					description={command!.description}
 					params={paramEntries}
 					focusedKey={focusedKey}
-					cardRef={(el) => { cardRef.current = el; }}
+					cardRef={(el) => {
+						cardRef.current = el;
+					}}
 				/>
 			) : null}
 		</NodeViewWrapper>

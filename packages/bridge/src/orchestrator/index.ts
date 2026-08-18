@@ -8,30 +8,43 @@
 //
 // All state changes emit events via the broadcaster. No direct SSE.
 // ============================================================
-import crypto from 'crypto';
-import type { EventNode } from '@warpcore/realmcore';
-import type { IMcpClient, IPermissions, IPersistence, IBridgeBroadcaster } from '../types/interfaces';
+
+import type { EventNode } from "@warpcore/realmcore";
+import {
+	genMessageId,
+	genPartId,
+	stableStringify,
+	EThreadInferenceEndCause,
+} from "@warpcore/shared";
+import { isDeepStrictEqual } from "util";
+import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";
+import {
+	accumulateToolCallDelta,
+	finalizeToolCalls,
+	type IToolCallAccumulator,
+	parseSSEBuffer,
+} from "../parser";
 import type {
-	ICompletionRequest,
-	IToolDefinition,
-	IToolAttachment,
-	IToolCall,
-	IOpenAITool,
-	IChatMessageStats,
 	IChatMessage,
+	IChatMessageStats,
+	ICompletionRequest,
 	IMessagePart,
 	IMessagePartToolCall,
+	IOpenAITool,
+	IToolCall,
+	IToolDefinition,
+	TFolderId,
 	TMessageId,
 	TThreadId,
-	TFolderId,
-	IFolder,
-	IWorkspace,
-} from '../types';
-import { folderNameToTopic } from '../util/topic';
-import { EChatRole, EMessagePartType, EToolCallStatus, EToolApprovalMode } from '../types';
-import { parseSSEBuffer, accumulateToolCallDelta, finalizeToolCalls, type IToolCallAccumulator } from '../parser';
-import { validateToolArgs, cleanSchema } from '../validation';
-import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from '../messageConverter';
+} from "../types";
+import { EChatRole, EMessagePartType, EToolApprovalMode, EToolCallStatus } from "../types";
+import type {
+	IBridgeBroadcaster,
+	IMcpClient,
+	IPermissions,
+	IPersistence,
+} from "../types/interfaces";
+import { cleanSchema, validateToolArgs } from "../validation";
 
 const MAX_PASSES = 10;
 
@@ -67,6 +80,7 @@ export type TPureCompletionChunkHandler = (partType: string, deltaText: string) 
 
 // Track in-flight inference URLs per thread so resume can continue
 const threadInferenceUrls: Map<TThreadId, string> = new Map();
+const threadInferenceMessageCache: Record<TThreadId, TOpenAIMessage[]> = {};
 
 export class Orchestrator {
 	private mcpClient: IMcpClient;
@@ -75,6 +89,11 @@ export class Orchestrator {
 	private broadcaster: IBridgeBroadcaster;
 	private eventNode: EventNode;
 	private pureCompletionControllers: Record<string, AbortController> = {};
+	private runningInferences: Set<TThreadId> = new Set();
+
+	public isThreadRunningInference(threadId: TThreadId): boolean {
+		return this.runningInferences.has(threadId);
+	}
 
 	constructor(config: IOrchestratorConfig) {
 		this.mcpClient = config.mcpClient;
@@ -86,46 +105,55 @@ export class Orchestrator {
 	}
 
 	private installStateHandlers(): void {
-		this.eventNode.fn('bridge.getAllMessageStatesByThread', async (api) => {
+		this.eventNode.fn("bridge.getAllMessageStatesByThread", async (api) => {
 			const threadId = api.payload as string;
 			return await this.persistence.getMessageStatesByThreadId(threadId);
 		});
 
-		this.eventNode.fn('bridge.getThreadState', async (api) => {
+		this.eventNode.fn("bridge.getThreadState", async (api) => {
 			const threadId = api.payload as string;
 			return await this.persistence.getThreadState(threadId);
 		});
 
-		this.eventNode.fn('bridge.getWorkspaceState', async (api) => {
+		this.eventNode.fn("bridge.getWorkspaceState", async (api) => {
 			const folderId = api.payload as string;
 			return await this.persistence.getWorkspaceState(folderId);
 		});
 
-		this.eventNode.fn('bridge.getMessageState', async (api) => {
+		this.eventNode.fn("bridge.getMessageState", async (api) => {
 			const messageId = api.payload as string;
 			return await this.persistence.getMessageState(messageId);
 		});
 
-		this.eventNode.fn('bridge.getToolCallsForMessage', async (api) => {
+		this.eventNode.fn("bridge.getToolCallsForMessage", async (api) => {
 			const messageId = api.payload as string;
 			return await this.persistence.getToolCallsForMessage(messageId);
 		});
 
-		this.eventNode.fn('bridge.updateMessageState', async (api) => {
+		this.eventNode.fn("bridge.updateMessageState", async (api) => {
 			const payload = api.payload as { messageId: string; data: Record<string, unknown> };
 			await this.persistence.updateMessageState(payload.messageId, payload.data);
 		});
 
-		this.eventNode.fn('bridge.listGuardrails', async () => {
+		this.eventNode.fn("bridge.listGuardrails", async () => {
 			return await this.persistence.listGuardrails();
 		});
 
-		this.eventNode.fn('bridge.getMode', async (api) => {
+		this.eventNode.fn("bridge.getMode", async (api) => {
 			const id = api.payload as string;
 			return await this.persistence.getMode(id);
 		});
 
-		this.eventNode.fn('bridge.handlePureCompletion', async (api) => {
+		this.eventNode.fn("bridge.listAgents", async (api) => {
+			return await this.persistence.listAgents();
+		});
+
+		this.eventNode.fn("bridge.getChatPrompt", async (api) => {
+			const id = api.payload as string;
+			return await this.persistence.getChatPrompt(id);
+		});
+
+		this.eventNode.fn("bridge.handlePureCompletion", async (api) => {
 			const payload = api.payload as {
 				inferenceRequestId: string;
 				inferenceUrl: string;
@@ -141,7 +169,10 @@ export class Orchestrator {
 					messages,
 					inferenceParams || {},
 					(partType, deltaText) => {
-						this.eventNode.broadcast('bridge.pure_completion_chunk.' + inferenceRequestId, { partType, deltaText });
+						this.eventNode.broadcast(
+							"bridge.pure_completion_chunk." + inferenceRequestId,
+							{ partType, deltaText },
+						);
 					},
 					controller.signal,
 				);
@@ -150,7 +181,7 @@ export class Orchestrator {
 			}
 		});
 
-		this.eventNode.fn('bridge.cancelPureCompletion', async (api) => {
+		this.eventNode.fn("bridge.cancelPureCompletion", async (api) => {
 			const id = api.payload as string;
 			const controller = this.pureCompletionControllers[id];
 			if (controller) {
@@ -159,10 +190,43 @@ export class Orchestrator {
 			}
 			return { cancelled: !!controller };
 		});
+
+		this.eventNode.fn("bridge.isThreadRunningInference", async (api) => {
+			return this.isThreadRunningInference(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.getThread", async (api) => {
+			return this.persistence.getThread(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.listNotifications", async (api) => {
+			const { threadId } = api.payload as { threadId: string };
+			return this.persistence.notificationList(threadId, false, false);
+		});
+
+		this.eventNode.fn("bridge.consumeNotification", async (api) => {
+			return this.persistence.notificationConsume(api.payload as string);
+		});
+
+		this.eventNode.fn("bridge.getThreadAttachedTools", async (api) => {
+			return this.persistence.getThreadAttachedTools(api.payload as TThreadId);
+		});
+
+		this.eventNode.fn("bridge.handleCompletion", async (api) => {
+			const { inferenceUrl, request } = api.payload as {
+				inferenceUrl: string;
+				request: ICompletionRequest;
+			};
+			const ac = new AbortController();
+			this.handleCompletionV2(inferenceUrl, request, ac.signal).catch(console.error);
+		});
 	}
 
 	// Walk parentId chain from a given message ID up to root, return root-to-leaf
-	private buildBranchChain(allMessages: IChatMessage[], fromMessageId: TMessageId | null | undefined): IChatMessage[] {
+	private buildBranchChain(
+		allMessages: IChatMessage[],
+		fromMessageId: TMessageId | null | undefined,
+	): IChatMessage[] {
 		if (!fromMessageId) return [];
 		const msgMap = new Map<TMessageId, IChatMessage>();
 		for (const m of allMessages) msgMap.set(m.id, m);
@@ -187,13 +251,15 @@ export class Orchestrator {
 	): Promise<Array<TOpenAIMessage>> {
 		const baseMessages: Array<TOpenAIMessage> = [];
 
+		const systemParts: string[] = [];
 		if (request.folderId) {
 			const ctx = await this.buildWorkspaceContext(request.folderId);
-			if (ctx) baseMessages.push(ctx);
+			if (ctx) systemParts.push(ctx.content);
 		}
-
-		if (request.systemPrompt) {
-			baseMessages.push({ role: 'system', content: request.systemPrompt });
+		const thread = await this.persistence.getThread(request.threadId);
+		if (thread?.systemPrompt) systemParts.push(thread.systemPrompt);
+		if (systemParts.length > 0) {
+			baseMessages.push({ role: "system", content: systemParts.join("\n\n") });
 		}
 
 		const allMessages = await this.persistence.getMessages(request.threadId);
@@ -204,8 +270,8 @@ export class Orchestrator {
 		const branchChain = this.buildBranchChain(allMessages, fromMessageId);
 
 		// Pipe branch for compaction — applet can truncate
-		const processedChain = await this.eventNode.pipe(
-			'bridge.buildBranchChain',
+		const processedChain = (await this.eventNode.pipe(
+			"bridge.buildBranchChain",
 			{
 				allMessages,
 				branch: branchChain,
@@ -213,9 +279,9 @@ export class Orchestrator {
 				fromMessageId,
 				extraMessages,
 			},
-			'.',
+			".",
 			branchChain,
-		) as IChatMessage[];
+		)) as IChatMessage[];
 
 		const openAIMessages = convertMessagesToOpenAIFormat(processedChain, toolCallsMap);
 		baseMessages.push(...openAIMessages);
@@ -224,14 +290,16 @@ export class Orchestrator {
 		return baseMessages;
 	}
 
-	private async buildWorkspaceContext(folderId: TFolderId): Promise<{ role: 'system'; content: string } | null> {
+	private async buildWorkspaceContext(
+		folderId: TFolderId,
+	): Promise<{ role: "system"; content: string } | null> {
 		const workspace = await this.persistence.getWorkspace(folderId);
 		if (!workspace) return null;
 		const folder = await this.persistence.getFolder(folderId);
 		if (!folder) return null;
 		const desc = (workspace.data as Record<string, unknown>)?.description as string | undefined;
 		const content = desc ? `Workspace: ${folder.name}\n${desc}` : `Workspace: ${folder.name}`;
-		return { role: 'system', content };
+		return { role: "system", content };
 	}
 
 	private async resolveWsVars(threadId: TThreadId): Promise<Record<string, unknown> | null> {
@@ -256,7 +324,7 @@ export class Orchestrator {
 			return wsVars;
 		}
 
-		return { threadId, folderId: null, topic: 'global', name: 'global' };
+		return { threadId, folderId: null, topic: "global", name: "global" };
 	}
 
 	private async resolveThreadVars(threadId: TThreadId): Promise<Record<string, unknown> | null> {
@@ -280,6 +348,18 @@ export class Orchestrator {
 		request: ICompletionRequest,
 		abortSignal: AbortSignal,
 	): Promise<void> {
+		let cause: EThreadInferenceEndCause = EThreadInferenceEndCause.COMPLETED;
+		const setCause = (newCause: EThreadInferenceEndCause) => {
+			if (cause === EThreadInferenceEndCause.COMPLETED) {
+				cause = newCause;
+			} else {
+				console.error(
+					`[Orchestrator] Cannot override inference cause: ${cause} → ${newCause} for thread ${request.threadId}`,
+				);
+			}
+		};
+		this.runningInferences.add(request.threadId);
+		this.eventNode.broadcast("bridge.threadInference.started", { threadId: request.threadId });
 		try {
 			// Auto-create thread if needed
 			let thread = await this.persistence.getThread(request.threadId);
@@ -287,7 +367,7 @@ export class Orchestrator {
 			if (!thread) {
 				isNewThread = true;
 				const now = Date.now();
-				let title = 'New Chat';
+				let title = "New Chat";
 				if (request.userMessage) {
 					title = this.truncateTitle(request.userMessage.content);
 				}
@@ -295,23 +375,33 @@ export class Orchestrator {
 					id: request.threadId,
 					title,
 					folderId: request.folderId ?? null,
-					systemPrompt: '',
-					meta: JSON.stringify({ serverId: request.serverId ?? null, whisperServerId: request.whisperServerId ?? null, tags: [], enableAutoEmbed: request.enableAutoEmbed ?? false }),
+					parentId: request.threadParentId ?? null,
+					systemPrompt: request.systemPrompt ?? "",
+					meta: JSON.stringify({
+						serverId: request.serverId ?? null,
+						whisperServerId: request.whisperServerId ?? null,
+						tags: [],
+						enableAutoEmbed: request.enableAutoEmbed ?? false,
+					}),
 					totalPromptTokens: 0,
 					totalCompletionTokens: 0,
 					createdAt: now,
 					updatedAt: now,
 				};
 				await this.persistence.createThread(thread);
-				if (request.threadState) await this.persistence.updateThreadState(thread.id, request.threadState);
+				if (request.threadState)
+					await this.persistence.updateThreadState(thread.id, request.threadState);
 				await this.persistence.setThreadConfig({
 					threadId: request.threadId,
 					presetId: request.presetId ?? null,
-					systemPrompt: request.systemPrompt ?? '',
+					systemPrompt: request.systemPrompt ?? "",
 					params: JSON.stringify(request.inferenceParams ?? {}),
 				});
-				this.broadcaster.emit({ type: 'thread.created', thread });
+				this.broadcaster.emit({ type: "thread.created", thread });
 			}
+
+			// Normalize folderId from thread (request.folderId may be stale from frontend)
+			request.folderId = thread.folderId;
 
 			// Stash inference URL for post-approval resume
 			threadInferenceUrls.set(request.threadId, inferenceUrl);
@@ -322,18 +412,20 @@ export class Orchestrator {
 			// If userMessage content provided, bridge generates ID and saves
 			let userMsg: IChatMessage | null = null;
 			if (request.userMessage) {
-				const userMessageId = crypto.randomUUID();
-				const content: IMessagePart[] = [{
-					id: crypto.randomUUID(),
-					type: EMessagePartType.TEXT,
-					orderIndex: 0,
-					text: request.userMessage.content,
-				}];
+				const userMessageId = genMessageId();
+				const content: IMessagePart[] = [
+					{
+						id: genPartId(),
+						type: EMessagePartType.TEXT,
+						orderIndex: 0,
+						text: request.userMessage.content,
+					},
+				];
 
 				if (request.attachments?.length) {
 					for (const att of request.attachments) {
 						content.push({
-							id: crypto.randomUUID(),
+							id: genPartId(),
 							type: EMessagePartType.ATTACHMENT,
 							orderIndex: content.length,
 							data: att.data,
@@ -346,7 +438,8 @@ export class Orchestrator {
 				}
 
 				const userActualTokens = content.reduce((acc, p) => {
-					if (p.type === EMessagePartType.TEXT || p.type === EMessagePartType.REASONING) return acc + (p.text ?? '').length;
+					if (p.type === EMessagePartType.TEXT || p.type === EMessagePartType.REASONING)
+						return acc + (p.text ?? "").length;
 					if (p.type === EMessagePartType.ATTACHMENT) return acc + (p.data?.length ?? 0);
 					return acc;
 				}, 0);
@@ -356,28 +449,40 @@ export class Orchestrator {
 					threadId: request.threadId,
 					role: EChatRole.USER,
 					content,
-					stats: { promptTokens: 0, completionTokens: 0, reasoningTokens: 0, actualTokens: Math.ceil(userActualTokens / 4) },
+					stats: {
+						promptTokens: 0,
+						completionTokens: 0,
+						reasoningTokens: 0,
+						actualTokens: Math.ceil(userActualTokens / 4),
+					},
 					createdAt: Date.now(),
 				};
 				await this.persistence.createMessage(userMsg);
-				await this.persistence.incrementThreadTokens(request.threadId, userMsg.stats!.actualTokens ?? 0, 0);
+				await this.persistence.incrementThreadTokens(
+					request.threadId,
+					userMsg.stats!.actualTokens ?? 0,
+					0,
+				);
 				if (request.messageState) {
 					await this.persistence.updateMessageState(userMessageId, request.messageState);
 				}
-				this.broadcaster.emit({ type: 'message.created', message: userMsg });
+				this.broadcaster.emit({ type: "message.created", message: userMsg });
 				parentForAssistant = userMessageId;
 			}
 			const enabledTools = await this.resolveEnabledTools(request);
 
 			// Build base messages for LLM context — V2: from persistence
-			let baseMessages = await this.buildMessageChain(request, request.parentId ?? undefined);
+			const baseMessages = await this.buildMessageChain(
+				request,
+				request.parentId ?? undefined,
+			);
 			if (userMsg) {
-				userMsg = await this.eventNode.pipe(
-					'bridge.preConvertNewMsg',
+				userMsg = (await this.eventNode.pipe(
+					"bridge.preConvertNewMsg",
 					{ request, userMsg },
-					'.',
+					".",
 					userMsg,
-				) as IChatMessage;
+				)) as IChatMessage;
 
 				const converted = convertMessagesToOpenAIFormat([userMsg], {});
 				baseMessages.push(...converted);
@@ -390,36 +495,52 @@ export class Orchestrator {
 				baseMessages,
 				enabledTools,
 				abortSignal,
+				setCause,
 			);
 
 			// Fire title generation after response completes (fire-and-forget)
-			if (request.userMessage && !!request.generateTitle && isNewThread) {
+			if (request.userMessage && request.generateTitle && isNewThread) {
 				this.generateTitle(inferenceUrl, request.userMessage.content)
-					.then(title => {
+					.then((title) => {
 						this.persistence.updateThread(request.threadId, { title });
-						this.broadcaster.emit({ type: 'thread.updated', threadId: request.threadId, updates: { title } });
+						this.broadcaster.emit({
+							type: "thread.updated",
+							threadId: request.threadId,
+							updates: { title },
+						});
 					})
 					.catch(() => {
 						// Title generation failed, keep truncated title
 					});
 			}
 		} catch (err) {
+			setCause(
+				abortSignal.aborted
+					? EThreadInferenceEndCause.ABORTED
+					: EThreadInferenceEndCause.ERROR,
+			);
 			const errorMsg = err instanceof Error ? err.message : String(err);
 			if (abortSignal.aborted) {
 				this.broadcaster.emit({
-					type: 'inference.ended',
+					type: "inference.ended",
 					threadId: request.threadId,
-					messageId: request.parentId ?? crypto.randomUUID(),
+					messageId: request.parentId ?? genMessageId(),
 				});
 			} else {
-				console.error('[Orchestrator] handleCompletionV2 error:', errorMsg);
+				console.error("[Orchestrator] handleCompletionV2 error:", errorMsg);
 				this.broadcaster.emit({
-					type: 'inference.error',
+					type: "inference.error",
 					threadId: request.threadId,
-					messageId: request.parentId ?? crypto.randomUUID(),
+					messageId: request.parentId ?? genMessageId(),
 					error: errorMsg,
 				});
 			}
+		} finally {
+			this.runningInferences.delete(request.threadId);
+			this.eventNode.broadcast("bridge.threadInference.ended", {
+				threadId: request.threadId,
+				cause,
+			});
 		}
 	}
 
@@ -433,6 +554,7 @@ export class Orchestrator {
 		messages: Array<TOpenAIMessage>,
 		enabledTools: IToolDefinition[],
 		abortSignal: AbortSignal,
+		setCause: (c: EThreadInferenceEndCause) => void,
 	): Promise<void> {
 		if (abortSignal.aborted) return;
 
@@ -446,7 +568,7 @@ export class Orchestrator {
 		};
 
 		this.broadcaster.emit({
-			type: 'inference.started',
+			type: "inference.started",
 			threadId: request.threadId,
 			messageId: assistantMsg.id,
 		});
@@ -465,7 +587,7 @@ export class Orchestrator {
 			const finalMessage = await this.persistence.getMessage(assistantMsg.id);
 			if (finalMessage) {
 				this.broadcaster.emit({
-					type: 'message.patched',
+					type: "message.patched",
 					messageId: assistantMsg.id,
 					threadId: request.threadId,
 					updates: {
@@ -475,11 +597,11 @@ export class Orchestrator {
 				});
 			}
 			this.broadcaster.emit({
-				type: 'inference.ended',
+				type: "inference.ended",
 				threadId: request.threadId,
 				messageId: assistantMsg.id,
 			});
-			this.eventNode.broadcast('bridge.inference.finish', {
+			this.eventNode.broadcast("bridge.inference.finish", {
 				threadId: request.threadId,
 				messageId: assistantMsg.id,
 				inferenceUrl,
@@ -490,7 +612,10 @@ export class Orchestrator {
 
 		// Stop conditions: waiting for approval, or no tool calls fired
 		if (!result) return;
-		if (result.needsAsk) return;
+		if (result.needsAsk) {
+			setCause(EThreadInferenceEndCause.PENDING_APPROVAL);
+			return;
+		}
 		if (!result.hadToolCalls) return;
 
 		// Tool calls auto-resolved — trigger next pass with new assistant message
@@ -502,12 +627,16 @@ export class Orchestrator {
 			messages,
 			enabledTools,
 			abortSignal,
+			setCause,
 		);
 	}
 
-	private async createAssistantMessage(threadId: TThreadId, parentId: TMessageId | null): Promise<IChatMessage> {
+	private async createAssistantMessage(
+		threadId: TThreadId,
+		parentId: TMessageId | null,
+	): Promise<IChatMessage> {
 		const msg: IChatMessage = {
-			id: crypto.randomUUID(),
+			id: genMessageId(),
 			parentId,
 			threadId,
 			role: EChatRole.ASSISTANT,
@@ -516,27 +645,33 @@ export class Orchestrator {
 			createdAt: Date.now(),
 		};
 		await this.persistence.createMessage(msg);
-		this.broadcaster.emit({ type: 'message.created', message: msg });
+		this.broadcaster.emit({ type: "message.created", message: msg });
 		return msg;
 	}
 
-	private async createToolMessage(threadId: TThreadId, parentId: TMessageId, toolCallId: string): Promise<IChatMessage> {
+	private async createToolMessage(
+		threadId: TThreadId,
+		parentId: TMessageId,
+		toolCallId: string,
+	): Promise<IChatMessage> {
 		const msg: IChatMessage = {
-			id: crypto.randomUUID(),
+			id: genMessageId(),
 			parentId,
 			threadId,
 			role: EChatRole.TOOL,
-			content: [{
-				id: crypto.randomUUID(),
-				type: EMessagePartType.TOOL_CALL,
-				orderIndex: 0,
-				toolCallId,
-			}],
+			content: [
+				{
+					id: genPartId(),
+					type: EMessagePartType.TOOL_CALL,
+					orderIndex: 0,
+					toolCallId,
+				},
+			],
 			stats: null,
 			createdAt: Date.now(),
 		};
 		await this.persistence.createMessage(msg);
-		this.broadcaster.emit({ type: 'message.created', message: msg });
+		this.broadcaster.emit({ type: "message.created", message: msg });
 		return msg;
 	}
 
@@ -550,8 +685,8 @@ export class Orchestrator {
 		abortSignal: AbortSignal,
 		turn: ITurnState,
 	): Promise<IPassResult> {
-		const openAiTools: IOpenAITool[] = enabledTools.map(t => ({
-			type: 'function' as const,
+		const openAiTools: IOpenAITool[] = enabledTools.map((t) => ({
+			type: "function" as const,
 			function: {
 				name: t.name,
 				description: t.description,
@@ -561,15 +696,24 @@ export class Orchestrator {
 		const hasTools = openAiTools.length > 0;
 
 		let finalMessages = [...messages];
-		finalMessages = await this.eventNode.pipe(
-			'bridge.preInference',
+		finalMessages = (await this.eventNode.pipe(
+			"bridge.preInference",
 			{ request, messages: finalMessages },
-			'.',
+			".",
 			finalMessages,
-		) as Array<TOpenAIMessage>;
+		)) as Array<TOpenAIMessage>;
+
+		this.checkMessageDivergence(request.threadId, finalMessages);
+
+		// this.eventNode.broadcast("console-log", {
+		// 	type: "inference_debug",
+		// 	threadId: request.threadId,
+		// 	messages: finalMessages,
+		// 	openAiTools
+		// });
 
 		const body: Record<string, unknown> = {
-			model: 'model',
+			model: "model",
 			messages: finalMessages,
 			stream: true,
 			...(hasTools ? { tools: openAiTools } : {}),
@@ -577,18 +721,18 @@ export class Orchestrator {
 		};
 
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
-			body: JSON.stringify(body),
+			method: "POST",
+			headers: { "Content-Type": "application/json", Authorization: "Bearer warpcore" },
+			body: stableStringify(body),
 			signal: abortSignal,
 		});
 
 		if (!response.ok || !response.body) {
-			const errBody = await response.text().catch(() => '');
+			const errBody = await response.text().catch(() => "");
 			const errorMessage = `Inference error ${response.status}: ${errBody}`;
 			console.error(`[Orchestrator] ${errorMessage}`);
 			this.broadcaster.emit({
-				type: 'inference.error',
+				type: "inference.error",
 				threadId: request.threadId,
 				messageId: turn.assistantMessageId,
 				error: errorMessage,
@@ -598,12 +742,12 @@ export class Orchestrator {
 
 		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
-		let buffer = '';
-		let fullText = '';
-		let reasoningText = '';
+		let buffer = "";
+		let fullText = "";
+		let reasoningText = "";
 		let timings: Record<string, number> | null = null;
 		let usage: Record<string, number> | null = null;
-		let finishReason = '';
+		let finishReason = "";
 		const toolCallAccumulators: Record<number, IToolCallAccumulator> = {};
 		let streamError: string | null = null;
 
@@ -626,38 +770,45 @@ export class Orchestrator {
 						await this.flushTextPart(turn);
 						return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
 					}
-					if (chunk.error || chunk.warpcore_event === 'error') {
-						streamError = chunk.error ?? 'Inference error from server';
+					if (chunk.error || chunk.warpcore_event === "error") {
+						streamError = chunk.error ?? "Inference error from server";
 						break;
 					}
 					const delta = chunk.choices?.[0]?.delta;
 
 					if (delta?.content) {
 						fullText += delta.content;
-						if (turn.currentReasoningPart) { await this.flushReasoningPart(turn); }
+						if (turn.currentReasoningPart) {
+							await this.flushReasoningPart(turn);
+						}
 						if (!turn.currentTextPart) {
-							turn.currentTextPart = { id: crypto.randomUUID(), text: '' };
+							turn.currentTextPart = { id: genPartId(), text: "" };
 							this.broadcaster.emit({
-								type: 'message.patched',
+								type: "message.patched",
 								messageId: turn.assistantMessageId,
 								threadId: request.threadId,
 								updates: {
-									addParts: [{
-										id: turn.currentTextPart.id,
-										type: EMessagePartType.TEXT,
-										orderIndex: turn.partOrderCounter,
-										text: '',
-									}],
+									addParts: [
+										{
+											id: turn.currentTextPart.id,
+											type: EMessagePartType.TEXT,
+											orderIndex: turn.partOrderCounter,
+											text: "",
+										},
+									],
 								},
 							});
 						}
 						turn.currentTextPart.text += delta.content;
 						// First chunk of text content
-						if (delta.content.length > 0 && turn.currentTextPart.text.length - delta.content.length === 0) {
+						if (
+							delta.content.length > 0 &&
+							turn.currentTextPart.text.length - delta.content.length === 0
+						) {
 							// first chunk
 						}
 						this.broadcaster.emit({
-							type: 'message.chunk',
+							type: "message.chunk",
 							messageId: turn.assistantMessageId,
 							threadId: request.threadId,
 							partId: turn.currentTextPart.id,
@@ -668,26 +819,30 @@ export class Orchestrator {
 
 					if (delta?.reasoning_content) {
 						reasoningText += delta.reasoning_content;
-						if (turn.currentTextPart) { await this.flushTextPart(turn); }
+						if (turn.currentTextPart) {
+							await this.flushTextPart(turn);
+						}
 						if (!turn.currentReasoningPart) {
-							turn.currentReasoningPart = { id: crypto.randomUUID(), text: '' };
+							turn.currentReasoningPart = { id: genPartId(), text: "" };
 							this.broadcaster.emit({
-								type: 'message.patched',
+								type: "message.patched",
 								messageId: turn.assistantMessageId,
 								threadId: request.threadId,
 								updates: {
-									addParts: [{
-										id: turn.currentReasoningPart.id,
-										type: EMessagePartType.REASONING,
-										orderIndex: turn.partOrderCounter,
-										text: '',
-									}],
+									addParts: [
+										{
+											id: turn.currentReasoningPart.id,
+											type: EMessagePartType.REASONING,
+											orderIndex: turn.partOrderCounter,
+											text: "",
+										},
+									],
 								},
 							});
 						}
 						turn.currentReasoningPart.text += delta.reasoning_content;
 						this.broadcaster.emit({
-							type: 'message.chunk',
+							type: "message.chunk",
 							messageId: turn.assistantMessageId,
 							threadId: request.threadId,
 							partId: turn.currentReasoningPart.id,
@@ -703,8 +858,32 @@ export class Orchestrator {
 							if (!hadName) {
 								const name = toolCallAccumulators[tc.index]?.name;
 								if (name) {
+									// Allow hooks to block tool calls based on mode restrictions
+									const shouldAbort = await this.eventNode.pipe(
+										"bridge.preTool",
+										{
+											request,
+											threadId: request.threadId,
+											messageId: turn.assistantMessageId,
+											toolName: name,
+											toolIndex: tc.index,
+											toolCallId: toolCallAccumulators[tc.index]?.id ?? "",
+										},
+										".",
+										false,
+									);
+									if (shouldAbort) {
+										await this.flushReasoningPart(turn);
+										await this.flushTextPart(turn);
+										return {
+											hadToolCalls: false,
+											needsAsk: false,
+											lastToolMessageId: null,
+										};
+									}
+
 									this.broadcaster.emit({
-										type: 'tool_call.starting',
+										type: "tool_call.starting",
 										threadId: request.threadId,
 										messageId: turn.assistantMessageId,
 										name,
@@ -714,11 +893,11 @@ export class Orchestrator {
 						}
 					}
 
-		const fr = chunk.choices?.[0]?.finish_reason;
+					const fr = chunk.choices?.[0]?.finish_reason;
 					if (fr) {
 						finishReason = fr;
 					}
-		if (chunk.timings) timings = chunk.timings as Record<string, number>;
+					if (chunk.timings) timings = chunk.timings as Record<string, number>;
 					if (chunk.usage) usage = chunk.usage as Record<string, number>;
 				}
 				if (sseDone) {
@@ -731,8 +910,9 @@ export class Orchestrator {
 		}
 
 		if (streamError) {
+			console.error("[Orchestrator] Stream Error!", streamError);
 			this.broadcaster.emit({
-				type: 'inference.error',
+				type: "inference.error",
 				threadId: request.threadId,
 				messageId: turn.assistantMessageId,
 				error: streamError,
@@ -745,18 +925,19 @@ export class Orchestrator {
 		if (timings || usage) {
 			const actualTokens = Math.ceil((fullText.length + reasoningText.length) / 4);
 			const stats: IChatMessageStats = {
-				promptTokens: (usage?.prompt_tokens ?? timings?.prompt_n ?? 0),
-				completionTokens: (usage?.completion_tokens ?? timings?.predicted_n ?? 0),
-				reasoningTokens: (usage?.reasoning_tokens ?? 0),
+				promptTokens: usage?.prompt_tokens ?? timings?.prompt_n ?? 0,
+				completionTokens: usage?.completion_tokens ?? timings?.predicted_n ?? 0,
+				reasoningTokens: usage?.reasoning_tokens ?? 0,
 				actualTokens,
 				promptPerSecond: timings?.prompt_per_second ?? 0,
 				predictedPerSecond: timings?.predicted_per_second ?? 0,
 				promptMs: timings?.prompt_ms ?? 0,
 				predictedMs: timings?.predicted_ms ?? 0,
+				finishReason,
 			};
 			await this.persistence.updateMessage(turn.assistantMessageId, { stats });
 			this.broadcaster.emit({
-				type: 'message.patched',
+				type: "message.patched",
 				messageId: turn.assistantMessageId,
 				threadId: request.threadId,
 				updates: { stats },
@@ -769,16 +950,16 @@ export class Orchestrator {
 		}
 
 		messages.push({
-			role: 'assistant',
+			role: "assistant",
 			content: fullText || (null as any),
-			tool_calls: finalToolCalls.map(tc => ({
+			tool_calls: finalToolCalls.map((tc) => ({
 				id: tc.id,
-				type: 'function',
+				type: "function",
 				function: { name: tc.name, arguments: tc.arguments },
 			})),
 		} as any);
 
-		if (finalToolCalls.length === 0 || finishReason !== 'tool_calls') {
+		if (finalToolCalls.length === 0 || finishReason !== "tool_calls") {
 			return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
 		}
 
@@ -788,38 +969,43 @@ export class Orchestrator {
 		let previousToolMessageId: TMessageId = turn.assistantMessageId;
 
 		for (const tc of finalToolCalls) {
-			if (abortSignal.aborted) return { hadToolCalls: true, needsAsk: false, lastToolMessageId };
+			if (abortSignal.aborted)
+				return { hadToolCalls: true, needsAsk: false, lastToolMessageId };
 
-			const enabledTool = enabledTools.find(t => t.name === tc.name);
+			const enabledTool = enabledTools.find((t) => t.name === tc.name);
 			const serverName = enabledTool?.serverName ?? this.mcpClient.findToolServer(tc.name);
 			//console.log('[Orch] tool call:', { toolName: tc.name, serverName, threadId: request.threadId });
 			let args: Record<string, unknown> = {};
-			try { args = JSON.parse(tc.arguments || '{}'); } catch { /* empty */ }
+			try {
+				args = JSON.parse(tc.arguments || "{}");
+			} catch {
+				/* empty */
+			}
 
 			let validationError: string | null = null;
 			if (!serverName) {
 				validationError = `No MCP server for tool '${tc.name}'`;
 			} else {
-				const toolDef = enabledTools.find(t => t.name === tc.name);
+				const toolDef = enabledTools.find((t) => t.name === tc.name);
 				if (toolDef) {
 					const validation = validateToolArgs(toolDef.inputSchema, args);
 					if (!validation.valid) {
-						validationError = `Invalid arguments: ${validation.errors.join(', ')}`;
+						validationError = `Invalid arguments: ${validation.errors.join(", ")}`;
 					}
 				}
 			}
 
 			// Use model's raw tool call ID for correlation with guardrails
 			const toolCallId = tc.id;
-			const toolMessageId = crypto.randomUUID();
+			const toolMessageId = genMessageId();
 
 			const toolCallRecord: IToolCall = {
 				id: toolCallId,
 				messageId: toolMessageId,
 				threadId: request.threadId,
-				serverName: serverName ?? '',
+				serverName: serverName ?? "",
 				toolName: tc.name,
-				arguments: JSON.stringify(args),
+				arguments: tc.arguments || "{}",
 				result: validationError ? JSON.stringify({ error: validationError }) : null,
 				status: validationError ? EToolCallStatus.ERROR : EToolCallStatus.PENDING,
 				error: validationError,
@@ -829,17 +1015,17 @@ export class Orchestrator {
 
 			// Order: tool_call.created -> message.patched (assistant gets tool_call part) -> message.created (tool message)
 			await this.persistence.createToolCall(toolCallRecord);
-			this.broadcaster.emit({ type: 'tool_call.created', toolCall: toolCallRecord });
+			this.broadcaster.emit({ type: "tool_call.created", toolCall: toolCallRecord });
 
 			const toolPart: IMessagePart = {
-				id: crypto.randomUUID(),
+				id: genPartId(),
 				type: EMessagePartType.TOOL_CALL,
 				orderIndex: turn.partOrderCounter++,
 				toolCallId,
 			};
 			await this.persistence.appendMessagePart(turn.assistantMessageId, toolPart);
 			this.broadcaster.emit({
-				type: 'message.patched',
+				type: "message.patched",
 				messageId: turn.assistantMessageId,
 				threadId: request.threadId,
 				updates: { addParts: [toolPart] },
@@ -851,31 +1037,37 @@ export class Orchestrator {
 				parentId: previousToolMessageId,
 				threadId: request.threadId,
 				role: EChatRole.TOOL,
-				content: [{
-					id: crypto.randomUUID(),
-					type: EMessagePartType.TOOL_CALL,
-					orderIndex: 0,
-					toolCallId,
-				}],
+				content: [
+					{
+						id: genPartId(),
+						type: EMessagePartType.TOOL_CALL,
+						orderIndex: 0,
+						toolCallId,
+					},
+				],
 				stats: null,
 				createdAt: Date.now(),
 			};
 			await this.persistence.createMessage(toolMsg);
-			this.broadcaster.emit({ type: 'message.created', message: toolMsg });
+			this.broadcaster.emit({ type: "message.created", message: toolMsg });
 
 			previousToolMessageId = toolMessageId;
 			lastToolMessageId = toolMessageId;
 
 			if (validationError) {
 				messages.push({
-					role: 'tool',
+					role: "tool",
 					content: toolCallRecord.result!,
 					tool_call_id: tc.id,
 				} as any);
 				continue;
 			}
 
-			const approvalMode = await this.permissions.getToolApprovalMode(request.threadId, serverName!, tc.name);
+			const approvalMode = await this.permissions.getToolApprovalMode(
+				request.threadId,
+				serverName!,
+				tc.name,
+			);
 			//console.log('[Orch] approvalMode:', approvalMode);
 
 			if (approvalMode === EToolApprovalMode.ASK) {
@@ -887,7 +1079,7 @@ export class Orchestrator {
 				const deniedTc: IToolCall = {
 					...toolCallRecord,
 					status: EToolCallStatus.DENIED,
-					result: JSON.stringify({ error: 'Tool call denied by policy' }),
+					result: JSON.stringify({ error: "Tool call denied by policy" }),
 					resolvedAt: Date.now(),
 				};
 				await this.persistence.updateToolCall(toolCallId, {
@@ -895,9 +1087,9 @@ export class Orchestrator {
 					result: deniedTc.result,
 					resolvedAt: deniedTc.resolvedAt,
 				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: deniedTc });
+				this.broadcaster.emit({ type: "tool_call.updated", toolCall: deniedTc });
 				messages.push({
-					role: 'tool',
+					role: "tool",
 					content: deniedTc.result!,
 					tool_call_id: tc.id,
 				} as any);
@@ -906,17 +1098,42 @@ export class Orchestrator {
 
 			// ALLOWED — execute now
 			const executingTc: IToolCall = { ...toolCallRecord, status: EToolCallStatus.EXECUTING };
-			await this.persistence.updateToolCall(toolCallId, { status: EToolCallStatus.EXECUTING });
-			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: executingTc });
+			await this.persistence.updateToolCall(toolCallId, {
+				status: EToolCallStatus.EXECUTING,
+			});
+			this.broadcaster.emit({ type: "tool_call.updated", toolCall: executingTc });
 
 			try {
 				const wsVars = await this.resolveWsVars(request.threadId);
 				const tsVars = await this.resolveThreadVars(request.threadId);
-				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars, tsVars);
-				console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
-				const mcpResult = await this.mcpClient.executeToolCall(serverName!, tc.name, finalArgs, request.threadId);
-				const resultStr = JSON.stringify(mcpResult.content);
-				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
+				const finalArgs = this.mcpClient.prepareToolArgs(
+					serverName!,
+					tc.name,
+					args,
+					wsVars,
+					tsVars,
+				);
+				// console.log(
+				// 	"[orchestrator] tool call:",
+				// 	serverName,
+				// 	tc.name,
+				// 	"wsVars:",
+				// 	wsVars,
+				// 	"tsVars:",
+				// 	tsVars,
+				// 	"finalArgs:",
+				// 	JSON.stringify(finalArgs),
+				// );
+				const mcpResult = await this.mcpClient.executeToolCall(
+					serverName!,
+					tc.name,
+					finalArgs,
+					request.threadId,
+				);
+				const resultStr = stableStringify(mcpResult.content);
+				const finalStatus = mcpResult.isError
+					? EToolCallStatus.ERROR
+					: EToolCallStatus.COMPLETED;
 				const completedTc: IToolCall = {
 					...toolCallRecord,
 					status: finalStatus,
@@ -930,9 +1147,9 @@ export class Orchestrator {
 					error: mcpResult.isError ? resultStr : null,
 					resolvedAt: completedTc.resolvedAt,
 				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: completedTc });
+				this.broadcaster.emit({ type: "tool_call.updated", toolCall: completedTc });
 				messages.push({
-					role: 'tool',
+					role: "tool",
 					content: resultStr,
 					tool_call_id: tc.id,
 				} as any);
@@ -950,9 +1167,9 @@ export class Orchestrator {
 					error: errorMsg,
 					resolvedAt: erroredTc.resolvedAt,
 				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: erroredTc });
+				this.broadcaster.emit({ type: "tool_call.updated", toolCall: erroredTc });
 				messages.push({
-					role: 'tool',
+					role: "tool",
 					content: errorResult,
 					tool_call_id: tc.id,
 				} as any);
@@ -960,6 +1177,48 @@ export class Orchestrator {
 		}
 
 		return { hadToolCalls: true, needsAsk, lastToolMessageId };
+	}
+
+	private checkMessageDivergence(threadId: TThreadId, currentMessages: TOpenAIMessage[]): void {
+		try {
+			const cachedMessages = threadInferenceMessageCache[threadId];
+			if (!cachedMessages) {
+				threadInferenceMessageCache[threadId] = currentMessages;
+				return;
+			}
+
+			const minLen = Math.min(cachedMessages.length, currentMessages.length);
+			for (let i = 0; i < minLen; i++) {
+				const oldMsg = cachedMessages[i];
+				const newMsg = currentMessages[i];
+				if (!isDeepStrictEqual(oldMsg, newMsg)) {
+					console.warn(
+						"inference_message_divergence",
+						JSON.stringify(oldMsg),
+						JSON.stringify(newMsg),
+					);
+					this.eventNode.broadcast("console-log", {
+						type: "inference_message_divergence",
+						threadId,
+						divergentIndex: i,
+						cachedThread: cachedMessages,
+						currentThread: currentMessages,
+						divergentCachedMessage: oldMsg,
+						divergentCurrentMessage: newMsg,
+					});
+					break;
+				}
+			}
+			threadInferenceMessageCache[threadId] = currentMessages;
+		} catch {
+			// non-fatal, do not interrupt inference
+		}
+	}
+
+	// Update the divergence cache with the post-inference messages (including the
+	// assistant response) so the next turn does not falsely detect divergence.
+	private updateDivergenceCache(threadId: TThreadId, currentMessages: TOpenAIMessage[]): void {
+		threadInferenceMessageCache[threadId] = currentMessages;
 	}
 
 	private async flushTextPart(turn: ITurnState): Promise<void> {
@@ -987,20 +1246,25 @@ export class Orchestrator {
 	// V2: builds message chain from persistence instead of receiving it from frontend
 	async resumeToolCallV2(
 		toolCallId: string,
-		decision: 'approve' | 'deny',
+		decision: "approve" | "deny",
 		inferenceUrl: string,
 		request: ICompletionRequest,
 		abortSignal: AbortSignal,
 	): Promise<void> {
 		const tc = await this.persistence.getToolCall(toolCallId);
-		if (!tc) throw new Error('Tool call not found');
-		if (tc.status !== EToolCallStatus.PENDING) throw new Error(`Tool call is ${tc.status}, not PENDING`);
+		if (!tc) throw new Error("Tool call not found");
+		if (tc.status !== EToolCallStatus.PENDING)
+			throw new Error(`Tool call is ${tc.status}, not PENDING`);
 
-		if (decision === 'deny') {
+		// Normalize folderId from thread
+		const thread = await this.persistence.getThread(request.threadId);
+		if (thread) request.folderId = thread.folderId;
+
+		if (decision === "deny") {
 			const deniedTc: IToolCall = {
 				...tc,
 				status: EToolCallStatus.DENIED,
-				result: JSON.stringify({ error: 'Tool call denied by user' }),
+				result: JSON.stringify({ error: "Tool call denied by user" }),
 				resolvedAt: Date.now(),
 			};
 			await this.persistence.updateToolCall(toolCallId, {
@@ -1008,21 +1272,36 @@ export class Orchestrator {
 				result: deniedTc.result,
 				resolvedAt: deniedTc.resolvedAt,
 			});
-			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: deniedTc });
+			this.broadcaster.emit({ type: "tool_call.updated", toolCall: deniedTc });
 		} else {
 			const executingTc: IToolCall = { ...tc, status: EToolCallStatus.EXECUTING };
-			await this.persistence.updateToolCall(toolCallId, { status: EToolCallStatus.EXECUTING });
-			this.broadcaster.emit({ type: 'tool_call.updated', toolCall: executingTc });
+			await this.persistence.updateToolCall(toolCallId, {
+				status: EToolCallStatus.EXECUTING,
+			});
+			this.broadcaster.emit({ type: "tool_call.updated", toolCall: executingTc });
 
 			try {
 				const args = JSON.parse(tc.arguments);
 				const wsVars = await this.resolveWsVars(tc.threadId);
 				const tsVars = await this.resolveThreadVars(tc.threadId);
-				const finalArgs = this.mcpClient.prepareToolArgs(tc.serverName, tc.toolName, args, wsVars, tsVars);
+				const finalArgs = this.mcpClient.prepareToolArgs(
+					tc.serverName,
+					tc.toolName,
+					args,
+					wsVars,
+					tsVars,
+				);
 				//console.log('[orchestrator] resume tool call:', tc.serverName, tc.toolName, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
-				const mcpResult = await this.mcpClient.executeToolCall(tc.serverName, tc.toolName, finalArgs, tc.threadId);
-				const resultStr = JSON.stringify(mcpResult.content);
-				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
+				const mcpResult = await this.mcpClient.executeToolCall(
+					tc.serverName,
+					tc.toolName,
+					finalArgs,
+					tc.threadId,
+				);
+				const resultStr = stableStringify(mcpResult.content);
+				const finalStatus = mcpResult.isError
+					? EToolCallStatus.ERROR
+					: EToolCallStatus.COMPLETED;
 				const completedTc: IToolCall = {
 					...tc,
 					status: finalStatus,
@@ -1036,7 +1315,7 @@ export class Orchestrator {
 					error: mcpResult.isError ? resultStr : null,
 					resolvedAt: completedTc.resolvedAt,
 				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: completedTc });
+				this.broadcaster.emit({ type: "tool_call.updated", toolCall: completedTc });
 			} catch (err) {
 				const errorMsg = err instanceof Error ? err.message : String(err);
 				const erroredTc: IToolCall = {
@@ -1050,7 +1329,7 @@ export class Orchestrator {
 					error: errorMsg,
 					resolvedAt: erroredTc.resolvedAt,
 				});
-				this.broadcaster.emit({ type: 'tool_call.updated', toolCall: erroredTc });
+				this.broadcaster.emit({ type: "tool_call.updated", toolCall: erroredTc });
 			}
 		}
 
@@ -1072,11 +1351,15 @@ export class Orchestrator {
 		const allInChain = await Promise.all(
 			assistantMsg.content
 				.filter((p): p is IMessagePartToolCall => p.type === EMessagePartType.TOOL_CALL)
-				.map(p => p.toolCallId)
-				.map(id => this.persistence.getToolCall(id))
+				.map((p) => p.toolCallId)
+				.map((id) => this.persistence.getToolCall(id)),
 		);
-		const stillBlocking = allInChain.some(t =>
-			t && (t.status === EToolCallStatus.PENDING || t.status === EToolCallStatus.EXECUTING || t.status === EToolCallStatus.DENIED)
+		const stillBlocking = allInChain.some(
+			(t) =>
+				t &&
+				(t.status === EToolCallStatus.PENDING ||
+					t.status === EToolCallStatus.EXECUTING ||
+					t.status === EToolCallStatus.DENIED),
 		);
 		if (stillBlocking) return;
 
@@ -1093,14 +1376,35 @@ export class Orchestrator {
 		const enabledTools = await this.resolveEnabledTools(request);
 		const baseMessages = await this.buildMessageChain(request, tc.messageId);
 
-		await this.executePass(
-			inferenceUrl,
-			request,
-			tc.messageId,
-			baseMessages,
-			enabledTools,
-			abortSignal,
-		);
+		this.runningInferences.add(request.threadId);
+		this.eventNode.broadcast("bridge.threadInference.started", { threadId: request.threadId });
+		let cause: EThreadInferenceEndCause = EThreadInferenceEndCause.COMPLETED;
+		const setCause = (newCause: EThreadInferenceEndCause) => {
+			if (cause === EThreadInferenceEndCause.COMPLETED) {
+				cause = newCause;
+			} else {
+				console.error(
+					`[Orchestrator] Cannot override inference cause: ${cause} → ${newCause} for thread ${request.threadId}`,
+				);
+			}
+		};
+		try {
+			await this.executePass(
+				inferenceUrl,
+				request,
+				tc.messageId,
+				baseMessages,
+				enabledTools,
+				abortSignal,
+				setCause,
+			);
+		} finally {
+			this.runningInferences.delete(request.threadId);
+			this.eventNode.broadcast("bridge.threadInference.ended", {
+				threadId: request.threadId,
+				cause,
+			});
+		}
 	}
 
 	private buildInferenceParams(params: Record<string, unknown>): Record<string, unknown> {
@@ -1115,15 +1419,31 @@ export class Orchestrator {
 			...(p.seed >= 0 ? { seed: p.seed } : {}),
 			...(p.repeatPenalty !== 1.0 ? { repeat_penalty: p.repeatPenalty } : {}),
 			...(p.minP > 0 ? { min_p: p.minP } : {}),
-			...(p.mirostatMode > 0 ? { mirostat: p.mirostatMode, mirostat_tau: p.mirostatTau, mirostat_eta: p.mirostatEta } : {}),
+			...(p.mirostatMode > 0
+				? {
+						mirostat: p.mirostatMode,
+						mirostat_tau: p.mirostatTau,
+						mirostat_eta: p.mirostatEta,
+					}
+				: {}),
 			...(p.cachePrompt ? { cache_prompt: true } : {}),
-			...(p.responseFormat && p.responseFormat !== 'text' ? { response_format: { type: p.responseFormat } } : {}),
-			...(p.reasoningFormat && p.reasoningFormat !== 'none' ? { reasoning_format: p.reasoningFormat } : {}),
+			...(p.responseFormat && p.responseFormat !== "text"
+				? { response_format: { type: p.responseFormat } }
+				: {}),
+			...(p.reasoningFormat && p.reasoningFormat !== "none"
+				? { reasoning_format: p.reasoningFormat }
+				: {}),
 			...(p.enableThinking !== undefined || p.reasoningEffort !== undefined
-				? { chat_template_kwargs: {
-					...(p.enableThinking !== undefined ? { enable_thinking: p.enableThinking } : {}),
-					...(p.reasoningEffort !== undefined ? { reasoning_effort: p.reasoningEffort } : {}),
-				} }
+				? {
+						chat_template_kwargs: {
+							...(p.enableThinking !== undefined
+								? { enable_thinking: p.enableThinking }
+								: {}),
+							...(p.reasoningEffort !== undefined
+								? { reasoning_effort: p.reasoningEffort }
+								: {}),
+						},
+					}
 				: {}),
 			...(p.typicalP !== undefined ? { typical_p: p.typicalP } : {}),
 			...(p.ignoreEos !== undefined ? { ignore_eos: p.ignoreEos } : {}),
@@ -1151,11 +1471,14 @@ export class Orchestrator {
 
 	private async resolveEnabledTools(request: ICompletionRequest): Promise<IToolDefinition[]> {
 		// Save to DB — convenience for UI reload only, doesn't affect filtering
-		if (!request.skipToolsSave && (request.attachAllTools !== undefined || request.attachedTools !== undefined)) {
+		if (
+			!request.skipToolsSave &&
+			(request.attachAllTools !== undefined || request.attachedTools !== undefined)
+		) {
 			await this.persistence.saveThreadAttachedTools(
 				request.threadId,
 				request.attachAllTools ?? false,
-				request.attachedTools ?? []
+				request.attachedTools ?? [],
 			);
 		}
 
@@ -1169,8 +1492,8 @@ export class Orchestrator {
 		if (attachAllTools) {
 			result = await this.permissions.getEnabledTools(request.threadId, allTools);
 		} else if (attachedTools && attachedTools.length > 0) {
-			const filtered = allTools.filter(t =>
-				attachedTools.some(a => a.serverName === t.serverName && a.toolName === t.name)
+			const filtered = allTools.filter((t) =>
+				attachedTools.some((a) => a.serverName === t.serverName && a.toolName === t.name),
 			);
 			result = await this.permissions.getEnabledTools(request.threadId, filtered);
 		} else {
@@ -1181,7 +1504,7 @@ export class Orchestrator {
 		result.sort((a, b) =>
 			a.serverName === b.serverName
 				? a.name.localeCompare(b.name)
-				: a.serverName.localeCompare(b.serverName)
+				: a.serverName.localeCompare(b.serverName),
 		);
 
 		return result;
@@ -1189,12 +1512,17 @@ export class Orchestrator {
 
 	private generateTitle(inferenceUrl: string, userContent: string): Promise<string> {
 		return fetch(`${inferenceUrl}/v1/chat/completions`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
+			method: "POST",
+			headers: { "Content-Type": "application/json", Authorization: "Bearer warpcore" },
 			body: JSON.stringify({
-				model: 'model',
+				model: "model",
 				messages: [
-					{ role: 'user', content: 'Generate a concise 3-5 word title for the conversation below. Return ONLY the title text, no quotes, no explanation.\n\n' + userContent },
+					{
+						role: "user",
+						content:
+							"Generate a concise 3-5 word title for the conversation below. Return ONLY the title text, no quotes, no explanation.\n\n" +
+							userContent,
+					},
 				],
 				stream: false,
 				max_tokens: 30,
@@ -1202,20 +1530,20 @@ export class Orchestrator {
 				chat_template_kwargs: { enable_thinking: false },
 			}),
 		})
-			.then(res => {
-				if (!res.ok || !res.body) throw new Error('Title generation failed');
+			.then((res) => {
+				if (!res.ok || !res.body) throw new Error("Title generation failed");
 				return res.json();
 			})
-			.then(body => {
-				const title = body?.choices?.[0]?.message?.content ?? '';
-				if (!title) throw new Error('Empty title response');
-				return title.replace(/^["']|["']$/g, '').trim();
+			.then((body) => {
+				const title = body?.choices?.[0]?.message?.content ?? "";
+				if (!title) throw new Error("Empty title response");
+				return title.replace(/^["']|["']$/g, "").trim();
 			});
 	}
 
 	private truncateTitle(text: string): string {
 		const words = text.split(/\s+/).filter(Boolean).slice(0, 5);
-		return words.join(' ') || 'New Chat';
+		return words.join(" ") || "New Chat";
 	}
 
 	async handlePureCompletions(
@@ -1226,32 +1554,32 @@ export class Orchestrator {
 		abortSignal?: AbortSignal,
 	): Promise<IPureCompletionResult> {
 		const body: Record<string, unknown> = {
-			model: 'model',
+			model: "model",
 			messages,
 			stream: true,
 			...this.buildInferenceParams(inferenceParams),
 		};
 
 		const response = await fetch(`${inferenceUrl}/v1/chat/completions`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer warpcore' },
-			body: JSON.stringify(body),
+			method: "POST",
+			headers: { "Content-Type": "application/json", Authorization: "Bearer warpcore" },
+			body: stableStringify(body),
 			signal: abortSignal,
 		});
 
 		if (!response.ok || !response.body) {
-			const errBody = await response.text().catch(() => '');
+			const errBody = await response.text().catch(() => "");
 			throw new Error(`Inference error ${response.status}: ${errBody}`);
 		}
 
 		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
-		let buffer = '';
-		let fullText = '';
-		let reasoningText = '';
+		let buffer = "";
+		let fullText = "";
+		let reasoningText = "";
 		let timings: Record<string, number> | null = null;
 		let usage: Record<string, number> | null = null;
-		let finishReason = '';
+		let finishReason = "";
 		let streamError: string | null = null;
 
 		const parts: IMessagePart[] = [];
@@ -1293,10 +1621,10 @@ export class Orchestrator {
 					if (abortSignal?.aborted) {
 						flushReasoning();
 						flushText();
-						return { content: parts, stats: null, finishReason: 'aborted' };
+						return { content: parts, stats: null, finishReason: "aborted" };
 					}
-					if (chunk.error || chunk.warpcore_event === 'error') {
-						streamError = chunk.error ?? 'Inference error from server';
+					if (chunk.error || chunk.warpcore_event === "error") {
+						streamError = chunk.error ?? "Inference error from server";
 						break;
 					}
 
@@ -1306,20 +1634,20 @@ export class Orchestrator {
 						fullText += delta.content;
 						if (currentReasoningPart) flushReasoning();
 						if (!currentTextPart) {
-							currentTextPart = { id: crypto.randomUUID(), text: '' };
+							currentTextPart = { id: genPartId(), text: "" };
 						}
 						currentTextPart.text += delta.content;
-						onChunk?.('text', delta.content);
+						onChunk?.("text", delta.content);
 					}
 
 					if (delta?.reasoning_content) {
 						reasoningText += delta.reasoning_content;
 						if (currentTextPart) flushText();
 						if (!currentReasoningPart) {
-							currentReasoningPart = { id: crypto.randomUUID(), text: '' };
+							currentReasoningPart = { id: genPartId(), text: "" };
 						}
 						currentReasoningPart.text += delta.reasoning_content;
-						onChunk?.('reasoning', delta.reasoning_content);
+						onChunk?.("reasoning", delta.reasoning_content);
 					}
 
 					const fr = chunk.choices?.[0]?.finish_reason;
@@ -1338,18 +1666,19 @@ export class Orchestrator {
 		}
 
 		const actualTokens = Math.ceil((fullText.length + reasoningText.length) / 4);
-		const stats: IChatMessageStats | null = (timings || usage)
-			? {
-				promptTokens: (usage?.prompt_tokens ?? timings?.prompt_n ?? 0),
-				completionTokens: (usage?.completion_tokens ?? timings?.predicted_n ?? 0),
-				reasoningTokens: (usage?.reasoning_tokens ?? 0),
-				actualTokens,
-				promptPerSecond: timings?.prompt_per_second ?? 0,
-				predictedPerSecond: timings?.predicted_per_second ?? 0,
-				promptMs: timings?.prompt_ms ?? 0,
-				predictedMs: timings?.predicted_ms ?? 0,
-			}
-			: null;
+		const stats: IChatMessageStats | null =
+			timings || usage
+				? {
+						promptTokens: usage?.prompt_tokens ?? timings?.prompt_n ?? 0,
+						completionTokens: usage?.completion_tokens ?? timings?.predicted_n ?? 0,
+						reasoningTokens: usage?.reasoning_tokens ?? 0,
+						actualTokens,
+						promptPerSecond: timings?.prompt_per_second ?? 0,
+						predictedPerSecond: timings?.predicted_per_second ?? 0,
+						promptMs: timings?.prompt_ms ?? 0,
+						predictedMs: timings?.predicted_ms ?? 0,
+					}
+				: null;
 
 		return { content: parts, stats, finishReason };
 	}

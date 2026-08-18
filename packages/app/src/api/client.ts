@@ -1,15 +1,12 @@
-import type { IApiResponse, IApiListResponse } from '@warpcore/shared';
+import type { IApiListResponse, IApiResponse } from "@warpcore/shared";
 
-const API_BASE = '/api';
+const API_BASE = "/api";
 
-async function request<T>(
-	path: string,
-	options?: RequestInit,
-): Promise<IApiResponse<T>> {
+async function request<T>(path: string, options?: RequestInit): Promise<IApiResponse<T>> {
 	try {
 		const res = await fetch(`${API_BASE}${path}`, {
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
+			headers: { "Content-Type": "application/json" },
+			credentials: "include",
 			...options,
 		});
 		if (!res.ok) {
@@ -23,14 +20,11 @@ async function request<T>(
 	}
 }
 
-async function requestList<T>(
-	path: string,
-	options?: RequestInit,
-): Promise<IApiListResponse<T>> {
+async function requestList<T>(path: string, options?: RequestInit): Promise<IApiListResponse<T>> {
 	try {
 		const res = await fetch(`${API_BASE}${path}`, {
-			headers: { 'Content-Type': 'application/json' },
-			credentials: 'include',
+			headers: { "Content-Type": "application/json" },
+			credentials: "include",
 			...options,
 		});
 		if (!res.ok) {
@@ -48,25 +42,24 @@ export const api = {
 	get: <T>(path: string) => request<T>(path),
 	getList: <T>(path: string) => requestList<T>(path),
 	post: <T>(path: string, body?: unknown) =>
-		request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+		request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
 	put: <T>(path: string, body: unknown) =>
-		request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+		request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
 	patch: <T>(path: string, body: unknown) =>
-		request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
-	del: <T>(path: string) =>
-		request<T>(path, { method: 'DELETE' }),
+		request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+	del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
 
 // Auth-specific functions that handle Bearer tokens
 export async function login(token: string): Promise<IApiResponse<unknown>> {
 	try {
 		const res = await fetch(`${API_BASE}/auth/login`, {
-			method: 'POST',
+			method: "POST",
 			headers: {
-				'Content-Type': 'application/json',
+				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
-			credentials: 'include',
+			credentials: "include",
 		});
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
@@ -80,14 +73,14 @@ export async function login(token: string): Promise<IApiResponse<unknown>> {
 }
 
 export async function logout(): Promise<IApiResponse<null>> {
-	return api.post<null>('/auth/logout');
+	return api.post<null>("/auth/logout");
 }
 
 export async function fetchAuthCheck(): Promise<IApiResponse<unknown>> {
 	try {
-		return await api.get<unknown>('/auth/check');
+		return await api.get<unknown>("/auth/check");
 	} catch (err) {
-		if (String(err).includes('HTTP 401')) {
+		if (String(err).includes("HTTP 401")) {
 			return { ok: true, data: null, error: null };
 		}
 		return { ok: false, data: null, error: String(err) };
@@ -95,6 +88,5 @@ export async function fetchAuthCheck(): Promise<IApiResponse<unknown>> {
 }
 
 export async function fetchAuthMe(): Promise<IApiResponse<unknown>> {
-	return api.get<unknown>('/auth/me');
+	return api.get<unknown>("/auth/me");
 }
-

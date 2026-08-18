@@ -1,14 +1,13 @@
-import { Router } from 'express';
-import { store } from '../util/store';
-import { scanAllModelRoots } from '../services/modelScanner';
-import { sseManager } from '../services/sseManagerInstance';
-import type { ISettings, IModel } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
-import { parseGgufMetadata } from '../services/ggufParser';
-import type { IGgufFile } from '@warpcore/shared';
+import type { IModel, ISettings } from "@warpcore/shared";
+import { DEFAULT_SETTINGS } from "@warpcore/shared";
+import { Router } from "express";
+import { parseGgufMetadata } from "../services/ggufParser";
+import { scanAllModelRoots } from "../services/modelScanner";
+import { sseManager } from "../services/sseManagerInstance";
+import { store } from "../util/store";
 
-const SETTINGS_KEY = 'settings:general';
-const MODELS_KEY = 'models:cache';
+const SETTINGS_KEY = "settings:general";
+const MODELS_KEY = "models:cache";
 
 // Cached scan results (refreshed on demand)
 let cachedModels: IModel[] = [];
@@ -24,9 +23,9 @@ export async function loadCachedModels(): Promise<void> {
 			console.log(`[models] Loaded ${cachedModels.length} cached models`);
 		} else {
 			// No cache - perform initial scan
-			const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+			const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 			if (settings.modelRoots.length > 0) {
-				console.log('[models] No cache found, scanning...');
+				console.log("[models] No cache found, scanning...");
 				cachedModels = await scanAllModelRoots(settings.modelRoots);
 				lastScanAt = Date.now();
 				await store.put(MODELS_KEY, cachedModels);
@@ -34,23 +33,23 @@ export async function loadCachedModels(): Promise<void> {
 			}
 		}
 	} catch (err) {
-		console.warn('[models] Failed to load cached models:', err);
+		console.warn("[models] Failed to load cached models:", err);
 	}
 }
 
 export const modelsRouter = Router();
 
 // GET /api/models — list all scanned models
-modelsRouter.get('/', async (_req, res) => {
+modelsRouter.get("/", async (_req, res) => {
 	res.json({ ok: true, data: cachedModels, total: cachedModels.length, error: null });
 });
 
 // POST /api/models/scan — trigger a fresh scan of all model roots
-modelsRouter.post('/scan', async (_req, res) => {
-	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+modelsRouter.post("/scan", async (_req, res) => {
+	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 
 	if (settings.modelRoots.length === 0) {
-		res.json({ ok: true, data: [], total: 0, error: 'No model directories configured' });
+		res.json({ ok: true, data: [], total: 0, error: "No model directories configured" });
 		return;
 	}
 
@@ -59,16 +58,16 @@ modelsRouter.post('/scan', async (_req, res) => {
 	lastScanAt = Date.now();
 
 	const changed = cachedModels.length - before;
-	const changeMsg = changed > 0 ? ` (+${changed})` : changed < 0 ? ` (${changed})` : '';
+	const changeMsg = changed > 0 ? ` (+${changed})` : changed < 0 ? ` (${changed})` : "";
 	console.log(`[models] Scan complete: ${cachedModels.length} models${changeMsg}`);
 
-	sseManager.emit('models:init', cachedModels);
+	sseManager.emit("models:init", cachedModels);
 
 	res.json({ ok: true, data: cachedModels, total: cachedModels.length, error: null });
 });
 
 // GET /api/models/scan-status
-modelsRouter.get('/scan-status', (_req, res) => {
+modelsRouter.get("/scan-status", (_req, res) => {
 	res.json({
 		ok: true,
 		data: {
@@ -85,13 +84,13 @@ export function getCachedModels(): IModel[] {
 }
 
 // PUT /api/models/:id - update model metadata (e.g., recommendedInferenceParams)
-modelsRouter.put('/:id', async (req, res) => {
+modelsRouter.put("/:id", async (req, res) => {
 	const modelId = req.params.id;
 	const updateData = req.body as { recommendedInferenceParams?: string };
 
-	const modelIndex = cachedModels.findIndex(m => m.id === modelId);
+	const modelIndex = cachedModels.findIndex((m) => m.id === modelId);
 	if (modelIndex === -1) {
-		res.status(404).json({ ok: false, data: null, error: 'Model not found' });
+		res.status(404).json({ ok: false, data: null, error: "Model not found" });
 		return;
 	}
 
@@ -107,19 +106,19 @@ modelsRouter.put('/:id', async (req, res) => {
 	// Save updated cache
 	try {
 		await store.put(MODELS_KEY, cachedModels);
-		sseManager.emit('models:update', [updatedModel]);
+		sseManager.emit("models:update", [updatedModel]);
 		res.json({ ok: true, data: updatedModel, error: null });
 	} catch (err) {
-		console.error('[models] Failed to save updated model:', err);
+		console.error("[models] Failed to save updated model:", err);
 		res.json({ ok: false, data: null, error: String(err) });
 	}
 });
 
-modelsRouter.post('/:id/reparse', async (req, res) => {
+modelsRouter.post("/:id/reparse", async (req, res) => {
 	const modelId = req.params.id;
-	const model = cachedModels.find(m => m.id === modelId);
+	const model = cachedModels.find((m) => m.id === modelId);
 	if (!model || !model.primaryFile) {
-		res.status(404).json({ ok: false, data: null, error: 'Model or primary file not found' });
+		res.status(404).json({ ok: false, data: null, error: "Model or primary file not found" });
 		return;
 	}
 
@@ -127,7 +126,7 @@ modelsRouter.post('/:id/reparse', async (req, res) => {
 
 	try {
 		await store.put(MODELS_KEY, cachedModels);
-		sseManager.emit('models:update', [model]);
+		sseManager.emit("models:update", [model]);
 		res.json({ ok: true, data: model, error: null });
 	} catch (err) {
 		res.json({ ok: false, data: null, error: String(err) });

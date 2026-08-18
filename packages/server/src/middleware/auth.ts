@@ -1,27 +1,30 @@
-import { Response, NextFunction } from 'express';
-import { store } from '../util/store';
-import { validateBearerToken } from '../routes/tokens';
-import type { IAccessToken, ISettings } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import type { IAccessToken, ISettings } from "@warpcore/shared";
+import { DEFAULT_SETTINGS } from "@warpcore/shared";
+import type { NextFunction, Response } from "express";
+import { validateBearerToken } from "../routes/tokens";
+import { store } from "../util/store";
 
-const SETTINGS_KEY = 'settings:general';
-const COOKIE_NAME = 'warpcore_auth';
+const SETTINGS_KEY = "settings:general";
+const COOKIE_NAME = "warpcore_auth";
 
 // Check if request is from a remote host (not localhost)
 export function isRemote(req: { ip: string; connection: { remoteAddress: string } }): boolean {
-	const ip = req.ip || req.connection.remoteAddress || '';
-	const normalized = ip.replace(/^::ffff:/, '');
-	const isLocalhost = normalized === '::1' || normalized === '127.0.0.1';
+	const ip = req.ip || req.connection.remoteAddress || "";
+	const normalized = ip.replace(/^::ffff:/, "");
+	const isLocalhost = normalized === "::1" || normalized === "127.0.0.1";
 	return !isLocalhost;
 }
 
 // Check if auth should be required for this request
-export async function shouldRequireAuth(req: { ip: string; connection: { remoteAddress: string } }): Promise<boolean> {
+export async function shouldRequireAuth(req: {
+	ip: string;
+	connection: { remoteAddress: string };
+}): Promise<boolean> {
 	const settings = await getSettings();
-	
+
 	// If localhost auth is forced, always require auth
 	if (settings.authRequireForLocalhost) return true;
-	
+
 	// Otherwise, only require auth for remote hosts
 	return isRemote(req);
 }
@@ -32,19 +35,24 @@ async function getSettings(): Promise<ISettings> {
 }
 
 // Check if user has admin access via cookie or token
-export async function hasAdminAccess(req: { cookies?: Record<string, string>; headers?: Record<string, string>; ip?: string; connection?: { remoteAddress: string } }): Promise<boolean> {
+export async function hasAdminAccess(req: {
+	cookies?: Record<string, string>;
+	headers?: Record<string, string>;
+	ip?: string;
+	connection?: { remoteAddress: string };
+}): Promise<boolean> {
 	const settings = await getSettings();
 
 	// If not requiring auth (localhost and authRequireForLocalhost is false), allow
-	if (!await shouldRequireAuth(req)) return true;
+	if (!(await shouldRequireAuth(req))) return true;
 
 	// Check if any auth is enabled
 	if (!settings.apiAuthEnabled && !settings.proxyAuthEnabled) return true;
 
 	// Check cookie first
 	if (req.cookies?.[COOKIE_NAME]) {
-		const tokens = await store.list<IAccessToken>('tokens:');
-		const token = tokens.find(t => t.id === req.cookies[COOKIE_NAME]);
+		const tokens = await store.list<IAccessToken>("tokens:");
+		const token = tokens.find((t) => t.id === req.cookies[COOKIE_NAME]);
 		if (token?.admin) return true;
 	}
 
@@ -62,15 +70,15 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
 	// Bypass auth if:
 	// 1. authRequireForLocalhost is false AND request is from localhost
 	// 2. apiAuthEnabled is false
-	if (!await shouldRequireAuth(req) || !settings.apiAuthEnabled) {
+	if (!(await shouldRequireAuth(req)) || !settings.apiAuthEnabled) {
 		next();
 		return;
 	}
 
 	// Check cookie auth
 	if (req.cookies?.[COOKIE_NAME]) {
-		const tokens = await store.list<IAccessToken>('tokens:');
-		const token = tokens.find(t => t.id === req.cookies[COOKIE_NAME]);
+		const tokens = await store.list<IAccessToken>("tokens:");
+		const token = tokens.find((t) => t.id === req.cookies[COOKIE_NAME]);
 		if (token) {
 			next();
 			return;
@@ -84,17 +92,21 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
 		return;
 	}
 
-	res.status(401).json({ ok: false, data: null, error: 'Authentication required' });
+	res.status(401).json({ ok: false, data: null, error: "Authentication required" });
 }
 
 // Auth middleware for /v1/* proxy routes
-export async function proxyAuthMiddleware(req: any, res: Response, next: NextFunction): Promise<void> {
+export async function proxyAuthMiddleware(
+	req: any,
+	res: Response,
+	next: NextFunction,
+): Promise<void> {
 	const settings = await getSettings();
 
 	// Bypass auth if:
 	// 1. authRequireForLocalhost is false AND request is from localhost
 	// 2. proxyAuthEnabled is false
-	if (!await shouldRequireAuth(req) || !settings.proxyAuthEnabled) {
+	if (!(await shouldRequireAuth(req)) || !settings.proxyAuthEnabled) {
 		next();
 		return;
 	}
@@ -106,7 +118,7 @@ export async function proxyAuthMiddleware(req: any, res: Response, next: NextFun
 		res.status(401).json({
 			ok: false,
 			data: null,
-			error: 'Authentication required',
+			error: "Authentication required",
 		});
 		return;
 	}
@@ -117,7 +129,7 @@ export async function proxyAuthMiddleware(req: any, res: Response, next: NextFun
 		res.status(403).json({
 			ok: false,
 			data: null,
-			error: 'Access denied for this model',
+			error: "Access denied for this model",
 		});
 		return;
 	}

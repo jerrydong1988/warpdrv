@@ -1,8 +1,8 @@
-import React from 'react';
-import { Box, Text, HStack, VStack, Link } from '@chakra-ui/react';
-import { Search, ExternalLink } from 'lucide-react';
-import { extractResultText } from './utils';
-import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { Box, HStack, Link, Text, VStack } from "@chakra-ui/react";
+import { ExternalLink } from "lucide-react";
+import React from "react";
+import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
+import { extractResultText } from "./utils";
 
 interface ISearchResult {
 	title?: string;
@@ -15,7 +15,12 @@ function parseSearchResults(text: string): ISearchResult[] | null {
 	try {
 		const parsed = JSON.parse(text);
 		if (Array.isArray(parsed)) return parsed as ISearchResult[];
-		if (parsed && typeof parsed === 'object' && 'results' in parsed && Array.isArray(parsed.results)) {
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			"results" in parsed &&
+			Array.isArray(parsed.results)
+		) {
 			return parsed.results as ISearchResult[];
 		}
 		return null;
@@ -24,10 +29,7 @@ function parseSearchResults(text: string): ISearchResult[] | null {
 	}
 }
 
-export const SearchRenderer = React.memo((props: {
-	query?: string,
-	result?: unknown,
-}) => {
+export const SearchRenderer = React.memo((props: { query?: string; result?: unknown }) => {
 	const { query, result } = props;
 	const resultText = extractResultText(result);
 	const results = resultText ? parseSearchResults(resultText) : null;
@@ -41,21 +43,49 @@ export const SearchRenderer = React.memo((props: {
 							</Text>
 			</HStack> */}
 			{results && results.length > 0 && (
-				<VStack gap="2" align="stretch" bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="400px">
+				<VStack
+					gap="2"
+					align="stretch"
+					bg="var(--wc-overlay-dim)"
+					borderRadius="sm"
+					p="2"
+					overflow="auto"
+					maxH="400px"
+				>
 					{results.map((r, i) => (
-						<Box key={i} pb="1" borderBottomWidth={i < results.length - 1 ? '1px' : '0'} borderColor="var(--wc-border-subtle)">
+						<Box
+							key={i}
+							pb="1"
+							borderBottomWidth={i < results.length - 1 ? "1px" : "0"}
+							borderColor="var(--wc-border-subtle)"
+						>
 							<HStack gap="1" align="center" mb="0">
 								{r.url && <ExternalLink size={10} color="var(--wc-text-faint)" />}
 								{r.url ? (
-																		<Link href={r.url} target="_blank" fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-accent-blue)" wordBreak="break-all">
+									<Link
+										href={r.url}
+										target="_blank"
+										fontSize="calc(var(--chat-font-size) - 3px)"
+										color="var(--wc-accent-blue)"
+										wordBreak="break-all"
+									>
 										{r.title ?? r.url}
 									</Link>
 								) : (
-																		<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-primary)">{r.title}</Text>
+									<Text
+										fontSize="calc(var(--chat-font-size) - 3px)"
+										color="var(--wc-text-primary)"
+									>
+										{r.title}
+									</Text>
 								)}
 							</HStack>
 							{(r.snippet ?? r.description) && (
-																<Text fontSize="calc(var(--chat-font-size) - 1px)" color="var(--wc-text-secondary)" mt="0">
+								<Text
+									fontSize="calc(var(--chat-font-size) - 1px)"
+									color="var(--wc-text-secondary)"
+									mt="0"
+								>
 									{r.snippet ?? r.description}
 								</Text>
 							)}
@@ -64,30 +94,39 @@ export const SearchRenderer = React.memo((props: {
 				</VStack>
 			)}
 			{resultText && !results && (
-				<Box bg="var(--wc-overlay-dim)" borderRadius="sm" p="2" overflow="auto" maxH="300px">
-										<Text fontSize="calc(var(--chat-font-size) - 3px)" fontFamily="mono" color="var(--wc-text-secondary)" whiteSpace="pre-wrap">
+				<Box
+					bg="var(--wc-overlay-dim)"
+					borderRadius="sm"
+					p="2"
+					overflow="auto"
+					maxH="300px"
+				>
+					<Text
+						fontSize="calc(var(--chat-font-size) - 3px)"
+						fontFamily="mono"
+						color="var(--wc-text-secondary)"
+						whiteSpace="pre-wrap"
+					>
 						{resultText}
 					</Text>
-		</Box>
-		)}
+				</Box>
+			)}
 		</Box>
 	);
 });
 
 export const SearchRendererMeta: IToolCallRenderer = {
 	component: SearchRenderer,
-	keywords: ['search', 'find', 'grep', 'query', 'lookup'],
+	keywords: ["search", "find", "grep", "query", "lookup"],
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
-		if (typeof query !== 'string' || query.length === 0) return false;
+		if (typeof query !== "string" || query.length === 0) return false;
 		return { query };
 	},
-  renderMini: React.memo(({ args }) => {
-    const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
-    if (typeof query !== 'string') return '';
-    const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
-    return (
-      <Text whiteSpace="nowrap">Search "{truncated}"</Text>
-    );
-  }),
+	renderMini: React.memo(({ args }) => {
+		const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
+		if (typeof query !== "string") return "";
+		const truncated = query.length > 60 ? query.slice(0, 57) + "..." : query;
+		return <Text whiteSpace="nowrap">Search "{truncated}"</Text>;
+	}),
 };

@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { nanoid } from 'nanoid';
-import { EventNode, RemoteNode, WSTransport } from '@warpcore/realmcore';
-import { AppletManager, EAppletHostType, EAppletScope } from '@warpcore/realmcore';
-import { feApplets, AppletHostFE } from '@/applets';
+import {
+	AppletManager,
+	EAppletHostType,
+	EAppletScope,
+	EventNode,
+	RemoteNode,
+	WSTransport,
+} from "@warpcore/realmcore";
+import { nanoid } from "nanoid";
+import { useEffect, useRef, useState } from "react";
+import { io, type Socket } from "socket.io-client";
+import { AppletHostFE, feApplets } from "@/applets";
 
 export function useRealm(currentThreadId: string | null) {
-	const realmRef = useRef<{ 
-		eventNode: EventNode; 
+	const realmRef = useRef<{
+		eventNode: EventNode;
 		remoteNode: RemoteNode;
-		nodeId: string; 
+		nodeId: string;
 		socket: Socket;
 		appletMgr: AppletManager;
 	}>(null);
@@ -25,39 +31,46 @@ export function useRealm(currentThreadId: string | null) {
 
 		const appletMgr = new AppletManager(
 			chatNode,
-			EAppletScope.THREAD,
-			currentThreadId ?? undefined,
+			EAppletScope.GLOBAL,
+			undefined,
 			{ [EAppletHostType.FE]: AppletHostFE },
 			feApplets,
 			{ FEApplet: true },
 		);
 
 		const socket = io({
-			path: '/api/realm/',
+			path: "/api/realm/",
 			query: { nodeId },
-			transports: ['websocket'],
+			transports: ["websocket"],
 			upgrade: false,
 		});
-		
-		const remoteNode = new RemoteNode('warpcore', chatNode, new WSTransport(socket));
 
-		socket.on('connect', () => {
+		const remoteNode = new RemoteNode("warpcore", chatNode, new WSTransport(socket));
+
+		socket.on("connect", () => {
 			console.log(`[Realm] ✅ Connected as ${nodeId}.`);
+			setTimeout(
+				() =>
+					chatNode.sub("../", "console-log", (api) => {
+						console.log("[console-log]", api.payload);
+					}),
+				100,
+			);
 		});
 
-		socket.on('disconnect', () => {
+		socket.on("disconnect", () => {
 			console.error(`[Realm] Disconnected!`);
 			setParentAttached(false);
 		});
 
-		socket.io.on('error', (err) => {
+		socket.io.on("error", (err) => {
 			console.error(`[Realm] Manager error:`, err.message);
 		});
 
-		realmRef.current = { 
-			eventNode: chatNode, 
+		realmRef.current = {
+			eventNode: chatNode,
 			remoteNode,
-			nodeId, 
+			nodeId,
 			socket,
 			appletMgr,
 		};
@@ -72,10 +85,10 @@ export function useRealm(currentThreadId: string | null) {
 		};
 	}, [isParentAttached]);
 
-	useEffect(() => {
-		if (!isParentAttached) return;
-		realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
-	}, [currentThreadId, isParentAttached]);
+	// useEffect(() => {
+	// 	if (!isParentAttached) return;
+	// 	realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
+	// }, [currentThreadId, isParentAttached]);
 
 	useEffect(() => {
 		const socket = realmRef.current?.socket;

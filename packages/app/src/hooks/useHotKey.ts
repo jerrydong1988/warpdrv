@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export enum HotkeyMode {
 	KEYPRESS = "KEYPRESS",
@@ -55,7 +55,7 @@ export function useHotkey(
 	callbacks: {
 		onActivate?: () => void;
 		onDeactivate?: () => void;
-	}
+	},
 ): { isActive: boolean } {
 	const { keys, mode, target, isGlobal = false, isEnabled = true } = options;
 	const [isActive, setIsActive] = useState(false);
@@ -106,19 +106,25 @@ export function useHotkey(
 		}
 	}, []);
 
-	const keyDown = useCallback((code: string): void => {
-		// console.log("[HOTKEY] KeyDown", code);
-		if (pressedRef.current[code]) return;
-		pressedRef.current[code] = true;
-		evaluate();
-	}, [evaluate]);
+	const keyDown = useCallback(
+		(code: string): void => {
+			// console.log("[HOTKEY] KeyDown", code);
+			if (pressedRef.current[code]) return;
+			pressedRef.current[code] = true;
+			evaluate();
+		},
+		[evaluate],
+	);
 
-	const keyUp = useCallback((code: string): void => {
-		// console.log("[HOTKEY] KeyUp", code);
-		if (!pressedRef.current[code]) return;
-		delete pressedRef.current[code];
-		evaluate();
-	}, [evaluate]);
+	const keyUp = useCallback(
+		(code: string): void => {
+			// console.log("[HOTKEY] KeyUp", code);
+			if (!pressedRef.current[code]) return;
+			delete pressedRef.current[code];
+			evaluate();
+		},
+		[evaluate],
+	);
 
 	const clearKeys = useCallback((): void => {
 		const codes = Object.keys(pressedRef.current);
@@ -133,9 +139,8 @@ export function useHotkey(
 			clearKeys();
 			return;
 		}
-		const el: EventTarget = target === window
-			? window
-			: (target as RefObject<EventTarget>).current ?? window;
+		const el: EventTarget =
+			target === window ? window : ((target as RefObject<EventTarget>).current ?? window);
 
 		const onDown = (ev: Event) => keyDown((ev as KeyboardEvent).code);
 		const onUp = (ev: Event) => keyUp((ev as KeyboardEvent).code);

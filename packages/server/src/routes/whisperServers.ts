@@ -1,51 +1,50 @@
-import { Router } from 'express';
-import crypto from 'crypto';
-import http from 'node:http';
-import { store } from '../util/store';
+import http from "node:http";
+import type { IWhisperServer, IWhisperServerCreatePayload } from "@warpcore/shared";
+import { EWhisperServerStatus } from "@warpcore/shared";
+import crypto from "crypto";
+import { Router } from "express";
+import { sseManager } from "../services/sseManagerInstance";
 import {
-	buildWhisperArgs,
-	spawnWhisperServer,
-	killWhisperServer,
-	getWhisperServerLogs,
 	clearWhisperServerLogs,
-	WHISPER_SERVERS_PREFIX,
+	getWhisperServerLogs,
+	killWhisperServer,
 	launchWhisperServer,
-} from '../services/whisperProcessManager';
-import { sseManager } from '../services/sseManagerInstance';
-
-import type {
-	IWhisperServer,
-	IWhisperServerCreatePayload,
-	IWhisperBackend,
-} from '@warpcore/shared';
-import { EWhisperServerStatus } from '@warpcore/shared';
+	WHISPER_SERVERS_PREFIX,
+} from "../services/whisperProcessManager";
+import { store } from "../util/store";
 
 const PREFIX = WHISPER_SERVERS_PREFIX;
 
 export const whisperServersRouter = Router();
 
 // GET /api/whisper-servers
-whisperServersRouter.get('/', async (_req, res) => {
+whisperServersRouter.get("/", async (_req, res) => {
 	const servers = await store.list<IWhisperServer>(PREFIX);
 	res.json({ ok: true, data: servers, total: servers.length, error: null });
 });
 
 // GET /api/whisper-servers/:id
-whisperServersRouter.get('/:id', async (req, res) => {
+whisperServersRouter.get("/:id", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 	res.json({ ok: true, data: server, error: null });
 });
 
 // POST /api/whisper-servers
-whisperServersRouter.post('/', async (req, res) => {
+whisperServersRouter.post("/", async (req, res) => {
 	const payload = req.body as IWhisperServerCreatePayload;
 
-	const id = crypto.randomBytes(6).toString('hex');
-	const serverName = payload.serverName ?? payload.modelPath.split('/').pop()?.replace(/\.(gguf|bin)$/, '') ?? 'whisper-server';
+	const id = crypto.randomBytes(6).toString("hex");
+	const serverName =
+		payload.serverName ??
+		payload.modelPath
+			.split("/")
+			.pop()
+			?.replace(/\.(gguf|bin)$/, "") ??
+		"whisper-server";
 
 	const server: IWhisperServer = {
 		id,
@@ -72,10 +71,10 @@ whisperServersRouter.post('/', async (req, res) => {
 });
 
 // POST /api/whisper-servers/:id/stop
-whisperServersRouter.post('/:id/stop', async (req, res) => {
+whisperServersRouter.post("/:id/stop", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 
@@ -89,12 +88,15 @@ whisperServersRouter.post('/:id/stop', async (req, res) => {
 });
 
 // POST /api/whisper-servers/stop-all
-whisperServersRouter.post('/stop-all', async (_req, res) => {
+whisperServersRouter.post("/stop-all", async (_req, res) => {
 	const servers = await store.list<IWhisperServer>(PREFIX);
 	let stoppedCount = 0;
 
 	for (const server of servers) {
-		if (server.status === EWhisperServerStatus.RUNNING || server.status === EWhisperServerStatus.LOADING) {
+		if (
+			server.status === EWhisperServerStatus.RUNNING ||
+			server.status === EWhisperServerStatus.LOADING
+		) {
 			if (server.pid) {
 				await killWhisperServer(server.id, server.pid);
 			}
@@ -109,10 +111,10 @@ whisperServersRouter.post('/stop-all', async (_req, res) => {
 });
 
 // POST /api/whisper-servers/:id/restart
-whisperServersRouter.post('/:id/restart', async (req, res) => {
+whisperServersRouter.post("/:id/restart", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 
@@ -127,14 +129,19 @@ whisperServersRouter.post('/:id/restart', async (req, res) => {
 });
 
 // PUT /api/whisper-servers/:id
-whisperServersRouter.put('/:id', async (req, res) => {
+whisperServersRouter.put("/:id", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 
-	type TUpdatePayload = Partial<Pick<IWhisperServer, 'backendId' | 'modelPath' | 'serverName' | 'params' | 'serverAlias' | 'autoLaunch'>> & { relaunch?: boolean };
+	type TUpdatePayload = Partial<
+		Pick<
+			IWhisperServer,
+			"backendId" | "modelPath" | "serverName" | "params" | "serverAlias" | "autoLaunch"
+		>
+	> & { relaunch?: boolean };
 	const updatePayload = req.body as TUpdatePayload;
 	const shouldRelaunch = updatePayload.relaunch ?? true;
 
@@ -145,7 +152,11 @@ whisperServersRouter.put('/:id', async (req, res) => {
 	if (updatePayload.serverAlias !== undefined) server.serverAlias = updatePayload.serverAlias;
 	if (updatePayload.autoLaunch !== undefined) server.autoLaunch = updatePayload.autoLaunch;
 
-	if (shouldRelaunch && (server.status === EWhisperServerStatus.RUNNING || server.status === EWhisperServerStatus.LOADING)) {
+	if (
+		shouldRelaunch &&
+		(server.status === EWhisperServerStatus.RUNNING ||
+			server.status === EWhisperServerStatus.LOADING)
+	) {
 		await killWhisperServer(server.id, server.pid);
 	}
 
@@ -159,15 +170,15 @@ whisperServersRouter.put('/:id', async (req, res) => {
 	}
 
 	await store.put(PREFIX + server.id, server);
-	sseManager.emit('whisperServers:update', { [server.id]: server });
+	sseManager.emit("whisperServers:update", { [server.id]: server });
 	res.json({ ok: true, data: server, error: null });
 });
 
 // DELETE /api/whisper-servers/:id
-whisperServersRouter.delete('/:id', async (req, res) => {
+whisperServersRouter.delete("/:id", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 
@@ -175,54 +186,62 @@ whisperServersRouter.delete('/:id', async (req, res) => {
 	clearWhisperServerLogs(server.id);
 	await store.del(PREFIX + req.params.id);
 
-	sseManager.emit('whisperServers:delete', { [req.params.id]: null });
+	sseManager.emit("whisperServers:delete", { [req.params.id]: null });
 	res.json({ ok: true, data: null, error: null });
 });
 
 // GET /api/whisper-servers/:id/logs
-whisperServersRouter.get('/:id/logs', async (req, res) => {
+whisperServersRouter.get("/:id/logs", async (req, res) => {
 	const logs = getWhisperServerLogs(req.params.id);
 	res.json({ ok: true, data: logs, total: logs.length, error: null });
 });
 
 // DELETE /api/whisper-servers/:id/logs
-whisperServersRouter.delete('/:id/logs', async (req, res) => {
+whisperServersRouter.delete("/:id/logs", async (req, res) => {
 	clearWhisperServerLogs(req.params.id);
 	res.json({ ok: true, data: null, error: null });
 });
 
 // POST /api/whisper-servers/:id/transcribe — stream multipart to whisper server
-whisperServersRouter.post('/:id/transcribe', async (req, res) => {
+whisperServersRouter.post("/:id/transcribe", async (req, res) => {
 	const server = await store.get<IWhisperServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Whisper server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Whisper server not found" });
 		return;
 	}
 	if (server.status !== EWhisperServerStatus.RUNNING) {
-		res.status(503).json({ ok: false, data: null, error: 'Whisper server not running' });
+		res.status(503).json({ ok: false, data: null, error: "Whisper server not running" });
 		return;
 	}
 
-	const upstream = http.request({
-		hostname: '127.0.0.1',
-		port: server.port,
-		path: server.params.inferencePath,
-		method: 'POST',
-		headers: {
-			'content-type': req.headers['content-type'] ?? 'application/octet-stream',
-			'content-length': req.headers['content-length'] ?? '',
+	const upstream = http.request(
+		{
+			hostname: "127.0.0.1",
+			port: server.port,
+			path: server.params.inferencePath,
+			method: "POST",
+			headers: {
+				"content-type": req.headers["content-type"] ?? "application/octet-stream",
+				"content-length": req.headers["content-length"] ?? "",
+			},
 		},
-	}, (upstreamRes) => {
-		res.status(upstreamRes.statusCode ?? 502);
-		for (const [k, v] of Object.entries(upstreamRes.headers)) {
-			if (v !== undefined) res.setHeader(k, v as string | string[]);
-		}
-		upstreamRes.pipe(res);
-	});
+		(upstreamRes) => {
+			res.status(upstreamRes.statusCode ?? 502);
+			for (const [k, v] of Object.entries(upstreamRes.headers)) {
+				if (v !== undefined) res.setHeader(k, v as string | string[]);
+			}
+			upstreamRes.pipe(res);
+		},
+	);
 
-	upstream.on('error', (err) => {
+	upstream.on("error", (err) => {
 		if (!res.headersSent) {
-			res.status(502).json({ ok: false, data: null, error: 'Whisper upstream error', message: err.message });
+			res.status(502).json({
+				ok: false,
+				data: null,
+				error: "Whisper upstream error",
+				message: err.message,
+			});
 		}
 	});
 

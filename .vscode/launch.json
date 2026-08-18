@@ -27,14 +27,9 @@
 			"env": {
 				"CONTROL_API_PORT": "4401"
 			},
-			"runtimeArgs": [
-				"tsx",
-				"src/index.ts"
-			],
+			"runtimeArgs": ["tsx", "src/index.ts"],
 			"console": "integratedTerminal",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
+			"skipFiles": ["<node_internals>/**"],
 			"presentation": {
 				"group": "warpcore",
 				"order": 1
@@ -49,9 +44,7 @@
 			"env": {
 				"CONTROL_API_PORT": "4401"
 			},
-			"runtimeArgs": [
-				"vite"
-			],
+			"runtimeArgs": ["vite"],
 			"console": "integratedTerminal",
 			"presentation": {
 				"group": "warpcore",

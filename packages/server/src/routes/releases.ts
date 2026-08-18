@@ -1,8 +1,13 @@
-import { Router } from 'express';
-import { fetchLlamaReleases, fetchLlamaReleasesForOs, fetchWhisperReleases, fetchWhisperReleasesForOs } from '../services/releases';
-import type { TOs } from '../services/hardware';
+import { Router } from "express";
+import type { TOs } from "../services/hardware";
+import {
+	fetchLlamaReleases,
+	fetchLlamaReleasesForOs,
+	fetchWhisperReleases,
+	fetchWhisperReleasesForOs,
+} from "../services/releases";
 export const releasesRouter = Router();
-releasesRouter.get('/llama', async (req, res) => {
+releasesRouter.get("/llama", async (req, res) => {
 	try {
 		const osFilter = req.query.os as string | undefined;
 		const assets = osFilter
@@ -13,7 +18,7 @@ releasesRouter.get('/llama', async (req, res) => {
 		res.json({ ok: false, data: null, error: String(err) });
 	}
 });
-releasesRouter.get('/whisper', async (req, res) => {
+releasesRouter.get("/whisper", async (req, res) => {
 	try {
 		const osFilter = req.query.os as string | undefined;
 		const assets = osFilter

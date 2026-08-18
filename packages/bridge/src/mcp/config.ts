@@ -4,10 +4,10 @@
 // Node only — filesystem access.
 // ============================================================
 
-import fs from 'fs';
-import path from 'path';
-import type { IMcpConfig } from '../types/interfaces';
-import type { IMcpConfigFile, IMcpServerEntry } from '../types';
+import fs from "fs";
+import path from "path";
+import type { IMcpConfigFile, IMcpServerEntry } from "../types";
+import type { IMcpConfig } from "../types/interfaces";
 
 const DEFAULT_CONFIG: IMcpConfigFile = { mcpServers: {} };
 
@@ -21,21 +21,23 @@ export class McpConfig implements IMcpConfig {
 	read(): IMcpConfigFile {
 		try {
 			if (fs.existsSync(this.configPath)) {
-				const raw = fs.readFileSync(this.configPath, 'utf8');
+				const raw = fs.readFileSync(this.configPath, "utf8");
 				const parsed = JSON.parse(raw);
-				if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
+				if (!parsed.mcpServers || typeof parsed.mcpServers !== "object") {
 					return { ...DEFAULT_CONFIG };
 				}
 				return parsed as IMcpConfigFile;
 			}
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		return { ...DEFAULT_CONFIG };
 	}
 
 	write(config: IMcpConfigFile): void {
 		const dir = path.dirname(this.configPath);
 		if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-		fs.writeFileSync(this.configPath, JSON.stringify(config, null, '\t'), 'utf8');
+		fs.writeFileSync(this.configPath, JSON.stringify(config, null, "\t"), "utf8");
 	}
 
 	getPath(): string {

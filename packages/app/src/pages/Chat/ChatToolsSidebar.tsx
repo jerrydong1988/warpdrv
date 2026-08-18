@@ -5,28 +5,32 @@
 // Thread overrides fetched on thread change, stored in Zustand.
 // ============================================================
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, Text, HStack, VStack, Badge } from '@chakra-ui/react';
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { EMcpServerStatus, EToolApprovalMode } from "@warpcore/bridge";
 import {
-	Wrench,
 	ChevronDown,
 	ChevronRight,
+	Globe,
 	Shield,
 	ShieldOff,
 	ShieldQuestion,
-	Globe,
-} from 'lucide-react';
-import { useStore } from '../../store';
-import { fetchThreadPermissions, setThreadToolPermission, resetThreadToolPermission } from '../../api/mcpServices';
-import type { IThreadToolPermission } from '@warpcore/bridge';
-import { EMcpServerStatus, EToolApprovalMode } from '@warpcore/bridge';
+	Wrench,
+} from "lucide-react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	fetchThreadPermissions,
+	resetThreadToolPermission,
+	setThreadToolPermission,
+} from "../../api/mcpServices";
+import { useStore } from "../../store";
 
 function StatusDot({ status }: { status: EMcpServerStatus }) {
 	const colors: Record<EMcpServerStatus, string> = {
-		[EMcpServerStatus.CONNECTED]: 'var(--wc-accent-green-icon)',
-		[EMcpServerStatus.CONNECTING]: 'var(--wc-accent-yellow-strong)',
-		[EMcpServerStatus.ERROR]: 'var(--wc-accent-red)',
-		[EMcpServerStatus.DISCONNECTED]: 'var(--wc-text-disabled)',
+		[EMcpServerStatus.CONNECTED]: "var(--wc-accent-green-icon)",
+		[EMcpServerStatus.CONNECTING]: "var(--wc-accent-yellow-strong)",
+		[EMcpServerStatus.ERROR]: "var(--wc-accent-red)",
+		[EMcpServerStatus.DISCONNECTED]: "var(--wc-text-disabled)",
 	};
 	return <Box w="6px" h="6px" borderRadius="full" bg={colors[status]} flexShrink={0} />;
 }
@@ -38,13 +42,19 @@ const approvalIcons: Record<EToolApprovalMode, React.ReactNode> = {
 };
 
 const approvalColors: Record<EToolApprovalMode, string> = {
-	[EToolApprovalMode.ASK]: 'var(--wc-accent-yellow-glow)',
-	[EToolApprovalMode.ALLOWED]: 'var(--wc-accent-green)',
-	[EToolApprovalMode.DENIED]: 'var(--wc-accent-red)',
+	[EToolApprovalMode.ASK]: "var(--wc-accent-yellow-glow)",
+	[EToolApprovalMode.ALLOWED]: "var(--wc-accent-green)",
+	[EToolApprovalMode.DENIED]: "var(--wc-accent-red)",
 };
 
 // 4-level selector: Global (inherited), Ask, Allow, Deny
-function ThreadApprovalButton({ mode, currentMode, isOverridden, isActive, onSelect }: {
+function ThreadApprovalButton({
+	mode,
+	currentMode,
+	isOverridden,
+	isActive,
+	onSelect,
+}: {
 	mode: EToolApprovalMode | null;
 	currentMode: EToolApprovalMode;
 	isOverridden: boolean;
@@ -52,24 +62,24 @@ function ThreadApprovalButton({ mode, currentMode, isOverridden, isActive, onSel
 	onSelect: () => void;
 }) {
 	const icons: Record<string, React.ReactNode> = {
-		'null': <Globe size={9} />,
+		null: <Globe size={9} />,
 		[EToolApprovalMode.ASK]: <ShieldQuestion size={9} />,
 		[EToolApprovalMode.ALLOWED]: <Shield size={9} />,
 		[EToolApprovalMode.DENIED]: <ShieldOff size={9} />,
 	};
 	const labels: Record<string, string> = {
-		'null': 'Global',
-		[EToolApprovalMode.ASK]: 'Ask',
-		[EToolApprovalMode.ALLOWED]: 'Allow',
-		[EToolApprovalMode.DENIED]: 'Deny',
+		null: "Global",
+		[EToolApprovalMode.ASK]: "Ask",
+		[EToolApprovalMode.ALLOWED]: "Allow",
+		[EToolApprovalMode.DENIED]: "Deny",
 	};
 	const activeColors: Record<string, string> = {
-		'null': 'var(--wc-bg-active)',
-		[EToolApprovalMode.ASK]: 'var(--wc-accent-yellow-hover-bg)',
-		[EToolApprovalMode.ALLOWED]: 'var(--wc-accent-green-bg-8)',
-		[EToolApprovalMode.DENIED]: 'var(--wc-accent-red-alt-bg)',
+		null: "var(--wc-bg-active)",
+		[EToolApprovalMode.ASK]: "var(--wc-accent-yellow-hover-bg)",
+		[EToolApprovalMode.ALLOWED]: "var(--wc-accent-green-bg-8)",
+		[EToolApprovalMode.DENIED]: "var(--wc-accent-red-alt-bg)",
 	};
-	const key = mode ?? 'null';
+	const key = mode ?? "null";
 
 	return (
 		<Box
@@ -78,9 +88,9 @@ function ThreadApprovalButton({ mode, currentMode, isOverridden, isActive, onSel
 			borderRadius="sm"
 			cursor="pointer"
 			fontSize="9px"
-			bg={isActive ? activeColors[key] : 'transparent'}
-			color={isActive ? 'var(--wc-text-heading)' : 'var(--wc-text-muted)'}
-			_hover={{ bg: isActive ? activeColors[key] : 'var(--wc-bg-hover)' }}
+			bg={isActive ? activeColors[key] : "transparent"}
+			color={isActive ? "var(--wc-text-heading)" : "var(--wc-text-muted)"}
+			_hover={{ bg: isActive ? activeColors[key] : "var(--wc-bg-hover)" }}
 			onClick={onSelect}
 		>
 			<HStack gap="0.5">
@@ -97,8 +107,14 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 	const toolPerms = useStore((s) => s.toolPermissions);
 	const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
 
-	const serverPermMap = useMemo(() => new Map(serverPerms.map(p => [p.serverName, p.enabled])), [serverPerms]);
-	const toolPermMap = useMemo(() => new Map(toolPerms.map(p => [`${p.serverName}:${p.toolName}`, p])), [toolPerms]);
+	const serverPermMap = useMemo(
+		() => new Map(serverPerms.map((p) => [p.serverName, p.enabled])),
+		[serverPerms],
+	);
+	const toolPermMap = useMemo(
+		() => new Map(toolPerms.map((p) => [`${p.serverName}:${p.toolName}`, p])),
+		[toolPerms],
+	);
 	const serverEntries = Object.entries(mcpServers);
 	const totalTools = serverEntries.reduce((sum, [, s]) => sum + s.tools.length, 0);
 
@@ -115,11 +131,13 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 				pt="3"
 				cursor="pointer"
 				onClick={onToggle}
-				_hover={{ bg: 'var(--wc-bg-surface)' }}
+				_hover={{ bg: "var(--wc-bg-surface)" }}
 			>
 				<Wrench size={14} color="var(--wc-text-muted)" />
 				{totalTools > 0 && (
-					<Text fontSize="10px" color="var(--wc-text-faint)" mt="1">{totalTools}</Text>
+					<Text fontSize="10px" color="var(--wc-text-faint)" mt="1">
+						{totalTools}
+					</Text>
 				)}
 			</Box>
 		);
@@ -135,13 +153,31 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 			p="3"
 		>
 			<HStack gap="2" mb="3">
-				<Box as="button" onClick={onToggle} p="1" _hover={{ bg: 'var(--wc-bg-hover)' }} borderRadius="sm">
+				<Box
+					as="button"
+					onClick={onToggle}
+					p="1"
+					_hover={{ bg: "var(--wc-bg-hover)" }}
+					borderRadius="sm"
+				>
 					<ChevronRight size={12} color="var(--wc-text-muted)" />
 				</Box>
-				<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)" textTransform="uppercase" letterSpacing="0.05em">
+				<Text
+					fontSize="12px"
+					fontWeight="600"
+					color="var(--wc-text-secondary)"
+					textTransform="uppercase"
+					letterSpacing="0.05em"
+				>
 					Tools
 				</Text>
-				<Badge fontSize="9px" px="1.5" borderRadius="sm" bg="var(--wc-bg-surface)" color="var(--wc-text-faint)">
+				<Badge
+					fontSize="9px"
+					px="1.5"
+					borderRadius="sm"
+					bg="var(--wc-bg-surface)"
+					color="var(--wc-text-faint)"
+				>
 					{totalTools}
 				</Badge>
 			</HStack>
@@ -158,22 +194,31 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 							py="1"
 							borderRadius="sm"
 							cursor="pointer"
-							_hover={{ bg: 'var(--wc-bg-card)' }}
-							onClick={() => setExpandedServers(prev => ({ ...prev, [name]: !prev[name] }))}
+							_hover={{ bg: "var(--wc-bg-card)" }}
+							onClick={() =>
+								setExpandedServers((prev) => ({ ...prev, [name]: !prev[name] }))
+							}
 						>
 							{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
 							<StatusDot status={state.status} />
-							<Text flex="1" fontSize="12px" color="var(--wc-text-primary)" fontWeight="500">
+							<Text
+								flex="1"
+								fontSize="12px"
+								color="var(--wc-text-primary)"
+								fontWeight="500"
+							>
 								{name}
 							</Text>
 							{!serverEnabled && (
-								<Text fontSize="9px" color="var(--wc-accent-red-border)">OFF</Text>
+								<Text fontSize="9px" color="var(--wc-accent-red-border)">
+									OFF
+								</Text>
 							)}
 						</HStack>
 
 						{isExpanded && serverEnabled && (
 							<VStack gap="0" pl="5" mt="0.5">
-								{state.tools.map(tool => {
+								{state.tools.map((tool) => {
 									const perm = toolPermMap.get(`${name}:${tool.name}`);
 									const toolEnabled = perm?.enabled ?? true;
 									const mode = perm?.approvalMode ?? EToolApprovalMode.ASK;
@@ -191,14 +236,28 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 											<Box color={approvalColors[mode]} flexShrink={0}>
 												{approvalIcons[mode]}
 											</Box>
-											<Text fontSize="11px" color="var(--wc-text-secondary)" flex="1" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+											<Text
+												fontSize="11px"
+												color="var(--wc-text-secondary)"
+												flex="1"
+												overflow="hidden"
+												textOverflow="ellipsis"
+												whiteSpace="nowrap"
+											>
 												{tool.name}
 											</Text>
 										</HStack>
 									);
 								})}
 								{state.tools.length === 0 && (
-									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">No tools</Text>
+									<Text
+										fontSize="10px"
+										color="var(--wc-text-faint)"
+										px="2"
+										py="1"
+									>
+										No tools
+									</Text>
 								)}
 							</VStack>
 						)}
@@ -228,35 +287,47 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 
 	useEffect(() => {
 		if (!threadId) return;
-		fetchThreadPermissions(threadId).then(res => {
+		fetchThreadPermissions(threadId).then((res) => {
 			if (res.ok) {
-				useStore.setState(draft => {
+				useStore.setState((draft) => {
 					draft.threadToolPermissions[threadId] = res.data.threadOverrides;
 				});
 			}
 		});
 	}, [threadId]);
 
-	const serverPermMap = useMemo(() => new Map(serverPerms.map(p => [p.serverName, p.enabled])), [serverPerms]);
-	const toolPermMap = useMemo(() => new Map(toolPerms.map(p => [`${p.serverName}:${p.toolName}`, p])), [toolPerms]);
-	const threadOverrideMap = useMemo(() => new Map(threadOverrides.map(p => [`${p.serverName}:${p.toolName}`, p])), [threadOverrides]);
+	const serverPermMap = useMemo(
+		() => new Map(serverPerms.map((p) => [p.serverName, p.enabled])),
+		[serverPerms],
+	);
+	const toolPermMap = useMemo(
+		() => new Map(toolPerms.map((p) => [`${p.serverName}:${p.toolName}`, p])),
+		[toolPerms],
+	);
+	const threadOverrideMap = useMemo(
+		() => new Map(threadOverrides.map((p) => [`${p.serverName}:${p.toolName}`, p])),
+		[threadOverrides],
+	);
 	const serverEntries = Object.entries(mcpServers);
 
-	const handleSetThreadPermission = useCallback(async (serverName: string, toolName: string, mode: EToolApprovalMode | null) => {
-		if (!threadId) return;
-		if (mode === null) {
-			await resetThreadToolPermission(threadId, serverName, toolName);
-		} else {
-			await setThreadToolPermission(threadId, serverName, toolName, true, mode);
-		}
-		fetchThreadPermissions(threadId).then(res => {
-			if (res.ok) {
-				useStore.setState(draft => {
-					draft.threadToolPermissions[threadId] = res.data.threadOverrides;
-				});
+	const handleSetThreadPermission = useCallback(
+		async (serverName: string, toolName: string, mode: EToolApprovalMode | null) => {
+			if (!threadId) return;
+			if (mode === null) {
+				await resetThreadToolPermission(threadId, serverName, toolName);
+			} else {
+				await setThreadToolPermission(threadId, serverName, toolName, true, mode);
 			}
-		});
-	}, [threadId]);
+			fetchThreadPermissions(threadId).then((res) => {
+				if (res.ok) {
+					useStore.setState((draft) => {
+						draft.threadToolPermissions[threadId] = res.data.threadOverrides;
+					});
+				}
+			});
+		},
+		[threadId],
+	);
 
 	return (
 		<Box p="3">
@@ -272,27 +343,42 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 							py="1"
 							borderRadius="sm"
 							cursor="pointer"
-							_hover={{ bg: 'var(--wc-bg-card)' }}
-							onClick={() => setExpandedServers(prev => ({ ...prev, [name]: !prev[name] }))}
+							_hover={{ bg: "var(--wc-bg-card)" }}
+							onClick={() =>
+								setExpandedServers((prev) => ({ ...prev, [name]: !prev[name] }))
+							}
 						>
 							{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
 							<StatusDot status={state.status} />
-							<Text flex="1" fontSize="12px" color="var(--wc-text-primary)" fontWeight="500">
+							<Text
+								flex="1"
+								fontSize="12px"
+								color="var(--wc-text-primary)"
+								fontWeight="500"
+							>
 								{name}
 							</Text>
 							{!serverEnabled && (
-								<Text fontSize="9px" color="var(--wc-accent-red-border)">OFF</Text>
+								<Text fontSize="9px" color="var(--wc-accent-red-border)">
+									OFF
+								</Text>
 							)}
 						</HStack>
 
 						{isExpanded && serverEnabled && (
 							<VStack gap="0" pl="5" mt="0.5" align="stretch">
-								{state.tools.map(tool => {
+								{state.tools.map((tool) => {
 									const globalPerm = toolPermMap.get(`${name}:${tool.name}`);
-									const threadPerm = threadOverrideMap.get(`${name}:${tool.name}`);
+									const threadPerm = threadOverrideMap.get(
+										`${name}:${tool.name}`,
+									);
 									const isOverridden = threadPerm != null;
-									const effectiveMode = threadPerm?.approvalMode ?? globalPerm?.approvalMode ?? EToolApprovalMode.ASK;
-									const toolEnabled = (threadPerm?.enabled ?? globalPerm?.enabled ?? true);
+									const effectiveMode =
+										threadPerm?.approvalMode ??
+										globalPerm?.approvalMode ??
+										EToolApprovalMode.ASK;
+									const toolEnabled =
+										threadPerm?.enabled ?? globalPerm?.enabled ?? true;
 
 									return (
 										<Box
@@ -303,27 +389,58 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 											opacity={toolEnabled ? 1 : 0.4}
 										>
 											<HStack gap="2" mb={isOverridden ? "0.5" : "0"}>
-												<Box color={approvalColors[effectiveMode]} flexShrink={0}>
+												<Box
+													color={approvalColors[effectiveMode]}
+													flexShrink={0}
+												>
 													{approvalIcons[effectiveMode]}
 												</Box>
-												<Text fontSize="11px" color="var(--wc-text-secondary)" flex="1" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+												<Text
+													fontSize="11px"
+													color="var(--wc-text-secondary)"
+													flex="1"
+													overflow="hidden"
+													textOverflow="ellipsis"
+													whiteSpace="nowrap"
+												>
 													{tool.name}
 												</Text>
 												{isOverridden && (
-													<Text fontSize="8px" color="var(--wc-text-faint)" textTransform="uppercase" flexShrink={0}>
+													<Text
+														fontSize="8px"
+														color="var(--wc-text-faint)"
+														textTransform="uppercase"
+														flexShrink={0}
+													>
 														override
 													</Text>
 												)}
 											</HStack>
 											<HStack gap="0.5" pl="4">
-												{[null, EToolApprovalMode.ASK, EToolApprovalMode.ALLOWED, EToolApprovalMode.DENIED].map((m, i) => (
+												{[
+													null,
+													EToolApprovalMode.ASK,
+													EToolApprovalMode.ALLOWED,
+													EToolApprovalMode.DENIED,
+												].map((m, i) => (
 													<ThreadApprovalButton
 														key={i}
 														mode={m}
 														currentMode={effectiveMode}
 														isOverridden={isOverridden}
-														isActive={m === null ? !isOverridden : isOverridden && effectiveMode === m}
-														onSelect={() => handleSetThreadPermission(name, tool.name, m)}
+														isActive={
+															m === null
+																? !isOverridden
+																: isOverridden &&
+																	effectiveMode === m
+														}
+														onSelect={() =>
+															handleSetThreadPermission(
+																name,
+																tool.name,
+																m,
+															)
+														}
 													/>
 												))}
 											</HStack>
@@ -331,7 +448,14 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 									);
 								})}
 								{state.tools.length === 0 && (
-									<Text fontSize="10px" color="var(--wc-text-faint)" px="2" py="1">No tools</Text>
+									<Text
+										fontSize="10px"
+										color="var(--wc-text-faint)"
+										px="2"
+										py="1"
+									>
+										No tools
+									</Text>
 								)}
 							</VStack>
 						)}

@@ -1,11 +1,8 @@
-import React from 'react';
-import { Box, Text, HStack } from '@chakra-ui/react';
-import { Trash2 } from 'lucide-react';
-import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { Box, Text } from "@chakra-ui/react";
+import React from "react";
+import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 
-export const CodeGraphClearRenderer = React.memo((props: {
-	result?: unknown;
-}) => {
+export const CodeGraphClearRenderer = React.memo((props: { result?: unknown }) => {
 	if (props.result === undefined) {
 		return null;
 	}
@@ -22,11 +19,9 @@ export const CodeGraphClearRenderer = React.memo((props: {
 
 export const CodeGraphClearRendererMeta: IToolCallRenderer = {
 	component: CodeGraphClearRenderer,
-	keywords: ['code_graph_clear'],
+	keywords: ["code_graph_clear"],
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		return {};
 	},
-  renderMini: React.memo(() => (
-    <Text whiteSpace="nowrap">Code Graph cleared</Text>
-  )),
+	renderMini: React.memo(() => <Text whiteSpace="nowrap">Code Graph cleared</Text>),
 };

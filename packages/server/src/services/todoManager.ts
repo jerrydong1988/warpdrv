@@ -1,6 +1,6 @@
-import { nanoid } from 'nanoid';
-import type { SqlitePersistence } from '@warpcore/bridge/server';
-import type { ITodoItem } from '@warpcore/shared';
+import type { SqlitePersistence } from "@warpcore/bridge/server";
+import type { ITodoItem } from "@warpcore/shared";
+import { nanoid } from "nanoid";
 
 export interface ITodoResult {
 	todos: ITodoItem[];
@@ -33,7 +33,7 @@ export class TodoManager {
 
 	async add(threadId: string, todo: ITodoItem, index?: number): Promise<ITodoItem[]> {
 		const todos = await this.getTodos(threadId);
-		const pos = typeof index === 'number' ? index : todos.length;
+		const pos = typeof index === "number" ? index : todos.length;
 		todos.splice(pos, 0, todo);
 		await this.setTodos(threadId, todos);
 		return todos;
@@ -49,7 +49,11 @@ export class TodoManager {
 		return todos;
 	}
 
-	async update(threadId: string, index: number, status: ITodoItem['status']): Promise<ITodoItem[]> {
+	async update(
+		threadId: string,
+		index: number,
+		status: ITodoItem["status"],
+	): Promise<ITodoItem[]> {
 		const todos = await this.getTodos(threadId);
 		if (index < 0 || index >= todos.length) {
 			throw new Error(`Index ${index} out of range`);
@@ -71,11 +75,15 @@ export class TodoManager {
 
 		if (!etag) {
 			if (currentTodos.length !== 0) {
-				throw new Error('Cannot write: todo list is not empty. Provide the current etag to overwrite.');
+				throw new Error(
+					"Cannot write: todo list is not empty. Provide the current etag to overwrite.",
+				);
 			}
 		} else if (etag !== currentEtag) {
 			console.error("To-do etag mismatch.", etag, currentEtag);
-			throw new Error('Cannot write: etag mismatch. Provide the latest etag - either from system-reminder or fresh read.');
+			throw new Error(
+				"Cannot write: etag mismatch. Provide the latest etag - either from system-reminder or fresh read.",
+			);
 		}
 
 		const newEtag = nanoid(6);

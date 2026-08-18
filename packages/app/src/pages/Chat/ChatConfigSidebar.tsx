@@ -1,19 +1,14 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Box, Flex, Text, HStack, VStack, Input, Textarea, IconButton, SegmentGroup } from '@chakra-ui/react';
-import { Settings, ChevronRight, ChevronLeft, Save, Trash2, Plus, RotateCcw } from 'lucide-react';
-import { LuCode, LuLayoutGrid } from 'react-icons/lu';
-import {
-	updateChatPreset as updateChatPresetApi,
-	updateSettings,
-} from '../../api/services';
-import type { IChatPreset, IChatInferenceParams, ISettings, IModel } from '@warpcore/shared';
-import { EResponseFormat, EReasoningFormat, EReasoningEffort } from '@warpcore/shared';
-import { VscLayoutSidebarRightOff } from 'react-icons/vsc';
-import { useJsonValidator } from '@/hooks/useJsonValidator';
-import { useStore } from '@/store';
-import { useQuery, useListQuery } from '@/hooks/useQuery';
+import { Box, HStack, Input, SegmentGroup, Text, Textarea, VStack } from "@chakra-ui/react";
+import type { IChatInferenceParams, IChatPreset, ISettings } from "@warpcore/shared";
+import { EReasoningEffort, EReasoningFormat, EResponseFormat } from "@warpcore/shared";
+import { ChevronRight, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { LuCode, LuLayoutGrid } from "react-icons/lu";
 import { useDependantState } from "@/hooks/useDependantState";
-import { ProjectRootPicker } from './ProjectRootPicker';
+import { useJsonValidator } from "@/hooks/useJsonValidator";
+import { useStore } from "@/store";
+import { updateSettings } from "../../api/services";
+import { ProjectRootPicker } from "./ProjectRootPicker";
 
 // ============================================================
 // Default params — must match the one in ChatPage
@@ -52,7 +47,7 @@ export const DEFAULT_INFERENCE_PARAMS: IChatInferenceParams = {
 	repeatLastN: 64,
 	n_probs: 0,
 	samplers: [],
-	grammar: '',
+	grammar: "",
 	jsonSchema: {},
 	adaptiveTarget: 1.0,
 	adaptiveDecay: 1.0,
@@ -73,7 +68,14 @@ interface IChatConfigSidebarProps {
 // ============================================================
 // Slider row component
 // ============================================================
-function ParamSlider({ label, value, min, max, step, onChange }: {
+function ParamSlider({
+	label,
+	value,
+	min,
+	max,
+	step,
+	onChange,
+}: {
 	label: string;
 	value: number;
 	min: number;
@@ -81,19 +83,27 @@ function ParamSlider({ label, value, min, max, step, onChange }: {
 	step: number;
 	onChange: (v: number) => void;
 }) {
-	const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const v = parseFloat(e.target.value);
-		if (!isNaN(v)) onChange(v);
-	}, [onChange]);
+	const handleInputChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const v = parseFloat(e.target.value);
+			if (!isNaN(v)) onChange(v);
+		},
+		[onChange],
+	);
 
-	const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		onChange(parseFloat(e.target.value));
-	}, [onChange]);
+	const handleSliderChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			onChange(parseFloat(e.target.value));
+		},
+		[onChange],
+	);
 
 	return (
 		<Box>
 			<HStack justify="space-between" mb="1">
-				<Text fontSize="12px" color="var(--wc-text-secondary)">{label}</Text>
+				<Text fontSize="12px" color="var(--wc-text-secondary)">
+					{label}
+				</Text>
 				<Input
 					size="xs"
 					w="60px"
@@ -116,7 +126,7 @@ function ParamSlider({ label, value, min, max, step, onChange }: {
 				step={step}
 				value={value}
 				onChange={handleSliderChange}
-				style={{ width: '100%', accentColor: 'var(--wc-special-mono-gray)' }}
+				style={{ width: "100%", accentColor: "var(--wc-special-mono-gray)" }}
 			/>
 		</Box>
 	);
@@ -125,7 +135,12 @@ function ParamSlider({ label, value, min, max, step, onChange }: {
 // ============================================================
 // Select row component
 // ============================================================
-function ParamSelect({ label, value, options, onChange }: {
+function ParamSelect({
+	label,
+	value,
+	options,
+	onChange,
+}: {
 	label: string;
 	value: string;
 	options: { value: string; label: string }[];
@@ -133,22 +148,32 @@ function ParamSelect({ label, value, options, onChange }: {
 }) {
 	return (
 		<Box>
-			<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">{label}</Text>
+			<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
+				{label}
+			</Text>
 			<select
 				value={value}
-				onChange={e => onChange(e.target.value)}
+				onChange={(e) => onChange(e.target.value)}
 				style={{
-					width: '100%',
-					background: 'var(--wc-bg-card)',
-					border: '1px solid var(--wc-border-default)',
-					borderRadius: '6px',
-					color: 'var(--wc-text-primary)',
-					fontSize: '12px',
-					padding: '4px 8px',
-					height: '28px',
+					width: "100%",
+					background: "var(--wc-bg-card)",
+					border: "1px solid var(--wc-border-default)",
+					borderRadius: "6px",
+					color: "var(--wc-text-primary)",
+					fontSize: "12px",
+					padding: "4px 8px",
+					height: "28px",
 				}}
 			>
-				{options.map((o) => <option key={o.value} value={o.value} style={{ background: 'var(--wc-bg-elevated)' }}>{o.label}</option>)}
+				{options.map((o) => (
+					<option
+						key={o.value}
+						value={o.value}
+						style={{ background: "var(--wc-bg-elevated)" }}
+					>
+						{o.label}
+					</option>
+				))}
 			</select>
 		</Box>
 	);
@@ -157,25 +182,38 @@ function ParamSelect({ label, value, options, onChange }: {
 // ============================================================
 // Toggle row component
 // ============================================================
-function ParamToggle({ label, value, onChange }: {
+function ParamToggle({
+	label,
+	value,
+	onChange,
+}: {
 	label: string;
 	value: boolean;
 	onChange: (v: boolean) => void;
 }) {
 	return (
 		<HStack justify="space-between">
-			<Text fontSize="12px" color="var(--wc-text-secondary)">{label}</Text>
+			<Text fontSize="12px" color="var(--wc-text-secondary)">
+				{label}
+			</Text>
 			<Box
-				w="36px" h="20px" borderRadius="full" cursor="pointer"
-				bg={value ? 'var(--wc-accent-green)' : 'var(--wc-border-default)'}
+				w="36px"
+				h="20px"
+				borderRadius="full"
+				cursor="pointer"
+				bg={value ? "var(--wc-accent-green)" : "var(--wc-border-default)"}
 				position="relative"
 				onClick={() => onChange(!value)}
 				transition="background 0.15s"
 			>
 				<Box
-					w="16px" h="16px" borderRadius="full" bg="var(--wc-special-white)"
-					position="absolute" top="2px"
-					left={value ? '18px' : '2px'}
+					w="16px"
+					h="16px"
+					borderRadius="full"
+					bg="var(--wc-special-white)"
+					position="absolute"
+					top="2px"
+					left={value ? "18px" : "2px"}
 					transition="left 0.15s"
 				/>
 			</Box>
@@ -186,11 +224,19 @@ function ParamToggle({ label, value, onChange }: {
 // ============================================================
 // Section header
 // ============================================================
-function SectionHeader({ title, collapsed, onToggle }: { title: string; collapsed?: boolean; onToggle?: () => void }) {
+function SectionHeader({
+	title,
+	collapsed,
+	onToggle,
+}: {
+	title: string;
+	collapsed?: boolean;
+	onToggle?: () => void;
+}) {
 	return (
 		<HStack
 			py="1.5"
-			cursor={onToggle ? 'pointer' : 'default'}
+			cursor={onToggle ? "pointer" : "default"}
 			onClick={onToggle}
 			userSelect="none"
 		>
@@ -199,12 +245,18 @@ function SectionHeader({ title, collapsed, onToggle }: { title: string; collapse
 					size={12}
 					style={{
 						opacity: 0.4,
-						transform: collapsed ? 'rotate(0deg)' : 'rotate(90deg)',
-						transition: 'transform 0.15s',
+						transform: collapsed ? "rotate(0deg)" : "rotate(90deg)",
+						transition: "transform 0.15s",
 					}}
 				/>
 			)}
-			<Text fontSize="11px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+			<Text
+				fontSize="11px"
+				fontWeight="600"
+				color="var(--wc-text-muted)"
+				textTransform="uppercase"
+				letterSpacing="0.05em"
+			>
 				{title}
 			</Text>
 		</HStack>
@@ -231,13 +283,13 @@ export function ChatConfigContentPanel({
 	onSystemPromptChange,
 	onPresetSelect,
 }: IChatConfigContentPanelProps) {
-	const chatPresets = useStore(s => s.chatPresets);
-	const addChatPreset = useStore(s => s.addChatPreset);
-	const removeChatPreset = useStore(s => s.removeChatPreset);
+	const chatPresets = useStore((s) => s.chatPresets);
+	const addChatPreset = useStore((s) => s.addChatPreset);
+	const removeChatPreset = useStore((s) => s.removeChatPreset);
 	const [advancedOpen, setAdvancedOpen] = useState(false);
-	const [savePresetName, setSavePresetName] = useState('');
+	const [savePresetName, setSavePresetName] = useState("");
 	const [showSaveInput, setShowSaveInput] = useState(false);
-	const settings = useStore(s => s.settings);
+	const settings = useStore((s) => s.settings);
 
 	const showRawJSON = settings.showRawJSONChatConfig ?? false;
 
@@ -249,13 +301,23 @@ export function ChatConfigContentPanel({
 		return { ...DEFAULT_INFERENCE_PARAMS, ...params };
 	}, [params]);
 
-	const { error: jsonError, validateAndParse, clearError } = useJsonValidator<Partial<IChatInferenceParams>>();
+	const {
+		error: jsonError,
+		validateAndParse,
+		clearError,
+	} = useJsonValidator<Partial<IChatInferenceParams>>();
 
 	const presets = chatPresets;
 
-	const updateParam = useCallback((key: keyof IChatInferenceParams, value: IChatInferenceParams[keyof IChatInferenceParams]) => {
-		onParamsChange({ ...params, [key]: value });
-	}, [params, onParamsChange]);
+	const updateParam = useCallback(
+		(
+			key: keyof IChatInferenceParams,
+			value: IChatInferenceParams[keyof IChatInferenceParams],
+		) => {
+			onParamsChange({ ...params, [key]: value });
+		},
+		[params, onParamsChange],
+	);
 
 	async function handleSavePreset() {
 		if (!savePresetName.trim()) return;
@@ -264,7 +326,7 @@ export function ChatConfigContentPanel({
 			systemPrompt,
 			params,
 		});
-		setSavePresetName('');
+		setSavePresetName("");
 		setShowSaveInput(false);
 	}
 
@@ -274,7 +336,7 @@ export function ChatConfigContentPanel({
 	}
 
 	function handlePresetChange(presetId: string) {
-		if (presetId === '') {
+		if (presetId === "") {
 			onPresetSelect(null, null);
 			return;
 		}
@@ -284,10 +346,7 @@ export function ChatConfigContentPanel({
 
 	const paramsStr = useMemo(() => JSON.stringify(params, null, 2), [params]);
 
-	const [
-		draftParamsStr,
-		setDraftParamsStr,
-	 ] = useDependantState<string>(paramsStr);
+	const [draftParamsStr, setDraftParamsStr] = useDependantState<string>(paramsStr);
 
 	return (
 		<VStack gap="3" p="3" align="stretch">
@@ -296,31 +355,51 @@ export function ChatConfigContentPanel({
 				<SectionHeader title="Preset" />
 				<HStack gap="1">
 					<select
-						value={selectedPresetId ?? ''}
+						value={selectedPresetId ?? ""}
 						onChange={(e) => handlePresetChange(e.target.value)}
 						style={{
 							flex: 1,
-							background: 'var(--wc-bg-card)',
-							border: '1px solid var(--wc-border-default)',
-							borderRadius: '6px',
-							color: 'var(--wc-text-primary)',
-							fontSize: '12px',
-							padding: '4px 8px',
-							height: '28px',
+							background: "var(--wc-bg-card)",
+							border: "1px solid var(--wc-border-default)",
+							borderRadius: "6px",
+							color: "var(--wc-text-primary)",
+							fontSize: "12px",
+							padding: "4px 8px",
+							height: "28px",
 						}}
 					>
-						<option value="" style={{ background: 'var(--wc-bg-elevated)' }}>None (custom)</option>
+						<option value="" style={{ background: "var(--wc-bg-elevated)" }}>
+							None (custom)
+						</option>
 						{presets.map((p) => (
-							<option key={p.id} value={p.id} style={{ background: 'var(--wc-bg-elevated)' }}>{p.name}</option>
+							<option
+								key={p.id}
+								value={p.id}
+								style={{ background: "var(--wc-bg-elevated)" }}
+							>
+								{p.name}
+							</option>
 						))}
 					</select>
 					{selectedPresetId && (
-						<Box cursor="pointer" onClick={() => handleDeletePreset(selectedPresetId)} _hover={{ opacity: 0.8 }} opacity={0.4} p="1">
+						<Box
+							cursor="pointer"
+							onClick={() => handleDeletePreset(selectedPresetId)}
+							_hover={{ opacity: 0.8 }}
+							opacity={0.4}
+							p="1"
+						>
 							<Trash2 size={13} />
 						</Box>
 					)}
 					{!showSaveInput && (
-						<Box cursor="pointer" onClick={() => setShowSaveInput(true)} _hover={{ opacity: 0.8 }} opacity={0.4} p="1">
+						<Box
+							cursor="pointer"
+							onClick={() => setShowSaveInput(true)}
+							_hover={{ opacity: 0.8 }}
+							opacity={0.4}
+							p="1"
+						>
 							<Plus size={13} />
 						</Box>
 					)}
@@ -332,7 +411,10 @@ export function ChatConfigContentPanel({
 							placeholder="Preset name..."
 							value={savePresetName}
 							onChange={(e) => setSavePresetName(e.target.value)}
-							onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); if (e.key === 'Escape') setShowSaveInput(false); }}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") handleSavePreset();
+								if (e.key === "Escape") setShowSaveInput(false);
+							}}
 							bg="var(--wc-bg-card)"
 							borderColor="var(--wc-border-default)"
 							color="var(--wc-text-primary)"
@@ -340,7 +422,13 @@ export function ChatConfigContentPanel({
 							h="26px"
 							autoFocus
 						/>
-						<Box cursor="pointer" onClick={handleSavePreset} _hover={{ opacity: 0.8 }} opacity={0.4} p="1">
+						<Box
+							cursor="pointer"
+							onClick={handleSavePreset}
+							_hover={{ opacity: 0.8 }}
+							opacity={0.4}
+							p="1"
+						>
 							<Save size={13} />
 						</Box>
 					</HStack>
@@ -376,32 +464,48 @@ export function ChatConfigContentPanel({
 				<SectionHeader title="Inference Params" />
 				<Box mt="2">
 					<SegmentGroup.Root
-						value={showRawJSON ? 'json' : 'ui'}
-						onValueChange={(details) => setSettings({ showRawJSONChatConfig: details.value === 'json' })}
+						value={showRawJSON ? "json" : "ui"}
+						onValueChange={(details) =>
+							setSettings({ showRawJSONChatConfig: details.value === "json" })
+						}
 						size={"sm"}
 						w="full"
 						css={{
-							bg: 'var(--wc-bg-subtle)',
-							'--segment-indicator-bg': 'var(--wc-bg-active)',
+							bg: "var(--wc-bg-subtle)",
+							"--segment-indicator-bg": "var(--wc-bg-active)",
 						}}
 					>
-						<SegmentGroup.Indicator css={{ bg: 'var(--wc-bg-active)' }} />
+						<SegmentGroup.Indicator css={{ bg: "var(--wc-bg-active)" }} />
 						<SegmentGroup.Items
 							flex={"content"}
 							items={[
 								{
-									value: 'ui',
+									value: "ui",
 									label: (
-										<HStack gap="1.5" color={showRawJSON ? 'var(--wc-text-muted)' : 'var(--wc-text-heading)'}>
+										<HStack
+											gap="1.5"
+											color={
+												showRawJSON
+													? "var(--wc-text-muted)"
+													: "var(--wc-text-heading)"
+											}
+										>
 											<LuLayoutGrid size={14} />
 											<Text fontSize="12px">Controls</Text>
 										</HStack>
 									),
 								},
 								{
-									value: 'json',
+									value: "json",
 									label: (
-										<HStack gap="1.5" color={showRawJSON ? 'var(--wc-text-heading)' : 'var(--wc-text-muted)'}>
+										<HStack
+											gap="1.5"
+											color={
+												showRawJSON
+													? "var(--wc-text-heading)"
+													: "var(--wc-text-muted)"
+											}
+										>
 											<LuCode size={14} />
 											<Text fontSize="12px">Raw</Text>
 										</HStack>
@@ -423,7 +527,6 @@ export function ChatConfigContentPanel({
 								const result = validateAndParse(str);
 								if (result.valid && result.parsed) clearError();
 							}}
-
 							onBlur={(e) => {
 								const str = e.target.value;
 								const result = validateAndParse(str);
@@ -436,14 +539,23 @@ export function ChatConfigContentPanel({
 							fontFamily="mono"
 							fontSize="11px"
 							bg="var(--wc-bg-card)"
-							borderColor={jsonError ? 'var(--wc-accent-red-border)' : 'var(--wc-border-default)'}
+							borderColor={
+								jsonError
+									? "var(--wc-accent-red-border)"
+									: "var(--wc-border-default)"
+							}
 							color="var(--wc-text-primary)"
 							minH="200px"
 							resize="vertical"
 							p="2"
 						/>
 						{jsonError && (
-							<Text fontSize="10px" color="var(--wc-accent-red-alt)" mt="1" fontFamily="mono">
+							<Text
+								fontSize="10px"
+								color="var(--wc-accent-red-alt)"
+								mt="1"
+								fontFamily="mono"
+							>
 								{jsonError}
 							</Text>
 						)}
@@ -460,13 +572,62 @@ export function ChatConfigContentPanel({
 					<Box>
 						<SectionHeader title="Sampling" />
 						<VStack gap="2.5" align="stretch">
-							<ParamSlider label="Temperature" value={displayParams.temperature} min={0} max={2} step={0.05} onChange={(v) => updateParam('temperature', v)} />
-							<ParamSlider label="Top P" value={displayParams.topP} min={0} max={1} step={0.05} onChange={(v) => updateParam('topP', v)} />
-							<ParamSlider label="Top K" value={displayParams.topK} min={0} max={200} step={1} onChange={(v) => updateParam('topK', v)} />
-							<ParamSlider label="Min P" value={displayParams.minP} min={0} max={1} step={0.01} onChange={(v) => updateParam('minP', v)} />
-							<ParamSlider label="Repeat Penalty" value={displayParams.repeatPenalty} min={1} max={2} step={0.05} onChange={(v) => updateParam('repeatPenalty', v)} />
-							<ParamSlider label="Frequency Penalty" value={displayParams.frequencyPenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('frequencyPenalty', v)} />
-							<ParamSlider label="Presence Penalty" value={displayParams.presencePenalty} min={0} max={2} step={0.05} onChange={(v) => updateParam('presencePenalty', v)} />
+							<ParamSlider
+								label="Temperature"
+								value={displayParams.temperature}
+								min={0}
+								max={2}
+								step={0.05}
+								onChange={(v) => updateParam("temperature", v)}
+							/>
+							<ParamSlider
+								label="Top P"
+								value={displayParams.topP}
+								min={0}
+								max={1}
+								step={0.05}
+								onChange={(v) => updateParam("topP", v)}
+							/>
+							<ParamSlider
+								label="Top K"
+								value={displayParams.topK}
+								min={0}
+								max={200}
+								step={1}
+								onChange={(v) => updateParam("topK", v)}
+							/>
+							<ParamSlider
+								label="Min P"
+								value={displayParams.minP}
+								min={0}
+								max={1}
+								step={0.01}
+								onChange={(v) => updateParam("minP", v)}
+							/>
+							<ParamSlider
+								label="Repeat Penalty"
+								value={displayParams.repeatPenalty}
+								min={1}
+								max={2}
+								step={0.05}
+								onChange={(v) => updateParam("repeatPenalty", v)}
+							/>
+							<ParamSlider
+								label="Frequency Penalty"
+								value={displayParams.frequencyPenalty}
+								min={0}
+								max={2}
+								step={0.05}
+								onChange={(v) => updateParam("frequencyPenalty", v)}
+							/>
+							<ParamSlider
+								label="Presence Penalty"
+								value={displayParams.presencePenalty}
+								min={0}
+								max={2}
+								step={0.05}
+								onChange={(v) => updateParam("presencePenalty", v)}
+							/>
 						</VStack>
 					</Box>
 
@@ -475,13 +636,18 @@ export function ChatConfigContentPanel({
 						<SectionHeader title="Generation" />
 						<VStack gap="2.5" align="stretch">
 							<Box>
-								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">Max Tokens (-1 = unlimited)</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
+									Max Tokens (-1 = unlimited)
+								</Text>
 								<Input
 									size="xs"
 									fontFamily="mono"
 									fontSize="12px"
-		value={displayParams.maxTokens}
-								onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) updateParam('maxTokens', v); }}
+									value={displayParams.maxTokens}
+									onChange={(e) => {
+										const v = parseInt(e.target.value);
+										if (!isNaN(v)) updateParam("maxTokens", v);
+									}}
 									bg="var(--wc-bg-card)"
 									borderColor="var(--wc-border-default)"
 									color="var(--wc-text-primary)"
@@ -489,13 +655,18 @@ export function ChatConfigContentPanel({
 								/>
 							</Box>
 							<Box>
-								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">Seed (-1 = random)</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
+									Seed (-1 = random)
+								</Text>
 								<Input
 									size="xs"
 									fontFamily="mono"
 									fontSize="12px"
-		value={displayParams.seed}
-								onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) updateParam('seed', v); }}
+									value={displayParams.seed}
+									onChange={(e) => {
+										const v = parseInt(e.target.value);
+										if (!isNaN(v)) updateParam("seed", v);
+									}}
 									bg="var(--wc-bg-card)"
 									borderColor="var(--wc-border-default)"
 									color="var(--wc-text-primary)"
@@ -504,68 +675,100 @@ export function ChatConfigContentPanel({
 							</Box>
 							<ParamSelect
 								label="Response Format"
-		value={displayParams.responseFormat}
+								value={displayParams.responseFormat}
 								options={[
-									{ value: EResponseFormat.TEXT, label: 'Text' },
-									{ value: EResponseFormat.JSON_OBJECT, label: 'JSON' },
+									{ value: EResponseFormat.TEXT, label: "Text" },
+									{ value: EResponseFormat.JSON_OBJECT, label: "JSON" },
 								]}
-								onChange={(v) => updateParam('responseFormat', v as EResponseFormat)}
+								onChange={(v) =>
+									updateParam("responseFormat", v as EResponseFormat)
+								}
 							/>
 
-						<Box>
-							<ParamToggle label="Enable Thinking" value={displayParams.enableThinking} onChange={(v) => updateParam('enableThinking', v)} />
-							{displayParams.enableThinking && (
-								<ParamSelect
-									label="Reasoning Effort"
-									value={displayParams.reasoningEffort}
-									options={[
-										{ value: EReasoningEffort.NONE, label: 'None' },
-										{ value: EReasoningEffort.LOW, label: 'Low' },
-										{ value: EReasoningEffort.MEDIUM, label: 'Medium' },
-										{ value: EReasoningEffort.HIGH, label: 'High' },
-									]}
-									onChange={(v) => updateParam('reasoningEffort', v as EReasoningEffort)}
+							<Box>
+								<ParamToggle
+									label="Enable Thinking"
+									value={displayParams.enableThinking}
+									onChange={(v) => updateParam("enableThinking", v)}
 								/>
-							)}
-						</Box>
+								{displayParams.enableThinking && (
+									<ParamSelect
+										label="Reasoning Effort"
+										value={displayParams.reasoningEffort}
+										options={[
+											{ value: EReasoningEffort.NONE, label: "None" },
+											{ value: EReasoningEffort.LOW, label: "Low" },
+											{ value: EReasoningEffort.MEDIUM, label: "Medium" },
+											{ value: EReasoningEffort.HIGH, label: "High" },
+										]}
+										onChange={(v) =>
+											updateParam("reasoningEffort", v as EReasoningEffort)
+										}
+									/>
+								)}
+							</Box>
 
-						<Box>
-							<ParamSelect
-								label="Reasoning Format"
-								value={displayParams.reasoningFormat}
-								options={[
-									{ value: EReasoningFormat.NONE, label: 'None' },
-									{ value: EReasoningFormat.PARSED, label: 'Parsed' },
-									{ value: EReasoningFormat.RAW, label: 'Raw' },
-								]}
-								onChange={(v) => updateParam('reasoningFormat', v as EReasoningFormat)}
-							/>
-						</Box>
-					</VStack>
+							<Box>
+								<ParamSelect
+									label="Reasoning Format"
+									value={displayParams.reasoningFormat}
+									options={[
+										{ value: EReasoningFormat.NONE, label: "None" },
+										{ value: EReasoningFormat.PARSED, label: "Parsed" },
+										{ value: EReasoningFormat.RAW, label: "Raw" },
+									]}
+									onChange={(v) =>
+										updateParam("reasoningFormat", v as EReasoningFormat)
+									}
+								/>
+							</Box>
+						</VStack>
 					</Box>
 
 					{/* Advanced */}
 					<Box>
-						<SectionHeader title="Advanced" collapsed={!advancedOpen} onToggle={() => setAdvancedOpen(!advancedOpen)} />
+						<SectionHeader
+							title="Advanced"
+							collapsed={!advancedOpen}
+							onToggle={() => setAdvancedOpen(!advancedOpen)}
+						/>
 						{advancedOpen && (
 							<VStack gap="2.5" align="stretch">
 								<ParamSelect
 									label="Mirostat Mode"
 									value={String(displayParams.mirostatMode)}
 									options={[
-										{ value: '0', label: 'Disabled' },
-										{ value: '1', label: 'Mirostat 1' },
-										{ value: '2', label: 'Mirostat 2' },
+										{ value: "0", label: "Disabled" },
+										{ value: "1", label: "Mirostat 1" },
+										{ value: "2", label: "Mirostat 2" },
 									]}
-									onChange={(v) => updateParam('mirostatMode', parseInt(v))}
+									onChange={(v) => updateParam("mirostatMode", parseInt(v))}
 								/>
 								{displayParams.mirostatMode > 0 && (
 									<>
-										<ParamSlider label="Mirostat Tau" value={displayParams.mirostatTau} min={0} max={10} step={0.1} onChange={(v) => updateParam('mirostatTau', v)} />
-										<ParamSlider label="Mirostat Eta" value={displayParams.mirostatEta} min={0} max={1} step={0.01} onChange={(v) => updateParam('mirostatEta', v)} />
+										<ParamSlider
+											label="Mirostat Tau"
+											value={displayParams.mirostatTau}
+											min={0}
+											max={10}
+											step={0.1}
+											onChange={(v) => updateParam("mirostatTau", v)}
+										/>
+										<ParamSlider
+											label="Mirostat Eta"
+											value={displayParams.mirostatEta}
+											min={0}
+											max={1}
+											step={0.01}
+											onChange={(v) => updateParam("mirostatEta", v)}
+										/>
 									</>
 								)}
-								<ParamToggle label="Cache Prompt" value={displayParams.cachePrompt} onChange={(v) => updateParam('cachePrompt', v)} />
+								<ParamToggle
+									label="Cache Prompt"
+									value={displayParams.cachePrompt}
+									onChange={(v) => updateParam("cachePrompt", v)}
+								/>
 							</VStack>
 						)}
 					</Box>
@@ -578,7 +781,10 @@ export function ChatConfigContentPanel({
 				cursor="pointer"
 				opacity={0.4}
 				_hover={{ opacity: 0.7 }}
-				onClick={() => { onParamsChange({ ...DEFAULT_INFERENCE_PARAMS }); onSystemPromptChange(''); }}
+				onClick={() => {
+					onParamsChange({ ...DEFAULT_INFERENCE_PARAMS });
+					onSystemPromptChange("");
+				}}
 				pb="2"
 			>
 				<RotateCcw size={12} />

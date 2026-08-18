@@ -1,27 +1,32 @@
-import { api } from './client';
 import type {
 	IWhisperBackend,
 	IWhisperBackendCreatePayload,
 	IWhisperBackendUpdatePayload,
 	IWhisperServer,
 	IWhisperServerCreatePayload,
-} from '@warpcore/shared';
+} from "@warpcore/shared";
+import { api } from "./client";
 
 // ============================================================
 // Whisper Backends
 // ============================================================
 
 export async function listWhisperBackends(): Promise<IWhisperBackend[]> {
-	const res = await api.get<IWhisperBackend[]>('/whisper-backends');
+	const res = await api.get<IWhisperBackend[]>("/whisper-backends");
 	return res.data ?? [];
 }
 
-export async function createWhisperBackend(payload: IWhisperBackendCreatePayload): Promise<IWhisperBackend | null> {
-	const res = await api.post<IWhisperBackend>('/whisper-backends', payload);
+export async function createWhisperBackend(
+	payload: IWhisperBackendCreatePayload,
+): Promise<IWhisperBackend | null> {
+	const res = await api.post<IWhisperBackend>("/whisper-backends", payload);
 	return res.data ?? null;
 }
 
-export async function updateWhisperBackend(id: string, payload: IWhisperBackendUpdatePayload): Promise<IWhisperBackend | null> {
+export async function updateWhisperBackend(
+	id: string,
+	payload: IWhisperBackendUpdatePayload,
+): Promise<IWhisperBackend | null> {
 	const res = await api.put<IWhisperBackend>(`/whisper-backends/${id}`, payload);
 	return res.data ?? null;
 }
@@ -40,16 +45,21 @@ export async function validateWhisperBackend(id: string): Promise<IWhisperBacken
 // ============================================================
 
 export async function listWhisperServers(): Promise<IWhisperServer[]> {
-	const res = await api.get<IWhisperServer[]>('/whisper-servers');
+	const res = await api.get<IWhisperServer[]>("/whisper-servers");
 	return res.data ?? [];
 }
 
-export async function createWhisperServer(payload: IWhisperServerCreatePayload): Promise<IWhisperServer | null> {
-	const res = await api.post<IWhisperServer>('/whisper-servers', payload);
+export async function createWhisperServer(
+	payload: IWhisperServerCreatePayload,
+): Promise<IWhisperServer | null> {
+	const res = await api.post<IWhisperServer>("/whisper-servers", payload);
 	return res.data ?? null;
 }
 
-export async function updateWhisperServer(id: string, payload: Partial<IWhisperServerCreatePayload> & { relaunch?: boolean }): Promise<IWhisperServer | null> {
+export async function updateWhisperServer(
+	id: string,
+	payload: Partial<IWhisperServerCreatePayload> & { relaunch?: boolean },
+): Promise<IWhisperServer | null> {
 	const res = await api.put<IWhisperServer>(`/whisper-servers/${id}`, payload);
 	return res.data ?? null;
 }
@@ -67,7 +77,7 @@ export async function restartWhisperServer(id: string): Promise<void> {
 }
 
 export async function stopAllWhisperServers(): Promise<void> {
-	await api.post('/whisper-servers/stop-all');
+	await api.post("/whisper-servers/stop-all");
 }
 
 export async function getWhisperServerLogs(id: string): Promise<string[]> {
@@ -87,7 +97,7 @@ export interface IWhisperModelFile {
 	fileName: string;
 	filePath: string;
 	sizeMb: number;
-	format: 'gguf' | 'bin';
+	format: "gguf" | "bin";
 }
 
 export interface IWhisperModel {
@@ -101,6 +111,6 @@ export interface IWhisperModel {
 }
 
 export async function listWhisperModels(): Promise<IWhisperModel[]> {
-	const res = await api.get<IWhisperModel[]>('/whisper-models');
+	const res = await api.get<IWhisperModel[]>("/whisper-models");
 	return res.data ?? [];
 }

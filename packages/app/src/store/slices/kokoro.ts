@@ -1,5 +1,6 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { IKokoroStatus } from '@warpcore/shared';
+import type { IKokoroStatus } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
+
 interface KokoroSlice {
 	kokoroStatus: IKokoroStatus | null;
 	setKokoroStatus: (status: IKokoroStatus | null) => void;
@@ -10,7 +11,7 @@ export const kokoroSlice = (
 ): Partial<AppState> => ({
 	kokoroStatus: null,
 	setKokoroStatus: (status) => {
-		setState(draft => {
+		setState((draft) => {
 			draft.kokoroStatus = status;
 		});
 	},

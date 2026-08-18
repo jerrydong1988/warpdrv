@@ -1,5 +1,6 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { IBackendAsset } from '@warpcore/shared';
+import type { IBackendAsset } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
+
 interface ReleasesSlice {
 	llamaReleases: Record<string, IBackendAsset>;
 	whisperReleases: Record<string, IBackendAsset>;

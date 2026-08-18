@@ -1,8 +1,48 @@
-import type React from 'react';
-import type { TServerId, IServer, IServerStats, TDownloadId, IDownload, IDevice, TBackendId, IBackend, TBackendGroupId, IBackendGroup, TRecipeId, IRecipe, IRecipeRunState, TStepId, IServerSlotsState, ICheckpoint, TCheckpointId, TModelId, IModel, ISettings, TWhisperBackendId, IWhisperBackend, TWhisperServerId, IWhisperServer, IWhisperModel, IHardwareInfo, IBackendAsset, IKokoroStatus, IChatPreset, IChatPresetCreatePayload, IMode, TModeId, IGuardrailDefinition } from '@warpcore/shared';
-import type { IProxyStatus, IStickyRouteInfo } from '@/api/services';
-import type { IExtractedSlashCommand } from '@/pages/Chat/assistant-ui/docToString';
-export { type ImmerSet, type ImmerGet } from '@warpcore/bridge';
+import type {
+	IAgent,
+	IBackend,
+	IBackendAsset,
+	IBackendGroup,
+	IChatPreset,
+	IChatPresetCreatePayload,
+	IChatPrompt,
+	IChatPromptCreatePayload,
+	ICheckpoint,
+	IDevice,
+	IDownload,
+	IGuardrailDefinition,
+	IHardwareInfo,
+	IKokoroStatus,
+	IMode,
+	INotification,
+	IModel,
+	IRecipe,
+	IRecipeRunState,
+	IServer,
+	IServerSlotsState,
+	IServerStats,
+	ISettings,
+	IWhisperBackend,
+	IWhisperModel,
+	IWhisperServer,
+	TBackendGroupId,
+	TBackendId,
+	TCheckpointId,
+	TDownloadId,
+	TModeId,
+	TModelId,
+	TRecipeId,
+	TServerId,
+	TStepId,
+	TWhisperBackendId,
+	TWhisperServerId,
+} from "@warpcore/shared";
+import type React from "react";
+import type { IProxyStatus, IStickyRouteInfo } from "@/api/services";
+import type { IExtractedSlashCommand } from "@/pages/Chat/assistant-ui/docToString";
+
+export type { ImmerGet, ImmerSet } from "@warpcore/bridge";
+import type { EToolCallStatus } from "@warpcore/bridge";
 
 export type TCanRenderResult = Record<string, unknown> | false;
 
@@ -10,35 +50,46 @@ export interface IToolCallRenderer {
 	component: React.ComponentType<any>;
 	keywords: string[];
 	canRender: (args: Record<string, unknown>) => TCanRenderResult;
-	renderMini?: React.ComponentType<{ args: Record<string, unknown>; result?: unknown }>;
+	renderMini?: React.ComponentType<{
+		args: Record<string, unknown>;
+		result?: unknown;
+		status?: EToolCallStatus;
+	}>;
 }
+
 import type {
+	IChatMessage,
+	IChatThread,
+	IElicitationRequest,
+	IFolder,
+	IServerPermission as IMcpServerPermission,
 	IMcpServerState,
-	IToolPermission,
+	IMessagePatch,
+	IThreadPatch,
 	IThreadToolPermission,
 	IToolAttachment,
-	IServerPermission as IMcpServerPermission,
-	IFolder,
-	IWorkspace,
-	IChatThread,
-	IChatMessage,
 	IToolCall,
-	IThreadPatch,
-	IMessagePatch,
-	TThreadId,
+	IToolPermission,
+	IWorkspace,
+	TFolderId,
 	TMessageId,
 	TMessagePartId,
+	TThreadId,
 	TToolCallId,
-	TFolderId,
-	IElicitationRequest,
-} from '@warpcore/bridge';
-import { IAnnotation } from '@/store/slices/annotations';
-import type { ISlashCommand } from '@/store/slices/slashCommands';
-import type { EUISpaceLoc, TAppletName, TUISpaceComponent, TUISpaceComponentId, TUiSpaceComponentDef } from '@/store/slices/uiSpaces';
-import type { EChatSidebarTab } from '@/store/slices/chatSidebar';
-import { IChatStoreState } from '@warpcore/bridge/store';
+} from "@warpcore/bridge";
+import type { IChatStoreState } from "@warpcore/bridge/store";
+import type { IAnnotation } from "@/store/slices/annotations";
+import type { EChatSidebarTab } from "@/store/slices/chatSidebar";
+import type { ISlashCommand } from "@/store/slices/slashCommands";
+import type {
+	EUISpaceLoc,
+	TAppletName,
+	TUISpaceComponent,
+	TUISpaceComponentId,
+	TUiSpaceComponentDef,
+} from "@/store/slices/uiSpaces";
 
-export interface AppState extends IChatStoreState{
+export interface AppState extends IChatStoreState {
 	// SSE Connection
 	sseConnected: boolean;
 	setSseConnected: (connected: boolean) => void;
@@ -94,15 +145,15 @@ export interface AppState extends IChatStoreState{
 
 	// TTS playback state
 	ttsActiveMessageId: string | null;
-	ttsIsGenerating: 'button' | 'vad' | null;
+	ttsIsGenerating: "button" | "vad" | null;
 	ttsIsSpeaking: boolean;
 	ttsSpokenByMessage: Record<string, number>;
 	ttsVadSentencesSent: number;
 	ttsVadSentencesDone: number;
 	ttsVadRequestId: number;
-	ttsStart: (messageId: string, mode?: 'button' | 'vad') => void;
+	ttsStart: (messageId: string, mode?: "button" | "vad") => void;
 	ttsStop: () => void;
-	ttsSetGenerating: (v: 'button' | 'vad' | null) => void;
+	ttsSetGenerating: (v: "button" | "vad" | null) => void;
 	ttsSetSpeaking: (v: boolean) => void;
 	ttsSetActiveMessageId: (messageId: string | null) => void;
 	ttsSetSpokenIndex: (messageId: string, index: number) => void;
@@ -141,11 +192,14 @@ export interface AppState extends IChatStoreState{
 
 	// Bridge Chat State
 	threads: Record<TThreadId, IChatThread>;
-	chunksByMessageId: Record<string, {
-		partId: string,
-		chunk: string,
-		lastUpdate: Date,
-	}>;
+	chunksByMessageId: Record<
+		string,
+		{
+			partId: string;
+			chunk: string;
+			lastUpdate: Date;
+		}
+	>;
 	messagesByThread: Record<TThreadId, Record<TMessageId, IChatMessage>>;
 	headMessageIdByThread: Record<TThreadId, TMessageId>;
 	toolCallsById: Record<TToolCallId, IToolCall>;
@@ -170,9 +224,18 @@ export interface AppState extends IChatStoreState{
 	applyThreadUpdated: (threadId: TThreadId, updates: IThreadPatch) => void;
 	applyThreadDeleted: (threadId: TThreadId) => void;
 	applyMessageCreated: (message: IChatMessage) => void;
-	applyMessagePatched: (messageId: TMessageId, threadId: TThreadId, updates: IMessagePatch) => void;
+	applyMessagePatched: (
+		messageId: TMessageId,
+		threadId: TThreadId,
+		updates: IMessagePatch,
+	) => void;
 	applyMessageDeleted: (messageId: TMessageId, threadId: TThreadId) => void;
-	applyMessageChunk: (messageId: TMessageId, threadId: TThreadId, partId: TMessagePartId, deltaText: string) => void;
+	applyMessageChunk: (
+		messageId: TMessageId,
+		threadId: TThreadId,
+		partId: TMessagePartId,
+		deltaText: string,
+	) => void;
 	applyToolCallStarting: (messageId: TMessageId, name: string) => void;
 	applyToolCallCreated: (toolCall: IToolCall) => void;
 	applyToolCallUpdated: (toolCall: IToolCall) => void;
@@ -215,15 +278,29 @@ export interface AppState extends IChatStoreState{
 	// Guardrails (global definitions)
 	guardrails: Record<string, IGuardrailDefinition>;
 
+	// Agents
+	agents: Record<string, IAgent>;
+
 	// Chat Presets
 	chatPresets: IChatPreset[];
 	setChatPresets: (presets: IChatPreset[]) => void;
 	addChatPreset: (payload: IChatPresetCreatePayload) => Promise<void>;
 	removeChatPreset: (id: string) => Promise<void>;
 
+	// Chat Prompts
+	chatPrompts: IChatPrompt[];
+	setChatPrompts: (prompts: IChatPrompt[]) => void;
+	addChatPrompt: (payload: IChatPromptCreatePayload) => Promise<void>;
+	updateChatPrompt: (id: string, payload: Partial<IChatPromptCreatePayload>) => Promise<void>;
+	removeChatPrompt: (id: string) => Promise<void>;
+
 	// Chat Folders
 	folders: IFolder[];
 	setFolders: (folders: IFolder[]) => void;
+	applyFolderCreated: (folder: IFolder) => void;
+	applyFolderUpdated: (folderId: TFolderId, updates: Partial<IFolder>) => void;
+	applyFolderDeleted: (folderId: TFolderId) => void;
+	applyFolderReordered: (folders: IFolder[]) => void;
 
 	// Workspaces
 	activeWorkspaceId: TFolderId | null;
@@ -240,7 +317,9 @@ export interface AppState extends IChatStoreState{
 	setMessageState: (messageId: TMessageId, data: Record<string, unknown>) => void;
 	initWorkspaceState: (folderId: TFolderId, data: Record<string, unknown>) => void;
 	initThreadState: (threadId: TThreadId, data: Record<string, unknown>) => void;
-	initMessageStates: (states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>) => void;
+	initMessageStates: (
+		states: Array<{ messageId: TMessageId; data: Record<string, unknown> }>,
+	) => void;
 	applyWorkspaceStateUpdated: (folderId: TFolderId, data: Record<string, unknown>) => void;
 	applyThreadStateUpdated: (threadId: TThreadId, data: Record<string, unknown>) => void;
 	applyMessageStateUpdated: (messageId: TMessageId, data: Record<string, unknown>) => void;
@@ -274,12 +353,32 @@ export interface AppState extends IChatStoreState{
 	uiSpaceComponentsById: Record<TUISpaceComponentId, TUiSpaceComponentDef>;
 	uiSpaceComponentsByLocation: Partial<Record<EUISpaceLoc, Record<TUISpaceComponentId, true>>>;
 	uiSpaceComponentsByApplet: Record<TAppletName, Record<TUISpaceComponentId, true>>;
-	registerUiSpaceComponent: (def: { componentId?: TUISpaceComponentId; label?: string; appletName: TAppletName; location: EUISpaceLoc; component: TUISpaceComponent; props?: Record<string, unknown> }) => TUISpaceComponentId;
+	registerUiSpaceComponent: (def: {
+		componentId?: TUISpaceComponentId;
+		label?: string;
+		appletName: TAppletName;
+		location: EUISpaceLoc;
+		component: TUISpaceComponent;
+		props?: Record<string, unknown>;
+	}) => TUISpaceComponentId;
 	unregisterUiSpaceComponent: (appletName: string, componentId?: TUISpaceComponentId) => void;
-	setUiSpaceComponentProps: (componentId: TUISpaceComponentId, propsPatch: Record<string, unknown>) => void;
+	setUiSpaceComponentProps: (
+		componentId: TUISpaceComponentId,
+		propsPatch: Record<string, unknown>,
+	) => void;
 
 	// Pending slash commands (extracted from editor, stored until send)
 	pendingSlashCommands: IExtractedSlashCommand[];
 	setPendingSlashCommands: (commands: IExtractedSlashCommand[]) => void;
 	clearPendingSlashCommands: () => void;
+
+	// Notifications
+	notificationsByThread: Record<TThreadId, Record<string, INotification>>;
+	applyNotificationCreated: (notification: INotification) => void;
+	applyNotificationUpdated: (notification: INotification) => void;
+	seedThreadNotifications: (threadId: TThreadId, notifications: INotification[]) => void;
+
+	// Monitor box
+	monitorBoxOpen: boolean;
+	setMonitorBoxOpen: (open: boolean) => void;
 }

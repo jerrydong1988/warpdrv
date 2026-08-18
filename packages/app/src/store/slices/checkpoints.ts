@@ -1,5 +1,5 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { ICheckpoint, TCheckpointId } from '@warpcore/shared';
+import type { ICheckpoint, TCheckpointId } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface CheckpointsSlice {
 	checkpoints: Record<TCheckpointId, ICheckpoint>;

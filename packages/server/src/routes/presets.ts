@@ -1,28 +1,28 @@
-import { Router } from 'express';
-import crypto from 'crypto';
-import { store } from '../util/store';
-import type { IPreset, IPresetCreatePayload } from '@warpcore/shared';
+import type { IPreset, IPresetCreatePayload } from "@warpcore/shared";
+import crypto from "crypto";
+import { Router } from "express";
+import { store } from "../util/store";
 
-const PREFIX = 'presets:';
+const PREFIX = "presets:";
 
 export const presetsRouter = Router();
 
 // GET /api/presets
-presetsRouter.get('/', async (_req, res) => {
+presetsRouter.get("/", async (_req, res) => {
 	const presets = await store.list<IPreset>(PREFIX);
 	res.json({ ok: true, data: presets, total: presets.length, error: null });
 });
 
 // POST /api/presets
-presetsRouter.post('/', async (req, res) => {
+presetsRouter.post("/", async (req, res) => {
 	const payload = req.body as IPresetCreatePayload;
 
 	if (!payload.name?.trim()) {
-		res.status(400).json({ ok: false, data: null, error: 'Name is required' });
+		res.status(400).json({ ok: false, data: null, error: "Name is required" });
 		return;
 	}
 
-	const id = crypto.randomBytes(6).toString('hex');
+	const id = crypto.randomBytes(6).toString("hex");
 
 	const preset: IPreset = {
 		id,
@@ -39,10 +39,10 @@ presetsRouter.post('/', async (req, res) => {
 });
 
 // DELETE /api/presets/:id
-presetsRouter.delete('/:id', async (req, res) => {
+presetsRouter.delete("/:id", async (req, res) => {
 	const existing = await store.get<IPreset>(PREFIX + req.params.id);
 	if (!existing) {
-		res.status(404).json({ ok: false, data: null, error: 'Preset not found' });
+		res.status(404).json({ ok: false, data: null, error: "Preset not found" });
 		return;
 	}
 	await store.del(PREFIX + req.params.id);

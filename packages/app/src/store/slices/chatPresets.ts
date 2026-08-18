@@ -1,6 +1,6 @@
-import type { IChatPreset, IChatPresetCreatePayload } from '@warpcore/shared';
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import { createChatPreset, deleteChatPreset } from '@/api/services';
+import type { IChatPreset, IChatPresetCreatePayload } from "@warpcore/shared";
+import { createChatPreset, deleteChatPreset } from "@/api/services";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
 
 interface ChatPresetsSlice {
 	chatPresets: IChatPreset[];
@@ -15,7 +15,7 @@ export const chatPresetsSlice = (
 ): Partial<AppState> => ({
 	chatPresets: [],
 	setChatPresets: (presets: IChatPreset[]) => {
-		setState(draft => {
+		setState((draft) => {
 			draft.chatPresets = presets;
 		});
 	},

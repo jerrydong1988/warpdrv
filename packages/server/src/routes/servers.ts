@@ -1,71 +1,66 @@
-import { Router } from 'express';
-import crypto from 'crypto';
-import { store } from '../util/store';
+import type { IBackend, IBackendGroup, IServer, IServerCreatePayload } from "@warpcore/shared";
+import { EServerStatus } from "@warpcore/shared";
+import crypto from "crypto";
+import { Router } from "express";
+import { clearStickyRoute, getStickyRoutesResolved } from "../services/modelProxy";
 import {
-	buildServerArgs,
-	spawnServer,
-	killServer,
-	isProcessAlive,
-	getServerLogs,
 	clearServerLogs,
-	SERVERS_PREFIX,
 	findRandomAvailablePort,
-	usedPorts,
+	getServerLogs,
+	killServer,
 	launchServer,
-} from '../services/processManager';
-import { getServerStats } from '../services/statsPoller';
-import { clearStickyRoute, getStickyRoutesResolved } from '../services/modelProxy';
-import { sseManager } from '../services/sseManagerInstance';
-
-import type {
-	IServer,
-	IServerCreatePayload,
-	IBackend,
-	IBackendGroup,
-	ISettings,
-} from '@warpcore/shared';
-import { EServerStatus } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+	SERVERS_PREFIX,
+	usedPorts,
+} from "../services/processManager";
+import { sseManager } from "../services/sseManagerInstance";
+import { getServerStats } from "../services/statsPoller";
+import { store } from "../util/store";
 
 const PREFIX = SERVERS_PREFIX;
 
 export const serversRouter = Router();
 
 // GET /api/servers
-serversRouter.get('/', async (_req, res) => {
+serversRouter.get("/", async (_req, res) => {
 	const servers = await store.list<IServer>(PREFIX);
-	const withStats = servers.map(s => ({ ...s, stats: (s.status === EServerStatus.RUNNING || s.status === EServerStatus.LOADING) ? getServerStats(s.id) : null }));
+	const withStats = servers.map((s) => ({
+		...s,
+		stats:
+			s.status === EServerStatus.RUNNING || s.status === EServerStatus.LOADING
+				? getServerStats(s.id)
+				: null,
+	}));
 	res.json({ ok: true, data: withStats, total: withStats.length, error: null });
 });
 
 // GET /api/servers/:id
-serversRouter.get('/:id', async (req, res) => {
+serversRouter.get("/:id", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 	res.json({ ok: true, data: server, error: null });
 });
 
 // POST /api/servers — launch a new server
-serversRouter.post('/', async (req, res) => {
+serversRouter.post("/", async (req, res) => {
 	const payload = req.body as IServerCreatePayload;
 
 	// Assign port for server.port, but keep params.port as-is (0 = auto-assign on every launch)
-	const serverPort = payload.params.port > 0
-		? payload.params.port
-		: await findRandomAvailablePort();
+	const serverPort =
+		payload.params.port > 0 ? payload.params.port : await findRandomAvailablePort();
 
 	// Track user-assigned port
 	if (payload.params.port > 0) {
 		usedPorts.add(serverPort);
 	}
 
-	const id = crypto.randomBytes(6).toString('hex');
+	const id = crypto.randomBytes(6).toString("hex");
 
 	// Generate server name from model filename if not provided
-	const serverName = payload.serverName ?? payload.modelPath.split('/').pop()?.replace('.gguf', '') ?? 'server';
+	const serverName =
+		payload.serverName ?? payload.modelPath.split("/").pop()?.replace(".gguf", "") ?? "server";
 
 	const server: IServer = {
 		id,
@@ -97,10 +92,10 @@ serversRouter.post('/', async (req, res) => {
 });
 
 // POST /api/servers/:id/stop
-serversRouter.post('/:id/stop', async (req, res) => {
+serversRouter.post("/:id/stop", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 
@@ -115,7 +110,7 @@ serversRouter.post('/:id/stop', async (req, res) => {
 });
 
 // POST /api/servers/stop-all — stop all running servers
-serversRouter.post('/stop-all', async (_req, res) => {
+serversRouter.post("/stop-all", async (_req, res) => {
 	const servers = await store.list<IServer>(PREFIX);
 	let stoppedCount = 0;
 
@@ -136,10 +131,10 @@ serversRouter.post('/stop-all', async (_req, res) => {
 });
 
 // POST /api/servers/:id/restart
-serversRouter.post('/:id/restart', async (req, res) => {
+serversRouter.post("/:id/restart", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 
@@ -155,49 +150,70 @@ serversRouter.post('/:id/restart', async (req, res) => {
 });
 
 // PUT /api/servers/:id — update params and optionally restart
-serversRouter.put('/:id', async (req, res) => {
+serversRouter.put("/:id", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 
-	type TUpdatePayload = Partial<Pick<IServer, 'backendId' | 'backendGroupId' | 'modelPath' | 'serverName' | 'params' | 'serverAlias' | 'autoLaunch' | 'autoSaveCheckpointOnStop' | 'autoLoadCheckpointOnStart' | 'useRecommendedInferenceParams' | 'useMultiModal'>> & { relaunch?: boolean };
+	type TUpdatePayload = Partial<
+		Pick<
+			IServer,
+			| "backendId"
+			| "backendGroupId"
+			| "modelPath"
+			| "serverName"
+			| "params"
+			| "serverAlias"
+			| "autoLaunch"
+			| "autoSaveCheckpointOnStop"
+			| "autoLoadCheckpointOnStart"
+			| "useRecommendedInferenceParams"
+			| "useMultiModal"
+		>
+	> & { relaunch?: boolean };
 	const updatePayload = req.body as TUpdatePayload;
 	const shouldRelaunch = updatePayload.relaunch ?? true;
 
 	// Validate new backend if changed
 	let backend: IBackend | null = null;
 	if (updatePayload.backendGroupId) {
-		const group = await store.get<IBackendGroup>('backendGroups:' + updatePayload.backendGroupId);
+		const group = await store.get<IBackendGroup>(
+			"backendGroups:" + updatePayload.backendGroupId,
+		);
 		if (!group) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend group not found' });
+			res.status(400).json({ ok: false, data: null, error: "Backend group not found" });
 			return;
 		}
-		backend = await store.get<IBackend>('backends:' + group.activeBackendId);
+		backend = await store.get<IBackend>("backends:" + group.activeBackendId);
 		if (!backend) {
-			res.status(400).json({ ok: false, data: null, error: 'Active backend in group not found' });
+			res.status(400).json({
+				ok: false,
+				data: null,
+				error: "Active backend in group not found",
+			});
 			return;
 		}
 	} else if (updatePayload.backendId) {
-		backend = await store.get<IBackend>('backends:' + updatePayload.backendId);
+		backend = await store.get<IBackend>("backends:" + updatePayload.backendId);
 		if (!backend) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend not found' });
+			res.status(400).json({ ok: false, data: null, error: "Backend not found" });
 			return;
 		}
 	} else {
 		// Use existing backend
 		if (server.backendGroupId) {
-			const group = await store.get<IBackendGroup>('backendGroups:' + server.backendGroupId);
+			const group = await store.get<IBackendGroup>("backendGroups:" + server.backendGroupId);
 			if (group) {
-				backend = await store.get<IBackend>('backends:' + group.activeBackendId);
+				backend = await store.get<IBackend>("backends:" + group.activeBackendId);
 			}
 		}
 		if (!backend && server.backendId) {
-			backend = await store.get<IBackend>('backends:' + server.backendId);
+			backend = await store.get<IBackend>("backends:" + server.backendId);
 		}
 		if (!backend) {
-			res.status(400).json({ ok: false, data: null, error: 'Backend not found' });
+			res.status(400).json({ ok: false, data: null, error: "Backend not found" });
 			return;
 		}
 	}
@@ -210,7 +226,8 @@ serversRouter.put('/:id', async (req, res) => {
 
 	// Update fields
 	if (updatePayload.backendId !== undefined) server.backendId = updatePayload.backendId;
-	if (updatePayload.backendGroupId !== undefined) server.backendGroupId = updatePayload.backendGroupId;
+	if (updatePayload.backendGroupId !== undefined)
+		server.backendGroupId = updatePayload.backendGroupId;
 	if (updatePayload.modelPath) server.modelPath = updatePayload.modelPath;
 	if (updatePayload.serverName != null) server.serverName = updatePayload.serverName;
 	if (updatePayload.params) {
@@ -229,7 +246,7 @@ serversRouter.put('/:id', async (req, res) => {
 			if (!newAliases.has(alias)) {
 				// Alias was removed - check if there's a sticky route for it pointing to this server
 				const routes = await getStickyRoutesResolved();
-				const route = routes.find(r => r.alias === alias && r.serverId === server.id);
+				const route = routes.find((r) => r.alias === alias && r.serverId === server.id);
 				if (route) {
 					clearStickyRoute(alias);
 				}
@@ -265,16 +282,16 @@ serversRouter.put('/:id', async (req, res) => {
 	await store.put(PREFIX + server.id, server);
 
 	// Emit SSE update so frontend receives the config change
-	sseManager.emit('servers:update', { [server.id]: server });
+	sseManager.emit("servers:update", { [server.id]: server });
 
 	res.json({ ok: true, data: server, error: null });
 });
 
 // DELETE /api/servers/:id — stop and remove
-serversRouter.delete('/:id', async (req, res) => {
+serversRouter.delete("/:id", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 
@@ -283,16 +300,16 @@ serversRouter.delete('/:id', async (req, res) => {
 	clearServerLogs(server.id);
 	await store.del(PREFIX + server.id);
 
-	sseManager.emit('servers:delete', { [server.id]: null });
+	sseManager.emit("servers:delete", { [server.id]: null });
 
 	res.json({ ok: true, data: null, error: null });
 });
 
 // GET /api/servers/:id/logs
-serversRouter.get('/:id/logs', async (req, res) => {
+serversRouter.get("/:id/logs", async (req, res) => {
 	const server = await store.get<IServer>(PREFIX + req.params.id);
 	if (!server) {
-		res.status(404).json({ ok: false, data: null, error: 'Server not found' });
+		res.status(404).json({ ok: false, data: null, error: "Server not found" });
 		return;
 	}
 
@@ -301,7 +318,7 @@ serversRouter.get('/:id/logs', async (req, res) => {
 });
 
 // DELETE /api/servers/:id/logs — clear logs
-serversRouter.delete('/:id/logs', async (req, res) => {
+serversRouter.delete("/:id/logs", async (req, res) => {
 	clearServerLogs(req.params.id!);
 	res.json({ ok: true, data: null, error: null });
 });

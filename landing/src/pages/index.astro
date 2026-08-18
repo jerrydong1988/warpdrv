@@ -1,11 +1,12 @@
 ---
-import "../styles/global.css";
+import Base from "../layouts/Base.astro";
 import ChatReplica from "../components/ChatReplica.astro";
 import ServersReplica from "../components/ServersReplica.astro";
 import AnnotationsReplica from "../components/AnnotationsReplica.astro";
 import ApprovalReplica from "../components/ApprovalReplica.astro";
+import SubagentsReplica from "../components/SubagentsReplica.astro";
 import BackendsReplica from "../components/BackendsReplica.astro";
-import Base from "../layouts/Base.astro";
+import "../styles/global.css";
 ---
 
 <Base>
@@ -197,16 +198,55 @@ import Base from "../layouts/Base.astro";
 					>
 				</div>
 			</div>
-			<div class="visual">
-				<div class="frame"><ApprovalReplica /></div>
-			</div>
-		</div>
-	</section>
+					<div class="visual">
+						<div class="frame"><ApprovalReplica /></div>
+					</div>
+				</div>
+			</section>
 
-	<section class="feature flip">
-		<div class="inner">
-			<div class="copy">
-				<span class="eyebrow">Custom llama.cpp</span>
+				<section class="feature flip">
+					<div class="inner">
+						<div class="copy">
+							<span class="eyebrow">Subagents</span>
+							<h2>
+								Delegate the grunt work, <span class="dim"
+									>keep the context.</span
+								>
+							</h2>
+							<span class="links-label">Features</span>
+							<div class="links">
+								<a href="/docs/subagents/modes"
+									>Blocking &amp; Background Modes <svg viewBox="0 0 24 24"
+										><path d="m9 6 6 6-6 6"></path></svg
+									></a
+								>
+								<a href="/docs/subagents/monitor"
+									>Agent Monitor <svg viewBox="0 0 24 24"
+										><path d="m9 6 6 6-6 6"></path></svg
+									></a
+								>
+								<a href="/docs/subagents/tool-policy"
+									>Per-Agent Tool Policy <svg viewBox="0 0 24 24"
+										><path d="m9 6 6 6-6 6"></path></svg
+									></a
+								>
+								<a href="/docs/subagents/injection"
+									>Message Injection <svg viewBox="0 0 24 24"
+										><path d="m9 6 6 6-6 6"></path></svg
+									></a
+								>
+							</div>
+						</div>
+						<div class="visual">
+							<div class="frame"><SubagentsReplica /></div>
+						</div>
+					</div>
+				</section>
+
+				<section class="feature">
+					<div class="inner">
+						<div class="copy">
+							<span class="eyebrow">Custom llama.cpp</span>
 				<h2>
 					Build it yourself, <span class="dim"
 						>swap it in a click.</span

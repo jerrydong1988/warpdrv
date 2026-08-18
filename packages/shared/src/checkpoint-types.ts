@@ -1,5 +1,5 @@
-import type { TServerId } from './types';
-import type { TThreadId, TMessageId } from '@warpcore/bridge';
+import type { TMessageId, TThreadId } from "@warpcore/bridge";
+import type { TServerId } from "./types";
 
 export type TCheckpointId = string;
 export type TBundleId = string;
@@ -8,8 +8,8 @@ export type TSlotId = number;
 export type TFingerprintHash = string;
 
 export enum ECheckpointSaveMode {
-	SAVE = 'SAVE',
-	SAVE_AS = 'SAVE_AS',
+	SAVE = "SAVE",
+	SAVE_AS = "SAVE_AS",
 }
 
 export interface ICheckpointFingerprint {
@@ -116,17 +116,18 @@ export interface IListCheckpointsQuery {
 }
 
 export const SSE_CHANNELS_CHECKPOINT = {
-	SLOT_STATE: 'slot:state',
-	SLOT_METADATA: 'slot:metadata',
-	SERVER_SLOTS_SNAPSHOT: 'server:slots-snapshot',
-	CHECKPOINT_CREATED: 'checkpoint:created',
-	CHECKPOINT_UPDATED: 'checkpoint:updated',
-	CHECKPOINT_DELETED: 'checkpoint:deleted',
-	CHECKPOINT_RESTORED: 'checkpoint:restored',
-	CHECKPOINTS_INIT: 'checkpoints:init',
+	SLOT_STATE: "slot:state",
+	SLOT_METADATA: "slot:metadata",
+	SERVER_SLOTS_SNAPSHOT: "server:slots-snapshot",
+	CHECKPOINT_CREATED: "checkpoint:created",
+	CHECKPOINT_UPDATED: "checkpoint:updated",
+	CHECKPOINT_DELETED: "checkpoint:deleted",
+	CHECKPOINT_RESTORED: "checkpoint:restored",
+	CHECKPOINTS_INIT: "checkpoints:init",
 } as const;
 
-export type TSseCheckpointChannel = typeof SSE_CHANNELS_CHECKPOINT[keyof typeof SSE_CHANNELS_CHECKPOINT];
+export type TSseCheckpointChannel =
+	(typeof SSE_CHANNELS_CHECKPOINT)[keyof typeof SSE_CHANNELS_CHECKPOINT];
 
 export interface ISseSlotStatePayload {
 	serverId: TServerId;

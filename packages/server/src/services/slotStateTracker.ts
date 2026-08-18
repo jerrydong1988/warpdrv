@@ -1,13 +1,13 @@
-import http from 'http';
 import type {
-	ISlotLiveState,
 	IServerSlotsState,
+	ISlotLiveState,
 	TServerId,
 	TSlotId,
 	TTaskId,
-} from '@warpcore/shared';
-import { SSE_CHANNELS_CHECKPOINT } from '@warpcore/shared';
-import { sseManager } from './sseManagerInstance';
+} from "@warpcore/shared";
+import { SSE_CHANNELS_CHECKPOINT } from "@warpcore/shared";
+import http from "http";
+import { sseManager } from "./sseManagerInstance";
 
 // In-memory state per server
 const serversState: Record<TServerId, IServerSlotsState> = {};
@@ -20,26 +20,30 @@ export async function bootstrapServer(serverId: TServerId, port: number): Promis
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		const slots = await fetchSlotsSnapshot(port);
 		if (slots != null) {
-			const liveSlots: ISlotLiveState[] = slots.sort((a, b) => a.id - b.id).map(s => ({
-				slotId: s.id,
-				isProcessing: s.is_processing,
-				taskId: s.id_task ?? null,
-				promptTokens: 0,
-				generatedTokens: s.next_token?.[0]?.n_decoded ?? 0,
-				cachedTokens: s.next_token?.[0]?.n_decoded ?? 0,
-				prefillProgress: null,
-				nCtx: s.n_ctx,
-				lastActivityAt: Date.now(),
-			}));
+			const liveSlots: ISlotLiveState[] = slots
+				.sort((a, b) => a.id - b.id)
+				.map((s) => ({
+					slotId: s.id,
+					isProcessing: s.is_processing,
+					taskId: s.id_task ?? null,
+					promptTokens: 0,
+					generatedTokens: s.next_token?.[0]?.n_decoded ?? 0,
+					cachedTokens: s.next_token?.[0]?.n_decoded ?? 0,
+					prefillProgress: null,
+					nCtx: s.n_ctx,
+					lastActivityAt: Date.now(),
+				}));
 			serversState[serverId] = { serverId, slots: liveSlots, metadata: {} };
 			emitSnapshot(serverId);
 			return;
 		}
 		if (attempt < maxRetries - 1) {
-			await new Promise(r => setTimeout(r, retryDelay));
+			await new Promise((r) => setTimeout(r, retryDelay));
 		}
 	}
-	console.warn(`[slotStateTracker] Failed to fetch slots for ${serverId} after ${maxRetries} attempts`);
+	console.warn(
+		`[slotStateTracker] Failed to fetch slots for ${serverId} after ${maxRetries} attempts`,
+	);
 	serversState[serverId] = { serverId, slots: [], metadata: {} };
 }
 
@@ -60,7 +64,7 @@ export function getAllServerSlots(): Record<TServerId, IServerSlotsState> {
 // Parse a single log line and update state if it matches a known pattern
 export function parseLogLine(serverId: TServerId, line: string): void {
 	// New llama.cpp log format (0.26+) uses "slot print_timing:" module prefix
-	if (line.includes('slot print_timing')) {
+	if (line.includes("slot print_timing")) {
 		parseNewFormatLine(serverId, line);
 		return;
 	}
@@ -69,7 +73,9 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	if (state == null) return;
 
 	// launch_slot_: id N | task M | processing task
-	const launchMatch = line.match(/launch_slot_:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*processing task/);
+	const launchMatch = line.match(
+		/launch_slot_:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*processing task/,
+	);
 	if (launchMatch) {
 		const slotId = parseInt(launchMatch[1]!, 10);
 		const taskId = parseInt(launchMatch[2]!, 10);
@@ -85,7 +91,9 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	}
 
 	// update_slots: id N | task M | new prompt, n_ctx_slot = X, n_keep = Y, task.n_tokens = Z
-	const newPromptMatch = line.match(/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*new prompt,\s*n_ctx_slot\s*=\s*(\d+),\s*n_keep\s*=\s*\d+,\s*task\.n_tokens\s*=\s*(\d+)/);
+	const newPromptMatch = line.match(
+		/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*new prompt,\s*n_ctx_slot\s*=\s*(\d+),\s*n_keep\s*=\s*\d+,\s*task\.n_tokens\s*=\s*(\d+)/,
+	);
 	if (newPromptMatch) {
 		const slotId = parseInt(newPromptMatch[1]!, 10);
 		const taskId = parseInt(newPromptMatch[2]!, 10);
@@ -102,7 +110,9 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	}
 
 	// update_slots: id N | task M | prompt processing progress, n_tokens = X, batch.n_tokens = Y, progress = Z
-	const progressMatch = line.match(/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*prompt processing progress,\s*n_tokens\s*=\s*\d+,\s*batch\.n_tokens\s*=\s*\d+,\s*progress\s*=\s*([\d.]+)/);
+	const progressMatch = line.match(
+		/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*prompt processing progress,\s*n_tokens\s*=\s*\d+,\s*batch\.n_tokens\s*=\s*\d+,\s*progress\s*=\s*([\d.]+)/,
+	);
 	if (progressMatch) {
 		const slotId = parseInt(progressMatch[1]!, 10);
 		const progress = parseFloat(progressMatch[3]!);
@@ -114,7 +124,9 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	}
 
 	// update_slots: id N | task M | prompt processing done, n_tokens = X, batch.n_tokens = Y
-	const doneMatch = line.match(/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*prompt processing done/);
+	const doneMatch = line.match(
+		/update_slots:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*prompt processing done/,
+	);
 	if (doneMatch) {
 		const slotId = parseInt(doneMatch[1]!, 10);
 		updateSlot(serverId, slotId, {
@@ -125,11 +137,13 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	}
 
 	// process_token: id N | task M | n_decoded = X, n_remaining = Y, ...
-	const tokenMatch = line.match(/process_token:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*n_decoded\s*=\s*(\d+),\s*n_remaining\s*=\s*(-?\d+)/);
+	const tokenMatch = line.match(
+		/process_token:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*n_decoded\s*=\s*(\d+),\s*n_remaining\s*=\s*(-?\d+)/,
+	);
 	if (tokenMatch) {
 		const slotId = parseInt(tokenMatch[1]!, 10);
 		const nDecoded = parseInt(tokenMatch[3]!, 10);
-		const slot = state.slots.find(s => s.slotId === slotId);
+		const slot = state.slots.find((s) => s.slotId === slotId);
 		const cachedBase = slot ? slot.promptTokens : 0;
 		updateSlot(serverId, slotId, {
 			generatedTokens: nDecoded,
@@ -141,7 +155,9 @@ export function parseLogLine(serverId: TServerId, line: string): void {
 	}
 
 	// release: id N | task M | stop processing: n_tokens = X, truncated = Y
-	const releaseMatch = line.match(/release:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*stop processing/);
+	const releaseMatch = line.match(
+		/release:\s*id\s+(\d+)\s*\|\s*task\s+(\d+)\s*\|\s*stop processing/,
+	);
 	if (releaseMatch) {
 		const slotId = parseInt(releaseMatch[1]!, 10);
 		updateSlot(serverId, slotId, {
@@ -162,7 +178,9 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 	if (slotId === null) return;
 
 	// slot print_timing: id N | task M | prompt processing, n_tokens = X, progress = Z
-	const ppProgressMatch = line.match(/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*prompt processing,\s*n_tokens\s*=\s*\d+,\s*progress\s*=\s*([\d.]+)/);
+	const ppProgressMatch = line.match(
+		/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*prompt processing,\s*n_tokens\s*=\s*\d+,\s*progress\s*=\s*([\d.]+)/,
+	);
 	if (ppProgressMatch) {
 		const progress = parseFloat(ppProgressMatch[1]!);
 		updateSlot(serverId, slotId, {
@@ -173,7 +191,9 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 	}
 
 	// slot print_timing: id N | task M | prompt eval time = ... (final summary = end of PP)
-	const ppDoneMatch = line.match(/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*prompt eval time\s*=/);
+	const ppDoneMatch = line.match(
+		/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*prompt eval time\s*=/,
+	);
 	if (ppDoneMatch) {
 		updateSlot(serverId, slotId, {
 			prefillProgress: null,
@@ -182,11 +202,13 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 		return;
 	}
 
-	// slot print_timing: id N | task M | n_decoded = X, tg = Y t/s
-	const genMatch = line.match(/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*n_decoded\s*=\s*(\d+),\s*tg\s*=\s*[\d.]+\s*t\/s/);
+	// slot print_timing: id N | task M | n_gen = X, tg = Y t/s (new format uses n_gen, older used n_decoded)
+	const genMatch = line.match(
+		/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*(?:n_gen|n_decoded)\s*=\s*(\d+),\s*tg\s*=\s*[\d.]+\s*t\/s/,
+	);
 	if (genMatch) {
 		const nDecoded = parseInt(genMatch[1]!, 10);
-		const slot = state.slots.find(s => s.slotId === slotId);
+		const slot = state.slots.find((s) => s.slotId === slotId);
 		const cachedBase = slot ? slot.promptTokens : 0;
 		updateSlot(serverId, slotId, {
 			generatedTokens: nDecoded,
@@ -198,7 +220,9 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 	}
 
 	// slot      release: id N | task M | stop processing: n_tokens = X, truncated = Y
-	const releaseMatch = line.match(/slot\s+release:\s*id\s+(\d+)\s*\|\s*task\s+\d+\s*\|\s*stop processing/);
+	const releaseMatch = line.match(
+		/slot\s+release:\s*id\s+(\d+)\s*\|\s*task\s+\d+\s*\|\s*stop processing/,
+	);
 	if (releaseMatch) {
 		const releaseSlotId = parseInt(releaseMatch[1]!, 10);
 		updateSlot(serverId, releaseSlotId, {
@@ -214,7 +238,7 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 function updateSlot(serverId: TServerId, slotId: TSlotId, patch: Partial<ISlotLiveState>): void {
 	const state = serversState[serverId];
 	if (state == null) return;
-	let slot = state.slots.find(s => s.slotId === slotId);
+	let slot = state.slots.find((s) => s.slotId === slotId);
 	if (slot == null) {
 		slot = {
 			slotId,
@@ -250,16 +274,27 @@ interface ISlotsApiSlot {
 
 function fetchSlotsSnapshot(port: number): Promise<ISlotsApiSlot[] | null> {
 	return new Promise((resolve) => {
-		const req = http.get({ host: '127.0.0.1', port, path: '/slots', timeout: 5000 }, (res) => {
-			if (res.statusCode !== 200) { resolve(null); return; }
-			let body = '';
-			res.on('data', (c) => { body += c; });
-			res.on('end', () => {
-				try { resolve(JSON.parse(body) as ISlotsApiSlot[]); }
-				catch { resolve(null); }
+		const req = http.get({ host: "127.0.0.1", port, path: "/slots", timeout: 5000 }, (res) => {
+			if (res.statusCode !== 200) {
+				resolve(null);
+				return;
+			}
+			let body = "";
+			res.on("data", (c) => {
+				body += c;
+			});
+			res.on("end", () => {
+				try {
+					resolve(JSON.parse(body) as ISlotsApiSlot[]);
+				} catch {
+					resolve(null);
+				}
 			});
 		});
-		req.on('error', () => resolve(null));
-		req.on('timeout', () => { req.destroy(); resolve(null); });
+		req.on("error", () => resolve(null));
+		req.on("timeout", () => {
+			req.destroy();
+			resolve(null);
+		});
 	});
 }

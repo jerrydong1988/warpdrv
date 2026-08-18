@@ -12,24 +12,24 @@ export interface IFlagMapping {
 
 // Toggle flags that appear in BackendDialog COMMON_FLAGS
 export const TOGGLE_FLAG_MAPPINGS: IFlagMapping[] = [
-	{ field: 'flashAttn', flag: '-fa' },
-	{ field: 'mlock', flag: '--mlock' },
-	{ field: 'directIo', flag: '-dio' },
-	{ field: 'noWarmup', flag: '--no-warmup' },
-	{ field: 'jinja', flag: '--jinja' },
-	{ field: 'swaFull', flag: '--swa-full' },
-	{ field: 'mmap', flag: '--no-mmap', negated: true }, // --no-mmap DISABLES mmap, so absence means enabled by default
+	{ field: "flashAttn", flag: "-fa" },
+	{ field: "mlock", flag: "--mlock" },
+	{ field: "directIo", flag: "-dio" },
+	{ field: "noWarmup", flag: "--no-warmup" },
+	{ field: "jinja", flag: "--jinja" },
+	{ field: "swaFull", flag: "--swa-full" },
+	{ field: "mmap", flag: "--no-mmap", negated: true }, // --no-mmap DISABLES mmap, so absence means enabled by default
 ];
 
 // Flags that take numeric values (flag followed by its value)
 export const VALUE_FLAG_MAPPINGS: Record<string, string> = {
-	gpuLayers: '-ngl',
-	contextSize: '-c',
-	batchSize: '-b',
-	ubatchSize: '-ub',
-	threads: '-t',
-	threadsBatch: '-tb',
-	flashAttn: '-fa',
+	gpuLayers: "-ngl",
+	contextSize: "-c",
+	batchSize: "-b",
+	ubatchSize: "-ub",
+	threads: "-t",
+	threadsBatch: "-tb",
+	flashAttn: "-fa",
 };
 
 // Common preset flags for quick-add in BackendDialog
@@ -40,40 +40,37 @@ export interface ICommonFlagPreset {
 }
 
 export const COMMON_FLAG_PRESETS: ICommonFlagPreset[] = [
-	{ field: 'gpuLayers', flag: '-ngl 999', label: 'Full GPU offload' },
+	{ field: "gpuLayers", flag: "-ngl 999", label: "Full GPU offload" },
 ];
 
 function getToggleLabel(mapping: IFlagMapping): string {
 	if (mapping.negated) {
-		return `Disable ${mapping.field.replace(/([A-Z])/g, ' $1').toLowerCase()}`;
+		return `Disable ${mapping.field.replace(/([A-Z])/g, " $1").toLowerCase()}`;
 	}
 	const labelMap: Record<string, string> = {
-		flashAttn: 'Flash Attention',
-		mlock: 'Lock memory',
-		directIo: 'Direct I/O',
-		noWarmup: 'Skip warmup',
-		jinja: 'Jinja templates',
-		swaFull: 'SWA Full',
+		flashAttn: "Flash Attention",
+		mlock: "Lock memory",
+		directIo: "Direct I/O",
+		noWarmup: "Skip warmup",
+		jinja: "Jinja templates",
+		swaFull: "SWA Full",
 	};
 	return labelMap[mapping.field] ?? mapping.field;
 }
 
 // Generate toggle presets from TOGGLE_FLAG_MAPPINGS (includes negated flags like --no-mmap)
-const TOGGLE_PRESETS: ICommonFlagPreset[] = TOGGLE_FLAG_MAPPINGS.map(m => ({
+const TOGGLE_PRESETS: ICommonFlagPreset[] = TOGGLE_FLAG_MAPPINGS.map((m) => ({
 	field: m.field,
 	flag: m.flag,
 	label: getToggleLabel(m),
 }));
 
 // Combine all presets in order
-export const ALL_COMMON_FLAGS: ICommonFlagPreset[] = [
-	...COMMON_FLAG_PRESETS,
-	...TOGGLE_PRESETS,
-];
+export const ALL_COMMON_FLAGS: ICommonFlagPreset[] = [...COMMON_FLAG_PRESETS, ...TOGGLE_PRESETS];
 
 // Get the mapping for a given field name
 export function getFlagMapping(field: string): IFlagMapping | undefined {
-	return TOGGLE_FLAG_MAPPINGS.find(m => m.field === field);
+	return TOGGLE_FLAG_MAPPINGS.find((m) => m.field === field);
 }
 
 // Check if a flag is present in an args array
@@ -82,7 +79,9 @@ export function hasFlag(args: string[], flag: string): boolean {
 }
 
 // Parse backend defaultArgs into param values
-export function parseDefaultArgsToParams(defaultArgs: string[]): Record<string, boolean | undefined> {
+export function parseDefaultArgsToParams(
+	defaultArgs: string[],
+): Record<string, boolean | undefined> {
 	const argsSet = new Set(defaultArgs);
 	const result: Record<string, boolean | undefined> = {};
 

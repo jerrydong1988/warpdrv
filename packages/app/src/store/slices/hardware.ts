@@ -1,5 +1,6 @@
-import type { AppState, ImmerSet, ImmerGet } from '../types';
-import type { IHardwareInfo } from '@warpcore/shared';
+import type { IHardwareInfo } from "@warpcore/shared";
+import type { AppState, ImmerGet, ImmerSet } from "../types";
+
 interface HardwareSlice {
 	hardware: IHardwareInfo | null;
 }

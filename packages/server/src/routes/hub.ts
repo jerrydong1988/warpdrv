@@ -1,35 +1,29 @@
-import { Router } from 'express';
-import fs from 'fs';
-import path from 'path';
-import { store } from '../util/store';
+import type { IDownloadRequestPayload, IHubFile, ISettings } from "@warpcore/shared";
+import { DEFAULT_SETTINGS } from "@warpcore/shared";
+import { Router } from "express";
 import {
-	startDownload,
-	startMultiPartDownload,
+	cancelDownload,
+	clearDownloadHistory,
+	getAllDownloads,
 	pauseDownload,
 	resumeDownload,
-	cancelDownload,
-	getAllDownloads,
-	clearDownloadHistory,
-} from '../services/downloadManager';
-import type { ISettings, IDownloadRequestPayload, IHubFile } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
-import {
-	fetchAllGgufFiles,
-	mapFilesToHubFiles,
-	processGgufFiles,
-} from '../services/hubParser';
-import { fetchAndParseModelRecommendations } from '../services/modelInferenceParser';
+	startDownload,
+	startMultiPartDownload,
+} from "../services/downloadManager";
+import { fetchAllGgufFiles, mapFilesToHubFiles, processGgufFiles } from "../services/hubParser";
+import { fetchAndParseModelRecommendations } from "../services/modelInferenceParser";
+import { store } from "../util/store";
 
-const SETTINGS_KEY = 'settings:general';
-const HF_API = 'https://huggingface.co/api';
+const SETTINGS_KEY = "settings:general";
+const HF_API = "https://huggingface.co/api";
 
 export const hubRouter = Router();
 
 // GET /api/hub/search?q=&sort=&order=&params_min=&params_max=&pipeline_tag=
-hubRouter.get('/search', async (req, res) => {
-	const q = (req.query.q as string) ?? '';
-	const sort = (req.query.sort as string) ?? 'downloads';
-	const order = (req.query.order as string) ?? 'desc';
+hubRouter.get("/search", async (req, res) => {
+	const q = (req.query.q as string) ?? "";
+	const sort = (req.query.sort as string) ?? "downloads";
+	const order = (req.query.order as string) ?? "desc";
 	const paramsMin = parseInt(req.query.params_min as string) || 0;
 	const paramsMax = parseInt(req.query.params_max as string) || 0;
 	const pipelineTag = req.query.pipeline_tag as string | undefined;
@@ -40,13 +34,13 @@ hubRouter.get('/search', async (req, res) => {
 	}
 
 	try {
-		const direction = order === 'asc' ? '1' : '-1';
+		const direction = order === "asc" ? "1" : "-1";
 
 		const searchParams: Record<string, string> = {
 			search: q.trim(),
-			sort: sort === 'modified' ? 'lastModified' : sort === 'created' ? 'createdAt' : sort,
+			sort: sort === "modified" ? "lastModified" : sort === "created" ? "createdAt" : sort,
 			direction,
-			limit: '100',
+			limit: "100",
 		};
 		if (pipelineTag) searchParams.pipeline_tag = pipelineTag;
 
@@ -58,25 +52,25 @@ hubRouter.get('/search', async (req, res) => {
 			return;
 		}
 
-		const raw = await response.json() as Record<string, unknown>[];
+		const raw = (await response.json()) as Record<string, unknown>[];
 		const models = raw.map((m: Record<string, unknown>) => ({
-			id: String(m.id ?? ''),
-			author: String(m.id ?? '').split('/')[0] ?? '',
-			modelId: String(m.id ?? '').split('/')[1] ?? '',
+			id: String(m.id ?? ""),
+			author: String(m.id ?? "").split("/")[0] ?? "",
+			modelId: String(m.id ?? "").split("/")[1] ?? "",
 			downloads: Number(m.downloads ?? 0),
 			likes: Number(m.likes ?? 0),
-			lastModified: String(m.lastModified ?? ''),
-			createdAt: String(m.createdAt ?? ''),
+			lastModified: String(m.lastModified ?? ""),
+			createdAt: String(m.createdAt ?? ""),
 			tags: (m.tags as string[]) ?? [],
-			pipelineTag: String(m.pipeline_tag ?? ''),
+			pipelineTag: String(m.pipeline_tag ?? ""),
 		}));
 
 		// Client-side param filtering (HF API doesn't support this directly)
 		// We filter by checking tags for param count hints
-		const filtered = models.filter(m => {
+		const filtered = models.filter((m) => {
 			if (paramsMin <= 0 && paramsMax <= 0) return true;
 			// Try to extract param count from tags or model name
-			const allText = [...m.tags, m.modelId, m.id].join(' ');
+			const allText = [...m.tags, m.modelId, m.id].join(" ");
 			const paramMatch = allText.match(/(\d+\.?\d*)[Bb]/);
 			if (!paramMatch) return true; // can't determine, include it
 			const paramB = parseFloat(paramMatch[1]!);
@@ -92,7 +86,7 @@ hubRouter.get('/search', async (req, res) => {
 });
 
 // GET /api/hub/model/:author/:name
-hubRouter.get('/model/:author/:name', async (req, res) => {
+hubRouter.get("/model/:author/:name", async (req, res) => {
 	const { author, name } = req.params;
 	const modelId = `${author}/${name}`;
 
@@ -100,16 +94,16 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 		// Fetch model info
 		const infoRes = await fetch(`${HF_API}/models/${modelId}`);
 		if (!infoRes.ok) {
-			res.status(404).json({ ok: false, data: null, error: 'Model not found' });
+			res.status(404).json({ ok: false, data: null, error: "Model not found" });
 			return;
 		}
-		const info = await infoRes.json() as Record<string, unknown>;
+		const info = (await infoRes.json()) as Record<string, unknown>;
 
 		// Get model roots to check downloaded status
-		const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+		const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 
 		// Fetch all GGUF files including from nested directories (one level deep)
-		const rawGgufFiles = await fetchAllGgufFiles(author!, name!, 'main');
+		const rawGgufFiles = await fetchAllGgufFiles(author!, name!, "main");
 
 		// Map to IHubFile format with download status
 		const mappedFiles = mapFilesToHubFiles(rawGgufFiles, author!, name!, settings.modelRoots);
@@ -118,12 +112,14 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 		const files = processGgufFiles(mappedFiles) as IHubFile[];
 
 		// Fetch README
-		let readme = '';
+		let readme = "";
 		try {
-			const readmeRes = await fetch(`https://huggingface.co/${modelId}/resolve/main/README.md`);
+			const readmeRes = await fetch(
+				`https://huggingface.co/${modelId}/resolve/main/README.md`,
+			);
 			if (readmeRes.ok) readme = await readmeRes.text();
 		} catch {
-			console.warn("Could not load README for Model", modelId)
+			console.warn("Could not load README for Model", modelId);
 		}
 
 		const detail = {
@@ -132,10 +128,10 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 			modelId: name!,
 			downloads: Number(info.downloads ?? 0),
 			likes: Number(info.likes ?? 0),
-			lastModified: String(info.lastModified ?? ''),
-			createdAt: String(info.createdAt ?? ''),
+			lastModified: String(info.lastModified ?? ""),
+			createdAt: String(info.createdAt ?? ""),
 			tags: (info.tags as string[]) ?? [],
-			pipelineTag: String(info.pipeline_tag ?? ''),
+			pipelineTag: String(info.pipeline_tag ?? ""),
 			files,
 			readme,
 		};
@@ -147,10 +143,10 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 });
 
 // POST /api/hub/download
-hubRouter.post('/download', async (req, res) => {
+hubRouter.post("/download", async (req, res) => {
 	const payload = req.body as IDownloadRequestPayload;
 
-	console.log('[HubRoute] Download request received:', {
+	console.log("[HubRoute] Download request received:", {
 		author: payload.author,
 		modelName: payload.modelName,
 		filename: payload.filename,
@@ -159,14 +155,18 @@ hubRouter.post('/download', async (req, res) => {
 	});
 
 	if (!payload.author || !payload.modelName || !payload.filename || !payload.destRoot) {
-		res.status(400).json({ ok: false, data: null, error: 'Missing required fields' });
+		res.status(400).json({ ok: false, data: null, error: "Missing required fields" });
 		return;
 	}
 
 	// Verify destRoot is a configured model root
-	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
+	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 	if (!settings.modelRoots.includes(payload.destRoot)) {
-		res.status(400).json({ ok: false, data: null, error: 'Destination is not a configured model directory' });
+		res.status(400).json({
+			ok: false,
+			data: null,
+			error: "Destination is not a configured model directory",
+		});
 		return;
 	}
 
@@ -179,7 +179,11 @@ hubRouter.post('/download', async (req, res) => {
 				payload.fileParts,
 				payload.destRoot,
 			);
-			res.json({ ok: true, data: { downloadIds, fileParts: payload.fileParts }, error: null });
+			res.json({
+				ok: true,
+				data: { downloadIds, fileParts: payload.fileParts },
+				error: null,
+			});
 		} else {
 			// Single file download
 			const dl = await startDownload(
@@ -198,37 +202,37 @@ hubRouter.post('/download', async (req, res) => {
 });
 
 // GET /api/hub/downloads
-hubRouter.get('/downloads', async (_req, res) => {
+hubRouter.get("/downloads", async (_req, res) => {
 	const downloads = await getAllDownloads();
 	res.json({ ok: true, data: downloads, total: downloads.length, error: null });
 });
 
 // POST /api/hub/downloads/:id/pause
-hubRouter.post('/downloads/:id/pause', async (req, res) => {
+hubRouter.post("/downloads/:id/pause", async (req, res) => {
 	const ok = await pauseDownload(req.params.id!);
-	res.json({ ok, data: null, error: ok ? null : 'Download not found or not active' });
+	res.json({ ok, data: null, error: ok ? null : "Download not found or not active" });
 });
 
 // POST /api/hub/downloads/:id/resume
-hubRouter.post('/downloads/:id/resume', async (req, res) => {
+hubRouter.post("/downloads/:id/resume", async (req, res) => {
 	const ok = await resumeDownload(req.params.id!);
-	res.json({ ok, data: null, error: ok ? null : 'Download not found or not paused' });
+	res.json({ ok, data: null, error: ok ? null : "Download not found or not paused" });
 });
 
 // POST /api/hub/downloads/:id/cancel
-hubRouter.post('/downloads/:id/cancel', async (req, res) => {
+hubRouter.post("/downloads/:id/cancel", async (req, res) => {
 	const ok = await cancelDownload(req.params.id!);
-	res.json({ ok, data: null, error: ok ? null : 'Download not found' });
+	res.json({ ok, data: null, error: ok ? null : "Download not found" });
 });
 
 // DELETE /api/hub/downloads/history
-hubRouter.delete('/downloads/history', async (_req, res) => {
+hubRouter.delete("/downloads/history", async (_req, res) => {
 	await clearDownloadHistory();
 	res.json({ ok: true, data: null, error: null });
 });
 
 // GET /api/hub/model/:author/:name/recommended-params
-hubRouter.get('/model/:author/:name/recommended-params', async (req, res) => {
+hubRouter.get("/model/:author/:name/recommended-params", async (req, res) => {
 	const { author, name } = req.params;
 	const hfUrl = `https://huggingface.co/${author}/${name}`;
 

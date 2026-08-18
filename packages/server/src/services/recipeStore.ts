@@ -1,11 +1,15 @@
-import { store } from '../util/store';
-import type { IRecipe, IRecipeState, TRecipeId } from '@warpcore/shared';
+import type { IRecipe, IRecipeState, TRecipeId } from "@warpcore/shared";
+import { store } from "../util/store";
 
-const RECIPE_PREFIX = 'recipe:';
-const RECIPE_STATE_PREFIX = 'recipeState:';
+const RECIPE_PREFIX = "recipe:";
+const RECIPE_STATE_PREFIX = "recipeState:";
 
-function recipeKey(id: TRecipeId): string { return `${RECIPE_PREFIX}${id}`; }
-function recipeStateKey(id: TRecipeId): string { return `${RECIPE_STATE_PREFIX}${id}`; }
+function recipeKey(id: TRecipeId): string {
+	return `${RECIPE_PREFIX}${id}`;
+}
+function recipeStateKey(id: TRecipeId): string {
+	return `${RECIPE_STATE_PREFIX}${id}`;
+}
 
 export async function listRecipes(): Promise<IRecipe[]> {
 	return store.list<IRecipe>(RECIPE_PREFIX);

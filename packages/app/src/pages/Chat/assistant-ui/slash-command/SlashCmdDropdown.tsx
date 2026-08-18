@@ -1,6 +1,6 @@
+import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 
 export type TDropdownItem = { label: string; value: string };
 
@@ -54,8 +54,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 		if (!query) return resolvedItems;
 		return resolvedItems.filter(
 			(it) =>
-				it.label.toLowerCase().includes(query) ||
-				it.value.toLowerCase().includes(query),
+				it.label.toLowerCase().includes(query) || it.value.toLowerCase().includes(query),
 		);
 	})();
 
@@ -233,7 +232,10 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 						{filtered.map((item, i) => (
 							<div
 								key={item.value}
-								onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }}
+								onMouseDown={(e) => {
+									e.preventDefault();
+									handleSelect(item);
+								}}
 								onKeyDown={(e) => {
 									if (e.key === "Enter") handleSelect(item);
 								}}
@@ -248,9 +250,7 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 									fontSize: "0.75rem",
 									color: "var(--wc-text-primary)",
 									background:
-										i === highlight
-											? "var(--wc-bg-selected)"
-											: "transparent",
+										i === highlight ? "var(--wc-bg-selected)" : "transparent",
 								}}
 								onMouseEnter={() => setHighlight(i)}
 							>
