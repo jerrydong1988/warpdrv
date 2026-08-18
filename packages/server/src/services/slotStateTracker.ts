@@ -202,9 +202,9 @@ function parseNewFormatLine(serverId: TServerId, line: string): void {
 		return;
 	}
 
-	// slot print_timing: id N | task M | n_decoded = X, tg = Y t/s
+	// slot print_timing: id N | task M | n_gen = X, tg = Y t/s (new format uses n_gen, older used n_decoded)
 	const genMatch = line.match(
-		/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*n_decoded\s*=\s*(\d+),\s*tg\s*=\s*[\d.]+\s*t\/s/,
+		/slot\s+print_timing:\s*id\s+\d+\s*\|\s*task\s+\d+\s*\|\s*(?:n_gen|n_decoded)\s*=\s*(\d+),\s*tg\s*=\s*[\d.]+\s*t\/s/,
 	);
 	if (genMatch) {
 		const nDecoded = parseInt(genMatch[1]!, 10);
