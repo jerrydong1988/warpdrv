@@ -4,9 +4,9 @@
 
 # warpdrv
 
-**Local LLM Server Manager + LlaMA.cpp + Chat + More**
+**LLAMA.cpp Server Manager + Chat + Tools**
 
-😎 **Built for Local AI Master Race!** 😎
+😎 **Built *for* Local AI, Built *by* Local AI** 😎
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/mikjee/warpdrv?include_prereleases)](https://github.com/mikjee/warpdrv/releases)
@@ -21,7 +21,7 @@
 
 https://github.com/user-attachments/assets/70fdddd1-3183-4793-849b-fe1cdc85bc66
 
-<img src="docs/screenshots/themes.png" alt="warpdrv hero screenshot" width="800" />
+<img src="docs/screenshots/chat.png" alt="warpdrv hero screenshot" width="800" />
 
 </div>
 
@@ -41,6 +41,7 @@ https://github.com/user-attachments/assets/70fdddd1-3183-4793-849b-fe1cdc85bc66
 - ⭐ **Built-in MCP** ⭐ Use tools that come with the built-in MCP server. Also supports external mcp.json.
 - ⭐ **RAG** ⭐ Build projects using Workspace and Embedding using local models.
 - ⭐ **Power Your Workflows** ⭐ Features such as Annotations, Guardrails, Compaction to drive your daily tasks.
+- ⭐ **Scale** ⭐ Use sub-agents to delegate your tasks in parallel.
 - ⭐ **Multi-GPU Multi-Vendor** ⭐ Use any CUDA/ROCm/Vulkan hardware.
 - ⭐ **Build your own LLAMA** ⭐ Supports custom-built LLAMA.cpp.
 - ⭐ **Open Source** ⭐ No hidden code. No analytics.
@@ -73,8 +74,8 @@ https://github.com/user-attachments/assets/57f917a0-faf9-4a39-9a70-0fdc3f3f8658
 
 <table>
 <tr>
-<td><img src="docs/screenshots/chat.png" alt="Chat interface" /></td>
 <td><img src="docs/screenshots/hero.png" alt="Model browser" /></td>
+<td><img src="docs/screenshots/chat.png" alt="Chat interface" /></td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/backends.png" alt="Llama backends" /></td>
