@@ -705,12 +705,12 @@ export class Orchestrator {
 
 		this.checkMessageDivergence(request.threadId, finalMessages);
 
-		// this.eventNode.broadcast("console-log", {
-		// 	type: "inference_debug",
-		// 	threadId: request.threadId,
-		// 	messages: finalMessages,
-		// 	openAiTools
-		// });
+		this.eventNode.broadcast("console-log", {
+			type: "inference_debug",
+			threadId: request.threadId,
+			messages: finalMessages,
+			openAiTools,
+		});
 
 		const body: Record<string, unknown> = {
 			model: "model",

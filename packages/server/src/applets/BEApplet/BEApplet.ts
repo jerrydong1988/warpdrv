@@ -30,7 +30,6 @@ import {
 	GUARDRAIL_PROMPT,
 	GUARDRAIL_RULESET_GENERIC_PROMPT,
 	MODE_SYSTEM_PROMPT,
-	TRAILING_SYSTEM_PROMPT,
 } from "./prompts";
 
 const GUARDRAILS_DEFAULT_INFERENCE_PARAMS = {
@@ -234,7 +233,6 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 				)) as Record<string, unknown> | null;
 			}
 
-			let content = "";
 			const messages = [...(eventApi.result as Array<TOpenAIMessage>)];
 
 			// --- Project Root ---
@@ -358,79 +356,38 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						})
 						.join(`\n\n`)}\n`,
 				);
+			}
 
-				// --- No-mode agent injection ---
-				if (!mode) {
-					const request = payload.request;
-					const hasCreateSubthread =
-						request.attachAllTools === true ||
-						request.attachedTools?.some(
-							(t) => t.serverName === "warpmcp" && t.toolName === "create_subthread",
+			// --- No-mode agent injection ---
+			if (!mode) {
+				const request = payload.request;
+				const hasCreateSubthread =
+					request.attachAllTools === true ||
+					request.attachedTools?.some(
+						(t) => t.serverName === "warpmcp" && t.toolName === "create_subthread",
+					);
+				const threadAgentIds = threadState?.activeAgents as string[] | undefined;
+				if (hasCreateSubthread && threadAgentIds && threadAgentIds.length > 0) {
+					const threadAgents = threadAgentIds
+						.map((id) => agentMap.get(id))
+						.filter((a): a is { name: string; description?: string } => Boolean(a))
+						.sort((a, b) => a.name.localeCompare(b.name));
+					if (threadAgents.length > 0) {
+						const agentsText =
+							"This is the list of available agents that can be used to create subthreads:\n" +
+							threadAgents
+								.map(
+									(a) =>
+										`- ${a.name}${a.description ? `: ${a.description}` : ""}`,
+								)
+								.join("\n");
+						injectSystemPrompt(
+							messages,
+							`\nAVAILABLE AGENTS\n\n${agentsText}\n`,
+							"append",
 						);
-					const threadAgentIds = threadState?.activeAgents as string[] | undefined;
-					if (hasCreateSubthread && threadAgentIds && threadAgentIds.length > 0) {
-						const threadAgents = threadAgentIds
-							.map((id) => agentMap.get(id))
-							.filter((a): a is { name: string; description?: string } => Boolean(a))
-							.sort((a, b) => a.name.localeCompare(b.name));
-						if (threadAgents.length > 0) {
-							const agentsText =
-								"This is the list of available agents that can be used to create subthreads:\n" +
-								threadAgents
-									.map(
-										(a) =>
-											`- ${a.name}${a.description ? `: ${a.description}` : ""}`,
-									)
-									.join("\n");
-							injectSystemPrompt(
-								messages,
-								`\nAVAILABLE AGENTS\n\n${agentsText}\n`,
-								"append",
-							);
-						}
 					}
 				}
-
-				if (content.length) {
-					console.log("[BEApplet: Appending Tail Prompt]");
-					const lastIndex = messages.length - 1;
-
-					if (lastIndex < 0) {
-						console.warn("No message found to inject trailing message! Strange..");
-						return messages;
-					}
-
-					const trailingContent =
-						"\n<system-reminder>\n" +
-						TRAILING_SYSTEM_PROMPT +
-						"\n" +
-						content +
-						"\n</system-reminder>";
-					const lastMsg = messages[lastIndex]!;
-
-					let newLastMsg: typeof lastMsg;
-					if (typeof lastMsg.content === "string") {
-						newLastMsg = { ...lastMsg, content: lastMsg.content + trailingContent };
-					} else {
-						const partIndex = lastMsg.content?.findIndex((p) => p.type === "text");
-						if (partIndex && partIndex >= 0) {
-							const newContent = lastMsg.content!.map((p, i) =>
-								i === partIndex
-									? { ...p, text: (p.text ?? "") + trailingContent }
-									: p,
-							);
-							newLastMsg = { ...lastMsg, content: newContent };
-						} else {
-							const newContent = [
-								...(lastMsg.content || []),
-								{ type: "text", text: trailingContent },
-							];
-							newLastMsg = { ...lastMsg, content: newContent };
-						}
-					}
-					const newMessages = messages.map((m, i) => (i === lastIndex ? newLastMsg : m));
-					return newMessages;
-				} else return messages;
 			}
 
 			return messages;
