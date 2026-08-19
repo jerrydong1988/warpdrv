@@ -19,7 +19,7 @@
 
 <br />
 
-https://github.com/user-attachments/assets/70fdddd1-3183-4793-849b-fe1cdc85bc66
+https://github.com/user-attachments/assets/3464b045-ca14-44a5-86db-5ce2677323d2
 
 <img src="docs/screenshots/chat.png" alt="warpdrv hero screenshot" width="800" />
 
@@ -41,14 +41,10 @@ https://github.com/user-attachments/assets/70fdddd1-3183-4793-849b-fe1cdc85bc66
 - ⭐ **Built-in MCP** ⭐ Use tools that come with the built-in MCP server. Also supports external mcp.json.
 - ⭐ **RAG** ⭐ Build projects using Workspace and Embedding using local models.
 - ⭐ **Power Your Workflows** ⭐ Features such as Annotations, Guardrails, Compaction to drive your daily tasks.
-- ⭐ **Scale** ⭐ Use sub-agents to delegate your tasks in parallel.
+- ⭐ **Agents** ⭐ Use sub-agents to delegate your tasks in parallel.
 - ⭐ **Multi-GPU Multi-Vendor** ⭐ Use any CUDA/ROCm/Vulkan hardware.
 - ⭐ **Build your own LLAMA** ⭐ Supports custom-built LLAMA.cpp.
 - ⭐ **Open Source** ⭐ No hidden code. No analytics.
-
----
-
-https://github.com/user-attachments/assets/57f917a0-faf9-4a39-9a70-0fdc3f3f8658
 
 ---
 
@@ -98,6 +94,12 @@ https://github.com/user-attachments/assets/57f917a0-faf9-4a39-9a70-0fdc3f3f8658
 </table>
 
 </details>
+
+---
+
+https://github.com/user-attachments/assets/70fdddd1-3183-4793-849b-fe1cdc85bc66
+
+https://github.com/user-attachments/assets/57f917a0-faf9-4a39-9a70-0fdc3f3f8658
 
 ---
 
