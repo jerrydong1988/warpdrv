@@ -209,22 +209,20 @@ export const Thread: FC<{
 								</>
 							)}
 
-							{!isLoading && (
-								<div className="sticky bottom-0 left-0 right-0 mt-auto flex flex-col items-center gap-4 pb-4 md:pb-6 pt-4 bg-[linear-gradient(to_bottom,transparent_0%,var(--wc-bg-page)_35%,var(--wc-bg-page)_100%)]">
-									<ThreadPrimitive.ViewportFooter
-										className="aui-thread-viewport-footer flex flex-col gap-4 overflow-visible"
-										style={{ width: "48rem" }}
-									>
-										<ThreadScrollToBottom />
-										<Elicitation />
-										<AnnotationsBox />
-										<MonitorMiniBox />
-										<MonitorBox />
-										<PendingToolCallsBox />
-										<Composer />
-									</ThreadPrimitive.ViewportFooter>
-								</div>
-							)}
+							<div className="sticky bottom-0 left-0 right-0 mt-auto flex flex-col items-center gap-4 pb-4 md:pb-6 pt-4 bg-[linear-gradient(to_bottom,transparent_0%,var(--wc-bg-page)_35%,var(--wc-bg-page)_100%)]">
+								<ThreadPrimitive.ViewportFooter
+									className="aui-thread-viewport-footer flex flex-col gap-4 overflow-visible"
+									style={{ width: "48rem" }}
+								>
+									<ThreadScrollToBottom />
+									<Elicitation />
+									<AnnotationsBox />
+									<MonitorMiniBox />
+									<MonitorBox />
+									<PendingToolCallsBox />
+									<Composer />
+								</ThreadPrimitive.ViewportFooter>
+							</div>
 						</ThreadPrimitive.Viewport>
 					</ThreadPrimitive.Root>
 
@@ -245,22 +243,26 @@ export const Thread: FC<{
 	);
 });
 
-const ThreadMessage: FC = () => {
+const ThreadMessage: FC = React.memo(() => {
 	const role = useAuiState((s) => s.message.role);
 	const isEditing = useAuiState((s) => s.message.composer.isEditing);
 	const parts = useAuiState((s) => s.message.content);
-	const hasToolCalls = parts.some((part: any) => part.type === "tool-call");
+	const hasToolCalls = useMemo(
+		() => parts.some((part: any) => part.type === "tool-call"),
+		[parts],
+	);
 
-	let msg;
-	if (isEditing) msg = <EditComposer />;
-	else if (role === "user") msg = <UserMessage />;
-	else if (hasToolCalls) msg = <ToolMessage />;
-	else msg = <AssistantMessage />;
+	const msg = useMemo(() => {
+		if (isEditing) return <EditComposer />;
+		else if (role === "user") return <UserMessage />;
+		else if (hasToolCalls) return <ToolMessage />;
+		else return <AssistantMessage />;
+	}, [isEditing, role, hasToolCalls]);
 
 	return msg;
-};
+});
 
-const ThreadScrollToBottom: FC = () => {
+const ThreadScrollToBottom: FC = React.memo(() => {
 	return (
 		<ThreadPrimitive.ScrollToBottom asChild>
 			<TooltipIconButton
@@ -272,13 +274,12 @@ const ThreadScrollToBottom: FC = () => {
 			</TooltipIconButton>
 		</ThreadPrimitive.ScrollToBottom>
 	);
-};
+});
 
-const ThreadWelcome: FC = () => {
+const ThreadWelcome: FC = React.memo(() => {
 	const activeWorkspaceId = useStore((s) => s.activeWorkspaceId);
-	if (activeWorkspaceId) {
-		return <WorkspaceView folderId={activeWorkspaceId} />;
-	}
+	if (activeWorkspaceId) return <WorkspaceView folderId={activeWorkspaceId} />;
+
 	return (
 		<div className="aui-thread-welcome-root mx-auto my-auto flex w-full max-w-(--thread-max-width) grow flex-col">
 			<div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center">
@@ -316,7 +317,7 @@ const ThreadWelcome: FC = () => {
 			<ThreadSuggestions />
 		</div>
 	);
-};
+});
 
 const ThreadSuggestions: FC = () => {
 	return (
@@ -352,28 +353,41 @@ const ThreadSuggestionItem: FC = () => {
 	);
 };
 
-const ContextUsageBar: FC = () => {
+const ContextUsageBar: FC = React.memo(() => {
 	const { contextSize } = useContext(ChatConfigContext);
 	const branchTokensCount = useContext(BranchTokensContext);
 	const composerText = useAuiState((s) => s.composer.text);
 
-	const inputTokens = composerText ? tokenEncoder.encode(composerText).length : 0;
+	const inputTokens = useMemo(
+		() => (composerText ? tokenEncoder.encode(composerText).length : 0),
+		[composerText],
+	);
 	const total = branchTokensCount + inputTokens;
-	const ctxLabel =
-		contextSize > 0
-			? contextSize > 1000
-				? `${(contextSize / 1000).toFixed(0)}k`
-				: String(contextSize)
-			: "?";
-	const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
-	const color =
-		pct > 90
-			? "var(--wc-accent-red)"
-			: pct > 70
-				? "var(--wc-accent-yellow-strong)"
-				: "var(--wc-text-muted)";
-	const textColor =
-		pct > 90 ? "var(--wc-accent-red)" : pct > 70 ? "var(--wc-accent-yellow-strong)" : undefined;
+
+	const { ctxLabel, color, pct, textColor } = useMemo(() => {
+		const ctxLabel =
+			contextSize > 0
+				? contextSize > 1000
+					? `${(contextSize / 1000).toFixed(0)}k`
+					: String(contextSize)
+				: "?";
+		const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
+		const color =
+			pct > 90
+				? "var(--wc-accent-red)"
+				: pct > 70
+					? "var(--wc-accent-yellow-strong)"
+					: "var(--wc-text-muted)";
+
+		const textColor =
+			pct > 90
+				? "var(--wc-accent-red)"
+				: pct > 70
+					? "var(--wc-accent-yellow-strong)"
+					: undefined;
+
+		return { ctxLabel, color, pct, textColor };
+	}, [contextSize, total]);
 
 	return (
 		<div
@@ -394,9 +408,9 @@ const ContextUsageBar: FC = () => {
 			</span>
 		</div>
 	);
-};
+});
 
-const Composer: FC = () => {
+const Composer: FC = React.memo(() => {
 	const { isValidServer } = useContext(ServerStatusContext);
 	const { waveformStream, setWaveformStream, subscribeTranscript } = useDictation();
 	const annotatorVisible = useStore((s) => s.annotatorVisible);
@@ -521,9 +535,9 @@ const Composer: FC = () => {
 			</ComposerPrimitive.AttachmentDropzone>
 		</ComposerPrimitive.Root>
 	);
-};
+});
 
-const ReasoningEffortToggle: FC = () => {
+const ReasoningEffortToggle: FC = React.memo(() => {
 	const { reasoningEffort, onReasoningEffortChange, enableThinking, onEnableThinkingChange } =
 		useContext(ChatConfigContext);
 	const levels: EReasoningEffort[] = [
@@ -566,7 +580,7 @@ const ReasoningEffortToggle: FC = () => {
 			Effort {label}
 		</IconButton>
 	);
-};
+});
 
 const ToolsSelector: FC = React.memo(() => {
 	const attachAllTools = useStore((s) => s.attachAllTools);
@@ -1120,117 +1134,130 @@ const AgentSelector: FC = React.memo(() => {
 	);
 });
 
-const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = ({
-	onStreamChange,
-}) => {
-	const { isValidServer, supportsMultiModal } = useContext(ServerStatusContext);
-	const currentThreadId = useStore((s) => s.currentThreadId);
-	const canAttach = isValidServer && supportsMultiModal;
-	const aui = useAui();
-	const annotations = useStore((s) => s.annotations);
-	const clearAnnotations = useStore((s) => s.clearAnnotations);
-	const composerDisabled = useAuiState((s) => s.composer.isEmpty || !s.composer.isEditing);
-	const composerText = useAuiState((s) => s.composer.text);
-	const pendingSlashCommands = useStore((s) => s.pendingSlashCommands);
-	const isSendDisabled =
-		composerDisabled && annotations.length === 0 && pendingSlashCommands.length === 0;
+const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void }> = React.memo(
+	({ onStreamChange }) => {
+		const { isValidServer, supportsMultiModal } = useContext(ServerStatusContext);
+		const currentThreadId = useStore((s) => s.currentThreadId);
+		const canAttach = isValidServer && supportsMultiModal;
+		const aui = useAui();
+		const annotations = useStore((s) => s.annotations);
+		const clearAnnotations = useStore((s) => s.clearAnnotations);
+		const composerDisabled = useAuiState((s) => s.composer.isEmpty || !s.composer.isEditing);
+		const composerText = useAuiState((s) => s.composer.text);
+		const pendingSlashCommands = useStore((s) => s.pendingSlashCommands);
+		const isSendDisabled =
+			composerDisabled && annotations.length === 0 && pendingSlashCommands.length === 0;
 
-	const handleSend = useCallback(() => {
-		if (isSendDisabled) return;
-		// Annotation injection moved to FEApplet bridge.preCompletion hook
-		// if (annotations.length > 0) {
-		// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
-		// 	const fullText = (lines.join('\n\n') + (composerText.trim() ? '\n\n' + composerText : '')).trim();
-		// 	aui.composer().setText(fullText);
-		// 	clearAnnotations();
-		// }
-		if (!composerText.trim() && (pendingSlashCommands.length > 0 || annotations.length > 0)) {
-			aui.composer().setText("<continue>");
-		}
-		aui.composer().send({ startRun: true });
-	}, [isSendDisabled, annotations, composerText, clearAnnotations, pendingSlashCommands.length]);
+		const handleSend = useCallback(() => {
+			if (isSendDisabled) return;
+			// Annotation injection moved to FEApplet bridge.preCompletion hook
+			// if (annotations.length > 0) {
+			// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
+			// 	const fullText = (lines.join('\n\n') + (composerText.trim() ? '\n\n' + composerText : '')).trim();
+			// 	aui.composer().setText(fullText);
+			// 	clearAnnotations();
+			// }
+			if (
+				!composerText.trim() &&
+				(pendingSlashCommands.length > 0 || annotations.length > 0)
+			) {
+				aui.composer().setText("<continue>");
+			}
+			aui.composer().send({ startRun: true });
+		}, [
+			isSendDisabled,
+			annotations,
+			composerText,
+			clearAnnotations,
+			pendingSlashCommands.length,
+		]);
 
-	return (
-		<div className="aui-composer-action-wrapper relative flex items-center justify-between">
-			<div className="flex items-center gap-1">
-				<ComposerAddAttachment
-					disabled={!canAttach}
-					tooltip={canAttach ? "Add Attachment" : "Multimodal not supported"}
-				/>
-				<ReasoningEffortToggle />
-				{/* <ToolsToggle /> */}
-				<ToolsSelector />
-				<AgentSelector />
-				<EmbeddingToggle />
-			</div>
-			<div className="flex items-center gap-2">
-				<VoiceInput
-					threadId={currentThreadId}
-					onTranscript={(text) => {
-						insertComposerText(text);
-					}}
-					aui={aui}
-					onStreamChange={onStreamChange}
-				/>
-				<ThreadWhisperServerSelector />
-				<ThreadServerSelector threadId={currentThreadId} />
-				<AuiIf condition={(s) => !s.thread.isRunning}>
-					<TooltipIconButton
-						onClick={handleSend}
-						disabled={!isValidServer || isSendDisabled}
-						tooltip={!isValidServer ? "Select and start a model first" : "Send message"}
-						side="bottom"
-						type="button"
-						variant="outline"
-						className={`${!isValidServer || isSendDisabled ? "opacity-50 cursor-not-allowed" : ""} aui-composer-send size-9`}
-						aria-label={
-							!isValidServer ? "Send message - model not selected" : "Send message"
-						}
-						style={
-							!isValidServer
-								? {
-										color: "var(--wc-text-muted)",
-										borderColor: "var(--wc-border-default)",
-										backgroundColor: "transparent",
-									}
-								: {
-										color: "var(--wc-accent-blue)",
-										borderColor: "var(--wc-accent-blue-border)",
-										backgroundColor: "var(--wc-accent-blue-bg-8)",
-									}
-						}
-						_hover={
-							!isValidServer
-								? undefined
-								: {
-										color: "var(--wc-accent-blue-hover)",
-										borderColor: "var(--wc-accent-blue-border)",
-										backgroundColor: "var(--wc-accent-blue-bg-10)",
-									}
-						}
-					>
-						<SendHorizonal className="aui-composer-send-icon size-4" />
-					</TooltipIconButton>
-				</AuiIf>
-				<AuiIf condition={(s) => s.thread.isRunning}>
-					<ComposerPrimitive.Cancel asChild>
-						<Button
+		return (
+			<div className="aui-composer-action-wrapper relative flex items-center justify-between">
+				<div className="flex items-center gap-1">
+					<ComposerAddAttachment
+						disabled={!canAttach}
+						tooltip={canAttach ? "Add Attachment" : "Multimodal not supported"}
+					/>
+					<ReasoningEffortToggle />
+					{/* <ToolsToggle /> */}
+					<ToolsSelector />
+					<AgentSelector />
+					<EmbeddingToggle />
+				</div>
+				<div className="flex items-center gap-2">
+					<VoiceInput
+						threadId={currentThreadId}
+						onTranscript={(text) => {
+							insertComposerText(text);
+						}}
+						aui={aui}
+						onStreamChange={onStreamChange}
+					/>
+					<ThreadWhisperServerSelector />
+					<ThreadServerSelector threadId={currentThreadId} />
+					<AuiIf condition={(s) => !s.thread.isRunning}>
+						<TooltipIconButton
+							onClick={handleSend}
+							disabled={!isValidServer || isSendDisabled}
+							tooltip={
+								!isValidServer ? "Select and start a model first" : "Send message"
+							}
+							side="bottom"
 							type="button"
 							variant="outline"
-							className="aui-composer-cancel size-9"
-							aria-label="Stop generating"
-							color="var(--wc-text-primary)"
-							borderColor="var(--wc-border-default)"
-							style={{ borderColor: "var(--wc-border-default)" }}
+							className={`${!isValidServer || isSendDisabled ? "opacity-50 cursor-not-allowed" : ""} aui-composer-send size-9`}
+							aria-label={
+								!isValidServer
+									? "Send message - model not selected"
+									: "Send message"
+							}
+							style={
+								!isValidServer
+									? {
+											color: "var(--wc-text-muted)",
+											borderColor: "var(--wc-border-default)",
+											backgroundColor: "transparent",
+										}
+									: {
+											color: "var(--wc-accent-blue)",
+											borderColor: "var(--wc-accent-blue-border)",
+											backgroundColor: "var(--wc-accent-blue-bg-8)",
+										}
+							}
+							_hover={
+								!isValidServer
+									? undefined
+									: {
+											color: "var(--wc-accent-blue-hover)",
+											borderColor: "var(--wc-accent-blue-border)",
+											backgroundColor: "var(--wc-accent-blue-bg-10)",
+										}
+							}
 						>
-							<SquareIcon className="aui-composer-cancel-icon size-4 fill-current" />
-						</Button>
-					</ComposerPrimitive.Cancel>
-				</AuiIf>
+							<SendHorizonal className="aui-composer-send-icon size-4" />
+						</TooltipIconButton>
+					</AuiIf>
+					<AuiIf condition={(s) => s.thread.isRunning}>
+						<ComposerPrimitive.Cancel asChild>
+							<Button
+								type="button"
+								variant="outline"
+								className="aui-composer-cancel size-9"
+								aria-label="Stop generating"
+								color="var(--wc-text-primary)"
+								borderColor="var(--wc-border-default)"
+								style={{ borderColor: "var(--wc-border-default)" }}
+							>
+								<SquareIcon className="aui-composer-cancel-icon size-4 fill-current" />
+							</Button>
+						</ComposerPrimitive.Cancel>
+					</AuiIf>
+				</div>
 			</div>
-		</div>
-	);
-};
+		);
+	},
+);
 
 const MessageError: FC = () => {
 	return (
@@ -1369,7 +1396,7 @@ const EmbeddingStatus: FC = React.memo(() => {
 	);
 });
 
-const ToolCallRenderer: FC = () => {
+const ToolCallRenderer: FC = React.memo(() => {
 	const part = useAuiState((s) => s.part);
 	const messageId = useAuiState((s) => s.message.id);
 
@@ -1384,7 +1411,7 @@ const ToolCallRenderer: FC = () => {
 			messageId={messageId}
 		/>
 	);
-};
+});
 
 function mapStatusFromPart(status: any): "complete" | "running" | "requires-action" | "error" {
 	if (!status) return "complete";
@@ -1395,14 +1422,14 @@ function mapStatusFromPart(status: any): "complete" | "running" | "requires-acti
 	return "complete";
 }
 
-const LoadingDot: FC<{ status: { type: string } }> = ({ status }) => {
+const LoadingDot: FC<{ status: { type: string } }> = React.memo(({ status }) => {
 	if (status?.type !== "running") return null;
 	return (
 		<div className="flex items-center py-1">
 			<div className="size-2 rounded-full bg-white/80 animate-pulse" />
 		</div>
 	);
-};
+});
 
 const componentsMap = {
 	Text: () => <MarkdownText />,
@@ -1573,7 +1600,7 @@ const BrowserTTS = React.memo(() => {
 	);
 });
 
-const AssistantActionBar: FC = () => {
+const AssistantActionBar: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const isCopied = useAuiState((s) => s.message.isCopied);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
@@ -1633,7 +1660,7 @@ const AssistantActionBar: FC = () => {
 			</Menu.Root>
 		</ActionBarPrimitive.Root>
 	);
-};
+});
 
 const ToolMessage: FC = React.memo(() => {
 	const parts = useAuiState((s) => s.message.content);
@@ -1680,7 +1707,7 @@ const ToolMessage: FC = React.memo(() => {
 	);
 });
 
-const ToolActionBar: FC = () => {
+const ToolActionBar: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
@@ -1720,9 +1747,9 @@ const ToolActionBar: FC = () => {
 			</Menu.Root>
 		</ActionBarPrimitive.Root>
 	);
-};
+});
 
-const MessageSlashCommands: FC = () => {
+const MessageSlashCommands: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const messageState = useStore((s) => s.messageStates[messageId]);
 	const slashCommands = messageState?.slashCommands as IExtractedSlashCommand[] | undefined;
@@ -1762,9 +1789,9 @@ const MessageSlashCommands: FC = () => {
 			))}
 		</div>
 	);
-};
+});
 
-const UserMessage: FC = () => {
+const UserMessage: FC = React.memo(() => {
 	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 	const chatFontFamily = useStore((s) => s.settings.chatFontFamily ?? "");
 	const messageId = useAuiState((s) => s.message.id);
@@ -1798,9 +1825,9 @@ const UserMessage: FC = () => {
 			</div>
 		</MessagePrimitive.Root>
 	);
-};
+});
 
-const UserActionBar: FC = () => {
+const UserActionBar: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
@@ -1841,7 +1868,7 @@ const UserActionBar: FC = () => {
 			</Menu.Root>
 		</ActionBarPrimitive.Root>
 	);
-};
+});
 
 const EditComposer: FC = () => {
 	return (
@@ -1872,7 +1899,7 @@ const EditComposer: FC = () => {
 // 	return <BranchPicker />;
 // };
 
-const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({ className, ...rest }) => {
+const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = React.memo(({ className, ...rest }) => {
 	return (
 		<BranchPickerPrimitive.Root
 			hideWhenSingleBranch
@@ -1897,4 +1924,4 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({ className, ...rest
 			</BranchPickerPrimitive.Next>
 		</BranchPickerPrimitive.Root>
 	);
-};
+});
