@@ -51,14 +51,11 @@ whisperModelsRouter.get("/", async (_req, res) => {
 	});
 });
 
-// POST /api/whisper-models/scan — trigger a fresh scan
-whisperModelsRouter.post("/scan", async (_req, res) => {
+// Re-scan all whisper model roots, update the cache, and broadcast via SSE.
+// Exported so other services (e.g. download completion) can trigger a rescan.
+export async function refreshWhisperModelsCache(): Promise<IWhisperModel[]> {
 	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
-
-	if (settings.modelRoots.length === 0) {
-		res.json({ ok: true, data: [], total: 0, error: "No model directories configured" });
-		return;
-	}
+	if (settings.modelRoots.length === 0) return cachedWhisperModels;
 
 	const before = cachedWhisperModels.length;
 	cachedWhisperModels = await scanAllWhisperModelRoots(settings.modelRoots);
@@ -70,13 +67,20 @@ whisperModelsRouter.post("/scan", async (_req, res) => {
 	console.log(`[whisper-models] Scan complete: ${cachedWhisperModels.length} models${changeMsg}`);
 
 	sseManager.emit("whisperModels:init", cachedWhisperModels);
+	return cachedWhisperModels;
+}
 
-	res.json({
-		ok: true,
-		data: cachedWhisperModels,
-		total: cachedWhisperModels.length,
-		error: null,
-	});
+// POST /api/whisper-models/scan — trigger a fresh scan
+whisperModelsRouter.post("/scan", async (_req, res) => {
+	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
+
+	if (settings.modelRoots.length === 0) {
+		res.json({ ok: true, data: [], total: 0, error: "No model directories configured" });
+		return;
+	}
+
+	const data = await refreshWhisperModelsCache();
+	res.json({ ok: true, data, total: data.length, error: null });
 });
 
 // GET /api/whisper-models/cache

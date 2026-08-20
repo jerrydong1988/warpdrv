@@ -44,14 +44,11 @@ modelsRouter.get("/", async (_req, res) => {
 	res.json({ ok: true, data: cachedModels, total: cachedModels.length, error: null });
 });
 
-// POST /api/models/scan — trigger a fresh scan of all model roots
-modelsRouter.post("/scan", async (_req, res) => {
+// Re-scan all model roots, update the cache, and broadcast via SSE.
+// Exported so other services (e.g. download completion) can trigger a rescan.
+export async function refreshModelsCache(): Promise<IModel[]> {
 	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
-
-	if (settings.modelRoots.length === 0) {
-		res.json({ ok: true, data: [], total: 0, error: "No model directories configured" });
-		return;
-	}
+	if (settings.modelRoots.length === 0) return cachedModels;
 
 	const before = cachedModels.length;
 	cachedModels = await scanAllModelRoots(settings.modelRoots);
@@ -62,8 +59,20 @@ modelsRouter.post("/scan", async (_req, res) => {
 	console.log(`[models] Scan complete: ${cachedModels.length} models${changeMsg}`);
 
 	sseManager.emit("models:init", cachedModels);
+	return cachedModels;
+}
 
-	res.json({ ok: true, data: cachedModels, total: cachedModels.length, error: null });
+// POST /api/models/scan — trigger a fresh scan of all model roots
+modelsRouter.post("/scan", async (_req, res) => {
+	const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
+
+	if (settings.modelRoots.length === 0) {
+		res.json({ ok: true, data: [], total: 0, error: "No model directories configured" });
+		return;
+	}
+
+	const data = await refreshModelsCache();
+	res.json({ ok: true, data, total: data.length, error: null });
 });
 
 // GET /api/models/scan-status

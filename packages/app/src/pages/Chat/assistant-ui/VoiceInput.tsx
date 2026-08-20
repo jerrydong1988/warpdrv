@@ -214,6 +214,18 @@ export const VoiceInput = React.memo(
 				return;
 			}
 
+			// Defensive: destroy any stale session before starting a new one,
+			// so a leftover session can never accumulate (e.g. if the flag got
+			// out of sync). This guarantees at most one live VAD session.
+			if (vadSessionRef.current) {
+				console.log("[VAD Chat] destroying stale session before starting new one");
+				vadSessionRef.current?.destroy();
+				vadSessionRef.current = null;
+				vadWaveformStreamRef.current?.getTracks().forEach((t) => t.stop());
+				vadWaveformStreamRef.current = null;
+				setWaveformStream(null);
+			}
+
 			try {
 				const audioConstraints: MediaTrackConstraints = {
 					echoCancellation: true,
@@ -331,6 +343,26 @@ export const VoiceInput = React.memo(
 				}
 			};
 		}, []);
+
+		// React to vadActive being reset from OUTSIDE this component (e.g. a
+		// thread switch). The store sets vadActive=false on thread switch, but
+		// the live VAD session lives in this component's refs and would
+		// otherwise keep running (orphaned), still capturing the mic and
+		// auto-sending. We destroy it here on a true → false transition.
+		const prevVadActiveRef = useRef(false);
+		useEffect(() => {
+			const wasActive = prevVadActiveRef.current;
+			prevVadActiveRef.current = vadActive;
+			if (wasActive && !vadActive && vadSessionRef.current) {
+				console.log("[VAD Chat] vadActive reset externally — destroying orphaned session");
+				stopTTS();
+				vadSessionRef.current?.destroy();
+				vadSessionRef.current = null;
+				vadWaveformStreamRef.current?.getTracks().forEach((t) => t.stop());
+				vadWaveformStreamRef.current = null;
+				setWaveformStream(null);
+			}
+		}, [vadActive, setWaveformStream]);
 
 		if (!isWhisperReady) {
 			return null;

@@ -11,6 +11,8 @@ import fs from "fs";
 import { DownloaderHelper } from "node-downloader-helper";
 import path from "path";
 import { store } from "../util/store";
+import { refreshModelsCache } from "../routes/models";
+import { refreshWhisperModelsCache } from "../routes/whisperModels";
 import { runPostActions } from "./postActions";
 import { sseManager } from "./sseManagerInstance";
 
@@ -42,6 +44,22 @@ function emitDownloadUpdate(dl: IDownload): void {
 async function persistDownload(dl: IDownload): Promise<void> {
 	downloadState.set(dl.id, dl);
 	await store.put(DOWNLOADS_PREFIX + dl.id, dl);
+}
+
+// Trigger a model rescan after a download completes so the new model shows up
+// without a manual re-scan. Fire-and-forget and fully guarded: a scan error
+// must never interrupt the download or mark it as failed.
+function triggerModelRescan(): void {
+	try {
+		refreshModelsCache().catch((e) =>
+			console.warn("[DownloadManager] model rescan failed:", e),
+		);
+		refreshWhisperModelsCache().catch((e) =>
+			console.warn("[DownloadManager] whisper rescan failed:", e),
+		);
+	} catch (e) {
+		console.warn("[DownloadManager] model rescan failed:", e);
+	}
 }
 
 export async function startDownload(
@@ -148,6 +166,7 @@ export async function startDownload(
 		}
 		await persistDownload(dl);
 		emitDownloadUpdate(dl);
+		if (dl.status === EDownloadStatus.COMPLETED) triggerModelRescan();
 	});
 	helper.on("error", async (err) => {
 		dl.status = EDownloadStatus.FAILED;
@@ -279,6 +298,7 @@ export async function resumeDownload(id: TDownloadId): Promise<boolean> {
 		}
 		await persistDownload(dl);
 		emitDownloadUpdate(dl);
+		if (dl.status === EDownloadStatus.COMPLETED) triggerModelRescan();
 	});
 	helper.on("error", async (err) => {
 		dl.status = EDownloadStatus.FAILED;

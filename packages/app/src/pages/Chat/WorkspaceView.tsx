@@ -193,9 +193,11 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	// Fetch workspace data on mount
 	useEffect(() => {
 		fetchWorkspace(folderId).then((res) => {
-			if (res.ok && res.data) {
-				setWorkspace(res.data);
-				setDescription((res.data.data as any)?.description ?? "");
+			if (res.ok) {
+				if (res.data) {
+					setWorkspace(res.data);
+				}
+				setDescription(res.data?.data?.description ?? "");
 			}
 		});
 	}, [folderId, setWorkspace]);

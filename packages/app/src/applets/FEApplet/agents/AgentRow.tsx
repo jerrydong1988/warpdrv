@@ -1,5 +1,5 @@
-import { Box, Button, Flex, Input, Text, Textarea, VStack } from "@chakra-ui/react";
-import type { IAgent } from "@warpcore/shared";
+import { Box, Button, Flex, Input, NativeSelect, Text, Textarea, VStack } from "@chakra-ui/react";
+import { EReasoningEffort, type IAgent } from "@warpcore/shared";
 import { Bot, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { deleteAgent as deleteAgentApi, updateAgent as updateAgentApi } from "@/api/agent-services";
@@ -131,6 +131,44 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								value={agent.serverId}
 								onChange={(id) => updateAgent({ serverId: id })}
 							/>
+						</Box>
+
+						<Box>
+							<Text
+								fontSize="9px"
+								fontWeight="600"
+								color="var(--wc-text-muted)"
+								textTransform="uppercase"
+								letterSpacing="0.04em"
+								mb="1"
+							>
+								Reasoning
+							</Text>
+							<NativeSelect.Root size="xs">
+								<NativeSelect.Field
+									value={agent.reasoningEffort ?? ""}
+									onChange={(e) =>
+										updateAgent({
+											reasoningEffort: (e.target.value || undefined) as
+												| EReasoningEffort
+												| undefined,
+										})
+									}
+									bg="var(--wc-bg-subtle)"
+									borderColor="var(--wc-border-default)"
+									borderWidth="1px"
+									borderRadius="md"
+									fontSize="xs"
+									color="var(--wc-text-primary)"
+									_focus={{ borderColor: "var(--wc-border-active)" }}
+								>
+									<option value="">Default</option>
+									<option value={EReasoningEffort.NONE}>None</option>
+									<option value={EReasoningEffort.LOW}>Low</option>
+									<option value={EReasoningEffort.MEDIUM}>Medium</option>
+									<option value={EReasoningEffort.HIGH}>High</option>
+								</NativeSelect.Field>
+							</NativeSelect.Root>
 						</Box>
 
 						<Box>
