@@ -376,3 +376,6 @@ In plain English:
 - No royalties owed; no warranty provided
 
 For commercial licensing without AGPL obligations, join the [Discord](https://discord.gg/Q9kSKhY5) and PM the mods.
+
+## Credits
+1. Music used in video - 1000Handz.com
