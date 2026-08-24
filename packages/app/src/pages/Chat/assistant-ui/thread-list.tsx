@@ -342,7 +342,7 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 							</HStack>
 						</Box>
 						<Box position="relative">
-							<Menu.Root positioning={{ getAnchorRect }}>
+							<Menu.Root positioning={{ getAnchorRect, strategy: "fixed" }}>
 								<Menu.Trigger asChild>
 									<Box
 										ref={triggerRef as any}
@@ -613,7 +613,7 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 				<Text fontSize="12px" color="var(--wc-text-faint)" flexShrink={0}>
 					{threadCount}
 				</Text>
-				<Menu.Root positioning={{ getAnchorRect }}>
+				<Menu.Root positioning={{ getAnchorRect, strategy: "fixed" }}>
 					<Menu.Trigger asChild>
 						<Box
 							ref={triggerRef as any}

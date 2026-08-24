@@ -683,7 +683,11 @@ export class SqlitePersistence implements IPersistence {
 	}
 
 	async deleteFolder(id: TFolderId): Promise<void> {
-		this.db!.prepare(`DELETE FROM ${this.t.folders} WHERE id = ?`).run(id);
+		return this.db!.transaction(() => {
+			// Delete dependent workspace row first to satisfy the FK constraint
+			this.db!.prepare(`DELETE FROM ${this.t.workspaces} WHERE folderId = ?`).run(id);
+			this.db!.prepare(`DELETE FROM ${this.t.folders} WHERE id = ?`).run(id);
+		})();
 	}
 
 	async reorderFolders(entries: IReorderFolderEntry[]): Promise<void> {

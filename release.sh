@@ -283,8 +283,12 @@ echo "Frontend: $DESKTOP_DIR/app-dist/"
 echo ""
 echo "=== Step 4/4: Building Tauri app ==="
 cd "$DESKTOP_DIR"
-[ -d "$DESKTOP_DIR/target/release/bundle/appimage_deb" ] && rm -r "$DESKTOP_DIR/target/release/bundle/appimage_deb"
-[ -d "$DESKTOP_DIR/target/release/bundle/appimage/warpdrv.AppDir" ] && rm -r "$DESKTOP_DIR/target/release/bundle/appimage/warpdrv.AppDir"
+if [ -d "$DESKTOP_DIR/target/release/bundle/appimage_deb" ]; then
+	rm -r "$DESKTOP_DIR/target/release/bundle/appimage_deb"
+fi
+if [ -d "$DESKTOP_DIR/target/release/bundle/appimage" ]; then
+	rm -r "$DESKTOP_DIR/target/release/bundle/appimage"
+fi
 
 # Build only the requested bundle formats
 BUNDLE_ARGS=""
@@ -293,6 +297,24 @@ for fmt in "${BUNDLE_FORMATS[@]}"; do
 done
 
 npx tauri build $BUNDLE_ARGS
+
+for fmt in "${BUNDLE_FORMATS[@]}"; do
+	if [ "$fmt" = "appimage" ]; then
+		APPDIR="$DESKTOP_DIR/target/release/bundle/appimage/warpdrv.AppDir"
+		PRISTINE="$DESKTOP_DIR/binaries/warpcore-server-${TARGET_TRIPLE}${SIDECAR_EXT}"
+		if [ ! -d "$APPDIR" ]; then
+			echo "ERROR: AppDir not found at $APPDIR"
+			exit 1
+		fi
+		cp "$PRISTINE" "$APPDIR/usr/bin/warpcore-server"
+		chmod +x "$APPDIR/usr/bin/warpcore-server"
+		( cd "$DESKTOP_DIR/target/release/bundle/appimage" && \
+			ARCH="x86_64" \
+			LDAI_OUTPUT="warpdrv_${NEW_VERSION}_amd64.AppImage" \
+			"$HOME/.cache/tauri/linuxdeploy-plugin-appimage.AppImage" \
+			--appdir "$APPDIR" )
+	fi
+done
 
 echo ""
 echo "============================================"

@@ -426,6 +426,52 @@ fn save_window_size(width: u32, height: u32) -> bool {
     }
 }
 
+fn rdev_key_to_dom_code(k: rdev::Key) -> String {
+    match k {
+        rdev::Key::Alt => "AltLeft".into(),
+        rdev::Key::AltGr => "AltRight".into(),
+        rdev::Key::Return => "Enter".into(),
+        rdev::Key::UpArrow => "ArrowUp".into(),
+        rdev::Key::DownArrow => "ArrowDown".into(),
+        rdev::Key::LeftArrow => "ArrowLeft".into(),
+        rdev::Key::RightArrow => "ArrowRight".into(),
+        rdev::Key::Num0 => "Digit0".into(),
+        rdev::Key::Num1 => "Digit1".into(),
+        rdev::Key::Num2 => "Digit2".into(),
+        rdev::Key::Num3 => "Digit3".into(),
+        rdev::Key::Num4 => "Digit4".into(),
+        rdev::Key::Num5 => "Digit5".into(),
+        rdev::Key::Num6 => "Digit6".into(),
+        rdev::Key::Num7 => "Digit7".into(),
+        rdev::Key::Num8 => "Digit8".into(),
+        rdev::Key::Num9 => "Digit9".into(),
+        rdev::Key::Kp0 => "Numpad0".into(),
+        rdev::Key::Kp1 => "Numpad1".into(),
+        rdev::Key::Kp2 => "Numpad2".into(),
+        rdev::Key::Kp3 => "Numpad3".into(),
+        rdev::Key::Kp4 => "Numpad4".into(),
+        rdev::Key::Kp5 => "Numpad5".into(),
+        rdev::Key::Kp6 => "Numpad6".into(),
+        rdev::Key::Kp7 => "Numpad7".into(),
+        rdev::Key::Kp8 => "Numpad8".into(),
+        rdev::Key::Kp9 => "Numpad9".into(),
+        rdev::Key::KpReturn => "NumpadEnter".into(),
+        rdev::Key::KpMinus => "NumpadSubtract".into(),
+        rdev::Key::KpPlus => "NumpadAdd".into(),
+        rdev::Key::KpMultiply => "NumpadMultiply".into(),
+        rdev::Key::KpDivide => "NumpadDivide".into(),
+        rdev::Key::KpDelete => "NumpadDecimal".into(),
+        rdev::Key::BackQuote => "Backquote".into(),
+        rdev::Key::BackSlash => "Backslash".into(),
+        rdev::Key::SemiColon => "Semicolon".into(),
+        rdev::Key::Dot => "Period".into(),
+        rdev::Key::LeftBracket => "BracketLeft".into(),
+        rdev::Key::RightBracket => "BracketRight".into(),
+        rdev::Key::Unknown(c) => format!("Unknown{}", c),
+        _ => format!("{:?}", k),
+    }
+}
+
 fn main() {
     let server_port = get_server_port();
     println!(
@@ -521,8 +567,8 @@ fn main() {
             thread::spawn(move || {
                 let _ = rdev::listen(move |event| {
                     let (code, down) = match event.event_type {
-                        rdev::EventType::KeyPress(k) => (format!("{:?}", k), true),
-                        rdev::EventType::KeyRelease(k) => (format!("{:?}", k), false),
+                        rdev::EventType::KeyPress(k) => (rdev_key_to_dom_code(k), true),
+                        rdev::EventType::KeyRelease(k) => (rdev_key_to_dom_code(k), false),
                         _ => return,
                     };
                     let _ = hk_handle.emit(
