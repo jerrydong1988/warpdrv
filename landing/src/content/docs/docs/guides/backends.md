@@ -12,7 +12,7 @@ This guide shows you how to add a new llama.cpp build and use **backend groups**
 You need a `llama-server` binary for your OS and GPU. Two options:
 
 - **Download a prebuilt binary** from the [llama.cpp releases](https://github.com/ggml-org/llama.cpp/releases) page. Pick the asset matching your OS and GPU type (CUDA for NVIDIA, ROCm for AMD, Vulkan for any GPU, or CPU).
-- **Compile your own** — if you need specific flags or a custom build, see [Compile llama.cpp for your system](compiling.md).
+- **Compile your own** — if you need specific flags or a custom build, see [Recipes — Compile llama.cpp for your system](/docs/guides/compiling/).
 
 ## Step 2: Add the backend
 
@@ -63,5 +63,5 @@ That's it — all servers using that group now run the new llama.cpp version, wi
 
 ## Next steps
 
-- [Compile llama.cpp for your system](compiling.md) — build a custom llama.cpp with specific flags.
-- [Use the model router](model-router.md) — expose your models to external apps.
+- [Recipes — Compile llama.cpp for your system](/docs/guides/compiling/) — build a custom llama.cpp with specific flags.
+- [Use the model router](/docs/guides/model-router/) — expose your models to external apps.

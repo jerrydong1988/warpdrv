@@ -26,5 +26,5 @@ Using named prompts keeps your setup consistent and easy to update in one place.
 
 ## Next steps
 
-- [Workflow, Part 1 — Modes](modes.md) — assign a prompt to a mode.
-- [Workflow, Part 3 — Subagents](subagents.md) — give agents their own prompts.
+- [Workflow, Part 1 — Modes](/docs/guides/modes/) — assign a prompt to a mode.
+- [Workflow, Part 3 — Subagents](/docs/guides/subagents/) — give agents their own prompts.

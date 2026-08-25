@@ -120,7 +120,7 @@ Smoke test: runs the freshly built binary and prints its version. If this step p
 5. Fill in the form (defaults are pre-filled), click **Run**.
 6. Watch each step stream its output. A non-zero exit stops the recipe and highlights the failed step.
 
-Once the build completes, register the resulting `llama-server` binary as a backend — see [Switch to the latest llama.cpp](backends.md).
+Once the build completes, register the resulting `llama-server` binary as a backend — see [Switch to the latest llama.cpp](/docs/guides/backends/).
 
 <!-- SCREENSHOT: A recipe run in progress, showing the step list with outputs streaming and a step marked as completed. -->
 
@@ -141,5 +141,5 @@ Copy one of the included recipes and tweak it:
 
 ## Next steps
 
-- [Switch to the latest llama.cpp](backends.md) — register your build and use backend groups.
-- [Downloading & running your first AI model](first-model.md) — get a model running.
+- [Switch to the latest llama.cpp](/docs/guides/backends/) — register your build and use backend groups.
+- [Downloading & running your first AI model](/docs/guides/first-model/) — get a model running.

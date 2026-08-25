@@ -41,4 +41,4 @@ User feedback and feature requests are very welcome — drop by the [Discord](ht
 
 ## FAQ
 
-Have a question? See the [FAQ](faq.md).
+Have a question? See the [FAQ](/docs/faq/).

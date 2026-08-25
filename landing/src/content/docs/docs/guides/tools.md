@@ -126,9 +126,9 @@ Near the composer (where you type your prompt) there's a **tool selector** that 
 
 > **Note:** Changing the tool selection **in the middle of a chat** causes the entire prompt to be **reprocessed**. This is because the list of available tools is sent at the very beginning of the request (per the llama.cpp specification). **Set your tools at the start of the chat.**
 
-If you want different tool sets for different tasks — e.g. read-only tools for planning, and edit/shell tools for building — that's what **modes** are for. See [Workflow, Part 1 — Modes](modes.md).
+If you want different tool sets for different tasks — e.g. read-only tools for planning, and edit/shell tools for building — that's what **modes** are for. See [Workflow, Part 1 — Modes](/docs/guides/modes/).
 
 ## Next steps
 
-- [Workflow, Part 1 — Modes](modes.md) — group tools into reusable modes.
-- [Workflow, Part 2 — Guardrails](guardrails.md) — add safety checks around tool usage.
+- [Workflow, Part 1 — Modes](/docs/guides/modes/) — group tools into reusable modes.
+- [Workflow, Part 2 — Guardrails](/docs/guides/guardrails/) — add safety checks around tool usage.

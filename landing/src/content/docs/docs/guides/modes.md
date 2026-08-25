@@ -17,8 +17,8 @@ Modes are a great way to separate **planning** from **development**, or to dedic
 A mode is more than a label. Each one can define:
 
 - **Its own list of tools** — the only tools the model may use in that mode.
-- **Its own agents** — the subagents it may spawn (see [Workflow, Part 3 — Subagents](subagents.md)).
-- **Its own guardrails** — safety checks applied to the work (see [Workflow, Part 2 — Guardrails](guardrails.md)).
+- **Its own agents** — the subagents it may spawn (see [Workflow, Part 3 — Subagents](/docs/guides/subagents/)).
+- **Its own guardrails** — safety checks applied to the work (see [Workflow, Part 2 — Guardrails](/docs/guides/guardrails/)).
 - **A customized prompt** — instructions that tell the AI how to operate while in this mode.
 
 ### Tool enforcement
@@ -34,7 +34,7 @@ warpdrv **rejects any tool call that isn't in the active mode's allowed list**. 
 
 ## Switching modes
 
-Use the **mode tabs** in the UI to switch between modes. You can also set a **default mode** for a [workspace](workspace.md) so it's applied automatically to new threads.
+Use the **mode tabs** in the UI to switch between modes. You can also set a **default mode** for a [workspace](/docs/guides/workspace/) so it's applied automatically to new threads.
 
 <!-- SCREENSHOT: The mode tabs in the chat UI, with the active mode highlighted in its color. -->
 
@@ -48,5 +48,5 @@ Editing a mode — or toggling between the default mode and a mode — **in the 
 
 ## Next steps
 
-- [Workflow, Part 2 — Guardrails](guardrails.md) — add safety checks to your modes.
-- [Workflow, Part 3 — Subagents](subagents.md) — delegate work to parallel subagents.
+- [Workflow, Part 2 — Guardrails](/docs/guides/guardrails/) — add safety checks to your modes.
+- [Workflow, Part 3 — Subagents](/docs/guides/subagents/) — delegate work to parallel subagents.

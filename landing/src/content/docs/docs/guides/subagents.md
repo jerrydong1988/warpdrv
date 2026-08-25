@@ -34,12 +34,12 @@ The **main agent** uses `create_subthread`, `subthread_send_message`, and `list_
 
 Each agent needs:
 
-- A **prompt** — instructions telling it what to do (see [Managing your prompts](prompts.md)).
+- A **prompt** — instructions telling it what to do (see [Managing your prompts](/docs/guides/prompts/)).
 - A **description** — a short summary of what the agent does.
 - A **server** — the LLM server the agent runs on.
 - A **list of tools** — the tools the agent is allowed to use.
 
-Every [mode](modes.md) can have its own list of available agents.
+Every [mode](/docs/guides/modes/) can have its own list of available agents.
 
 :::danger[Agent tools run without a permission prompt]
 **All tools given to an agent run without any permission prompt** — they are automatically approved. **Do not give an agent edit tools** (`file_write`, `file_patch`) **or `shell_exec`**, as that can be very dangerous. Give agents only the tools they truly need (e.g. `fetch`, `rg`, `file_read`).
@@ -81,5 +81,5 @@ If a subagent **doesn't call `superthread_send_message`**, its result **never re
 
 ## Next steps
 
-- [Workflow, Part 1 — Modes](modes.md) — assign agents to different modes.
-- [Managing your prompts](prompts.md) — give each agent a clear prompt.
+- [Workflow, Part 1 — Modes](/docs/guides/modes/) — assign agents to different modes.
+- [Managing your prompts](/docs/guides/prompts/) — give each agent a clear prompt.

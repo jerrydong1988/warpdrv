@@ -47,7 +47,7 @@ The guardrail's review appears **immediately after the tool call is requested** 
 
 ## The decision is yours
 
-Guardrails **do not auto-deny or block** anything. They only surface issues. After checking the guardrail's output, the approve/deny decision is entirely up to you — it works together with the [permission system](tools.md#permissions).
+Guardrails **do not auto-deny or block** anything. They only surface issues. After checking the guardrail's output, the approve/deny decision is entirely up to you — it works together with the [permission system](/docs/guides/tools/#permissions).
 
 ## Run guardrails on a separate server
 
@@ -74,7 +74,7 @@ warpdrv ships with two built-in guardrails:
 
 ## Per-mode guardrails
 
-Guardrails are **assigned per [mode](modes.md)**. When you switch modes, the active set of guardrails changes automatically to match that mode.
+Guardrails are **assigned per [mode](/docs/guides/modes/)**. When you switch modes, the active set of guardrails changes automatically to match that mode.
 
 :::caution[Guardrails are not a guarantee]
 Guardrails may still miss important or destructive parts. They are an LLM doing the processing, so they are **not guaranteed** to catch everything. Don't rely on them 100% — always do your own review before approving a tool call.
@@ -82,5 +82,5 @@ Guardrails may still miss important or destructive parts. They are an LLM doing 
 
 ## Next steps
 
-- [Workflow, Part 1 — Modes](modes.md) — assign guardrails to different modes.
-- [Workflow, Part 3 — Subagents](subagents.md) — delegate work to parallel subagents.
+- [Workflow, Part 1 — Modes](/docs/guides/modes/) — assign guardrails to different modes.
+- [Workflow, Part 3 — Subagents](/docs/guides/subagents/) — delegate work to parallel subagents.

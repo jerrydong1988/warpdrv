@@ -19,7 +19,7 @@ Tell warpdrv where your GGUF models live. Models should follow a `user/model` fo
 2. Click **+** to add the folder.
 3. Click **Save & Scan**.
 
-warpdrv scans the folder and reports how many models it found. If you don't have any models yet, you can **Skip** this step and download some later from the [Hub](first-model.md#download-a-model-from-the-hub).
+warpdrv scans the folder and reports how many models it found. If you don't have any models yet, you can **Skip** this step and download some later from the [Hub](/docs/guides/first-model/#download-a-model-from-the-hub).
 
 <!-- SCREENSHOT: The Model Folders step with a path added and the "N models found" result showing after Save & Scan. -->
 
@@ -39,7 +39,7 @@ A **backend** is a llama.cpp binary that runs your models. This step shows your 
 
 <!-- SCREENSHOT: The Backends step showing detected hardware at the top and a backend (e.g. CUDA) checked, with the "Install & continue" button. -->
 
-If you're not sure which backend to pick, see the hardware table in the [Downloading & running your first AI model](first-model.md#backends--hardware) guide.
+If you're not sure which backend to pick, see the hardware table in the [Downloading & running your first AI model](/docs/guides/first-model/#backends--hardware) guide.
 
 ## Step 4: Getting Started Guide
 
@@ -59,4 +59,4 @@ You're done. Click **Start Using warpdrv** to enter the main app.
 
 ## Next steps
 
-- [Downloading & running your first AI model](first-model.md) — get a model running and chatting.
+- [Downloading & running your first AI model](/docs/guides/first-model/) — get a model running and chatting.

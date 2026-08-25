@@ -87,4 +87,4 @@ When you select text and start an annotation via the selection pop-up, you can k
 
 ## Next steps
 
-- [Improving your chat experience](chat-experience.md) — annotations, workspaces, and more.
+- [Use the model router](/docs/guides/model-router/) — expose your models to external apps.

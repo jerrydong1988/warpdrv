@@ -99,5 +99,5 @@ There's also an option to **enforce auth even for localhost** requests if you wa
 
 ## Next steps
 
-- [Improving your chat experience](chat-experience.md) — get the most out of warpdrv's own chat.
-- [Set up a workspace](workspace.md) — organize projects and their default servers.
+- [Improving your chat experience](/docs/guides/chat-experience/) — get the most out of warpdrv's own chat.
+- [Set up a workspace](/docs/guides/workspace/) — organize projects and their default servers.

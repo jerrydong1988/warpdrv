@@ -14,7 +14,7 @@ warpdrv works with any standard `llama-server` binary, so hardware compatibility
 | Vulkan | Any GPU (Intel, AMD, NVIDIA) |
 | CPU | Any machine (no GPU required) |
 
-> **Note:** warpdrv does not bundle a llama.cpp binary. You'll download or compile one separately — covered in the [Downloading & running your first AI model](first-model.md) guide.
+> **Note:** warpdrv does not bundle a llama.cpp binary. You'll download or compile one separately — covered in the [Downloading & running your first AI model](/docs/guides/first-model/) guide.
 
 ## Download
 
@@ -53,7 +53,7 @@ Download the `.msi` installer and run it through the standard Windows installer 
 
 ### macOS
 
-No prebuilt binary is available yet. You'll need to build from source — see the [Compiling](compiling.md) guide. Untested on Apple Silicon; contributions welcome.
+No prebuilt binary is available yet. You'll need to build from source — see the [Compiling](/docs/guides/compiling/) guide. Untested on Apple Silicon; contributions welcome.
 
 ## First run
 
@@ -63,7 +63,7 @@ On first launch, warpdrv shows an **onboarding welcome screen** that walks you t
 2. Optionally installing a llama.cpp backend.
 3. A short slideshow of next steps.
 
-See the [Onboarding](onboarding.md) guide for a detailed walkthrough.
+See the [Onboarding](/docs/guides/onboarding/) guide for a detailed walkthrough.
 
 <!-- SCREENSHOT: The onboarding welcome screen on first launch. -->
 
@@ -82,5 +82,5 @@ warpdrv checks for updates on startup. If a new version is available, a banner a
 
 ## Next steps
 
-- [Onboarding](onboarding.md) — a detailed walkthrough of the first-run setup.
-- [Downloading & running your first AI model](first-model.md) — get a model running and chatting.
+- [Onboarding](/docs/guides/onboarding/) — a detailed walkthrough of the first-run setup.
+- [Downloading & running your first AI model](/docs/guides/first-model/) — get a model running and chatting.

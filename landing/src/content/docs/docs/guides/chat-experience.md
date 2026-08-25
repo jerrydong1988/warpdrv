@@ -23,15 +23,15 @@ In **Settings**, use the **Theme** dropdown to pick a dark or light theme — or
 
 ## Voice (TTS)
 
-In **Settings**, use the voice selector to choose a Kokoro TTS voice. Full setup is covered in [Set up voice](voice.md).
+In **Settings**, use the voice selector to choose a Kokoro TTS voice. Full setup is covered in [Set up voice](/docs/guides/voice/).
 
 ## Organize chats into workspaces
 
-We **highly recommend** grouping chats by category or topic into a **workspace**. A workspace lets you set a **default server**, common **default values**, and a **project description** — which is especially useful for an ongoing project or recurring topic. See [Set up a workspace](workspace.md).
+We **highly recommend** grouping chats by category or topic into a **workspace**. A workspace lets you set a **default server**, common **default values**, and a **project description** — which is especially useful for an ongoing project or recurring topic. See [Set up a workspace](/docs/guides/workspace/).
 
 ## Annotate
 
-Select any text in a chat to add a comment or **annotation**. You can also use **dictation** or **voice chat mode** to add an annotation — covered in [Set up voice](voice.md).
+Select any text in a chat to add a comment or **annotation**. You can also use **dictation** or **voice chat mode** to add an annotation — covered in [Set up voice](/docs/guides/voice/).
 
 ## Search your chats
 
@@ -41,10 +41,10 @@ Use the search in the **right sidebar** to find anything across your chats.
 
 Chat is augmented with several built-in features. They're covered in detail in:
 
-- [Set up a workspace](workspace.md)
-- [Workflow, Part 1 — Modes](modes.md)
-- [Workflow, Part 2 — Guardrails](guardrails.md)
-- [Using MCP tools](tools.md)
+- [Set up a workspace](/docs/guides/workspace/)
+- [Workflow, Part 1 — Modes](/docs/guides/modes/)
+- [Workflow, Part 2 — Guardrails](/docs/guides/guardrails/)
+- [Using MCP tools](/docs/guides/tools/)
 
 ## Slash commands
 
@@ -56,7 +56,7 @@ Control how much the model **reasons** before answering by adjusting the **reaso
 
 ## Tune your model
 
-Head to the **Models** page to see which parameters you can control per model, and apply a different configuration to each. Some models support **speculative decoding modes** — [read about it](#). You can also set a proper **context length**, **KV Unified** values, and other launch-server-dialog parameters to improve performance — see [Advanced launch options](first-model.md#advanced-launch-options).
+Head to the **Models** page to see which parameters you can control per model, and apply a different configuration to each. Some models support **speculative decoding modes** — [read about it](#). You can also set a proper **context length**, **KV Unified** values, and other launch-server-dialog parameters to improve performance — see [Advanced launch options](/docs/guides/first-model/#advanced-launch-options).
 
 ## Access warpdrv in your browser
 

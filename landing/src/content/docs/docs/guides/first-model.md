@@ -7,7 +7,7 @@ This guide walks you through downloading and running your first local AI model i
 
 ## Prerequisites
 
-- warpdrv is installed (see the [Installation guide](installation.md)).
+- warpdrv is installed (see the [Installation guide](/docs/guides/installation/)).
 - You have a **backend** — a llama.cpp binary that runs the actual inference.
 
 ### Backends & hardware
@@ -21,7 +21,7 @@ A backend is the engine that executes your model. warpdrv supports several backe
 | Any GPU (Intel, AMD, NVIDIA) | **Vulkan** | Cross-vendor GPU support; good fallback if no dedicated CUDA/ROCm build exists. |
 | CPU only | **CPU** | Always available. Slower, but works on any machine. |
 
-If you already installed a backend during [onboarding](onboarding.md), you can skip to the next section. Otherwise:
+If you already installed a backend during [onboarding](/docs/guides/onboarding/), you can skip to the next section. Otherwise:
 
 1. Go to **Settings** in the left sidebar.
 2. Find the **Onboarding** card and click **Re-run Onboarding**.
@@ -121,6 +121,6 @@ You're now chatting with a local AI model running entirely on your own hardware.
 
 ## Next steps
 
-- [Improving your chat experience](chat-experience.md) — configure prompts, modes, and more.
-- [Use the model router](model-router.md) — automatically route requests to the best server.
-- [Set up a workspace](workspace.md) — organize projects with their own server defaults.
+- [Improving your chat experience](/docs/guides/chat-experience/) — configure prompts, modes, and more.
+- [Use the model router](/docs/guides/model-router/) — automatically route requests to the best server.
+- [Set up a workspace](/docs/guides/workspace/) — organize projects with their own server defaults.

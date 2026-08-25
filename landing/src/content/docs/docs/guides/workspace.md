@@ -38,5 +38,5 @@ Setting a project root and doing your work inside that workspace is the right wa
 
 ## Next steps
 
-- [Using MCP tools](tools.md) — the built-in tools that use your project root.
-- [Workflow, Part 1 — Modes](modes.md) — set a sensible default mode for your workspace.
+- [Using MCP tools](/docs/guides/tools/) — the built-in tools that use your project root.
+- [Workflow, Part 1 — Modes](/docs/guides/modes/) — set a sensible default mode for your workspace.

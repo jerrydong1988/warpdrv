@@ -33,4 +33,4 @@ warpdrv is licensed under AGPL-3.0. If you offer it as a network service, you mu
 
 ---
 
-Have something else to ask? Drop by the [Discord](https://discord.gg/Q9kSKhY5). See also the [Introduction](introduction.md).
+Have something else to ask? Drop by the [Discord](https://discord.gg/Q9kSKhY5). See also the [Introduction](/docs/).
