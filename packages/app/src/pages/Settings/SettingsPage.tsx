@@ -383,18 +383,20 @@ export function SettingsPage() {
 			}
 		}
 
-		// Apply autostart setting via Tauri plugin (desktop only)
+		// Apply autostart setting via Tauri plugin (desktop only).
+		// Only call enable/disable on an actual state change: the underlying
+		// auto-launch disable() is non-idempotent and throws OS error 2 when the
+		// registry value is already absent (e.g. fresh install, toggle off).
 		const api = await getAutostartApi();
 		if (api && autoLaunch !== null) {
 			try {
-				if (autoLaunch) {
+				const currentlyEnabled = await api.isEnabled();
+				if (autoLaunch && !currentlyEnabled) {
 					await api.enable();
-				} else {
+				} else if (!autoLaunch && currentlyEnabled) {
 					await api.disable();
 				}
-				// Refresh the toggle to reflect actual OS status
-				const isEnabled = await api.isEnabled();
-				setAutoLaunch(isEnabled);
+				setAutoLaunch(autoLaunch);
 			} catch (err) {
 				console.error("[Settings] Failed to apply autostart setting:", err);
 				toast("error", `Failed to update autostart: ${String(err)}`);
