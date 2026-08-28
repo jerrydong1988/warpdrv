@@ -1,7 +1,7 @@
 # warpdrv 项目完整审计报告
 
 - **项目**: warpdrv (Local LLM Server Manager + llama.cpp + Chat)
-- **仓库**: `warpdrv-i18n` — fork, 当前分支 `codex/i18n-zh-CN-clean`
+- **仓库**: `warpdrv-i18n` — fork of `mikjee/warpdrv`; 审计在 `codex/i18n-zh-CN-clean` 上完成, 该分支已全部并入 `master`(见文末「后续状态更新」)
 - **版本**: root `package.json` / `release.json` / `tauri.conf.json` / 全部 workspace 包 / Cargo.toml 统一为 `0.5.8`
 - **审计依据**: Codebase Memory 知识图谱 (http://localhost:9749/, 已于审计前重新索引, `index-status: done`) + 源码直接核查
 - **图谱规模**: 7,950 节点 / 22,204 边 / 529 个文件, 索引覆盖率良好(仅 2 个非代码文件部分解析)
@@ -12,7 +12,7 @@
 
 项目整体健康状况 **良好**, 处于 alpha 阶段但工程质量高于平均水准:
 
-- i18n(本次分支主题)完成度极高: 14 个命名空间、1382 个 key, en/zh-CN **完全对称** — 无缺失 key、无多余 key、无占位符 `{{x}}` 不匹配。
+- i18n(本次分支主题)完成度极高: 14 个命名空间、1392 个 key(审计时 1382, 后续新增 10), en/zh-CN **完全对称** — 无缺失 key、无多余 key、无占位符 `{{x}}` 不匹配。
 - 安全基线扎实: 最近 9 次提交中有 4 次是安全加固(认证、命令注入、XSS、限流、依赖升级)。
 - 知识图谱显示 **0 个 dead-code 节点**, 代码结构干净。
 - CI 覆盖类型检查、前端构建、i18n 校验、lint、Rust fmt/clippy 与三套单元测试。
@@ -121,7 +121,7 @@ README Monorepo 结构补入 `realmcore`/`warpmcp`, 技术栈补 i18next; 修正
 
 ## 5. i18n 审计(本次分支主题) — 结论: 优秀
 
-- 14 个命名空间 × 2 语言, **每语言 1,382 个 key**, 完全对称: 缺失 zh 0 / 缺失 en 0 / 占位符不匹配 0(本次新增 3 个 key: `sections.inferenceExpose`、`descriptions.inferenceExpose`、`switches.exposeInference`)。
+- 14 个命名空间 × 2 语言, **每语言 1,392 个 key**, 完全对称: 缺失 zh 0 / 缺失 en 0 / 占位符不匹配 0(本次新增 3 个 key: `sections.inferenceExpose`、`descriptions.inferenceExpose`、`switches.exposeInference`)。校验仅提示 63 个 en/zh 取值相同的产品名/技术术语, 属预期。
 - CI 有 AST 级校验 `check-i18n.mjs`: 解析所有 `t()` 调用、校验 key/命名空间/占位符/编码损坏。
 - 根目录无残留硬编码 UI 字符串。
 
@@ -160,3 +160,34 @@ README Monorepo 结构补入 `realmcore`/`warpmcp`, 技术栈补 i18next; 修正
 | 10 | 🟡 低 | main.rs serde_json | ✅ 严格 JSON 解析 |
 
 *报告生成于 Codebase Memory 图谱重新索引完成之后; 图谱数据(7,950 节点)与源码抽查交叉验证。*
+
+---
+
+## 9. 后续状态更新 (2026-08-28)
+
+上文各节保留为审计当时的快照, 本节记录**当前实测**状态, 数字均来自本机命令输出。
+
+### 9.1 分支与远端
+
+| 项 | 值 |
+|---|---|
+| 版本 | `0.5.8`(root / `release.json` / tauri / 7 个 workspace 包一致) |
+| 上游 | fork 领先 `upstream/master` **26** 个提交, 落后 **66** 个(上游已到 **0.6.17**) |
+| 已合并分支 | `codex/i18n-zh-CN-clean` 已全部并入 `master`, 本地与远端分支均已删除 |
+| 在途 PR | #3 `codex/fix-mcp-autostart` → `master`(MCP 工具可见性 + autostart 幂等 + `shell_exec` 只读巡检白名单) |
+| 已关闭 PR | #2(由 clean 分支取代, 无遗漏提交) |
+
+### 9.2 复核实测结果
+
+- **测试**: realmcore 225 · server 49 · warpmcp 11 · app 6 = **291 个测试全部通过**。
+- **静态检查**: `npm run lint`(shared + realmcore)无告警; `tsc -p packages/app --noEmit` 退出码 0。
+- **i18n**: `npm run i18n:check -w @warpcore/app` 通过, 14 命名空间 / 每语言 1,392 key。
+- **CI**: HEAD 上 `CI` 与 `Windows MSI` 两个 workflow 均 success。
+
+### 9.3 需要注意的事项
+
+- **上游同步成本已进入重写级别**: `git merge-tree --write-tree` 演练显示合并 `upstream/master` 会产生 **220 个冲突路径**(app 153 · server 26 · warpmcp 12 · bridge 9 · shared 6 · realmcore 4)。其中 `landing/.astro/*` 与 `landing/original/chat.html` 是 modify/delete 冲突(本 fork 已把这两个目录 gitignore 并移出版本库, 上游仍在跟踪), 解决方式是保留删除。
+- **autostart 修复存在双向改动**: 上游 `7d7fd23` 也改了 autostart 设置报错(`SettingsPage.tsx` / `store/slices/settings.ts` / `routes/settings.ts`), 本 fork 的方案是独立文件 `packages/app/src/utils/autostart.ts`(上游不存在)。同步时需逐一确认两边修复都不被覆盖。
+- **i18n 仍是 fork 独有价值**: `upstream/master` 至今没有任何 locale 文件, zh-CN 层不会被上游重复实现。
+- **`npm audit` 依赖官方 registry**: 若 npm registry 配置为镜像(如 `registry.npmmirror.com`), 其未实现 `/-/npm/v1/security/*` 接口, `npm audit` 会直接报错而非返回 0 漏洞; 复扫需临时切回官方 registry。
+
