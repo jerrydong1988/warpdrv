@@ -64,6 +64,7 @@ import { useMessageTiming } from "@assistant-ui/react";
 import { BrainCircuitIcon, ClockIcon } from "lucide-react";
 import { EReasoningEffort, EServerStatus, TServerId } from "@warpcore/shared";
 import { EMcpServerStatus, IToolAttachment } from "@warpcore/bridge";
+import { isMcpServerEnabled, isMcpToolEnabled } from "@/utils/mcpPermissions";
 import { encodingForModel } from 'js-tiktoken';
 import { IconButton } from '@chakra-ui/react';
 import { Elicitation } from './Elicitation';
@@ -496,6 +497,8 @@ const ToolsSelector: FC = React.memo(() => {
 	const attachedTools = useStore(s => s.attachedTools);
 	const setAttachedTools = useStore(s => s.setAttachedTools);
 	const mcpServers = useStore(s => s.mcpServers);
+	const serverPermissions = useStore(s => s.serverPermissions);
+	const toolPermissions = useStore(s => s.toolPermissions);
 	const modes = useStore(s => s.modes);
 	const threadState = useStore(s => s.getCurrentThreadState());
 
@@ -504,9 +507,16 @@ const ToolsSelector: FC = React.memo(() => {
 	const isModeActive = !!currentMode;
 
 	const connectedServers = useMemo(() => {
-		const entries = Object.entries(mcpServers).filter(([, state]) => state.status === EMcpServerStatus.CONNECTED);
-		return entries as [string, { status: EMcpServerStatus; tools: { name: string; description: string; serverName: string }[] }][];
-	}, [mcpServers]);
+		const entries = Object.entries(mcpServers)
+			.filter(([serverName, state]) =>
+				state.status === EMcpServerStatus.CONNECTED && isMcpServerEnabled(serverName, serverPermissions)
+			)
+			.map(([serverName, state]) => [serverName, {
+				...state,
+				tools: state.tools.filter(tool => isMcpToolEnabled(serverName, tool.name, toolPermissions)),
+			}] as [string, typeof state]);
+		return entries;
+	}, [mcpServers, serverPermissions, toolPermissions]);
 
 	const totalCount = useMemo(() => connectedServers.reduce((sum, [, s]) => sum + s.tools.length, 0), [connectedServers]);
 
@@ -521,14 +531,22 @@ const ToolsSelector: FC = React.memo(() => {
 		return s;
 	}, [isModeActive, currentMode]);
 
-	const modeToolCount = modeToolSet ? modeToolSet.size : 0;
+	const availableToolKeys = useMemo(() => new Set(
+		connectedServers.flatMap(([serverName, state]) => state.tools.map(tool => `${serverName}:${tool.name}`))
+	), [connectedServers]);
+	const modeToolCount = modeToolSet
+		? [...modeToolSet].filter(key => availableToolKeys.has(key)).length
+		: 0;
+	const attachedToolCount = attachAllTools
+		? totalCount
+		: attachedTools.filter(tool => availableToolKeys.has(`${tool.serverName}:${tool.toolName}`)).length;
 
 	const color = isModeActive
 		? (modeToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)')
-		: ((attachAllTools || attachedTools.length > 0) ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
+		: (attachedToolCount > 0 ? 'var(--wc-accent-blue)' : 'var(--wc-text-muted)');
 	const label = isModeActive
 		? (modeToolCount > 0 ? `${modeToolCount} Tool(s)` : 'Tools Off')
-		: (attachAllTools ? 'All Tools' : attachedTools.length > 0 ? `${attachedTools.length} Tools` : 'Tools Off');
+		: (attachAllTools && attachedToolCount > 0 ? 'All Tools' : attachedToolCount > 0 ? `${attachedToolCount} Tools` : 'Tools Off');
 
 	const handleAllToolsChange = useCallback((checked: boolean) => {
 		if (isModeActive) return;

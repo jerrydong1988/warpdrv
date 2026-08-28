@@ -21,6 +21,7 @@ import { useStore } from '../../store';
 import { fetchThreadPermissions, setThreadToolPermission, resetThreadToolPermission } from '../../api/mcpServices';
 import type { IThreadToolPermission } from '@warpcore/bridge';
 import { EMcpServerStatus, EToolApprovalMode } from '@warpcore/bridge';
+import { isMcpServerEnabled } from '../../utils/mcpPermissions';
 
 function StatusDot({ status }: { status: EMcpServerStatus }) {
 	const colors: Record<EMcpServerStatus, string> = {
@@ -99,7 +100,6 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 	const toolPerms = useStore((s) => s.toolPermissions);
 	const [expandedServers, setExpandedServers] = useState<Record<string, boolean>>({});
 
-	const serverPermMap = useMemo(() => new Map(serverPerms.map(p => [p.serverName, p.enabled])), [serverPerms]);
 	const toolPermMap = useMemo(() => new Map(toolPerms.map(p => [`${p.serverName}:${p.toolName}`, p])), [toolPerms]);
 	const serverEntries = Object.entries(mcpServers);
 	const totalTools = serverEntries.reduce((sum, [, s]) => sum + s.tools.length, 0);
@@ -148,7 +148,7 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 			</HStack>
 
 			{serverEntries.map(([name, state]) => {
-				const serverEnabled = serverPermMap.get(name) ?? true;
+				const serverEnabled = isMcpServerEnabled(name, serverPerms);
 				const isExpanded = expandedServers[name] ?? true;
 
 				return (
@@ -238,7 +238,6 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 		});
 	}, [threadId]);
 
-	const serverPermMap = useMemo(() => new Map(serverPerms.map(p => [p.serverName, p.enabled])), [serverPerms]);
 	const toolPermMap = useMemo(() => new Map(toolPerms.map(p => [`${p.serverName}:${p.toolName}`, p])), [toolPerms]);
 	const threadOverrideMap = useMemo(() => new Map(threadOverrides.map(p => [`${p.serverName}:${p.toolName}`, p])), [threadOverrides]);
 	const serverEntries = Object.entries(mcpServers);
@@ -262,7 +261,7 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 	return (
 		<Box p="3">
 			{serverEntries.map(([name, state]) => {
-				const serverEnabled = serverPermMap.get(name) ?? true;
+				const serverEnabled = isMcpServerEnabled(name, serverPerms);
 				const isExpanded = expandedServers[name] ?? true;
 
 				return (

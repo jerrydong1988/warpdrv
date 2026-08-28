@@ -14,10 +14,11 @@ import type { ISettings } from '@warpcore/shared';
 import { ETheme } from '@warpcore/shared';
 import { useToast } from '../../components/ToastProvider';
 import { useStore } from '../../store';
+import { syncAutostart, type IAutostartApi } from '../../utils/autostart';
 
 // Feature detection: try to import Tauri's autostart plugin.
 // Returns the API functions if running in Tauri, null otherwise.
-async function getAutostartApi(): Promise<{ isEnabled: () => Promise<boolean>; enable: () => Promise<void>; disable: () => Promise<void> } | null> {
+async function getAutostartApi(): Promise<IAutostartApi | null> {
 	try {
 		const mod = await import('@tauri-apps/plugin-autostart');
 		return {
@@ -338,21 +339,18 @@ dictationPTTKey,
 			}
 		}
 
-		// Apply autostart setting via Tauri plugin (desktop only)
+		// Apply autostart setting via Tauri plugin (desktop only). The Windows
+		// plugin's disable command fails when its registry value is already absent,
+		// so synchronize only when the requested state actually differs.
 		const api = await getAutostartApi();
 		if (api && autoLaunch !== null) {
 			try {
-				if (autoLaunch) {
-					await api.enable();
-				} else {
-					await api.disable();
-				}
-				// Refresh the toggle to reflect actual OS status
-				const isEnabled = await api.isEnabled();
+				const isEnabled = await syncAutostart(api, autoLaunch);
 				setAutoLaunch(isEnabled);
 			} catch (err) {
 				console.error('[Settings] Failed to apply autostart setting:', err);
 				toast('error', t('common:toast.autostartUpdateFailed'));
+				return;
 			}
 		}
 
