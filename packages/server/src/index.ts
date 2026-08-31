@@ -35,7 +35,7 @@ import { recipesRouter } from './routes/recipes';
 import { modesRouter } from './routes/modes';
 import { guardrailsRouter } from './routes/guardrails';
 import { checkpointsRouter } from './routes/checkpoints';
-import { clientLogsRouter } from './routes/clientLogs';
+import { clientLogsRouter, clientLogsBodyParser } from './routes/clientLogs';
 import { whisperBackendsRouter } from './routes/whisperBackends';
 import { whisperServersRouter } from './routes/whisperServers';
 import { whisperModelsRouter, loadCachedWhisperModels, getCachedWhisperModels } from './routes/whisperModels';
@@ -53,6 +53,10 @@ import { getProjectRoot } from './services/projectRoot';
 import { embeddingManager } from './services/embeddingManager';
 import { getDataDir } from './util/mcpConfig';
 import { serveStaticApp } from './middleware/serveStatic';
+import { isLocalOrShellOrigin } from './util/localOrigin';
+import { isLoopbackHost } from './util/access';
+import { resolveListenPort } from './util/port';
+import { stopAllInferenceServers } from './services/shutdown';
 import { initRealm } from './services/initRealm';
 import path from 'path';
 import os from 'os';
@@ -196,8 +200,14 @@ async function main() {
 	});
 
 	// CORS: restrict browser origins to the local dev/desktop origins rather
-	// than reflecting any origin.
-	app.use(cors({ origin: ['http://localhost:4400', 'http://127.0.0.1:4400', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
+	// than reflecting any origin. Any localhost port qualifies so the desktop
+	// dev shell (3000) and Vite's fallback ports keep working.
+	app.use(cors({
+		origin(origin, callback) {
+			if (!origin) return callback(null, true); // non-browser client
+			return callback(null, isLocalOrShellOrigin(origin) ? origin : false);
+		},
+	}));
 
 	// CSRF defense for the (by-default unauthenticated) localhost control plane.
 	// Browsers always attach a real Origin header to cross-origin requests; reject
@@ -207,16 +217,18 @@ async function main() {
 	// the "malicious website drives the unauthenticated localhost control plane"
 	// vector that CORS preflight alone does not cover for simple (non-preflighted)
 	// requests such as POST /api/recipes/:id/run or POST /api/proxy/stop.
-	const ALLOWED_REQUEST_ORIGIN = /^(https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|https?:\/\/([a-z0-9-]+\.)*tauri\.localhost|tauri:\/\/.*|wry:\/\/.*)$/i;
 	app.use('/api', (req, res, next) => {
 		const method = req.method.toUpperCase();
 		if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
 		const origin = req.headers.origin;
 		if (!origin) return next(); // non-browser client
-		if (ALLOWED_REQUEST_ORIGIN.test(origin)) return next();
+		if (isLocalOrShellOrigin(origin)) return next();
 		res.status(403).json({ ok: false, data: null, error: 'Cross-origin request blocked' });
 	});
 
+	// The unauthenticated log route gets its own small body parser first so the
+	// 32 MB app-wide parser never buffers an oversized anonymous payload.
+	app.use('/api/client-log', clientLogsBodyParser);
 	app.use(express.json({ limit: '32mb' }));
 	app.use(cookieParser());
 	// Auth routes (no middleware - public endpoints)
@@ -260,7 +272,9 @@ async function main() {
 
 	// Stats endpoint — returns live stats for a running server (protected by auth)
 	app.get('/api/servers/:id/stats', authMiddleware, (req, res) => {
-		const { getServerStats } = require('./services/statsPoller');
+		// getServerStats is imported at module scope; the previous `require()`
+		// here only worked because tsx shims require() in dev and the release
+		// build is bundled to CJS — an ESM server build would 500 on it.
 		const stats = getServerStats(req.params.id);
 		res.json({ ok: true, data: stats, error: null });
 	});
@@ -275,14 +289,31 @@ async function main() {
 
 	const currentSettings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
-	// Port: env var overrides settings, defaults to 4400
+	// Port: env var overrides settings, defaults to DEFAULT_SETTINGS.apiPort.
+	// Resolution lives in util/port so an unusable value can never reach listen().
 	const envPort = process.env.CONTROL_API_PORT;
-	const port = envPort ? parseInt(envPort, 10) : (currentSettings.apiPort ?? DEFAULT_SETTINGS.apiPort);
-	if (isNaN(port) || port < 1 || port > 65535) {
-		console.error(`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using default 4400.`);
+	const resolvedPort = resolveListenPort(envPort, currentSettings.apiPort, DEFAULT_SETTINGS.apiPort);
+	if (envPort && !resolvedPort.usedEnv) {
+		console.error(`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using ${resolvedPort.port} instead.`);
 	}
+	const port = resolvedPort.port;
 
 	const host = currentSettings.apiHost ?? DEFAULT_SETTINGS.apiHost;
+
+	// Security posture warnings. These states are reachable from the product's own
+	// settings UI, so they are warned about rather than silently overridden — but
+	// the control plane can start servers and run recipes (i.e. execute code), so
+	// exposing it without authentication deserves a line in the log on every boot.
+	if (!isLoopbackHost(host)) {
+		if (!currentSettings.apiAuthEnabled) {
+			console.warn(`[WarpCore] WARNING: API bound to '${host}' with control-plane auth DISABLED. Any host that can reach this port can start servers and run recipes. Enable API auth, or bind apiHost to 127.0.0.1.`);
+		} else {
+			console.log(`[WarpCore] API bound to '${host}' (non-loopback): every request must present a token, including requests arriving through a local reverse proxy.`);
+		}
+	}
+	if (currentSettings.authRequireForLocalhost && !currentSettings.apiAuthEnabled) {
+		console.warn('[WarpCore] WARNING: authRequireForLocalhost is set but apiAuthEnabled is false — localhost stays unauthenticated. Enable API auth for that setting to take effect.');
+	}
 
 	// Register SSE channels
 	function registerSSEChannels(): void {
@@ -481,6 +512,41 @@ async function main() {
 	});
 
 	process.on('exit', () => { mcpClient.disconnectAll(); });
+
+	// Graceful shutdown. Before this, only the synchronous 'exit' hook ran, so
+	// Ctrl+C / service stops left llama.cpp children alive as orphans holding GPU
+	// memory. Stop the inference children first, then close the listener; SSE
+	// streams are long-lived, so closeAllConnections() is what lets close() settle.
+	let shuttingDown = false;
+	async function shutdown(signal: NodeJS.Signals): Promise<void> {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		console.log(`[WarpCore] ${signal} received — stopping inference servers…`);
+
+		// A wedged child must not turn shutdown into a hang.
+		const forceTimer = setTimeout(() => {
+			console.error('[WarpCore] Shutdown did not finish within 15s; forcing exit.');
+			process.exit(1);
+		}, 15_000);
+		forceTimer.unref?.();
+
+		try {
+			const stopped = await stopAllInferenceServers();
+			console.log(`[WarpCore] Stopped ${stopped.llama} llama / ${stopped.whisper} whisper server(s).`);
+		} catch (err) {
+			console.error('[WarpCore] Failed to stop inference servers:', err instanceof Error ? err.message : String(err));
+		}
+
+		try {
+			await mcpClient.disconnectAll();
+		} catch { /* best effort */ }
+
+		clearTimeout(forceTimer);
+		httpServer.closeAllConnections?.();
+		httpServer.close(() => process.exit(0));
+	}
+	process.on('SIGINT', signal => { void shutdown(signal); });
+	process.on('SIGTERM', signal => { void shutdown(signal); });
 
 	// Start model proxy if enabled in settings
 	if (currentSettings.proxyEnabled) {

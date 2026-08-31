@@ -291,7 +291,7 @@ export async function startRun(
 	activeRun = { state, proc: null, cancelled: false };
 	sseEmitter.emit('runs:started', state);
 
-	executeRun(parsed).then(() => {}).catch(err => {
+	executeRun(parsed).catch(err => {
 		console.error('[recipeRunner] unhandled error in executeRun:', err);
 		if (activeRun !== null && activeRun.state.runId === runId) {
 			activeRun.state.status = ERecipeRunStatus.FAILED;

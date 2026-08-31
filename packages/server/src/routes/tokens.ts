@@ -137,26 +137,6 @@ export async function validateBearerToken(authHeader: string | undefined): Promi
 	return null;
 }
 
-// Check if a token has inference access to a specific server alias/id
-export function hasInferenceAccess(token: IAccessToken, serverAliasOrId: string): boolean {
-	if (token.admin) return true;
-	if (token.inference === true) return true;
-	if (Array.isArray(token.inference)) return token.inference.includes(serverAliasOrId);
-	return false;
-}
-
-// Check if a token has MCP access (labelled tools from mcp.json)
-export function hasMcpLabelledAccess(token: IAccessToken, toolName: string): boolean {
-	if (token.admin) return true;
-	if (token.mcp_labelled === true) return true;
-	if (Array.isArray(token.mcp_labelled)) return token.mcp_labelled.includes(toolName);
-	return false;
-}
-
-// Check if a token has MCP access (inline/ephemeral tools)
-export function hasMcpInlineAccess(token: IAccessToken, toolName: string): boolean {
-	if (token.admin) return true;
-	if (token.mcp_inline === true) return true;
-	if (Array.isArray(token.mcp_inline)) return token.mcp_inline.includes(toolName);
-	return false;
-}
+// Token capability checks (inference / mcp_labelled / mcp_inline) used to be
+// duplicated here alongside middleware/auth.ts. They are implemented once in
+// util/access.ts now; import them from there rather than adding a third copy.

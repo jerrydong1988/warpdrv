@@ -3,27 +3,31 @@ import { store } from '../util/store';
 import { validateBearerToken } from '../routes/tokens';
 import type { IAccessToken, ISettings } from '@warpcore/shared';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import {
+	hasInferenceAccessForToken,
+	hasMcpInlineAccessForToken,
+	hasMcpLabelledAccessForToken,
+	isRemoteRequest,
+	shouldRequireAuthForRequest,
+} from '../util/access';
 
 const SETTINGS_KEY = 'settings:general';
 const COOKIE_NAME = 'warpcore_auth';
 
+// Token capability checks are implemented once in util/access and re-exported
+// here so existing callers keep working.
+export { hasInferenceAccessForToken, hasMcpLabelledAccessForToken, hasMcpInlineAccessForToken };
+
 // Check if request is from a remote host (not localhost)
 export function isRemote(req: { ip?: string; connection?: { remoteAddress?: string } }): boolean {
-	const ip = req.ip || req.connection?.remoteAddress || '';
-	const normalized = ip.replace(/^::ffff:/, '');
-	const isLocalhost = normalized === '::1' || normalized === '127.0.0.1';
-	return !isLocalhost;
+	return isRemoteRequest(req);
 }
 
-// Check if auth should be required for this request
+// Check if auth should be required for this request. Delegates to util/access so
+// the "bound to a non-loopback interface" case (where a reverse proxy makes a
+// network request look local) is applied consistently.
 export async function shouldRequireAuth(req: { ip?: string; connection?: { remoteAddress?: string } }): Promise<boolean> {
-	const settings = await getSettings();
-	
-	// If localhost auth is forced, always require auth
-	if (settings.authRequireForLocalhost) return true;
-	
-	// Otherwise, only require auth for remote hosts
-	return isRemote(req);
+	return shouldRequireAuthForRequest(req, await getSettings());
 }
 
 // Get current settings
@@ -62,7 +66,12 @@ export async function authMiddleware(req: any, res: Response, next: NextFunction
 
 	// Bypass auth if:
 	// 1. authRequireForLocalhost is false AND request is from localhost
+	//    (a non-loopback apiHost always requires auth — see util/access)
 	// 2. apiAuthEnabled is false
+	// (2) is a deliberate global kill switch, so it also covers remote peers.
+	// Running it with apiHost bound to a LAN address exposes the control plane,
+	// which can start servers and run recipes; startup warns loudly about that
+	// combination instead of silently overriding the user's setting.
 	if (!await shouldRequireAuth(req) || !settings.apiAuthEnabled) {
 		next();
 		return;
@@ -150,28 +159,4 @@ export async function proxyAuthMiddleware(req: any, res: Response, next: NextFun
 	// Attach token to request for downstream use
 	(req as any).authToken = token;
 	next();
-}
-
-// Check if token has inference access for a specific model alias
-export function hasInferenceAccessForToken(token: IAccessToken, modelAlias: string): boolean {
-	if (token.admin) return true;
-	if (token.inference === true) return true;
-	if (Array.isArray(token.inference)) return token.inference.includes(modelAlias);
-	return false;
-}
-
-// Check if token has MCP access (labelled tools from mcp.json)
-export function hasMcpLabelledAccessForToken(token: IAccessToken, toolName: string): boolean {
-	if (token.admin) return true;
-	if (token.mcp_labelled === true) return true;
-	if (Array.isArray(token.mcp_labelled)) return token.mcp_labelled.includes(toolName);
-	return false;
-}
-
-// Check if token has MCP access (inline/ephemeral tools)
-export function hasMcpInlineAccessForToken(token: IAccessToken, toolName: string): boolean {
-	if (token.admin) return true;
-	if (token.mcp_inline === true) return true;
-	if (Array.isArray(token.mcp_inline)) return token.mcp_inline.includes(toolName);
-	return false;
 }
