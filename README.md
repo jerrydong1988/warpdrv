@@ -347,7 +347,7 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, con
 
 ## Community & Support
 
-- **Discord** — [discord.gg/Q9kSKhY5](https://discord.gg/Q9kSKhY5) (newly created, help shape it)
+- **Discord** — [discord.gg/ptXTuSgGbu](https://discord.gg/ptXTuSgGbu) (newly created, help shape it)
 - **Reddit** — [r/warpdrv](https://www.reddit.com/r/warpdrv/)
 - **Issues** — [GitHub Issues](https://github.com/mikjee/warpdrv/issues)
 - **Discussions** — [GitHub Discussions](https://github.com/mikjee/warpdrv/discussions)
