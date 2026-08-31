@@ -1,6 +1,7 @@
 import { EventSource } from 'eventsource';
 import { useEffect } from 'react';
 import { useStore } from '../store';
+import { fetchFolders, fetchThreads } from '../api/services';
 import { setKokoroCurrentRequestId, startStream } from '../pages/Chat/assistant-ui/KokoroTTS';
 import type { IBridgeEvent } from '@warpcore/bridge';
 
@@ -57,8 +58,31 @@ export function useChatEventsStream() {
 		console.log('[Chat SSE] Creating EventSource connection to /api/chat/events');
 		const es = new EventSource('/api/chat/events');
 
+		// EventSource reconnects by itself, but events emitted while the socket was
+		// down are lost: without a resync the UI silently drifts (a thread created
+		// during the outage never appears until reload). Refetch the mirrored
+		// collections on every reconnect after the first — cheap, and it converges.
+		let everOpened = false;
+		const resyncFromServer = async () => {
+			try {
+				const [threadsRes, foldersRes] = await Promise.all([fetchThreads(), fetchFolders()]);
+				const state = useStore.getState();
+				if (threadsRes.ok && Array.isArray(threadsRes.data)) {
+					const byId: Record<string, (typeof threadsRes.data)[number]> = {};
+					for (const thread of threadsRes.data) byId[thread.id] = thread;
+					state.setThreads(byId);
+				}
+				if (foldersRes.ok && foldersRes.data) state.setFolders(foldersRes.data);
+				console.log('[Chat SSE] Reconnected — resynced threads/folders');
+			} catch (err) {
+				console.warn('[Chat SSE] Resync after reconnect failed:', err);
+			}
+		};
+
 		es.onopen = () => {
 			console.log('[Chat SSE] ✅ Connection opened successfully');
+			if (everOpened) void resyncFromServer();
+			everOpened = true;
 		};
 
 		const handleEvent = (e: MessageEvent) => {
