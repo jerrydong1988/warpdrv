@@ -36,6 +36,13 @@ import { convertMessagesToOpenAIFormat, type TOpenAIMessage } from '../messageCo
 
 const MAX_PASSES = 10;
 
+// No chunk from the model for this long means it is wedged, not thinking.
+const STREAM_IDLE_TIMEOUT_MS = 120_000;
+
+// A tool call that never returns (hanging MCP server) used to hold the whole
+// inference pass — and the thread with it — open forever.
+const TOOL_EXEC_TIMEOUT_MS = 5 * 60_000;
+
 export interface IOrchestratorConfig {
 	mcpClient: IMcpClient;
 	permissions: IPermissions;
@@ -138,6 +145,13 @@ export class Orchestrator {
 				inferenceParams?: Record<string, unknown>;
 			};
 			const { inferenceRequestId, inferenceUrl, messages, inferenceParams } = payload;
+			if (!inferenceRequestId) throw new Error('inferenceRequestId is required');
+			// The id is client-supplied. A second caller reusing an in-flight id used
+			// to replace the first controller (making that run uncancellable) and its
+			// cleanup then deleted the entry that no longer belonged to it.
+			if (this.pureCompletionControllers[inferenceRequestId]) {
+				throw new Error(`Pure completion request ${inferenceRequestId} is already in flight`);
+			}
 			const controller = new AbortController();
 			this.pureCompletionControllers[inferenceRequestId] = controller;
 			try {
@@ -151,7 +165,9 @@ export class Orchestrator {
 					controller.signal,
 				);
 			} finally {
-				delete this.pureCompletionControllers[inferenceRequestId];
+				if (this.pureCompletionControllers[inferenceRequestId] === controller) {
+					delete this.pureCompletionControllers[inferenceRequestId];
+				}
 			}
 		});
 
@@ -166,6 +182,57 @@ export class Orchestrator {
 		});
 	}
 
+	// A model server that stops mid-stream used to leave reader.read() pending
+	// forever, holding the HTTP request and its SSE client open forever.
+	private async readWithIdleTimeout(
+		reader: ReadableStreamDefaultReader<Uint8Array>,
+		idleMs: number,
+	): Promise<ReadableStreamReadResult<Uint8Array>> {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				reader.read(),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(
+						() => reject(new Error(`Inference stream produced no data for ${Math.round(idleMs / 1000)}s`)),
+						idleMs,
+					);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	}
+
+	// A hanging MCP server used to hold the whole inference pass — and the thread
+	// behind it — open indefinitely. Bound the wait and surface a timeout as the
+	// tool's error result instead.
+	private async executeToolCallBounded(
+		serverName: string,
+		toolName: string,
+		args: Record<string, unknown>,
+		threadId: TThreadId,
+	): Promise<{ content: unknown; isError: boolean }> {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const pending = this.mcpClient.executeToolCall(serverName, toolName, args, threadId);
+		// The call keeps running after a timeout; swallow its late settlement so it
+		// cannot surface as an unhandled rejection.
+		Promise.resolve(pending).catch(() => {});
+		try {
+			return await Promise.race([
+				pending,
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(
+						() => reject(new Error(`Tool ${serverName}.${toolName} did not return within ${Math.round(TOOL_EXEC_TIMEOUT_MS / 1000)}s`)),
+						TOOL_EXEC_TIMEOUT_MS,
+					);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	}
+
 	// Walk parentId chain from a given message ID up to root, return root-to-leaf
 	private buildBranchChain(allMessages: IChatMessage[], fromMessageId: TMessageId | null | undefined): IChatMessage[] {
 		if (!fromMessageId) return [];
@@ -173,8 +240,13 @@ export class Orchestrator {
 		for (const m of allMessages) msgMap.set(m.id, m);
 
 		const chain: IChatMessage[] = [];
+		// parentId is data we do not control (imported threads, a hand-edited DB).
+		// A cycle used to spin here forever, holding the request open.
+		const seen = new Set<TMessageId>();
 		let currentId: TMessageId | null | undefined = fromMessageId;
 		while (currentId) {
+			if (seen.has(currentId)) break;
+			seen.add(currentId);
 			const msg = msgMap.get(currentId);
 			if (!msg) break;
 			chain.push(msg);
@@ -628,15 +700,18 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				const { done, value } = await reader.read();
-				if (done) {
+				let result: ReadableStreamReadResult<Uint8Array>;
+				try {
+					result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
+				} catch (err) {
+					streamError = err instanceof Error ? err.message : String(err);
 					break;
 				}
-				buffer += decoder.decode(value, { stream: true });
-				const { chunks, remaining, done: sseDone } = parseSSEBuffer(buffer);
-				if (sseDone) {
-					// [DONE] marker received
+				if (result.done) {
+					break;
 				}
+				buffer += decoder.decode(result.value, { stream: true });
+				const { chunks, remaining, done: sseDone } = parseSSEBuffer(buffer);
 				buffer = remaining;
 
 				for (const chunk of chunks) {
@@ -671,10 +746,6 @@ export class Orchestrator {
 							});
 						}
 						turn.currentTextPart.text += delta.content;
-						// First chunk of text content
-						if (delta.content.length > 0 && turn.currentTextPart.text.length - delta.content.length === 0) {
-							// first chunk
-						}
 						this.broadcaster.emit({
 							type: 'message.chunk',
 							messageId: turn.assistantMessageId,
@@ -792,6 +863,9 @@ export class Orchestrator {
 				}
 			}
 		} finally {
+			// Always release the upstream stream: an early return or a throw used to
+			// leave the response body (and the connection to the model) open.
+			try { await reader.cancel(); } catch { /* already closed */ }
 			await this.flushReasoningPart(turn);
 			await this.flushTextPart(turn);
 		}
@@ -983,7 +1057,7 @@ export class Orchestrator {
 				const wsVars = await this.resolveWsVars(request.threadId);
 				const tsVars = await this.resolveThreadVars(request.threadId);
 				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars, tsVars);
-				const mcpResult = await this.mcpClient.executeToolCall(serverName!, tc.name, finalArgs, request.threadId);
+				const mcpResult = await this.executeToolCallBounded(serverName!, tc.name, finalArgs, request.threadId);
 				const resultStr = JSON.stringify(mcpResult.content);
 				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
 				const completedTc: IToolCall = {
@@ -1088,8 +1162,7 @@ export class Orchestrator {
 				const wsVars = await this.resolveWsVars(tc.threadId);
 				const tsVars = await this.resolveThreadVars(tc.threadId);
 				const finalArgs = this.mcpClient.prepareToolArgs(tc.serverName, tc.toolName, args, wsVars, tsVars);
-				//console.log('[orchestrator] resume tool call:', tc.serverName, tc.toolName, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
-				const mcpResult = await this.mcpClient.executeToolCall(tc.serverName, tc.toolName, finalArgs, tc.threadId);
+				const mcpResult = await this.executeToolCallBounded(tc.serverName, tc.toolName, finalArgs, tc.threadId);
 				const resultStr = JSON.stringify(mcpResult.content);
 				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
 				const completedTc: IToolCall = {
@@ -1311,9 +1384,15 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
+				let result: ReadableStreamReadResult<Uint8Array>;
+				try {
+					result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
+				} catch (err) {
+					streamError = err instanceof Error ? err.message : String(err);
+					break;
+				}
+				if (result.done) break;
+				buffer += decoder.decode(result.value, { stream: true });
 				const { chunks, remaining } = parseSSEBuffer(buffer);
 				buffer = remaining;
 
@@ -1384,6 +1463,8 @@ export class Orchestrator {
 				}
 			}
 		} finally {
+			// Release the upstream response body on every exit path.
+			try { await reader.cancel(); } catch { /* already closed */ }
 			flushReasoning();
 			flushText();
 		}

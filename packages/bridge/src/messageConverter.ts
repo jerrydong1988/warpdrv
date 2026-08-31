@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { IChatMessage, IToolCall } from './types';
-import { EChatRole, EMessagePartType } from './types';
+import { EChatRole, EMessagePartType, EToolCallStatus } from './types';
 
 export type TOpenAIMessage = {
 	role: 'system' | 'user' | 'assistant' | 'tool';
@@ -122,9 +122,23 @@ export function convertMessagesToOpenAIFormat(
 					const tc = toolCallId ? toolCallsById[toolCallId] : undefined;
 
 					if (tc) {
+						// Every tool call the assistant announced needs a matching tool
+						// message, but say what actually happened: an unresolved call
+						// used to be replayed as "No results!", which reads to the model
+						// like the tool ran and returned nothing.
+						let content: string;
+						if (tc.result != null) {
+							content = tc.result;
+						} else if (tc.status === EToolCallStatus.PENDING || tc.status === EToolCallStatus.EXECUTING) {
+							content = JSON.stringify({ error: `Tool call ${tc.toolName} was never executed` });
+						} else if (tc.error) {
+							content = JSON.stringify({ error: tc.error });
+						} else {
+							content = JSON.stringify({ error: `Tool call ${tc.toolName} returned no result` });
+						}
 						result.push({
 							role: 'tool',
-							content: tc.result ?? `Error: ${ tc.error ?? "No results!" }`,
+							content,
 							tool_call_id: tc.id,
 						});
 					}
