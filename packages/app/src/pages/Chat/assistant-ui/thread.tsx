@@ -51,7 +51,7 @@ import {
 	Trash2,
 	Volume2,
 } from "lucide-react";
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState, type FC } from "react";
+import React, { useCallback, useDeferredValue, useContext, useEffect, useMemo, useRef, useState, type FC } from "react";
 import { BranchTokensContext, ChatConfigContext } from "@/pages/Chat/ChatPage";
 import { useStore } from "@/store";
 import { VoiceWaveform } from "./VoiceWaveform";
@@ -83,6 +83,19 @@ import { ToolCallUiSpace } from '../ui-space/ToolCallUiSpace';
 import type { IExtractedSlashCommand } from './docToString';
 
 const tokenEncoder = encodingForModel('gpt-4o');
+
+// BPE-encoding the whole composer on every render is measurable once the prompt
+// runs to a few thousand characters, and this bar re-renders on any state
+// change. One-entry memo: the value only ever matters for the current text.
+let encodedTextCacheKey = '';
+let encodedTextCacheValue = 0;
+function countTokens(text: string): number {
+	if (text === encodedTextCacheKey) return encodedTextCacheValue;
+	const count = tokenEncoder.encode(text).length;
+	encodedTextCacheKey = text;
+	encodedTextCacheValue = count;
+	return count;
+}
 
 interface DeleteMessageState {
 	messageId: string | null;
@@ -319,8 +332,13 @@ const ContextUsageBar: FC = () => {
 	const { contextSize } = useContext(ChatConfigContext);
 	const branchTokensCount = useContext(BranchTokensContext);
 	const composerText = useAuiState((s) => s.composer.text);
-
-	const inputTokens = composerText ? tokenEncoder.encode(composerText).length : 0;
+	// Keep the BPE encode off the keystroke path: React renders with the previous
+	// text first and re-renders once typing settles.
+	const deferredComposerText = useDeferredValue(composerText);
+	const inputTokens = useMemo(
+		() => (deferredComposerText ? countTokens(deferredComposerText) : 0),
+		[deferredComposerText],
+	);
 	const total = branchTokensCount + inputTokens;
 	const ctxLabel = contextSize > 0 ? (contextSize > 1000 ? `${(contextSize / 1000).toFixed(0)}k` : String(contextSize)) : '?';
 	const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
