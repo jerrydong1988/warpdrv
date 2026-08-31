@@ -983,7 +983,6 @@ export class Orchestrator {
 				const wsVars = await this.resolveWsVars(request.threadId);
 				const tsVars = await this.resolveThreadVars(request.threadId);
 				const finalArgs = this.mcpClient.prepareToolArgs(serverName!, tc.name, args, wsVars, tsVars);
-				console.log('[orchestrator] tool call:', serverName, tc.name, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
 				const mcpResult = await this.mcpClient.executeToolCall(serverName!, tc.name, finalArgs, request.threadId);
 				const resultStr = JSON.stringify(mcpResult.content);
 				const finalStatus = mcpResult.isError ? EToolCallStatus.ERROR : EToolCallStatus.COMPLETED;
