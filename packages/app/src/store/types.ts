@@ -329,6 +329,7 @@ export interface AppState extends IChatStoreState {
 	annotatorVisible: boolean;
 	addAnnotation: (selectedText: string, comment: string) => void;
 	removeAnnotation: (id: string) => void;
+	updateAnnotation: (id: string, comment: string) => void;
 	clearAnnotations: () => void;
 	setAnnotatorVisible: (v: boolean) => void;
 
