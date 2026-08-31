@@ -16,12 +16,16 @@
 [![Stars](https://img.shields.io/github/stars/mikjee/warpdrv?style=social)](https://github.com/mikjee/warpdrv/stargazers)
 [![Issues](https://img.shields.io/github/issues/mikjee/warpdrv)](https://github.com/mikjee/warpdrv/issues)
 [![Platform](https://img.shields.io/badge/platform-linux-success)](#install)
-[![Discord](https://img.shields.io/discord/PLACEHOLDER?label=Discord&logo=discord)](https://discord.gg/Q9kSKhY5)
+[![Discord](https://img.shields.io/discord/PLACEHOLDER?label=Discord&logo=discord)](https://discord.gg/ptXTuSgGbu)
 [![Reddit](https://img.shields.io/badge/reddit-r%2Fwarpdrv-orange?logo=reddit)](https://www.reddit.com/r/warpdrv/)
 
 <br />
 
-[Documentation / Guides - Click Here](https://warpdrv.ai/docs/)
+📘 [Documentation / Guides](https://warpdrv.ai/docs/)
+
+💬 [Join our Discord](https://discord.gg/ptXTuSgGbu)
+
+📰 [Follow the Sub-reddit](https://www.reddit.com/r/warpdrv/)
 
 <br />
 
