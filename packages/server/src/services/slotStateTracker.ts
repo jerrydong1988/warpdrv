@@ -12,6 +12,9 @@ import { sseManager } from './sseManagerInstance';
 // In-memory state per server
 const serversState: Record<TServerId, IServerSlotsState> = {};
 
+// /slots answers are small; this bounds what we will ever buffer per poll.
+const MAX_SLOTS_BODY_BYTES = 2 * 1024 * 1024;
+
 // Bootstrap: read GET /slots once and seed the map
 export async function bootstrapServer(serverId: TServerId, port: number): Promise<void> {
 	const maxRetries = 5;
@@ -252,10 +255,21 @@ function fetchSlotsSnapshot(port: number): Promise<ISlotsApiSlot[] | null> {
 	return new Promise((resolve) => {
 		const req = http.get({ host: '127.0.0.1', port, path: '/slots', timeout: 5000 }, (res) => {
 			if (res.statusCode !== 200) { resolve(null); return; }
-			let body = '';
-			res.on('data', (c) => { body += c; });
+			const chunks: Buffer[] = [];
+			let size = 0;
+			res.on('data', (c: Buffer) => {
+				// /slots is a few kilobytes; the cap bounds what a non-llama service on
+				// this port can make us buffer on every poll.
+				size += c.length;
+				if (size > MAX_SLOTS_BODY_BYTES) {
+					req.destroy();
+					resolve(null);
+					return;
+				}
+				chunks.push(c);
+			});
 			res.on('end', () => {
-				try { resolve(JSON.parse(body) as ISlotsApiSlot[]); }
+				try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')) as ISlotsApiSlot[]); }
 				catch { resolve(null); }
 			});
 		});

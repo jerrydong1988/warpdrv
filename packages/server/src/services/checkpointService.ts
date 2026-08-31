@@ -28,20 +28,55 @@ const SETTINGS_KEY = 'settings:general';
 const SERVERS_PREFIX = 'servers:';
 const PREVIEW_MAX_CHARS = 200;
 
-// Resolve the checkpoints directory (configurable via settings)
-export async function getCheckpointsDir(): Promise<string> {
+// Resolve the checkpoints directory (configurable via settings). Listing and
+// restoring must not create anything, so creation is opt-in.
+async function resolveCheckpointsDir(ensure: boolean): Promise<string> {
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	const configured = (settings as ISettings & { checkpointsPath?: string }).checkpointsPath;
 	const dir = configured && configured.trim().length > 0
 		? configured
 		: path.join(os.homedir(), '.config', 'warpcore', 'checkpoints');
-	if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+	if (ensure && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 	return dir;
 }
 
-// Compose deterministic fingerprint hash from filename + size
+export async function getCheckpointsDir(): Promise<string> {
+	return resolveCheckpointsDir(true);
+}
+
+// Fingerprint: name + size cannot tell two same-sized models apart, which let a
+// checkpoint saved from one model be restored into another. Hashing the whole
+// file is out of the question for 70 GB GGUFs, so hash the ends plus the size.
+const FINGERPRINT_CHUNK_BYTES = 1024 * 1024;
+
+function computeContentHash(modelPath: string): string | null {
+	let fd: number | null = null;
+	try {
+		const stat = fs.statSync(modelPath);
+		fd = fs.openSync(modelPath, 'r');
+		const head = Buffer.alloc(Math.min(FINGERPRINT_CHUNK_BYTES, stat.size));
+		fs.readSync(fd, head, 0, head.length, 0);
+		const hash = crypto.createHash('sha256');
+		hash.update(String(stat.size));
+		hash.update(head);
+		if (stat.size > FINGERPRINT_CHUNK_BYTES * 2) {
+			const tail = Buffer.alloc(FINGERPRINT_CHUNK_BYTES);
+			fs.readSync(fd, tail, 0, tail.length, stat.size - FINGERPRINT_CHUNK_BYTES);
+			hash.update(tail);
+		}
+		return hash.digest('hex').slice(0, 16);
+	} catch {
+		// Unreadable model: fall back to name + size rather than failing the call.
+		return null;
+	} finally {
+		if (fd !== null) { try { fs.closeSync(fd); } catch { /* ignore */ } }
+	}
+}
+
 function computeFingerprintHash(fp: ICheckpointFingerprint): TFingerprintHash {
-	const raw = `${fp.modelFilename}:${fp.modelSizeBytes}`;
+	const raw = fp.contentHash
+		? `${fp.modelFilename}:${fp.modelSizeBytes}:${fp.contentHash}`
+		: `${fp.modelFilename}:${fp.modelSizeBytes}`;
 	return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
 }
 
@@ -51,6 +86,7 @@ function buildFingerprint(modelPath: string): ICheckpointFingerprint {
 	return {
 		modelFilename: path.basename(modelPath),
 		modelSizeBytes: stat.size,
+		contentHash: computeContentHash(modelPath) ?? undefined,
 	};
 }
 
@@ -75,10 +111,48 @@ function binPath(dir: string, id: TCheckpointId): string {
 	return path.join(dir, `${id}.bin`);
 }
 
-// Truncate a string to PREVIEW_MAX_CHARS characters
+// Truncate a string to PREVIEW_MAX_CHARS characters, on a code-point boundary.
+// A slice can end between the halves of a surrogate pair; JSON.stringify then
+// writes an unpaired surrogate, which is invalid UTF-8 on disk and breaks the
+// next readSidecar/JSON.parse round-trip.
 function truncatePreview(text: string | null): string | null {
 	if (text == null) return null;
-	return text.length > PREVIEW_MAX_CHARS ? text.slice(0, PREVIEW_MAX_CHARS) : text;
+	let out = text.length > PREVIEW_MAX_CHARS ? text.slice(0, PREVIEW_MAX_CHARS) : text;
+	const last = out.charCodeAt(out.length - 1);
+	if (last >= 0xD800 && last <= 0xDBFF) out = out.slice(0, -1);
+	return out;
+}
+
+// llama-server answers are small JSON. Cap what we buffer so a service that is
+// not llama.cpp on this port cannot make us grow without bound.
+const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+type IBodyCollector = (
+	res: http.IncomingMessage,
+	req: http.ClientRequest,
+	resolve: (v: { status: number; body: string }) => void,
+	reject: (e: Error) => void,
+) => void;
+
+const collectBody: IBodyCollector = (res, req, resolve, reject) => {
+	const chunks: Buffer[] = [];
+	let size = 0;
+	res.on('data', (c: Buffer) => {
+		size += c.length;
+		if (size > MAX_RESPONSE_BYTES) {
+			req.destroy();
+			reject(new Error(`llama-server response exceeded ${MAX_RESPONSE_BYTES} bytes`));
+			return;
+		}
+		chunks.push(c);
+	});
+	res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') }));
+	res.on('error', (err) => reject(err instanceof Error ? err : new Error(String(err))));
+};
+
+// llama responses end up in error messages and logs; keep them short.
+function previewBody(body: string): string {
+	return body.length > 300 ? body.slice(0, 300) + '…' : body;
 }
 
 // HTTP helper - POST to llama-server
@@ -96,9 +170,7 @@ function httpPostJson(port: number, urlPath: string, body: unknown): Promise<{ s
 			},
 			timeout: 60000,
 		}, (res) => {
-			let chunks = '';
-			res.on('data', (c) => { chunks += c; });
-			res.on('end', () => resolve({ status: res.statusCode ?? 0, body: chunks }));
+			collectBody(res, req, resolve, reject);
 		});
 		req.on('error', reject);
 		req.on('timeout', () => { req.destroy(new Error('llama-server request timeout')); });
@@ -116,9 +188,7 @@ function httpGetJson(port: number, urlPath: string): Promise<{ status: number; b
 			path: urlPath,
 			timeout: 10000,
 		}, (res) => {
-			let chunks = '';
-			res.on('data', (c) => { chunks += c; });
-			res.on('end', () => resolve({ status: res.statusCode ?? 0, body: chunks }));
+			collectBody(res, req, resolve, reject);
 		});
 		req.on('error', reject);
 		req.on('timeout', () => { req.destroy(new Error('llama-server request timeout')); });
@@ -135,9 +205,17 @@ function readSidecar(filePath: string): ICheckpoint | null {
 	}
 }
 
-// Write a sidecar JSON file
+// Write a sidecar JSON file through a temp name and rename it into place: an
+// interrupted write must not leave a half-written checkpoint record behind.
 function writeSidecar(filePath: string, data: ICheckpoint): void {
-	fs.writeFileSync(filePath, JSON.stringify(data, null, '\t'), 'utf8');
+	const tmp = `${filePath}.tmp`;
+	try {
+		fs.writeFileSync(tmp, JSON.stringify(data, null, '\t'), 'utf8');
+		fs.renameSync(tmp, filePath);
+	} catch (err) {
+		try { fs.unlinkSync(tmp); } catch { /* nothing to clean up */ }
+		throw err;
+	}
 }
 
 // Save checkpoints for one or more slots on a server
@@ -180,57 +258,68 @@ export async function saveCheckpoint(req: ISaveCheckpointRequest): Promise<ISave
 
 	const saved: ICheckpoint[] = [];
 
-	for (const slotIndex of slotIds) {
-		const id = composeCheckpointId(fingerprintHash, createdAt, slotIndex);
-		const filename = `${id}.bin`;
+	// A bundle is all-or-nothing for the caller: if slot N fails, drop the
+	// .bin/.json already written for earlier slots instead of leaving checkpoints
+	// whose bundle id never appears in a successful response.
+	try {
+		for (const slotIndex of slotIds) {
+			const id = composeCheckpointId(fingerprintHash, createdAt, slotIndex);
+			const filename = `${id}.bin`;
 
-		// Trigger save on llama-server
-		const saveRes = await httpPostJson(server.port, `/slots/${slotIndex}?action=save`, { filename });
-		if (saveRes.status !== 200) {
-			throw new Error(`Save failed for slot ${slotIndex}: status ${saveRes.status}, body: ${saveRes.body}`);
-		}
-
-		// Parse response - llama-server may return n_saved/n_written; fall back to fs/logs if absent
-		let tokens = 0;
-		let sizeBytes = 0;
-		try {
-			const parsed = JSON.parse(saveRes.body) as { n_saved?: number; n_written?: number };
-			if (typeof parsed.n_saved === 'number') tokens = parsed.n_saved;
-			if (typeof parsed.n_written === 'number') sizeBytes = parsed.n_written;
-		} catch {
-			// Ignore parse errors
-		}
-
-		// Fallback to fs.stat for size
-		if (sizeBytes === 0) {
-			const filePath = binPath(dir, id);
-			try {
-				sizeBytes = fs.statSync(filePath).size;
-			} catch {
-				sizeBytes = 0;
+			// Trigger save on llama-server
+			const saveRes = await httpPostJson(server.port, `/slots/${slotIndex}?action=save`, { filename });
+			if (saveRes.status !== 200) {
+				throw new Error(`Save failed for slot ${slotIndex}: status ${saveRes.status}, body: ${previewBody(saveRes.body)}`);
 			}
+
+			// Parse response - llama-server may return n_saved/n_written; fall back to fs/logs if absent
+			let tokens = 0;
+			let sizeBytes = 0;
+			try {
+				const parsed = JSON.parse(saveRes.body) as { n_saved?: number; n_written?: number };
+				if (typeof parsed.n_saved === 'number') tokens = parsed.n_saved;
+				if (typeof parsed.n_written === 'number') sizeBytes = parsed.n_written;
+			} catch {
+				// Ignore parse errors
+			}
+
+			// Fallback to fs.stat for size
+			if (sizeBytes === 0) {
+				const filePath = binPath(dir, id);
+				try {
+					sizeBytes = fs.statSync(filePath).size;
+				} catch {
+					sizeBytes = 0;
+				}
+			}
+
+			const checkpoint: ICheckpoint = {
+				id,
+				bundleId,
+				name: req.name ?? `Checkpoint ${new Date(createdAt).toISOString()}`,
+				serverId: req.serverId,
+				slotIndex,
+				filename,
+				fingerprint,
+				fingerprintHash,
+				sizeBytes,
+				tokens,
+				messageCount: null,
+				lastUserMessagePreview: null,
+				isAutoSave,
+				notes: req.notes ? truncatePreview(req.notes) : null,
+				createdAt,
+			};
+
+			writeSidecar(sidecarPath(dir, id), checkpoint);
+			saved.push(checkpoint);
 		}
-
-		const checkpoint: ICheckpoint = {
-			id,
-			bundleId,
-			name: req.name ?? `Checkpoint ${new Date(createdAt).toISOString()}`,
-			serverId: req.serverId,
-			slotIndex,
-			filename,
-			fingerprint,
-			fingerprintHash,
-			sizeBytes,
-			tokens,
-			messageCount: null,
-			lastUserMessagePreview: null,
-			isAutoSave,
-			notes: req.notes ? truncatePreview(req.notes) : null,
-			createdAt,
-		};
-
-		writeSidecar(sidecarPath(dir, id), checkpoint);
-		saved.push(checkpoint);
+	} catch (err) {
+		for (const cp of saved) {
+			try { fs.unlinkSync(sidecarPath(dir, cp.id)); } catch { /* already gone */ }
+			try { fs.unlinkSync(binPath(dir, cp.id)); } catch { /* llama may still hold the file */ }
+		}
+		throw err;
 	}
 
 	return { bundleId, checkpoints: saved };
@@ -286,6 +375,16 @@ export async function restoreCheckpoint(req: IRestoreCheckpointRequest): Promise
 				actual: targetFingerprint.modelSizeBytes,
 			});
 		}
+		// Only comparable when both sides recorded one: sidecars written before the
+		// content hash existed simply skip this check.
+		if (sample.fingerprint.contentHash && targetFingerprint.contentHash
+			&& sample.fingerprint.contentHash !== targetFingerprint.contentHash) {
+			mismatches.push({
+				field: 'contentHash',
+				expected: sample.fingerprint.contentHash,
+				actual: targetFingerprint.contentHash,
+			});
+		}
 	}
 
 	if (mismatches.length > 0) {
@@ -299,9 +398,8 @@ export async function restoreCheckpoint(req: IRestoreCheckpointRequest): Promise
 		const cp = ordered[i]!;
 		const targetSlot = i;
 		const restoreRes = await httpPostJson(server.port, `/slots/${targetSlot}?action=restore`, { filename: cp.filename });
-		console.log(`[CheckpointService] Restore slot ${targetSlot} response - status: ${restoreRes.status}, body: ${restoreRes.body}`);
 		if (restoreRes.status !== 200) {
-			throw new Error(`Restore failed for slot ${targetSlot} (checkpoint ${cp.id}): status ${restoreRes.status}, body: ${restoreRes.body}`);
+			throw new Error(`Restore failed for slot ${targetSlot} (checkpoint ${cp.id}): status ${restoreRes.status}, body: ${previewBody(restoreRes.body)}`);
 		}
 		restored++;
 	}
@@ -311,8 +409,13 @@ export async function restoreCheckpoint(req: IRestoreCheckpointRequest): Promise
 
 // List all checkpoints, optionally filtered
 export async function listCheckpoints(query: IListCheckpointsQuery): Promise<ICheckpoint[]> {
-	const dir = await getCheckpointsDir();
-	const entries = fs.readdirSync(dir);
+	const dir = await resolveCheckpointsDir(false);
+	let entries: string[];
+	try {
+		entries = fs.readdirSync(dir);
+	} catch {
+		return []; // No checkpoints directory yet.
+	}
 	const checkpoints: ICheckpoint[] = [];
 	for (const entry of entries) {
 		if (!entry.endsWith('.json')) continue;
@@ -422,6 +525,14 @@ export async function restoreCheckpointsMapped(req: IRestoreCheckpointsMappedReq
 				actual: targetFingerprint.modelSizeBytes,
 			});
 		}
+		if (sample.fingerprint.contentHash && targetFingerprint.contentHash
+			&& sample.fingerprint.contentHash !== targetFingerprint.contentHash) {
+			mismatches.push({
+				field: 'contentHash',
+				expected: sample.fingerprint.contentHash,
+				actual: targetFingerprint.contentHash,
+			});
+		}
 	}
 	if (mismatches.length > 0) {
 		return { success: false, restoredSlotCount: 0, fingerprintMismatches: mismatches };
@@ -432,9 +543,8 @@ export async function restoreCheckpointsMapped(req: IRestoreCheckpointsMappedReq
 	for (const m of req.mappings) {
 		const cp = mapByCheckpointId[m.checkpointId]!;
 		const res = await httpPostJson(server.port, `/slots/${m.targetSlotId}?action=restore`, { filename: cp.filename });
-		console.log(`[CheckpointService] Restore slot ${m.targetSlotId} response - status: ${res.status}, body: ${res.body}`);
 		if (res.status !== 200) {
-			throw new Error(`Restore failed for target slot ${m.targetSlotId} (checkpoint ${cp.id}): status ${res.status}, body: ${res.body}`);
+			throw new Error(`Restore failed for target slot ${m.targetSlotId} (checkpoint ${cp.id}): status ${res.status}, body: ${previewBody(res.body)}`);
 		}
 		restored++;
 	}

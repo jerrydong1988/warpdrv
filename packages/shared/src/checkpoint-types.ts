@@ -15,6 +15,9 @@ export enum ECheckpointSaveMode {
 export interface ICheckpointFingerprint {
 	modelFilename: string;
 	modelSizeBytes: number;
+	// sha256 over size + the first/last megabyte of the model file. Optional so
+	// checkpoints written before it existed still load and compare.
+	contentHash?: string;
 }
 
 // One checkpoint = one slot saved to disk

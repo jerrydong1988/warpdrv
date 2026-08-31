@@ -688,7 +688,9 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
             }
             
             // Poll until process is dead
-            checkInterval = setInterval(async () => {
+            // Poll until process is dead (synchronous on purpose: an async callback
+            // here would swallow rejections inside setInterval).
+            checkInterval = setInterval(() => {
                 if (!isProcessAlive(pid)) {
                     finish(true);
                 }
@@ -755,20 +757,36 @@ async function maybeAutoLoadCheckpoint(serverId: string): Promise<void> {
 	}
 }
 
-// Auto-save all slots as a bundle if enabled on this server
+// Auto-save all slots as a bundle if enabled on this server.
+const AUTO_SAVE_TIMEOUT_MS = 30_000;
+
 async function maybeAutoSaveCheckpoint(serverId: string): Promise<void> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
 	try {
 		const server = await store.get<IServer>(`servers:${serverId}`);
 		if (!server || !server.autoSaveCheckpointOnStop) return;
-		await saveCheckpoint({
+		const saving = saveCheckpoint({
 			serverId,
 			slotIds: null,
 			mode: ECheckpointSaveMode.SAVE,
 			name: `Auto-save ${new Date().toISOString()}`,
 			notes: null,
 		});
+		// The save keeps running after a timeout; swallow its result so it cannot
+		// surface later as an unhandled rejection.
+		saving.catch(() => {});
+		// A wedged llama-server must not turn "stop the server" into a multi-minute
+		// wait: give the save a deadline and proceed with the kill either way.
+		await Promise.race([
+			saving,
+			new Promise<never>((_, reject) => {
+				timer = setTimeout(() => reject(new Error(`auto-save did not finish within ${AUTO_SAVE_TIMEOUT_MS / 1000}s`)), AUTO_SAVE_TIMEOUT_MS);
+			}),
+		]);
 	} catch (err) {
 		console.error(`[auto-save] ${serverId}:`, err);
+	} finally {
+		if (timer) clearTimeout(timer);
 	}
 }
 
