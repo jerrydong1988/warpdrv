@@ -63,19 +63,25 @@ const GRAMMAR_PACKAGES: Record<string, string> = {
 // generated file costs more than the symbols in it are worth.
 const MAX_INDEX_FILE_BYTES = 1024 * 1024;
 
-// Grammar packages disagree about where the language object lives, and handing
-// setLanguage() the module object throws "Invalid language object". Asking the
-// binding directly which candidate it accepts is the only portable check.
+// Grammar packages disagree about where the language object lives:
+// tree-sitter-typescript exports { typescript, tsx }, tree-sitter-php exports
+// { php, php_only }, and newer bindings export { language, nodeTypeInfo } as a
+// pair that has to be handed to setLanguage() together. Handing setLanguage()
+// half of it is worse than rejecting it: setLanguage() accepts the bare
+// .language pointer but every parse then dies inside the binding, so each
+// candidate is validated by actually parsing something.
 function isUsableLanguage(candidate: any): boolean {
 	if (!candidate || typeof candidate !== 'object') return false;
 	try {
 		const Ctor = ParserCtor ?? tsRequire('tree-sitter');
 		const probe = new (Ctor as any)();
 		probe.setLanguage(candidate);
+		const tree = probe.parse('x');
+		const ok = !!tree && typeof tree.rootNode?.type === 'string';
 		// Older bindings have no delete(); leaking one throwaway parser is
 		// preferable to rejecting a grammar that works.
 		if (typeof probe.delete === 'function') probe.delete();
-		return true;
+		return ok;
 	} catch {
 		return false;
 	}
@@ -103,9 +109,10 @@ export class CodeGraphService {
 		// language object", which used to disable every non-TS language.
 		const candidates = [
 			pkg?.[language],
-			pkg?.default?.[language],
-			pkg?.language,
+			pkg?.[`${language}_only`],
+			pkg,
 			pkg?.default,
+			pkg?.default?.[language],
 		];
 		for (const candidate of candidates) {
 			if (isUsableLanguage(candidate)) {
@@ -318,20 +325,28 @@ export class CodeGraphService {
 		const props = nameProps[language] ?? ['name'];
 		for (const prop of props) {
 			const parts = prop.split('.');
-			let current = node;
+			let current: any = node;
 			for (const part of parts) {
-				if (current[part]) {
-					current = current[part];
-				} else {
+				// Tree-sitter fields are not plain properties, so `current[part]`
+				// misses them; childForFieldName is the documented accessor. The
+				// property access is kept for the wrapper paths that are real JS
+				// properties (export_statement.declaration).
+				const next = current[part] ?? (typeof current.childForFieldName === 'function' ? current.childForFieldName(part) : null);
+				if (!current || !next) {
 					current = null;
 					break;
 				}
+				current = next;
 			}
 			if (typeof current === 'string') return current;
 			// A resolved field may be any named node (identifier, property_identifier,
 			// type_identifier); its text is the name. The old check only accepted
 			// "identifier" and then read .text/.name off a string, returning null.
-			if (current?.type) return current.text ?? null;
+			if (current?.type) {
+				const text = current.text ?? '';
+				// A declarator node reads as "f(int x)"; the symbol is its identifier.
+				return /\(/.test(text) ? /([A-Za-z_$][\w$]*)\s*(?:\([^()]*\))?\s*$/.exec(text)?.[1] ?? null : text || null;
+			}
 		}
 		const nameChild = node.childForFieldName('name');
 		if (nameChild) return nameChild.text;
@@ -340,6 +355,16 @@ export class CodeGraphService {
 			const declName = declarator.childForFieldName('name');
 			if (declName) return declName.text;
 		}
+		// C/C++ name a function inside its declarator: the node text of
+		// `int f()` is "f()", so strip the parameter list to get the symbol.
+		const declaratorField = typeof node.childForFieldName === 'function' ? node.childForFieldName('declarator') : null;
+		if (declaratorField) {
+			const m = /([A-Za-z_$][\w$]*)\s*(?:\([^()]*\))?\s*$/.exec(declaratorField.text ?? '');
+			if (m?.[1]) return m[1];
+		}
+		// JavaScript class fields name their key "property", not "name".
+		const property = node.childForFieldName('property');
+		if (property) return property.text;
 		return null;
 	}
 
