@@ -3,7 +3,6 @@ import http from 'http';
 import net from 'net';
 import type { IServer, ILaunchParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams, ILlamaBackendCapabilities } from '@warpcore/shared';
 import { EServerStatus, EKvQuantType, ELlamaFlashAttentionMode, ELlamaLoadMode, DEFAULT_SETTINGS } from '@warpcore/shared';
-import { parse as shellParse } from 'shell-quote';
 import { bootstrapServer, teardownServer, parseLogLine } from './slotStateTracker';
 import { listCheckpoints, restoreCheckpoint, saveCheckpoint, getCheckpointsDir } from './checkpointService';
 import { ECheckpointSaveMode } from '@warpcore/shared';
@@ -12,6 +11,7 @@ import { sseManager } from './sseManagerInstance';
 import { getCachedModels } from '../routes/models';
 import { startStatsPolling, stopStatsPolling } from './statsPoller';
 import { refreshBackendCompatibility } from './backendValidator';
+import { parseArgTokens } from '../util/shellArgs';
 
 export const SERVERS_PREFIX = 'servers:';
 const SETTINGS_KEY = 'settings:general';
@@ -375,7 +375,7 @@ export function buildArgs(
 	// user value can never override --host/--port/--slot-save-path (previously
 	// a crafted extraArgs could redirect checkpoint writes to any directory).
 	if (params.extraArgs.trim()) {
-		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
+		const tokens = parseArgTokens(params.extraArgs);
 		// Stored free-form flags can contain the same removed/deprecated options as
 		// backend defaults. Strip only the parameter families controlled above so
 		// upgrading a backend cannot reintroduce a fatal parser error from old data.
@@ -632,7 +632,12 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
             // process within 5s would get SIGKILLed (data loss on the host).
             killTimer = setTimeout(() => {
                 if (resolved) return;
-                if (!isProcessAlive(pidToUse!)) return;
+                if (!isProcessAlive(pidToUse!)) {
+                    // The process is already gone — that is the outcome we wanted.
+                    // Returning without resolving would hang the caller forever.
+                    finish(true);
+                    return;
+                }
                 try {
                     killProcessTree(pidToUse!, 'SIGKILL');
                 } catch (err) {
@@ -651,6 +656,11 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
     if (pid) {
         stopStatsPolling(serverId);
         teardownServer(serverId);
+        // No child handle exists on this path, so the spawn-time exit handler
+        // never runs and would leave the port marked as used forever.
+        void store.get<IServer>(`${SERVERS_PREFIX}${serverId}`).then((srv) => {
+            if (srv?.port && srv.port > 0) usedPorts.delete(srv.port);
+        }).catch(() => {});
         if (!isProcessAlive(pid)) {
             return true;
         }
@@ -771,7 +781,7 @@ export function parseCliFlags(flags: string): Map<string, string | true> {
 	if (!flags?.trim()) return result;
 	
 	// Tokenize respecting quotes via shell-quote
-	const tokens: string[] = shellParse(flags).filter((t): t is string => typeof t === 'string');
+	const tokens: string[] = parseArgTokens(flags);
 	
 	// Parse tokens into flags
 	for (let i = 0; i < tokens.length; i++) {
@@ -1012,7 +1022,19 @@ export async function launchServer(server: IServer): Promise<void> {
 		},
 	);
 
-	server.pid = pid || undefined;
+	if (pid === null) {
+		// Spawn failed. There is no child process, so the exit handler that
+		// normally frees the port and settles the status will never run: settle
+		// to ERROR here and release the reserved port immediately.
+		if (server.port > 0) usedPorts.delete(server.port);
+		server.pid = undefined;
+		server.status = EServerStatus.ERROR;
+		server.error = server.error ?? 'Failed to start the inference process';
+		await store.put(SERVERS_PREFIX + server.id, server);
+		return;
+	}
+
+	server.pid = pid;
 	server.status = EServerStatus.LOADING;
 	server.error = null;
 	await store.put(SERVERS_PREFIX + server.id, server);

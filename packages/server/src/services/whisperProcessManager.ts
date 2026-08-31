@@ -1,8 +1,8 @@
 import { spawn, type ChildProcess } from 'child_process';
 import net from 'net';
 import type { IWhisperServer, IWhisperLaunchParams, IWhisperBackend } from '@warpcore/shared';
-import { EWhisperServerStatus, DEFAULT_WHISPER_LAUNCH_PARAMS } from '@warpcore/shared';
-import { parse as shellParse } from 'shell-quote';
+import { EWhisperServerStatus, DEFAULT_WHISPER_LAUNCH_PARAMS, DEFAULT_SETTINGS, type ISettings } from '@warpcore/shared';
+import { parseArgTokens } from '../util/shellArgs';
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { killProcessTree } from './processManager';
@@ -81,13 +81,19 @@ export function buildWhisperArgs(
 	if (params.prompt) args.push('--prompt', params.prompt);
 	if (params.convert) args.push('--convert');
 	if (params.inferencePath) args.push('--inference-path', params.inferencePath);
-	args.push('--host', '0.0.0.0');
-	args.push('--port', String(params.port));
 
+	// User-supplied flags come first: whisper-server keeps the LAST occurrence of
+	// a flag, so appending them after the controlled ones below would let a
+	// stored extraArgs value override --host/--port.
 	if (params.extraArgs.trim()) {
-		const tokens = shellParse(params.extraArgs).filter((t): t is string => typeof t === 'string');
-		args.push(...tokens);
+		args.push(...parseArgTokens(params.extraArgs));
 	}
+
+	// Controlled flags last so user input cannot override them. The listen address
+	// follows the same exposure setting as llama-server instead of always binding
+	// every interface.
+	args.push('--host', params.inferenceExposeExternal ? '0.0.0.0' : '127.0.0.1');
+	args.push('--port', String(params.port));
 
 	return args;
 }
@@ -191,6 +197,13 @@ async function isPortFree(port: number): Promise<boolean> {
 
 export async function killWhisperServer(serverId: string, pid?: number): Promise<boolean> {
 	const child = processes.get(serverId);
+	// Neither the child path nor the orphan path below has an exit handler that
+	// frees the reserved port (unlike llama-server), so capture it here and
+	// release it once the process is gone.
+	const record = await store.get<IWhisperServer>(`${WHISPER_SERVERS_PREFIX}${serverId}`).catch(() => null);
+	const releasePort = () => {
+		if (record && record.port > 0) usedPorts.delete(record.port);
+	};
 
 	if (child?.pid) {
 		return new Promise((resolve) => {
@@ -204,11 +217,12 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 				if (!resolved) {
 					resolved = true;
 					processes.delete(serverId);
+					releasePort();
 					resolve(success);
 				}
 			};
 
-			child.once('exit', async () => {
+			const onExit = async () => {
 				const server = await store.get<IWhisperServer>(`${WHISPER_SERVERS_PREFIX}${serverId}`).catch(() => null);
 				const port = server?.port || 0;
 
@@ -231,7 +245,17 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 				}
 
 				emitWhisperServerUpdate(serverId, EWhisperServerStatus.STOPPED, null, null).catch(() => {});
-			});
+			};
+
+			// The child may already have exited before we got here: 'exit' will not
+			// fire again, and taskkill does not throw for a dead PID on Windows, so
+			// run the settled path directly instead of waiting for an event that has
+			// already happened — otherwise this promise never settles.
+			if (child.exitCode !== null || child.signalCode !== null) {
+				void onExit();
+			} else {
+				child.once('exit', onExit);
+			}
 
 	try {
 			killProcessTree(pidToUse, 'SIGTERM');
@@ -244,7 +268,12 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		// after a clean exit is never SIGKILLed.
 		killTimer = setTimeout(() => {
 			if (resolved) return;
-			if (!isProcessAlive(pidToUse)) return;
+			if (!isProcessAlive(pidToUse)) {
+				// Already gone, which is the outcome we wanted. Returning without
+				// resolving used to hang the caller forever.
+				finish(true);
+				return;
+			}
 			try {
 				killProcessTree(pidToUse, 'SIGKILL');
 			} catch {}
@@ -257,6 +286,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		try {
 			process.kill(pid, 0);
 		} catch {
+			releasePort();
 			return true;
 		}
 
@@ -267,6 +297,10 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 		return new Promise((resolve) => {
 			let settled = false;
 			let forceKillTimer: ReturnType<typeof setTimeout> | null = null;
+			const settle = (success: boolean) => {
+				releasePort();
+				resolve(success);
+			};
 			const check = setInterval(() => {
 				try {
 					process.kill(pid, 0);
@@ -274,17 +308,17 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 					settled = true;
 					if (forceKillTimer) { clearTimeout(forceKillTimer); forceKillTimer = null; }
 					clearInterval(check);
-					resolve(true);
+					settle(true);
 				}
 			}, 100);
 			forceKillTimer = setTimeout(() => {
 				if (settled) return; // already resolved — do not touch the PID
 				clearInterval(check);
-				if (!isProcessAlive(pid)) { resolve(true); return; }
+				if (!isProcessAlive(pid)) { settle(true); return; }
 				try {
 					killProcessTree(pid, 'SIGKILL');
 				} catch {}
-				setTimeout(() => resolve(true), 200);
+				setTimeout(() => settle(true), 200);
 			}, 5000);
 		});
 	}
@@ -314,7 +348,9 @@ export async function reconcileWhisperServers(): Promise<void> {
 	for (const server of servers) {
 		if (server.status === EWhisperServerStatus.RUNNING || server.status === EWhisperServerStatus.LOADING) {
 			if (server.pid && isProcessAlive(server.pid)) {
-				// alive
+				// Still running across a server restart: re-claim the port so a later
+				// launch is not handed an address this live process already holds.
+				if (server.port > 0) usedPorts.add(server.port);
 			} else {
 				server.status = EWhisperServerStatus.STOPPED;
 				server.pid = undefined;
@@ -353,7 +389,9 @@ export async function launchWhisperServer(server: IWhisperServer): Promise<void>
 		}
 		server.port = await findRandomAvailablePort();
 	}
+	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	const launchParams = { ...server.params };
+	launchParams.inferenceExposeExternal = settings.inferenceExposeExternal ?? false;
 	if (launchParams.port === 0) {
 		launchParams.port = server.port;
 	}
@@ -379,7 +417,19 @@ export async function launchWhisperServer(server: IWhisperServer): Promise<void>
 		},
 	);
 
-	server.pid = pid || undefined;
+	if (pid === null) {
+		// Spawn failed. There is no child process, so the exit handler that
+		// normally settles the status and frees the port will never run: settle to
+		// ERROR here and release the reserved port immediately.
+		if (server.port > 0) usedPorts.delete(server.port);
+		server.pid = undefined;
+		server.status = EWhisperServerStatus.ERROR;
+		server.error = server.error ?? 'Failed to start the whisper process';
+		await store.put(WHISPER_SERVERS_PREFIX + server.id, server);
+		return;
+	}
+
+	server.pid = pid;
 	server.status = EWhisperServerStatus.LOADING;
 	server.error = null;
 	await store.put(WHISPER_SERVERS_PREFIX + server.id, server);

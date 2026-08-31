@@ -56,6 +56,8 @@ export interface IWhisperLaunchParams {
 	convert: boolean;         // --convert, auto-convert audio formats
 	inferencePath: string;    // --inference-path, OpenAI endpoint path
 	extraArgs: string;        // free-form additional flags
+	/** Listen on every interface; default loopback unless settings.inferenceExposeExternal. */
+	inferenceExposeExternal?: boolean;
 }
 
 export const DEFAULT_WHISPER_LAUNCH_PARAMS: IWhisperLaunchParams = {
@@ -72,6 +74,7 @@ export const DEFAULT_WHISPER_LAUNCH_PARAMS: IWhisperLaunchParams = {
 	convert: true,
 	inferencePath: '/v1/audio/transcriptions',
 	extraArgs: '',
+	inferenceExposeExternal: false,
 };
 
 // ============================================================
