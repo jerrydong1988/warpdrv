@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import busboy from 'busboy';
 import { store } from '../util/store';
+import { isLocalOrShellOrigin } from '../util/localOrigin';
 import type { IServer, ISettings, IWhisperServer } from '@warpcore/shared';
 import { EServerStatus, EWhisperServerStatus, DEFAULT_SETTINGS } from '@warpcore/shared';
 import { sseManager } from './sseManagerInstance';
@@ -130,59 +131,17 @@ function extractModelFromMultipart(req: express.Request): Promise<string | null>
 	});
 }
 
-// Proxy a request to a llama-server, streaming the response through
-function proxyRequest(
-	targetPort: number,
-	req: express.Request,
-	res: express.Response,
-): void {
-	// Only forward safe headers — strip client auth/origin metadata. NOTE:
-	// 'authorization' is intentionally excluded — the upstream target is always a
-	// local llama-server on 127.0.0.1 with no auth, so forwarding the caller's
-	// warpcore bearer token would only leak it to the inference backend.
-	const SAFE_PROXY_HEADERS = new Set(['content-type', 'accept', 'cache-control', 'pragma', 'user-agent', 'accept-language']);
-	const forwardedHeaders: Record<string, string> = {};
-	for (const [key, value] of Object.entries(req.headers)) {
-		if (value === undefined) continue;
-		const lk = key.toLowerCase();
-		if (SAFE_PROXY_HEADERS.has(lk)) forwardedHeaders[key] = Array.isArray(value) ? value.join(', ') : value;
-	}
-	forwardedHeaders['host'] = `127.0.0.1:${targetPort}`;
+// How long an upstream (llama.cpp / whisper.cpp) may take to start responding
+// before the proxied request is torn down. Generations are long-lived, so this
+// is deliberately generous — it exists to stop permanently wedged sockets.
+const PROXY_UPSTREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
-	const options: http.RequestOptions = {
-		hostname: '127.0.0.1',
-		port: targetPort,
-		path: req.originalUrl,
-		method: req.method,
-		headers: forwardedHeaders,
-	};
-
-	const proxyReq = http.request(options, (proxyRes) => {
-		res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
-		proxyRes.pipe(res, { end: true });
-	});
-
-	proxyReq.on('error', (err) => {
-		if (!res.headersSent) {
-			res.status(502).json({
-				error: {
-					message: `Failed to reach model server: ${err.message}`,
-					type: 'proxy_error',
-					code: 502,
-				},
-			});
-		}
-	});
-
-	// If the client disconnects mid-stream, tear down the upstream request so
-	// we don't keep buffering/streaming to a dead socket.
-	res.on('close', () => {
-		if (!res.writableEnded) proxyReq.destroy();
-	});
-
-	// Pipe request body through for POST requests
-	req.pipe(proxyReq, { end: true });
-}
+// NOTE: this file used to carry a second, unused forwarding helper
+// (`proxyRequest`) that held the disconnect handling and header allowlist while
+// the live handlers did not. It was dead code and has been removed; the /v1/
+// handlers below now own those guarantees (client-disconnect propagation,
+// upstream timeout, minimal forwarded headers). Keeping a second copy of a
+// security-relevant helper around is how fixes end up applied to the wrong path.
 
 // Extract model name from request body (for POST requests)
 // Needs raw body parsing since we also pipe it through
@@ -248,34 +207,54 @@ function createProxyApp(): express.Express {
 	app.use(cors({
 		origin(origin, callback) {
 			if (!origin) return callback(null, true); // non-browser client (no Origin)
-			const allowed = /^(https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|https?:\/\/([a-z0-9-]+\.)*tauri\.localhost|tauri:\/\/.*|wry:\/\/.*)$/i;
-			if (allowed.test(origin)) return callback(null, true);
-			return callback(null, false); // ACAO omitted → browser blocks the read
+			// Shared with the control plane: localhost on any port + Tauri/Wry.
+			return callback(null, isLocalOrShellOrigin(origin) ? origin : false); // ACAO omitted → browser blocks the read
 		},
 	}));
 
-	// Parse JSON body but keep it available for piping.
+	// Parse JSON body but keep it available for forwarding.
 	// Bounded buffering — an unbounded accumulate would let any client
 	// (the proxy binds 0.0.0.0 when remote access is enabled) exhaust memory.
+	//
+	// Two invariants this buffering must keep:
+	//  * Accumulate Buffers and decode ONCE. Appending `chunk.toString()` per
+	//    chunk corrupts any multi-byte character straddling a read boundary
+	//    (routine for CJK/emoji prompts), and the old `catch { req.body = {} }`
+	//    fallback then turned a perfectly valid request into a 400
+	//    "Missing model field".
+	//  * Only consume JSON-ish bodies. The multipart transcription route reads
+	//    the stream itself; consuming it here would leave that handler waiting
+	//    on an 'end' event that has already fired.
 	const MAX_PROXY_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 	app.use((req, res, next) => {
-		let rawBody = '';
+		const contentType = req.headers['content-type'] ?? '';
+		const isJsonish = contentType.trim() === '' || /application\/(?:[\w.+-]+\+)?json/i.test(contentType);
+		if (!isJsonish) return next();
+
+		const chunks: Buffer[] = [];
+		let rawBytes = 0;
 		let tooLarge = false;
 		req.on('data', (chunk: Buffer) => {
-			if (rawBody.length + chunk.length > MAX_PROXY_BODY_BYTES) {
+			if (rawBytes + chunk.length > MAX_PROXY_BODY_BYTES) {
 				tooLarge = true;
 				req.destroy();
 				return;
 			}
-			rawBody += chunk.toString();
+			chunks.push(chunk);
+			rawBytes += chunk.length;
 		});
 		req.on('end', () => {
 			if (tooLarge) return;
-			try {
-				if (rawBody) (req as any)._rawBody = rawBody;
-				if (rawBody) req.body = JSON.parse(rawBody);
-			} catch {
-				req.body = {};
+			const raw = Buffer.concat(chunks);
+			if (raw.length > 0) {
+				(req as { _rawBody?: string })._rawBody = raw.toString('utf8');
+				// Byte-exact copy for forwarding: never re-encode the client payload.
+				(req as { _rawBodyBuffer?: Buffer })._rawBodyBuffer = raw;
+				try {
+					req.body = JSON.parse(raw.toString('utf8'));
+				} catch {
+					req.body = {};
+				}
 			}
 			next();
 		});
@@ -375,7 +354,20 @@ function createProxyApp(): express.Express {
 			proxyRes.pipe(res, { end: true });
 		});
 
+		proxyReq.setTimeout(PROXY_UPSTREAM_TIMEOUT_MS, () => {
+			proxyReq.destroy(new Error(`upstream did not respond within ${PROXY_UPSTREAM_TIMEOUT_MS}ms`));
+		});
+
+		let whisperClientGone = false;
+		res.on('close', () => {
+			if (!res.writableEnded) {
+				whisperClientGone = true;
+				proxyReq.destroy();
+			}
+		});
+
 		proxyReq.on('error', (err) => {
+			if (whisperClientGone) return; // client aborted; teardown is expected
 			if (!res.headersSent) {
 				res.status(502).json({
 					error: {
@@ -384,6 +376,8 @@ function createProxyApp(): express.Express {
 						code: 502,
 					},
 				});
+			} else if (!res.writableEnded) {
+				res.end();
 			}
 		});
 
@@ -412,7 +406,7 @@ function createProxyApp(): express.Express {
 	// Express 5 router uses different syntax - use a middleware approach
 	app.use('/v1/', async (req, res, next) => {
 		// Skip the /models endpoint which is handled separately
-		if (req.path === '/models' || req.path.startsWith('/models')) {
+		if (req.path.startsWith('/models')) {
 			return next();
 		}
 		const model = extractModelFromBody(req);
@@ -446,19 +440,24 @@ function createProxyApp(): express.Express {
 			return;
 		}
 
-		// Re-create the request with raw body for piping
-		// Since we consumed the body for parsing, we need to create a new request
-		const rawBody = (req as any)._rawBody as string | undefined;
+		// The body was already consumed for model extraction, so forward the
+		// buffered bytes verbatim — never re-encode a client payload.
+		const rawBody = (req as { _rawBodyBuffer?: Buffer })._rawBodyBuffer;
+
+		const forwardHeaders: Record<string, string> = {
+			'content-type': req.headers['content-type'] ?? 'application/json',
+			'accept': req.headers.accept ?? '*/*',
+		};
+		if (rawBody && rawBody.length > 0) {
+			forwardHeaders['content-length'] = String(rawBody.length);
+		}
 
 		const options: http.RequestOptions = {
 			hostname: '127.0.0.1',
 			port: server.port,
 			path: req.originalUrl,
 			method: req.method,
-			headers: {
-				'content-type': 'application/json',
-				'accept': req.headers.accept ?? '*/*',
-			},
+			headers: forwardHeaders,
 		};
 
 		const proxyReq = http.request(options, (proxyRes) => {
@@ -469,7 +468,26 @@ function createProxyApp(): express.Express {
 			proxyRes.pipe(res, { end: true });
 		});
 
+		// A stalled upstream must not pin the client socket forever: a single
+		// llama.cpp generation can stall for minutes.
+		proxyReq.setTimeout(PROXY_UPSTREAM_TIMEOUT_MS, () => {
+			proxyReq.destroy(new Error(`upstream did not respond within ${PROXY_UPSTREAM_TIMEOUT_MS}ms`));
+		});
+
+		// Propagate client disconnects: without this, llama.cpp keeps generating
+		// a full completion for a socket nobody is reading (GPU held for nothing).
+		let clientGone = false;
+		res.on('close', () => {
+			if (!res.writableEnded) {
+				clientGone = true;
+				proxyReq.destroy();
+			}
+		});
+
 		proxyReq.on('error', (err) => {
+			// A teardown caused by the client going away is expected: keep the
+			// sticky route warm and do not report a proxy error.
+			if (clientGone) return;
 			// Server might have died — clear sticky route
 			stickyRoutes.delete(model);
 			if (!res.headersSent) {
@@ -480,11 +498,14 @@ function createProxyApp(): express.Express {
 						code: 502,
 					},
 				});
+			} else if (!res.writableEnded) {
+				// Mid-stream failure after headers: close cleanly instead of hanging.
+				res.end();
 			}
 		});
 
 		// Write the raw body and end
-		if (rawBody) {
+		if (rawBody && rawBody.length > 0) {
 			proxyReq.write(rawBody);
 		}
 		proxyReq.end();
