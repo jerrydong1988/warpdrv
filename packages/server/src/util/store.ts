@@ -58,7 +58,6 @@ function load(): void {
 			console.error(`[store] Backup restore also failed: ${backupErr instanceof Error ? backupErr.message : String(backupErr)}`);
 			data = {};
 		}
-		if (Object.keys(data).length === 0) data = {};
 	}
 }
 
@@ -77,6 +76,26 @@ function save(): void {
 	fs.renameSync(DB_TMP_FILE, DB_FILE);
 }
 
+/**
+ * Apply an in-memory mutation and persist it. If persistence fails the
+ * mutation is rolled back: callers must never be left with a process whose
+ * memory claims a write that the disk rejected (that state was previously
+ * permanent — every later save() failed for the same reason).
+ */
+function commit(key: string, nextValue: string | null): void {
+	const previous = data[key];
+	if (nextValue === null) delete data[key];
+	else data[key] = nextValue;
+
+	try {
+		save();
+	} catch (err) {
+		if (previous === undefined) delete data[key];
+		else data[key] = previous;
+		throw err;
+	}
+}
+
 // Init
 load();
 
@@ -88,13 +107,17 @@ export const store = {
 	},
 
 	async put<T>(key: string, value: T): Promise<void> {
-		data[key] = JSON.stringify(value);
-		save();
+		let serialized: string;
+		try {
+			serialized = JSON.stringify(value);
+		} catch (err) {
+			throw new Error(`[store] Value for '${key}' is not serializable: ${err instanceof Error ? err.message : String(err)}`);
+		}
+		commit(key, serialized);
 	},
 
 	async del(key: string): Promise<void> {
-		delete data[key];
-		save();
+		commit(key, null);
 	},
 
 	async list<T>(prefix: string): Promise<T[]> {
