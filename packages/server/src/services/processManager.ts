@@ -253,7 +253,11 @@ export function buildArgs(
 	if (params.useEmbedding && !argsSet.has("--embedding")) args.push("--embedding");
 	if (params.kvQuantK !== EKvQuantType.F16) args.push("--cache-type-k", params.kvQuantK);
 	if (params.kvQuantV !== EKvQuantType.F16) args.push("--cache-type-v", params.kvQuantV);
-	if (params.chatTemplate) args.push("--chat-template", params.chatTemplate);
+	if (params.chatTemplateMode === "file") {
+		if (params.chatTemplateFile) args.push("--chat-template-file", params.chatTemplateFile);
+	} else if (params.chatTemplate) {
+		args.push("--chat-template", params.chatTemplate);
+	}
 	if (params.preserveThinking)
 		args.push("--chat-template-kwargs", JSON.stringify({ preserve_thinking: true }));
 	if (params.device && !params.multiGpu) args.push("--device", params.device);
