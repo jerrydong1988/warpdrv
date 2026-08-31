@@ -43,6 +43,9 @@ const STREAM_IDLE_TIMEOUT_MS = 120_000;
 // inference pass — and the thread with it — open forever.
 const TOOL_EXEC_TIMEOUT_MS = 5 * 60_000;
 
+// ReadableStreamReadResult is not in every lib set this package compiles with.
+type TStreamReadResult = Awaited<ReturnType<ReadableStreamDefaultReader<Uint8Array>['read']>>;
+
 export interface IOrchestratorConfig {
 	mcpClient: IMcpClient;
 	permissions: IPermissions;
@@ -187,7 +190,7 @@ export class Orchestrator {
 	private async readWithIdleTimeout(
 		reader: ReadableStreamDefaultReader<Uint8Array>,
 		idleMs: number,
-	): Promise<ReadableStreamReadResult<Uint8Array>> {
+	): Promise<TStreamReadResult> {
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		try {
 			return await Promise.race([
@@ -700,7 +703,7 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				let result: ReadableStreamReadResult<Uint8Array>;
+				let result: TStreamReadResult;
 				try {
 					result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
 				} catch (err) {
@@ -1384,7 +1387,7 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				let result: ReadableStreamReadResult<Uint8Array>;
+				let result: TStreamReadResult;
 				try {
 					result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
 				} catch (err) {
