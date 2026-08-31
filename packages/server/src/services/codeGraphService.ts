@@ -59,6 +59,28 @@ const GRAMMAR_PACKAGES: Record<string, string> = {
 	php: 'tree-sitter-php',
 };
 
+// Files above this size are skipped: hashing and parsing a multi-megabyte
+// generated file costs more than the symbols in it are worth.
+const MAX_INDEX_FILE_BYTES = 1024 * 1024;
+
+// Grammar packages disagree about where the language object lives, and handing
+// setLanguage() the module object throws "Invalid language object". Asking the
+// binding directly which candidate it accepts is the only portable check.
+function isUsableLanguage(candidate: any): boolean {
+	if (!candidate || typeof candidate !== 'object') return false;
+	try {
+		const Ctor = ParserCtor ?? tsRequire('tree-sitter');
+		const probe = new (Ctor as any)();
+		probe.setLanguage(candidate);
+		// Older bindings have no delete(); leaking one throwaway parser is
+		// preferable to rejecting a grammar that works.
+		if (typeof probe.delete === 'function') probe.delete();
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export class CodeGraphService {
 	private persistence: IPersistence;
 	private grammarCache: Map<string, any> = new Map();
@@ -74,15 +96,24 @@ export class CodeGraphService {
 		const pkgName = GRAMMAR_PACKAGES[language];
 		if (!pkgName) throw new Error(`No grammar package for language: ${language}`);
 		const pkg = tsRequire(pkgName);
-		let grammar;
-		if (language === 'tsx' || language === 'typescript') {
-			grammar = pkg?.[language] ?? pkg?.default?.[language];
-		} else {
-			grammar = pkg?.default ?? pkg;
+		// Grammar packages disagree about where the language object lives:
+		// tree-sitter-typescript exports { typescript, tsx }, tree-sitter-php
+		// exports { php, php_only }, and the newer bindings export { language }.
+		// Passing the module object itself to setLanguage() throws "Invalid
+		// language object", which used to disable every non-TS language.
+		const candidates = [
+			pkg?.[language],
+			pkg?.default?.[language],
+			pkg?.language,
+			pkg?.default,
+		];
+		for (const candidate of candidates) {
+			if (isUsableLanguage(candidate)) {
+				this.grammarCache.set(language, candidate);
+				return candidate;
+			}
 		}
-		if (!grammar) throw new Error(`Failed to load grammar for: ${language}`);
-		this.grammarCache.set(language, grammar);
-		return grammar;
+		throw new Error(`Failed to load grammar for: ${language}`);
 	}
 
 	private async createParser(language: string): Promise<Parser> {
@@ -98,11 +129,21 @@ export class CodeGraphService {
 	}
 
 	private async loadIgnore(projectRoot: string): Promise<any> {
-		if (this.ignoreCache[projectRoot]) return this.ignoreCache[projectRoot];
+		const gitignorePath = path.join(projectRoot, '.gitignore');
+		let mtimeMs = -1;
+		try {
+			mtimeMs = fs.statSync(gitignorePath).mtimeMs;
+		} catch {
+			mtimeMs = -1; // no .gitignore: defaults only
+		}
+		// The cache used to be permanent, so editing .gitignore had no effect
+		// until the process restarted.
+		const cached = this.ignoreCache[projectRoot];
+		if (cached && cached.mtimeMs === mtimeMs) return cached.ig;
+
 		const ig = ignore();
 		ig.add(['.git', 'node_modules', 'vendor', '.venv']);
-		const gitignorePath = path.join(projectRoot, '.gitignore');
-		if (fs.existsSync(gitignorePath)) {
+		if (mtimeMs >= 0) {
 			try {
 				const content = await fsPromises.readFile(gitignorePath, 'utf8');
 				ig.add(content);
@@ -110,7 +151,7 @@ export class CodeGraphService {
 				// unreadable gitignore, defaults only
 			}
 		}
-		this.ignoreCache[projectRoot] = ig;
+		this.ignoreCache[projectRoot] = { ig, mtimeMs };
 		return ig;
 	}
 	private async isGitIgnored(projectRoot: string, relativePath: string): Promise<boolean> {
@@ -135,6 +176,14 @@ export class CodeGraphService {
 					const ext = path.extname(entry.name);
 					if (!this.isSupportedLanguage(ext)) continue;
 					if (await this.isGitIgnored(projectRoot, relPath)) continue;
+					try {
+						// Generated bundles and minified vendor files are megabytes of
+						// generated code; hashing and parsing them dominated ingests.
+						const stat = await fsPromises.stat(path.join(dir, entry.name));
+						if (stat.size > MAX_INDEX_FILE_BYTES) continue;
+					} catch {
+						continue; // unreadable entry, skip it
+					}
 					files.push(relPath);
 				}
 			}
@@ -178,8 +227,11 @@ export class CodeGraphService {
 
 			let nodeId = this.buildNodeId(relativePath, scope, name);
 			if (seenIds[nodeId] !== undefined) {
-				seenIds[nodeId] = (seenIds[nodeId] ?? 0) + 1;
-				nodeId = `${nodeId}:${seenIds[nodeId]}`;
+				// Two declarations share a name in one scope (overloads, re-opened
+				// namespaces). The old counter suffix shifted every id after it
+				// whenever an unrelated symbol appeared or vanished; a position suffix
+				// is unique here and stable across re-indexes.
+				nodeId = `${nodeId}@${startLine}:${startCol}`;
 			} else {
 				seenIds[nodeId] = 0;
 			}
@@ -209,9 +261,9 @@ export class CodeGraphService {
 	private getDeclarationNodes(node: any, language: string): any[] {
 		if (!node.children) return [];
 		const declarationTypes: Record<string, Set<string>> = {
-			typescript: new Set(['function_declaration', 'class_declaration', 'interface_declaration', 'type_alias_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'property_declaration', 'enum_declaration', 'module_declaration']),
-			tsx: new Set(['function_declaration', 'class_declaration', 'interface_declaration', 'type_alias_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'property_declaration', 'enum_declaration', 'module_declaration']),
-			javascript: new Set(['function_declaration', 'class_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'property_definition']),
+			typescript: new Set(['function_declaration', 'class_declaration', 'interface_declaration', 'type_alias_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'public_field_definition', 'property_signature', 'property_declaration', 'enum_declaration', 'module_declaration']),
+			tsx: new Set(['function_declaration', 'class_declaration', 'interface_declaration', 'type_alias_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'public_field_definition', 'property_signature', 'property_declaration', 'enum_declaration', 'module_declaration']),
+			javascript: new Set(['function_declaration', 'class_declaration', 'lexical_declaration', 'variable_declaration', 'method_definition', 'field_definition']),
 			python: new Set(['function_definition', 'class_definition', 'assignment', 'import_statement', 'import_from_statement']),
 			rust: new Set(['function_item', 'struct_item', 'enum_item', 'impl_item', 'mod_item', 'trait_item']),
 			go: new Set(['function_declaration', 'type_declaration', 'var_declaration', 'method_declaration']),
@@ -226,6 +278,13 @@ export class CodeGraphService {
 		};
 		const types = declarationTypes[language] ?? new Set();
 		const wrappers = exportWrappers[language] ?? new Set();
+		// Members are not direct children of their type: class_declaration holds a
+		// class_body, which holds the methods. Without descending one more level no
+		// class or interface member was ever indexed.
+		const containers = new Set([
+			'class_body', 'interface_body', 'enum_body', 'object_type',
+			'declaration_list', 'field_declaration_list', 'struct_declaration_list',
+		]);
 		const results: any[] = [];
 
 		for (const child of node.children) {
@@ -237,6 +296,8 @@ export class CodeGraphService {
 						results.push(inner);
 					}
 				}
+			} else if (containers.has(child.type)) {
+				results.push(...this.getDeclarationNodes(child, language));
 			}
 		}
 		return results;
@@ -266,9 +327,11 @@ export class CodeGraphService {
 					break;
 				}
 			}
-			if (current?.type === 'identifier' || typeof current === 'string') {
-				return current?.text ?? current?.name ?? null;
-			}
+			if (typeof current === 'string') return current;
+			// A resolved field may be any named node (identifier, property_identifier,
+			// type_identifier); its text is the name. The old check only accepted
+			// "identifier" and then read .text/.name off a string, returning null.
+			if (current?.type) return current.text ?? null;
 		}
 		const nameChild = node.childForFieldName('name');
 		if (nameChild) return nameChild.text;
@@ -290,6 +353,8 @@ export class CodeGraphService {
 				variable_declaration: 'variable',
 				lexical_declaration: 'variable',
 				method_definition: 'method',
+				public_field_definition: 'property',
+				property_signature: 'property',
 				property_declaration: 'property',
 				enum_declaration: 'enum',
 				module_declaration: 'module',
@@ -302,6 +367,8 @@ export class CodeGraphService {
 				variable_declaration: 'variable',
 				lexical_declaration: 'variable',
 				method_definition: 'method',
+				public_field_definition: 'property',
+				property_signature: 'property',
 				property_declaration: 'property',
 				enum_declaration: 'enum',
 				module_declaration: 'module',
@@ -312,7 +379,7 @@ export class CodeGraphService {
 				variable_declaration: 'variable',
 				lexical_declaration: 'variable',
 				method_definition: 'method',
-				property_definition: 'property',
+				field_definition: 'property',
 			},
 			python: {
 				function_definition: 'function',
@@ -531,32 +598,39 @@ export class CodeGraphService {
 		for (const file of newOrChangedFiles) {
 			const absPath = path.join(projectRoot, file);
 			const ext = path.extname(file);
-			const stat = fs.statSync(absPath);
-			const hash = await this.contentHash(absPath);
-			const { nodes, edges } = await this.parseFile(absPath, file, ext);
+			try {
+				const stat = fs.statSync(absPath);
+				const hash = await this.contentHash(absPath);
+				const { nodes, edges } = await this.parseFile(absPath, file, ext);
 
-			for (const n of nodes) {
-				n.projectId = projectRoot;
+				for (const n of nodes) {
+					n.projectId = projectRoot;
+				}
+				for (const e of edges) {
+					e.projectId = projectRoot;
+				}
+
+				await this.persistence.codeGraphUpsertFile({
+					id: randomUUID(),
+					projectId: projectRoot,
+					filePath: file,
+					language: LANGUAGE_MAP[ext] ?? 'unknown',
+					mtime: stat.mtimeMs,
+					contentHash: hash,
+					indexedAt: Date.now(),
+				});
+				await this.persistence.codeGraphUpsertNodes(projectRoot, file, nodes);
+				await this.persistence.codeGraphUpsertEdges(projectRoot, file, edges);
+
+				result.filesUpdated++;
+				result.nodesCreated += nodes.length;
+				result.edgesCreated += edges.length;
+			} catch (err) {
+				// A file deleted between discovery and ingest, or a grammar the
+				// installed binding rejects, used to abort the entire ingest run.
+				console.warn(`[codeGraph] skipped ${file}:`, err instanceof Error ? err.message : String(err));
+				result.filesSkipped++;
 			}
-			for (const e of edges) {
-				e.projectId = projectRoot;
-			}
-
-			await this.persistence.codeGraphUpsertFile({
-				id: randomUUID(),
-				projectId: projectRoot,
-				filePath: file,
-				language: LANGUAGE_MAP[ext] ?? 'unknown',
-				mtime: stat.mtimeMs,
-				contentHash: hash,
-				indexedAt: Date.now(),
-			});
-			await this.persistence.codeGraphUpsertNodes(projectRoot, file, nodes);
-			await this.persistence.codeGraphUpsertEdges(projectRoot, file, edges);
-
-			result.filesUpdated++;
-			result.nodesCreated += nodes.length;
-			result.edgesCreated += edges.length;
 		}
 
 		result.filesIndexed = result.filesUpdated;
@@ -586,8 +660,15 @@ export class CodeGraphService {
 		}
 
 		const stat = fs.statSync(absPath);
-		const hash = await this.contentHash(absPath);
 		const existing = await this.persistence.codeGraphGetFile(projectRoot, relativePath);
+
+		// Oversized files are not indexed any more; drop a stale record of one.
+		if (stat.size > MAX_INDEX_FILE_BYTES) {
+			if (existing) await this.persistence.codeGraphDeleteByFile(projectRoot, relativePath);
+			return;
+		}
+
+		const hash = await this.contentHash(absPath);
 
 		if (existing && existing.contentHash === hash && existing.mtime === stat.mtimeMs) {
 			return;
