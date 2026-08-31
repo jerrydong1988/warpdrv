@@ -128,13 +128,17 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 				if (!sender) return msg;
 
 				let header: string | null = null;
+				let footer: string | null = null;
 
 				if (sender.type === EThreadHierarchyType.SUBTHREAD) {
 					const agentName = sender.agent?.name ?? "Unknown";
 					const title = sender.title ?? "Untitled";
+
 					header = `[Message(s) from threadId: ${sender.threadId} (Title: ${title}, Agent: ${agentName})]`;
+					footer = `<system-reminder>You can continue conversation on the same topic with the sub-agent if necessary by re-using the same sub-thread. Only create a new thread if a new topic is needed.</system-reminder>`;
 				} else if (sender.type === EThreadHierarchyType.SUPERTHREAD) {
 					header = `[Message from parent thread. Use the superthread_send_message tool to respond when ready.]`;
+					footer = `<system-reminder>Perform the requested actions and then use the superthread_send_message tool once to respond when all tasks are completed. Report progress at each step using the set_current_status tool.</system-reminder>`;
 				}
 
 				if (!header) return msg;
@@ -149,6 +153,12 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 							text: header,
 						} as IMessagePart,
 						...msg.content,
+						{
+							id: genPartId(),
+							type: EMessagePartType.TEXT,
+							orderIndex: msg.content.length,
+							text: footer,
+						} as IMessagePart,
 					],
 				};
 			});
