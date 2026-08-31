@@ -24,8 +24,16 @@ function expandHome(p: string | undefined): string | undefined {
 	return out;
 }
 
-// Validate recipe step body to prevent shell injection
-const SAFE_COMMAND_PATTERN = /^[a-zA-Z0-9_./-]+(\s+[a-zA-Z0-9_./-]+)*$/;
+// Threat model: a recipe step body is executed with `bash -c`, i.e. it can run
+// arbitrary shell. The blacklist below (DANGEROUS_PATTERNS + the metacharacter
+// checks in validateRecipeBody) is defense-in-depth against accidental footguns
+// and obvious destructive patterns — it is NOT a security boundary and cannot
+// make arbitrary bash "safe". The real controls are: (1) creating/running recipes
+// requires admin access, and (2) users must only import/run recipes they trust.
+// A previous SAFE_COMMAND_PATTERN whitelist constant here was never wired up; it
+// has been removed so the code does not imply a whitelist is enforced when it is
+// not. If a hard whitelist is ever wanted, gate bodies against an allow-list of
+// commands AND reject metacharacters, and update validateRecipeBody accordingly.
 const DANGEROUS_PATTERNS = [
 	/;\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,
 	/\|\s*(rm|del|format|mkfs|dd|wipe|shred|overwrite)\b/i,

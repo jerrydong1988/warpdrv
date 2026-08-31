@@ -124,8 +124,20 @@ export async function proxyAuthMiddleware(req: any, res: Response, next: NextFun
 		return;
 	}
 
-	// Check if token has inference access
-	const model = req.body?.model;
+	// Check if token has inference access. The proxy sub-app does not mount
+	// express.json(), so req.body is not populated here; derive the model from the
+	// raw body captured by the proxy's raw-body middleware (JSON requests). For
+	// multipart uploads the route enforces per-model access after extraction.
+	let model: string | undefined = typeof req.body?.model === 'string' ? req.body.model : undefined;
+	if (!model) {
+		const raw = req._rawBody;
+		if (typeof raw === 'string' && raw.length > 0) {
+			try {
+				const parsed = JSON.parse(raw);
+				if (parsed && typeof parsed.model === 'string') model = parsed.model;
+			} catch { /* not JSON (e.g. multipart) — route handles it */ }
+		}
+	}
 	if (model && !hasInferenceAccessForToken(token, model)) {
 		res.status(403).json({
 			ok: false,

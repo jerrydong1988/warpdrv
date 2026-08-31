@@ -6,7 +6,7 @@ import { store } from '../util/store';
 import type { IServer, ISettings, IWhisperServer } from '@warpcore/shared';
 import { EServerStatus, EWhisperServerStatus, DEFAULT_SETTINGS } from '@warpcore/shared';
 import { sseManager } from './sseManagerInstance';
-import { proxyAuthMiddleware } from '../middleware/auth';
+import { proxyAuthMiddleware, hasInferenceAccessForToken } from '../middleware/auth';
 
 const SERVERS_PREFIX = 'servers:';
 const WHISPER_SERVERS_PREFIX = 'whisperServers:';
@@ -136,8 +136,11 @@ function proxyRequest(
 	req: express.Request,
 	res: express.Response,
 ): void {
-	// Only forward safe headers — strip client-originated auth, forwarded-addrs, etc.
-	const SAFE_PROXY_HEADERS = new Set(['content-type', 'accept', 'authorization', 'cache-control', 'pragma', 'user-agent', 'accept-language', 'origin', 'referer']);
+	// Only forward safe headers — strip client auth/origin metadata. NOTE:
+	// 'authorization' is intentionally excluded — the upstream target is always a
+	// local llama-server on 127.0.0.1 with no auth, so forwarding the caller's
+	// warpcore bearer token would only leak it to the inference backend.
+	const SAFE_PROXY_HEADERS = new Set(['content-type', 'accept', 'cache-control', 'pragma', 'user-agent', 'accept-language']);
 	const forwardedHeaders: Record<string, string> = {};
 	for (const [key, value] of Object.entries(req.headers)) {
 		if (value === undefined) continue;
@@ -237,7 +240,19 @@ function createProxyApp(): express.Express {
 	const app = express();
 
 	// Enable CORS for browser clients
-	app.use(cors());
+	// CORS: do NOT reflect arbitrary origins. The proxy is meant for OpenAI-
+	// compatible clients (curl, SDKs, native apps) which send no Origin header and
+	// are unaffected. Browsers always send their real Origin; we allow only local /
+	// desktop-shell origins so that a random website cannot drive the local proxy
+	// (and read its responses) from the user's browser.
+	app.use(cors({
+		origin(origin, callback) {
+			if (!origin) return callback(null, true); // non-browser client (no Origin)
+			const allowed = /^(https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|https?:\/\/([a-z0-9-]+\.)*tauri\.localhost|tauri:\/\/.*|wry:\/\/.*)$/i;
+			if (allowed.test(origin)) return callback(null, true);
+			return callback(null, false); // ACAO omitted → browser blocks the read
+		},
+	}));
 
 	// Parse JSON body but keep it available for piping.
 	// Bounded buffering — an unbounded accumulate would let any client
@@ -310,6 +325,16 @@ function createProxyApp(): express.Express {
 					code: 400,
 				},
 			});
+			return;
+		}
+
+		// Enforce per-token inference access for the extracted model. The proxy's
+		// JSON body is not parsed by express.json, so proxyAuthMiddleware cannot see
+		// this multipart model; enforce it here using the token it attached. When
+		// proxy auth is disabled there is no authToken and no restriction applies.
+		const authToken = (req as any).authToken;
+		if (authToken && !hasInferenceAccessForToken(authToken, model)) {
+			res.status(403).json({ error: { message: 'Access denied for this model', type: 'access_denied', code: 403 } });
 			return;
 		}
 

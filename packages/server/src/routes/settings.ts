@@ -83,6 +83,12 @@ function sanitizeSettingsPatch(body: unknown): Partial<ISettings> {
 	return out;
 }
 
+// A bind host is considered loopback-safe if it only accepts loopback traffic.
+function isLoopbackHost(host: string | undefined): boolean {
+	const h = (host || '').trim().toLowerCase();
+	return h === '' || h === 'localhost' || h === '::1' || h === '::ffff:127.0.0.1' || /^127\./.test(h);
+}
+
 // GET /api/settings - returns persisted preferences only
 settingsRouter.get('/', async (_req, res) => {
 	const settings = await store.get<ISettings>(SETTINGS_KEY);
@@ -94,6 +100,19 @@ settingsRouter.put('/', async (req, res) => {
 	const current = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	const patch = sanitizeSettingsPatch(req.body);
 	const updated: ISettings = { ...current, ...patch };
+
+	// Hardening guardrail: never allow binding the control plane or the proxy to a
+	// non-loopback interface while authentication is disabled — that would expose
+	// the control plane (incl. recipe execution) or inference to the LAN unauth'd.
+	if (!isLoopbackHost(updated.apiHost) && !updated.apiAuthEnabled && !updated.authRequireForLocalhost) {
+		res.status(400).json({ ok: false, data: null, error: 'Refusing to bind apiHost to a non-loopback address while authentication is disabled. Enable API authentication (or "require auth for localhost") first.' });
+		return;
+	}
+	if (!isLoopbackHost(updated.proxyHost) && !updated.proxyAuthEnabled) {
+		res.status(400).json({ ok: false, data: null, error: 'Refusing to bind proxyHost to a non-loopback address while proxy authentication is disabled. Enable proxy authentication first.' });
+		return;
+	}
+
 	await store.put(SETTINGS_KEY, updated);
 	// Emit partial update
 	sseManager.emit('settings:update', patch);

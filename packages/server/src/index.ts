@@ -198,6 +198,25 @@ async function main() {
 	// CORS: restrict browser origins to the local dev/desktop origins rather
 	// than reflecting any origin.
 	app.use(cors({ origin: ['http://localhost:4400', 'http://127.0.0.1:4400', 'http://localhost:5173', 'http://127.0.0.1:5173'] }));
+
+	// CSRF defense for the (by-default unauthenticated) localhost control plane.
+	// Browsers always attach a real Origin header to cross-origin requests; reject
+	// state-changing requests whose Origin is present but not a local/desktop origin.
+	// Non-browser clients (curl, SDKs, native apps) send no Origin and are allowed.
+	// Same-origin app requests carry a localhost/tauri origin and pass. This closes
+	// the "malicious website drives the unauthenticated localhost control plane"
+	// vector that CORS preflight alone does not cover for simple (non-preflighted)
+	// requests such as POST /api/recipes/:id/run or POST /api/proxy/stop.
+	const ALLOWED_REQUEST_ORIGIN = /^(https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?|https?:\/\/([a-z0-9-]+\.)*tauri\.localhost|tauri:\/\/.*|wry:\/\/.*)$/i;
+	app.use('/api', (req, res, next) => {
+		const method = req.method.toUpperCase();
+		if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return next();
+		const origin = req.headers.origin;
+		if (!origin) return next(); // non-browser client
+		if (ALLOWED_REQUEST_ORIGIN.test(origin)) return next();
+		res.status(403).json({ ok: false, data: null, error: 'Cross-origin request blocked' });
+	});
+
 	app.use(express.json({ limit: '32mb' }));
 	app.use(cookieParser());
 	// Auth routes (no middleware - public endpoints)

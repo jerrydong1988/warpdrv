@@ -393,6 +393,19 @@ export async function startGenericDownload(
 	postActions: IDownloadPostAction[] = [],
 	groupKey?: string,
 ): Promise<IDownload> {
+	// Defense-in-depth: even though current callers pass curated release-manifest
+	// values, never let a caller write outside destDir via `filename`, and only
+	// allow http(s) sources.
+	if (!/^https?:\/\//i.test(sourceUrl)) {
+		throw new Error(`Invalid download URL: ${sourceUrl}`);
+	}
+	if (
+		!filename || typeof filename !== 'string' ||
+		filename.startsWith('/') || filename.startsWith('\\') ||
+		filename.split(/[\\/]/).some(seg => seg === '' || seg === '.' || seg === '..')
+	) {
+		throw new Error(`Invalid filename: ${filename}`);
+	}
 	const id = makeDownloadId();
 	const destPath = path.join(destDir, filename);
 	fs.mkdirSync(destDir, { recursive: true });
