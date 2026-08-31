@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { assertPathAllowed } from '../util/sandbox';
+import { assertPathAllowed, assertFileSafe } from '../util/sandbox';
 import type { IWarpmcpDeps } from '../types';
 
 export const filePatchDefinition = {
@@ -309,6 +309,10 @@ function buildNotFoundError(content: string, oldText: string): string {
 
 export async function filePatchHandler(deps: IWarpmcpDeps, args: { path: string; oldText: string; newText: string; encoding?: string }): Promise<{ success: boolean; fileSize: number; strategy: string; matchLine: number }> {
 	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
+	// Same symlink-component guard file_write applies: without it, a symlink
+	// inside an allowed root would let this tool write through to a target
+	// outside the roots.
+	assertFileSafe(deps.getFsAllowedRoots(), safePath);
 	const encoding = (args.encoding ?? 'utf8') as BufferEncoding;
 	if (!args.oldText) {
 		throw new Error('oldText must be non-empty');
