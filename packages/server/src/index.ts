@@ -541,6 +541,16 @@ async function main() {
 			await mcpClient.disconnectAll();
 		} catch { /* best effort */ }
 
+		try {
+			await embeddingManager.destroy();
+		} catch { /* best effort */ }
+
+		try {
+			// Closes chat.db so the WAL is checkpointed instead of being replayed (or
+			// left locked) by whatever opens it next.
+			persistence.close();
+		} catch { /* best effort */ }
+
 		clearTimeout(forceTimer);
 		httpServer.closeAllConnections?.();
 		httpServer.close(() => process.exit(0));

@@ -317,6 +317,28 @@ function buildSchema(t: ReturnType<typeof buildTableNames>): string {
 	`;
 }
 
+// Bumping this forces a one-time full FTS rebuild on next startup. The index is
+// otherwise maintained by the INSERT/DELETE/UPDATE triggers.
+const FTS_INDEX_VERSION = 1;
+
+/**
+ * Parse a persisted JSON blob without letting one corrupt row throw through
+ * every caller. Logs only the size — these records hold chat content.
+ */
+function parseJsonRecord(raw: string | null | undefined, what: string): Record<string, unknown> {
+	if (!raw) return {};
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+			return parsed as Record<string, unknown>;
+		}
+	} catch {
+		// fall through to the warning below
+	}
+	console.warn(`[sqlite] ignoring malformed ${what} record (${raw.length} bytes)`);
+	return {};
+}
+
 // ============================================================
 // BetterSqlitePersistence
 // ============================================================
@@ -341,6 +363,9 @@ export class SqlitePersistence implements IPersistence {
 		});
 
 		this.db.pragma('journal_mode = WAL');
+		// The desktop app and the server can hold the same file open; without a busy
+		// timeout any concurrent write fails immediately with SQLITE_BUSY.
+		this.db.pragma('busy_timeout = 5000');
 		this.db.pragma('foreign_keys = ON');
 		this.migrateCodeGraphSchema();
 		this.db.exec(buildSchema(this.t));
@@ -392,30 +417,50 @@ export class SqlitePersistence implements IPersistence {
 		}
 
 		// FTS5 — standard mode, populate index via INSERT.
-		// This migration re-runs on every startup: use INSERT OR IGNORE and
-		// first clear the tables so restarts never duplicate rows (FTS5 allows
-		// duplicate rowids, which previously doubled the index per restart and
-		// made MATCH return every row multiple times).
+		// The triggers keep the index current from here on, so the full rebuild runs
+		// once per FTS_INDEX_VERSION instead of on every startup (it used to rewrite
+		// the whole corpus at every boot). It also self-heals when content exists but
+		// the index is empty. INSERT OR IGNORE guards against duplicate rowids, which
+		// previously doubled the index and made MATCH return rows twice.
 		try {
-			const txn = this.db!.transaction(() => {
-				this.db!.prepare(`DELETE FROM ${this.t.threadFts}`).run();
-				this.db!.prepare(`DELETE FROM ${this.t.messagePartsFts}`).run();
-				this.db!.prepare(
-					`INSERT OR IGNORE INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`
-				).run();
-				this.db!.prepare(
-					`INSERT OR IGNORE INTO ${this.t.messagePartsFts}(rowid, text)
-					 SELECT rowid, CASE WHEN type IN ('text','reasoning') THEN text ELSE extractedText END
-					 FROM ${this.t.messageParts}
-					 WHERE (type IN ('text','reasoning') AND text IS NOT NULL AND length(text) > 0)
-					    OR (type = 'attachment' AND extractedText IS NOT NULL AND length(extractedText) > 0)`
-				).run();
-			});
-			txn();
+			const version = Number(this.db!.pragma('user_version', { simple: true }) ?? 0);
+			let needsRebuild = version < FTS_INDEX_VERSION;
+			if (!needsRebuild) {
+				const unindexed = this.db!.prepare(
+					`SELECT EXISTS(
+						SELECT 1 FROM ${this.t.messageParts}
+						WHERE (type IN ('text','reasoning') AND text IS NOT NULL AND length(text) > 0)
+						   OR (type = 'attachment' AND extractedText IS NOT NULL AND length(extractedText) > 0)
+					) AS e`
+				).get() as { e: number };
+				const indexed = this.db!.prepare(
+					`SELECT EXISTS(SELECT 1 FROM ${this.t.messagePartsFts}) AS e`
+				).get() as { e: number };
+				needsRebuild = unindexed.e === 1 && indexed.e === 0;
+			}
 
-			const mpCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.messagePartsFts}`).get() as { c: number };
-			const thCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.threadFts}`).get() as { c: number };
-			console.log(`[FTS5] Indexed ${mpCount.c} message parts, ${thCount.c} threads`);
+			if (needsRebuild) {
+				const txn = this.db!.transaction(() => {
+					this.db!.prepare(`DELETE FROM ${this.t.threadFts}`).run();
+					this.db!.prepare(`DELETE FROM ${this.t.messagePartsFts}`).run();
+					this.db!.prepare(
+						`INSERT OR IGNORE INTO ${this.t.threadFts}(rowid, title) SELECT rowid, title FROM ${this.t.threads}`
+					).run();
+					this.db!.prepare(
+						`INSERT OR IGNORE INTO ${this.t.messagePartsFts}(rowid, text)
+						 SELECT rowid, CASE WHEN type IN ('text','reasoning') THEN text ELSE extractedText END
+						 FROM ${this.t.messageParts}
+						 WHERE (type IN ('text','reasoning') AND text IS NOT NULL AND length(text) > 0)
+						    OR (type = 'attachment' AND extractedText IS NOT NULL AND length(extractedText) > 0)`
+					).run();
+				});
+				txn();
+				this.db!.pragma(`user_version = ${FTS_INDEX_VERSION}`);
+
+				const mpCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.messagePartsFts}`).get() as { c: number };
+				const thCount = this.db!.prepare(`SELECT count(*) as c FROM ${this.t.threadFts}`).get() as { c: number };
+				console.log(`[FTS5] Rebuilt search index: ${mpCount.c} message parts, ${thCount.c} threads`);
+			}
 		} catch (err) {
 			console.error('[FTS5] Index build failed:', err);
 		}
@@ -692,6 +737,10 @@ export class SqlitePersistence implements IPersistence {
 
 		this.db!.transaction((() => {
 			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(msg.parentId, id);
+			// Parts must go too: they are only referenced by messageId, and the FTS
+			// rows are removed by the AFTER DELETE trigger on message_parts. Without
+			// this every deleted message leaked its parts (and their index rows).
+			this.db!.prepare(`DELETE FROM ${this.t.messageParts} WHERE messageId = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messages} WHERE id = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messageStates} WHERE messageId = ?`).run(id);
 		}) as any)();
@@ -961,7 +1010,8 @@ export class SqlitePersistence implements IPersistence {
 	async searchMessages(q: string, options: ISearchOptions): Promise<ISearchResult[]> {
 		const processed = this.preprocessQuery(q);
 		if (!processed) return [];
-		console.log(`[FTS5] searchMessages: mode=${options.mode}, query="${q}" -> processed="${processed}"`);
+		// The query itself is user chat content — log only its shape.
+		console.log(`[FTS5] searchMessages: mode=${options.mode}, terms=${processed.split(' ').length}`);
 
 		const limit = Math.min(options.limit ?? 50, 200);
 		const offset = options.offset ?? 0;
@@ -1124,46 +1174,57 @@ export class SqlitePersistence implements IPersistence {
 	async getWorkspaceState(folderId: TFolderId): Promise<Record<string, unknown> | null> {
 		const row = this.db!.prepare(`SELECT data FROM ${this.t.workspaceStates} WHERE folderId = ?`).get(folderId) as { data: string } | undefined;
 		if (!row) return null;
-		return JSON.parse(row.data);
+		return parseJsonRecord(row.data, 'workspaceStates');
 	}
 
 	async updateWorkspaceState(folderId: TFolderId, data: Record<string, unknown>): Promise<void> {
-		const existing = await this.getWorkspaceState(folderId);
-		const merged = { ...(existing || {}), ...data };
-		this.db!.prepare(
-			`INSERT INTO ${this.t.workspaceStates} (folderId, data) VALUES (?, ?)
-			 ON CONFLICT(folderId) DO UPDATE SET data = excluded.data`
-		).run(folderId, JSON.stringify(merged));
+		// Read-modify-write has to be atomic: awaiting between the read and the
+		// write let concurrent callers drop each other's keys.
+		const txn = this.db!.transaction((id: string, patch: Record<string, unknown>) => {
+			const row = this.db!.prepare(`SELECT data FROM ${this.t.workspaceStates} WHERE folderId = ?`).get(id) as { data: string } | undefined;
+			const merged = { ...parseJsonRecord(row?.data, 'workspaceStates'), ...patch };
+			this.db!.prepare(
+				`INSERT INTO ${this.t.workspaceStates} (folderId, data) VALUES (?, ?)
+				 ON CONFLICT(folderId) DO UPDATE SET data = excluded.data`
+			).run(id, JSON.stringify(merged));
+		});
+		txn(folderId, data);
 	}
 
 	async getThreadState(threadId: TThreadId): Promise<Record<string, unknown> | null> {
 		const row = this.db!.prepare(`SELECT data FROM ${this.t.threadStates} WHERE threadId = ?`).get(threadId) as { data: string } | undefined;
 		if (!row) return null;
-		return JSON.parse(row.data);
+		return parseJsonRecord(row.data, 'threadStates');
 	}
 
 	async updateThreadState(threadId: TThreadId, data: Record<string, unknown>): Promise<void> {
-		const existing = await this.getThreadState(threadId);
-		const merged = { ...(existing || {}), ...data };
-		this.db!.prepare(
-			`INSERT INTO ${this.t.threadStates} (threadId, data) VALUES (?, ?)
-			 ON CONFLICT(threadId) DO UPDATE SET data = excluded.data`
-		).run(threadId, JSON.stringify(merged));
+		const txn = this.db!.transaction((id: string, patch: Record<string, unknown>) => {
+			const row = this.db!.prepare(`SELECT data FROM ${this.t.threadStates} WHERE threadId = ?`).get(id) as { data: string } | undefined;
+			const merged = { ...parseJsonRecord(row?.data, 'threadStates'), ...patch };
+			this.db!.prepare(
+				`INSERT INTO ${this.t.threadStates} (threadId, data) VALUES (?, ?)
+				 ON CONFLICT(threadId) DO UPDATE SET data = excluded.data`
+			).run(id, JSON.stringify(merged));
+		});
+		txn(threadId, data);
 	}
 
 	async getMessageState(messageId: TMessageId): Promise<Record<string, unknown> | null> {
 		const row = this.db!.prepare(`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`).get(messageId) as { data: string } | undefined;
 		if (!row) return null;
-		return JSON.parse(row.data);
+		return parseJsonRecord(row.data, 'messageStates');
 	}
 
 	async updateMessageState(messageId: TMessageId, data: Record<string, unknown>): Promise<void> {
-		const existing = await this.getMessageState(messageId);
-		const merged = { ...(existing || {}), ...data };
-		this.db!.prepare(
-			`INSERT INTO ${this.t.messageStates} (messageId, data) VALUES (?, ?)
-			 ON CONFLICT(messageId) DO UPDATE SET data = excluded.data`
-		).run(messageId, JSON.stringify(merged));
+		const txn = this.db!.transaction((id: string, patch: Record<string, unknown>) => {
+			const row = this.db!.prepare(`SELECT data FROM ${this.t.messageStates} WHERE messageId = ?`).get(messageId) as { data: string } | undefined;
+			const merged = { ...parseJsonRecord(row?.data, 'messageStates'), ...patch };
+			this.db!.prepare(
+				`INSERT INTO ${this.t.messageStates} (messageId, data) VALUES (?, ?)
+				 ON CONFLICT(messageId) DO UPDATE SET data = excluded.data`
+			).run(id, JSON.stringify(merged));
+		});
+		txn(messageId, data);
 	}
 
 	async getMessageStatesByThreadId(threadId: TThreadId): Promise<Array<{ messageId: string; data: Record<string, unknown> }>> {
@@ -1223,8 +1284,12 @@ export class SqlitePersistence implements IPersistence {
 
 	async codeGraphDeleteByFile(projectId: string, filePath: string): Promise<void> {
 		const txn = this.db!.transaction(() => {
+			// Scope every delete to the project: two projects can index the same
+			// absolute path (worktrees, copies), and dropping another project's
+			// edges/nodes silently corrupts its graph.
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`).run(projectId, filePath);
 			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE filePath = ?`).run(filePath);
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphEdges} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
 			this.db!.prepare(`DELETE FROM ${this.t.codeGraphFiles} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
 		});
 		txn();
@@ -1232,6 +1297,10 @@ export class SqlitePersistence implements IPersistence {
 
 	async codeGraphUpsertNodes(projectId: string, filePath: string, nodes: ICodeGraphNode[]): Promise<void> {
 		const txn = this.db!.transaction(() => {
+			// Clear this file's FTS rows BEFORE deleting the node rows they point at:
+			// the subquery reads the nodes table, so running it afterwards matched
+			// nothing and leaked an FTS row on every re-index.
+			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`).run(projectId, filePath);
 			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?`).run(projectId, filePath);
 			const insert = this.db!.prepare(
 				`INSERT INTO ${this.t.codeGraphNodes} (id, filePath, projectId, symbol, kind, language, startLine, endLine, startCol, endCol, signature, isExported)
@@ -1240,7 +1309,6 @@ export class SqlitePersistence implements IPersistence {
 			for (const n of nodes) {
 				insert.run(n.id, n.filePath, n.projectId ?? projectId, n.symbol, n.kind, n.language, n.startLine, n.endLine, n.startCol, n.endCol, n.signature ?? null, n.isExported ? 1 : 0);
 			}
-			this.db!.prepare(`DELETE FROM ${this.t.codeGraphNodesFts} WHERE nodeId IN (SELECT id FROM ${this.t.codeGraphNodes} WHERE projectId = ? AND filePath = ?)`).run(projectId, filePath);
 			const ftsInsert = this.db!.prepare(
 				`INSERT INTO ${this.t.codeGraphNodesFts} (nodeId, symbol, kind, signature) VALUES (?, ?, ?, ?)`
 			);
@@ -1287,10 +1355,13 @@ export class SqlitePersistence implements IPersistence {
 			).all(query) as Array<{ nodeId: string }>;
 			if (ftsResults.length === 0) return [];
 			const nodeIds = ftsResults.map(r => r.nodeId);
-			const placeholders = nodeIds.map(() => '?').join(',');
+			const placeholders = nodeIds.map(() => '?').join(', ');
+			// The FTS index is not partitioned per project, so the row lookup has to
+			// re-apply the project (and kind/filePath) filters — otherwise a match
+			// belonging to another project is returned as if it were local.
 			const rows = this.db!.prepare(
-				`SELECT * FROM ${this.t.codeGraphNodes} WHERE id IN (${placeholders}) LIMIT ?`
-			).all(...nodeIds, limit) as ICodeGraphNode[];
+				`SELECT * FROM ${this.t.codeGraphNodes} n WHERE n.id IN (${placeholders}) AND ${where} ORDER BY n.symbol LIMIT ?`
+			).all(...nodeIds, ...params, limit) as ICodeGraphNode[];
 			return rows;
 		}
 
@@ -1504,5 +1575,21 @@ export class SqlitePersistence implements IPersistence {
 
 	async deleteMode(id: string): Promise<void> {
 		this.db!.prepare(`DELETE FROM ${this.t.modes} WHERE id = ?`).run(id);
+	}
+
+	/**
+	 * Release the file handle. Without this the WAL sidecar is never checkpointed
+	 * and the file stays locked for other connections (the desktop app and the
+	 * server can both open it).
+	 */
+	close(): void {
+		if (!this.db) return;
+		try {
+			this.db.close();
+		} catch (err) {
+			console.error('[sqlite] close failed:', err);
+		} finally {
+			this.db = null;
+		}
 	}
 }
