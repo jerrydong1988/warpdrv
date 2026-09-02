@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import {
 	Flex, Box, Text, HStack, VStack, Button, Input, Switch, Portal, Combobox, createListCollection,
 } from '@chakra-ui/react';
-import { Sparkles, Layers, Cpu, AlertTriangle } from 'lucide-react';
-import { ESpecType, type IModel, type ISpecDecodeParams } from '@warpcore/shared';
+import { Sparkles, Layers, Cpu, AlertTriangle, ChevronDown } from 'lucide-react';
+import { ESpecType, EKvQuantType, type IModel, type ISpecDecodeParams } from '@warpcore/shared';
 import { Card } from '@/components/Card';
-import { NumberField, SelectField } from './Helpers';
+import { NumberField, SelectField, ToggleChip } from './Helpers';
 
 type TModelEntry = {
 	model: IModel;
@@ -81,6 +81,81 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 				</Combobox.Positioner>
 			</Portal>
 		</Combobox.Root>
+	);
+});
+
+// Advanced draft-model controls shared by the draft and dflash modes:
+// KV cache quantization, threads, polling, priority, CPU placement and
+// lookup decoding caches (llama.cpp v0.3.0 alignment). Collapsed by default.
+const SpecAdvancedSection = React.memo(({ specDecode, onSpecParamChange }: {
+	specDecode: ISpecDecodeParams;
+	onSpecParamChange: <K extends keyof ISpecDecodeParams>(key: K, value: ISpecDecodeParams[K]) => void;
+}) => {
+	const { t } = useTranslation();
+	const [open, setOpen] = useState(false);
+	const kvTypes = [EKvQuantType.F16, EKvQuantType.Q8_0, EKvQuantType.Q4_0, EKvQuantType.Q4_1, EKvQuantType.IQ4_NL, EKvQuantType.Q5_0, EKvQuantType.Q5_1];
+	return (
+		<Box borderWidth="1px" borderColor="var(--wc-border-subtle)" borderRadius="lg" overflow="hidden">
+			<Button variant="ghost" size="sm" w="100%" justifyContent="space-between" px="3" py="2"
+				onClick={() => setOpen(!open)} fontSize="12px" color="var(--wc-text-secondary)" _hover={{ bg: 'var(--wc-bg-hover)' }}>
+				{t('servers:specAdvanced.title')}
+				<ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s ease' }} />
+			</Button>
+			{open && (
+				<VStack align="stretch" gap="3" p="3" pt="0">
+					<Flex gap="4">
+						<SelectField label={t('servers:specAdvanced.draftKvQuantK')} value={specDecode.draftKvQuantK ?? EKvQuantType.F16}
+							options={kvTypes} onChange={v => onSpecParamChange('draftKvQuantK', v as EKvQuantType)} mono
+							optionLabels={{ [EKvQuantType.F16]: t('servers:specAdvanced.f16Default') }} />
+						<SelectField label={t('servers:specAdvanced.draftKvQuantV')} value={specDecode.draftKvQuantV ?? EKvQuantType.F16}
+							options={kvTypes} onChange={v => onSpecParamChange('draftKvQuantV', v as EKvQuantType)} mono
+							optionLabels={{ [EKvQuantType.F16]: t('servers:specAdvanced.f16Default') }} />
+					</Flex>
+					<Flex gap="4">
+						<NumberField label={t('servers:specAdvanced.draftThreads')} value={specDecode.draftThreads ?? 0} onChange={v => onSpecParamChange('draftThreads', v)} min={0} suffix="0 = auto" />
+						<NumberField label={t('servers:specAdvanced.draftThreadsBatch')} value={specDecode.draftThreadsBatch ?? 0} onChange={v => onSpecParamChange('draftThreadsBatch', v)} min={0} suffix="0 = auto" />
+					</Flex>
+					<Flex gap="4">
+						<SelectField label={t('servers:specAdvanced.draftPrio')} value={String(specDecode.draftPrio ?? 0)} options={['0', '1', '2', '3']} onChange={v => onSpecParamChange('draftPrio', Number(v))} />
+						<SelectField label={t('servers:specAdvanced.draftPrioBatch')} value={String(specDecode.draftPrioBatch ?? 0)} options={['0', '1', '2', '3']} onChange={v => onSpecParamChange('draftPrioBatch', Number(v))} />
+					</Flex>
+					<HStack gap="2" flexWrap="wrap">
+						<ToggleChip label={t('servers:specAdvanced.draftPoll')} active={specDecode.draftPoll ?? false} onClick={() => onSpecParamChange('draftPoll', !(specDecode.draftPoll ?? false))} />
+						<ToggleChip label={t('servers:specAdvanced.draftPollBatch')} active={specDecode.draftPollBatch ?? false} onClick={() => onSpecParamChange('draftPollBatch', !(specDecode.draftPollBatch ?? false))} />
+						<ToggleChip label={t('servers:specAdvanced.draftCpuMoe')} active={specDecode.draftCpuMoe ?? false} onClick={() => onSpecParamChange('draftCpuMoe', !(specDecode.draftCpuMoe ?? false))} />
+						<ToggleChip label={t('servers:specAdvanced.draftCpuStrict')} active={specDecode.draftCpuStrict ?? false} onClick={() => onSpecParamChange('draftCpuStrict', !(specDecode.draftCpuStrict ?? false))} />
+						<ToggleChip label={t('servers:specAdvanced.draftCpuStrictBatch')} active={specDecode.draftCpuStrictBatch ?? false} onClick={() => onSpecParamChange('draftCpuStrictBatch', !(specDecode.draftCpuStrictBatch ?? false))} />
+					</HStack>
+					<Flex gap="4">
+						<NumberField label={t('servers:specAdvanced.draftNCpuMoe')} value={specDecode.draftNCpuMoe ?? 0} onChange={v => onSpecParamChange('draftNCpuMoe', v)} min={0} />
+						<Box flex="1">
+							<Text fontSize="12px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('servers:specAdvanced.draftCpuRange')}</Text>
+							<Input placeholder={t('servers:specAdvanced.draftCpuRangePlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-faint)' }} _focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} value={specDecode.draftCpuRange ?? ''} onChange={e => onSpecParamChange('draftCpuRange', e.target.value)} />
+						</Box>
+					</Flex>
+					<Flex gap="4">
+						<Box flex="1">
+							<Text fontSize="12px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('servers:specAdvanced.draftCpuMask')}</Text>
+							<Input size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} value={specDecode.draftCpuMask ?? ''} onChange={e => onSpecParamChange('draftCpuMask', e.target.value)} />
+						</Box>
+						<Box flex="1">
+							<Text fontSize="12px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('servers:specAdvanced.draftCpuMaskBatch')}</Text>
+							<Input size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} value={specDecode.draftCpuMaskBatch ?? ''} onChange={e => onSpecParamChange('draftCpuMaskBatch', e.target.value)} />
+						</Box>
+					</Flex>
+					<Flex gap="4">
+						<Box flex="1">
+							<Text fontSize="12px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('servers:specAdvanced.lookupCacheStatic')}</Text>
+							<Input placeholder={t('servers:specAdvanced.lookupCachePlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-faint)' }} _focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} value={specDecode.lookupCacheStatic ?? ''} onChange={e => onSpecParamChange('lookupCacheStatic', e.target.value)} />
+						</Box>
+						<Box flex="1">
+							<Text fontSize="12px" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('servers:specAdvanced.lookupCacheDynamic')}</Text>
+							<Input placeholder={t('servers:specAdvanced.lookupCachePlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="12px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-faint)' }} _focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} value={specDecode.lookupCacheDynamic ?? ''} onChange={e => onSpecParamChange('lookupCacheDynamic', e.target.value)} />
+						</Box>
+					</Flex>
+				</VStack>
+			)}
+		</Box>
 	);
 });
 
@@ -229,6 +304,7 @@ export const SpeculativeDecodingCard = React.memo(({
 									_focus={{ borderColor: 'var(--wc-accent-purple)', outline: 'none' }} min={0} max={1} step={0.05} />
 								<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">0.0 - 1.0</Text>
 							</Box>
+							<SpecAdvancedSection specDecode={specDecode} onSpecParamChange={onSpecParamChange} />
 						</VStack>
 					)}
 
@@ -351,6 +427,7 @@ export const SpeculativeDecodingCard = React.memo(({
 									<NumberField label="N-Min" value={specDecode.specDraftNMin ?? 0} onChange={v => onSpecParamChange('specDraftNMin', v)} min={0} max={64} />
 								</Flex>
 							</Box>
+							<SpecAdvancedSection specDecode={specDecode} onSpecParamChange={onSpecParamChange} />
 						</VStack>
 					)}
 

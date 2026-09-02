@@ -233,7 +233,7 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 						{/* Right column */}
 						<VStack gap="5" flex="1" minW="0" align="stretch">
 							<ContextKVCard params={params} onParamChange={updateParam} meta={meta} />
-							<MultiModalCard useMultiModal={useMultiModal} onUseMultiModalChange={setUseMultiModal} hasMmproj={!!selectedEntry?.model.mmprojFile} />
+							<MultiModalCard useMultiModal={useMultiModal} onUseMultiModalChange={setUseMultiModal} hasMmproj={!!selectedEntry?.model.mmprojFile} params={params} onParamChange={updateParam} />
 							<EmbeddingCard useEmbedding={params.useEmbedding ?? false} onUseEmbeddingChange={v => updateParam('useEmbedding', v)} />
 							<RecommendedParamsCard
 								useRecommended={useRecommendedInferParams} onUseRecommendedChange={setUseRecommendedInferParams}
