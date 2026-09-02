@@ -4,7 +4,10 @@ import type { IWarpmcpDeps } from './types';
 // Only bypass auth for local requests when server is NOT exposed externally
 function isAuthRequired(deps: IWarpmcpDeps, req: Request): boolean {
 	if (deps.exposeExternal) return true;
-	return deps.isRemote(req as any);
+	return deps.isRemote({
+		ip: req.ip ?? '',
+		connection: { remoteAddress: req.socket?.remoteAddress ?? '' },
+	});
 }
 
 export async function authorizeToolCall(deps: IWarpmcpDeps, req: Request, toolName: string): Promise<{ ok: boolean; reason?: string }> {

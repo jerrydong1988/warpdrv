@@ -68,32 +68,45 @@ function getVersion(): string {
 // tests/tool_wiring.test.ts). The shell_exec entry in particular must receive
 // deps.getFsAllowedRoots — a previous regression registered it without deps,
 // silently disabling the path/cwd sandbox the tool description promises.
+// Handler args are typed via Parameters<typeof handler>[…] so the tool files
+// stay the single source of truth for their argument shapes.
+export interface IToolEntry<TDef = { name?: string; resultLimit?: number }> {
+	def: TDef;
+	handler: (args: Record<string, unknown>) => Promise<unknown>;
+}
+
+// Each def keeps its literal type (name/description/inputSchema/resultLimit),
+// which is what the MCP SDK's ListTools/CallTool result shapes expect.
+function entry<TDef>(def: TDef, handler: IToolEntry<TDef>['handler']): IToolEntry<TDef> {
+	return { def, handler };
+}
+
 export function buildToolEntries(deps: IWarpmcpDeps) {
 	return [
-		{ def: fileReadDefinition, handler: (a: any) => fileReadHandler(deps, a) },
-		{ def: fileWriteDefinition, handler: (a: any) => fileWriteHandler(deps, a) },
-		{ def: filePatchDefinition, handler: (a: any) => filePatchHandler(deps, a) },
-		{ def: dirListDefinition, handler: (a: any) => dirListHandler(deps, a) },
-		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a, deps.getFsAllowedRoots()) },
-		{ def: fetchDefinition, handler: (a: any) => fetchHandler(a) },
-		{ def: embeddingSearchDefinition, handler: (a: any) => embeddingSearchHandler(deps, a) },
-		{ def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
-		// { def: todoAddDefinition, handler: (a: any) => todoAddHandler(deps, a) },
-		// { def: todoRemoveDefinition, handler: (a: any) => todoRemoveHandler(deps, a) },
-		// { def: todoUpdateDefinition, handler: (a: any) => todoUpdateHandler(deps, a) },
-		// { def: todoClearDefinition, handler: (a: any) => todoClearHandler(deps, a) },
-		{ def: todoWriteDefinition, handler: (a: any) => todoWriteHandler(deps, a) },
-		{ def: rgDefinition, handler: (a: any) => rgHandler(deps, a) },
-		{ def: getProjectRootDefinition, handler: (a: any) => getProjectRootHandler(deps, a) },
-		{ def: codeGraphIngestDefinition, handler: (a: any) => codeGraphIngestHandler(deps, a) },
-		{ def: codeGraphSearchDefinition, handler: (a: any) => codeGraphSearchHandler(deps, a) },
-		{ def: codeGraphSymbolDefinition, handler: (a: any) => codeGraphSymbolHandler(deps, a) },
-		{ def: codeGraphCallersDefinition, handler: (a: any) => codeGraphCallersHandler(deps, a) },
-		{ def: codeGraphCalleesDefinition, handler: (a: any) => codeGraphCalleesHandler(deps, a) },
-		{ def: codeGraphListDefinition, handler: (a: any) => codeGraphListHandler(deps, a) },
-		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
-		{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
-		{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
+		entry(fileReadDefinition, (a) => fileReadHandler(deps, a as Parameters<typeof fileReadHandler>[1])),
+		entry(fileWriteDefinition, (a) => fileWriteHandler(deps, a as Parameters<typeof fileWriteHandler>[1])),
+		entry(filePatchDefinition, (a) => filePatchHandler(deps, a as Parameters<typeof filePatchHandler>[1])),
+		entry(dirListDefinition, (a) => dirListHandler(deps, a as Parameters<typeof dirListHandler>[1])),
+		entry(shellExecDefinition, (a) => shellExecHandler(a as Parameters<typeof shellExecHandler>[0], deps.getFsAllowedRoots())),
+		entry(fetchDefinition, (a) => fetchHandler(a as Parameters<typeof fetchHandler>[0])),
+		entry(embeddingSearchDefinition, (a) => embeddingSearchHandler(deps, a as Parameters<typeof embeddingSearchHandler>[1])),
+		entry(todoReadDefinition, (a) => todoReadHandler(deps, a as Parameters<typeof todoReadHandler>[1])),
+		// entry(todoAddDefinition, (a) => todoAddHandler(deps, a as Parameters<typeof todoAddHandler>[1])),
+		// entry(todoRemoveDefinition, (a) => todoRemoveHandler(deps, a as Parameters<typeof todoRemoveHandler>[1])),
+		// entry(todoUpdateDefinition, (a) => todoUpdateHandler(deps, a as Parameters<typeof todoUpdateHandler>[1])),
+		// entry(todoClearDefinition, (a) => todoClearHandler(deps, a as Parameters<typeof todoClearHandler>[1])),
+		entry(todoWriteDefinition, (a) => todoWriteHandler(deps, a as Parameters<typeof todoWriteHandler>[1])),
+		entry(rgDefinition, (a) => rgHandler(deps, a as Parameters<typeof rgHandler>[1])),
+		entry(getProjectRootDefinition, (a) => getProjectRootHandler(deps, a as Parameters<typeof getProjectRootHandler>[1])),
+		entry(codeGraphIngestDefinition, (a) => codeGraphIngestHandler(deps, a as Parameters<typeof codeGraphIngestHandler>[1])),
+		entry(codeGraphSearchDefinition, (a) => codeGraphSearchHandler(deps, a as Parameters<typeof codeGraphSearchHandler>[1])),
+		entry(codeGraphSymbolDefinition, (a) => codeGraphSymbolHandler(deps, a as Parameters<typeof codeGraphSymbolHandler>[1])),
+		entry(codeGraphCallersDefinition, (a) => codeGraphCallersHandler(deps, a as Parameters<typeof codeGraphCallersHandler>[1])),
+		entry(codeGraphCalleesDefinition, (a) => codeGraphCalleesHandler(deps, a as Parameters<typeof codeGraphCalleesHandler>[1])),
+		entry(codeGraphListDefinition, (a) => codeGraphListHandler(deps, a as Parameters<typeof codeGraphListHandler>[1])),
+		entry(codeGraphClearDefinition, (a) => codeGraphClearHandler(deps, a as Parameters<typeof codeGraphClearHandler>[1])),
+		entry(chatSearchDefinition, (a) => chatSearchHandler(deps, a as Parameters<typeof chatSearchHandler>[1])),
+		entry(chatGetMessageDefinition, (a) => chatGetMessageHandler(deps, a as Parameters<typeof chatGetMessageHandler>[1])),
 	];
 }
 
@@ -105,10 +118,10 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		const { name, arguments: args } = request.params;
 		const tool = tools.find(t => t.def.name === name);
 		if (!tool) throw new Error(`Unknown tool: ${name}`);
-		const result = await tool.handler(args as any);
+		const result = await tool.handler((args ?? {}) as Record<string, unknown>);
 		const json = JSON.stringify(result);
 		const bytes = Buffer.byteLength(json, 'utf8');
-		const limit = (tool.def as any).resultLimit;
+		const limit = (tool.def as { resultLimit?: number }).resultLimit;
 		if (limit !== undefined && bytes > limit) {
 			throw new Error(`[tool:${name}] Result too large: ${bytes} bytes exceeds ${limit} byte limit.`);
 		}
