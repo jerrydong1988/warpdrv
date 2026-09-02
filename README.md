@@ -318,6 +318,11 @@ npm run dev
 ./release.sh appimage           # AppImage only
 ```
 
+Individual stages are scripted too, so they are reproducible outside `release.sh`:
+
+- `npm run build -w @warpcore/server` — packages the Node sidecar (`packages/server/scripts/build.mjs`: esbuild bundle + `pkg` binary + runtime deps).
+- `npm run build:desktop` — full desktop chain: frontend build, sidecar staging into `packages/desktop/binaries/` and `app-dist/` (`packages/desktop/scripts/prepare.mjs`), then `cargo tauri build`.
+
 Bundle formats supported by Tauri: `deb`, `appimage`, `rpm`, `dmg`, `msi`, `nsis`, `updater`. Pass any combination to `release.sh`.
 
 Artifacts land in `packages/desktop/target/release/bundle/`.

@@ -41,8 +41,35 @@ jobs:
       - name: Validate translations
         run: npm run i18n:check -w @warpcore/app
 
+      - name: Lint core packages
+        run: npm run lint
+
       - name: Run core tests
         run: npm test -w @warpcore/realmcore
+
+      - name: Run server tests
+        run: npm test -w @warpcore/server
+
+      - name: Run warpmcp tests
+        run: npm test -w @warpcore/warpmcp
+
+      - name: Run bridge tests
+        run: npm test -w @warpcore/bridge
+
+      - name: Build shared declarations
+        run: npx tsc -b packages/shared packages/realmcore
+
+      - name: Typecheck server
+        run: npx tsc -p packages/server/tsconfig.json --noEmit
+
+      - name: Typecheck app
+        run: npx tsc -p packages/app/tsconfig.json --noEmit
+
+      - name: Typecheck bridge
+        run: npx tsc -p packages/bridge/tsconfig.json --noEmit
+
+      - name: Typecheck warpmcp
+        run: npx tsc -p packages/warpmcp/tsconfig.json --noEmit
 
       - name: Build frontend
         env:
