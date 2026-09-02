@@ -174,4 +174,24 @@
 | 附赠 | bridge 线程级工具审批从未生效 | ✅ `00de398` | 修复被行尾注释吞掉的 return（符合原设计意图，测试锁定） |
 | 附赠 | rateLimiter 多实例共享桶互相污染 | ✅ `b9e1e2d` | 桶与清理定时器移入工厂函数（每实例独立） |
 
-**遗留（P3/低危，记录在案未实施）**：覆盖率工具与门禁、Prettier/.editorconfig、eslint 扩展到 server/app、warpmcp `(a:any)` 处理器类型化、SSE 连接上限、store 全量写盘去抖、ElicitationRegistry TTL、下载二进制校验和、landing 站 i18n 与 CI 接入、RTL 就绪性。
+**遗留（2026-09-02 同日第二轮已全部处理或记录）**：
+
+| 遗留项 | 状态 | 说明 |
+|---|---|---|
+| warpmcp 处理器 `(a:any)` | ✅ `6214ab2` | `Parameters<typeof handler>` 类型化，auth/rg 残余 any 一并清除 |
+| SSE 连接上限 | ✅ `da38c8c` | 32 会话上限，超额 503 |
+| ElicitationRegistry TTL | ✅ `f31e32d` | 30 分钟超时拒绝 + 假定时器测试 |
+| 覆盖率工具与 CI | ✅ `a6dbbf3` | @vitest/coverage-v8 五包接入 + 根脚本；基线 realmcore 77% / warpmcp 21% / bridge 11% / server 7% / app <1%；阈值门禁后置 |
+| eslint 扩展 server/app | ✅ `4d2e291` | server 强制 no-unused-vars（47 处死代码清除）；app 推荐规则 error + unused warn（~320 处历史遗留警告，后续清扫）；首轮修复 21 空 catch、5 表达式语句、3 失效 disable 注释等 |
+| landing CI 接入 | ✅ `a6dbbf3` | ci.yml 增加 landing npm ci + astro build 步骤（本地验证 15 页构建通过） |
+| landing i18n（zh-CN 文档翻译） | ⏸ 记录 | 内容工作量（12 篇指南）超出工程修复范围；Starlight locales 结构已就绪，翻译可由内容 PR 完成 |
+| @types/socket.io 废弃包 | ✅ `a6dbbf3` | 彻底移除：该 DefinitelyTyped stub 会遮蔽 socket.io-client v4 自带类型并破坏 app tsc |
+| 死工具 update-claude-filelist | ✅ `da38c8c` | .sh/.ts 双实现已删除 |
+| engines/packageManager | ✅ `a6dbbf3` | node >=24 + npm@11.12.1 |
+| .editorconfig/.prettierrc | ✅ `4166d8a` | 与 tab 约定一致；未做全量重格式化（避免噪音 diff） |
+| RTL 就绪性 / missingKeyHandler | ✅ `4166d8a` | `<html dir>` 随 locale（rtl 检测 ar/he/fa/ur）；缺失 key 控制台告警 |
+| 下载的 llama.cpp/whisper.cpp 二进制校验和 | ⏸ 记录 | 需要上游发布清单（.sha256 资产）作为信任源，属数据/产品决策而非代码修复；当前依赖 TLS + GitHub 信誉 |
+| store 全量同步写盘去抖 | ⏸ 记录 | 现有 storePersistence 测试锁定"写入后立即落盘"语义（崩溃安全特性），去抖会破坏该保证；保留原子写+回滚设计 |
+| server tsconfig 跨树 include | ✅ `da38c8c` | 移除 tools/test-gguf.ts include |
+
+**第二轮验证**：lint 0 错误（server 全强制）；i18n:check 1550 keys；五包测试（realmcore 225 + server 216 + warpmcp 25 + bridge 63 + app 6 = 535）；全部 tsc 通过；coverage 五包报告生成。
