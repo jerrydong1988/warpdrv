@@ -79,6 +79,7 @@ describe('buildLlamaInferenceParams', () => {
 			grammar: 'root ::= "a"',
 			jsonSchema: { type: 'object' },
 			extraSamplingParams: { custom: 1 },
+			drySequenceBreaker: 'none',
 		});
 		expect(result).toMatchObject({
 			stop: ['END', 'STOP'],
@@ -86,6 +87,7 @@ describe('buildLlamaInferenceParams', () => {
 			grammar: 'root ::= "a"',
 			json_schema: { type: 'object' },
 			custom: 1,
+			dry_sequence_breaker: 'none',
 		});
 	});
 

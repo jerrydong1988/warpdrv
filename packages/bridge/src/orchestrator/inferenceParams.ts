@@ -48,6 +48,7 @@ export function buildLlamaInferenceParams(params: Record<string, unknown>): Reco
 	const dryBase = toNumber(p.dryBase);
 	const dryAllowedLength = toNumber(p.dryAllowedLength);
 	const dryPenaltyLastN = toNumber(p.dryPenaltyLastN);
+	const drySequenceBreaker = typeof p.drySequenceBreaker === 'string' ? p.drySequenceBreaker : undefined;
 	const topNSigma = toNumber(p.topNSigma);
 	const xtcProbability = toNumber(p.xtcProbability);
 	const xtcThreshold = toNumber(p.xtcThreshold);
@@ -92,6 +93,7 @@ export function buildLlamaInferenceParams(params: Record<string, unknown>): Reco
 		...(dryBase ? { dry_base: dryBase } : {}),
 		...(dryAllowedLength ? { dry_allowed_length: dryAllowedLength } : {}),
 		...(dryPenaltyLastN ? { dry_penalty_last_n: dryPenaltyLastN } : {}),
+		...(drySequenceBreaker !== undefined ? { dry_sequence_breaker: drySequenceBreaker } : {}),
 		...(topNSigma !== undefined ? { top_n_sigma: topNSigma } : {}),
 		...(xtcProbability ? { xtc_probability: xtcProbability } : {}),
 		...(xtcThreshold ? { xtc_threshold: xtcThreshold } : {}),

@@ -127,6 +127,12 @@ function pushSupportedOption(
 	if (flag) args.push(flag, value);
 }
 
+// Like pushSupportedOption but for boolean toggles that carry no value.
+function pushSupportedFlag(args: string[], capabilities: ILlamaBackendCapabilities | undefined, candidates: string[]): void {
+	const flag = supportedFlag(capabilities, candidates);
+	if (flag) args.push(flag);
+}
+
 // Build speculative decoding args for older llama.cpp builds.
 function buildSpecDecodeArgsLegacy(sd: ISpecDecodeParams): string[] {
 	const args: string[] = [];
@@ -210,6 +216,7 @@ function buildSpecDecodeArgsModern(sd: ISpecDecodeParams, capabilities?: ILlamaB
 		if (sd.draftDevice) pushSupportedOption(args, capabilities, ['--spec-draft-device', '--device-draft'], sd.draftDevice);
 		if (sd.specDraftNMax) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.specDraftNMax));
 		if (sd.specDraftNMin) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.specDraftNMin));
+		appendDraftModelControls(args, sd, capabilities);
 		return args;
 	}
 	const specType = acceptedSpecType(capabilities, normalizeDraftModelSpecType(sd.specType), 'draft-simple');
@@ -224,7 +231,60 @@ function buildSpecDecodeArgsModern(sd: ISpecDecodeParams, capabilities?: ILlamaB
 	if (sd.draftMax > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.draftMax));
 	if (sd.draftMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.draftMin));
 	if (sd.draftPMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-p-min', '--draft-p-min'], String(sd.draftPMin));
+	appendDraftModelControls(args, sd, capabilities);
 	return args;
+}
+
+// Draft-model execution controls shared by the draft/dflash branches:
+// KV cache quantization, threads, polling, priority and CPU placement
+// (--spec-draft-* family, each with legacy aliases for older builds).
+// Ngram and MTP modes have no separate draft model, so these do not apply.
+function appendDraftModelControls(args: string[], sd: ISpecDecodeParams, capabilities?: ILlamaBackendCapabilities): void {
+	if (sd.draftKvQuantK && sd.draftKvQuantK !== EKvQuantType.F16) {
+		pushSupportedOption(args, capabilities, ['--cache-type-k-draft'], sd.draftKvQuantK);
+	}
+	if (sd.draftKvQuantV && sd.draftKvQuantV !== EKvQuantType.F16) {
+		pushSupportedOption(args, capabilities, ['--cache-type-v-draft'], sd.draftKvQuantV);
+	}
+	if (sd.draftThreads && sd.draftThreads > 0) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-threads', '--threads-draft'], String(sd.draftThreads));
+	}
+	if (sd.draftThreadsBatch && sd.draftThreadsBatch > 0) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-threads-batch', '--threads-batch-draft'], String(sd.draftThreadsBatch));
+	}
+	if (sd.draftPoll !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-poll', '--poll-draft'], sd.draftPoll ? '1' : '0');
+	}
+	if (sd.draftPollBatch !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-poll-batch', '--poll-batch-draft'], sd.draftPollBatch ? '1' : '0');
+	}
+	if (sd.draftPrio !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-prio', '--prio-draft'], String(sd.draftPrio));
+	}
+	if (sd.draftPrioBatch !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-prio-batch', '--prio-batch-draft'], String(sd.draftPrioBatch));
+	}
+	if (sd.draftCpuMoe) {
+		pushSupportedFlag(args, capabilities, ['--spec-draft-cpu-moe', '--cpu-moe-draft']);
+	}
+	if (sd.draftNCpuMoe !== undefined && sd.draftNCpuMoe >= 0) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-ncmoe', '--n-cpu-moe-draft'], String(sd.draftNCpuMoe));
+	}
+	if (sd.draftCpuMask) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-cpu-mask', '--cpu-mask-draft'], sd.draftCpuMask);
+	}
+	if (sd.draftCpuMaskBatch) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-cpu-mask-batch', '--cpu-mask-batch-draft'], sd.draftCpuMaskBatch);
+	}
+	if (sd.draftCpuStrict !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-cpu-strict', '--cpu-strict-draft'], sd.draftCpuStrict ? '1' : '0');
+	}
+	if (sd.draftCpuStrictBatch !== undefined) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-cpu-strict-batch', '--cpu-strict-batch-draft'], sd.draftCpuStrictBatch ? '1' : '0');
+	}
+	if (sd.draftCpuRange) {
+		pushSupportedOption(args, capabilities, ['--spec-draft-cpu-range', '--cpu-range-draft'], sd.draftCpuRange);
+	}
 }
 
 const LOAD_MODE_FLAGS = new Set(['--load-mode', '-lm', '--mlock', '--mmap', '--no-mmap', '-dio', '--direct-io', '-ndio', '--no-direct-io']);
@@ -370,7 +430,29 @@ export function buildArgs(
 			? buildSpecDecodeArgsModern(sd, capabilities)
 			: buildSpecDecodeArgsLegacy(sd);
 		args.push(...specArgs);
+		// Lookup decoding caches — orthogonal to the spec mode, valid whenever
+		// speculative decoding is on.
+		if (sd.lookupCacheStatic) pushSupportedOption(args, capabilities, ['--lookup-cache-static'], sd.lookupCacheStatic);
+		if (sd.lookupCacheDynamic) pushSupportedOption(args, capabilities, ['--lookup-cache-dynamic'], sd.lookupCacheDynamic);
 	}
+	// Experimental llama-sampling backend
+	if (params.backendSampling && !argsSet.has('--backend-sampling')) args.push('--backend-sampling');
+	// Reasoning-trace handling (tristate; omit = template default)
+	if (params.reasoningPreserve === true && !argsSet.has('--reasoning-preserve')) args.push('--reasoning-preserve');
+	else if (params.reasoningPreserve === false && !argsSet.has('--no-reasoning-preserve')) args.push('--no-reasoning-preserve');
+	// Prompt-similarity threshold for slot reuse (0 = disabled; llama.cpp default 0.10)
+	if (params.slotPromptSimilarity !== undefined) args.push('--slot-prompt-similarity', String(params.slotPromptSimilarity));
+	// LoRA adapters (comma-separated) and per-adapter scales
+	if (params.loraAdapters?.trim()) pushSupportedOption(args, capabilities, ['--lora'], params.loraAdapters.trim());
+	if (params.loraScaled?.trim()) pushSupportedOption(args, capabilities, ['--lora-scaled'], params.loraScaled.trim());
+	if (params.loraInitWithoutApply) pushSupportedFlag(args, capabilities, ['--lora-init-without-apply']);
+	// Multimodal projector loading controls
+	if (params.mmprojUrl?.trim()) pushSupportedOption(args, capabilities, ['--mmproj-url'], params.mmprojUrl.trim());
+	if (params.mmprojAuto === true && !argsSet.has('--mmproj-auto')) args.push('--mmproj-auto');
+	else if (params.mmprojAuto === false && !argsSet.has('--no-mmproj-auto')) args.push('--no-mmproj-auto');
+	if (params.mmprojDevice?.trim()) pushSupportedOption(args, capabilities, ['--mmproj-device'], params.mmprojDevice.trim());
+	if (params.mmprojOffload === true && !argsSet.has('--mmproj-offload')) args.push('--mmproj-offload');
+	else if (params.mmprojOffload === false && !argsSet.has('--no-mmproj-offload')) args.push('--no-mmproj-offload');
 	// User extra args — placed BEFORE the server-controlled flags below so a
 	// user value can never override --host/--port/--slot-save-path (previously
 	// a crafted extraArgs could redirect checkpoint writes to any directory).

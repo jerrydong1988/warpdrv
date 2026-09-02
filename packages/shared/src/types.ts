@@ -165,6 +165,26 @@ export interface ISpecDecodeParams {
 	ngramSizeN?: number; // lookup n-gram length
 	ngramSizeM?: number; // draft m-gram length
 	ngramMinHits?: number; // min occurrences before drafting (ngram-map-k* only)
+	// Draft-model KV cache quantization (--cache-type-k-draft / --cache-type-v-draft)
+	draftKvQuantK?: EKvQuantType;
+	draftKvQuantV?: EKvQuantType;
+	// Draft-model execution controls (--spec-draft-* family)
+	draftThreads?: number; // 0 = follow --threads
+	draftThreadsBatch?: number; // 0 = follow --threads-draft
+	draftPoll?: boolean; // use polling to wait for draft work
+	draftPollBatch?: boolean;
+	draftPrio?: number; // 0-normal, 1-medium, 2-high, 3-realtime
+	draftPrioBatch?: number;
+	draftCpuMoe?: boolean; // keep MoE weights on CPU for the draft model
+	draftNCpuMoe?: number; // keep first N layers' MoE weights on CPU
+	draftCpuMask?: string; // CPU affinity mask for the draft model
+	draftCpuMaskBatch?: string;
+	draftCpuStrict?: boolean; // strict CPU placement for the draft model
+	draftCpuStrictBatch?: boolean;
+	draftCpuRange?: string; // CPU affinity range "lo-hi"
+	// Lookup decoding caches (--lookup-cache-static / --lookup-cache-dynamic)
+	lookupCacheStatic?: string;
+	lookupCacheDynamic?: string;
 }
 export const DEFAULT_SPEC_DECODE_PARAMS: ISpecDecodeParams = {
 	enabled: false,
@@ -214,6 +234,26 @@ export interface ILaunchParams {
 		preserveThinking?: boolean; // enables --chat-template-kwargs {"preserve_thinking":true}
 		/** Overrides the listen host for this instance; default loopback unless settings.inferenceExposeExternal. */
 		inferenceExposeExternal?: boolean;
+		/** Enables the (experimental) llama-sampling backend: --backend-sampling. */
+		backendSampling?: boolean;
+		/** Tristate reasoning-trace handling: true → --reasoning-preserve, false → --no-reasoning-preserve, undefined → template default. */
+		reasoningPreserve?: boolean;
+		/** Prompt-similarity threshold for slot reuse (--slot-prompt-similarity); 0 = disabled. */
+		slotPromptSimilarity?: number;
+		/** LoRA adapters, comma-separated paths (--lora). */
+		loraAdapters?: string;
+		/** LoRA adapters with per-adapter scales, "path:scale,..." (--lora-scaled). */
+		loraScaled?: string;
+		/** Load LoRA adapters without applying them (--lora-init-without-apply). */
+		loraInitWithoutApply?: boolean;
+		/** Multimodal projector URL (--mmproj-url). */
+		mmprojUrl?: string;
+		/** Tristate auto projector detection: true → --mmproj-auto, false → --no-mmproj-auto, undefined → default. */
+		mmprojAuto?: boolean;
+		/** Device for the multimodal projector (--mmproj-device); empty = auto. */
+		mmprojDevice?: string;
+		/** Tristate projector GPU offload: true → --mmproj-offload, false → --no-mmproj-offload, undefined → default. */
+		mmprojOffload?: boolean;
 	}
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {

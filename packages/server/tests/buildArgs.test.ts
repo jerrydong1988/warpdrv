@@ -353,3 +353,152 @@ describe('buildArgs dedupe and flags', () => {
 		expect(args[args.indexOf('--spec-type') + 1]).toBe('draft-dflash');
 	});
 });
+
+// llama.cpp v0.3.0 alignment: draft KV quantization, draft execution
+// controls, lookup caches, sampling backend, reasoning preserve, slot
+// similarity, LoRA and mmproj loading controls.
+const V030_CAPABILITIES: ILlamaBackendCapabilities = {
+	...B10453_CAPABILITIES,
+	supportedFlags: [
+		...B10453_CAPABILITIES.supportedFlags,
+		'--cache-type-k-draft', '--cache-type-v-draft',
+		'--spec-draft-threads', '--spec-draft-threads-batch',
+		'--spec-draft-poll', '--spec-draft-poll-batch',
+		'--spec-draft-prio', '--spec-draft-prio-batch',
+		'--spec-draft-cpu-moe', '--spec-draft-ncmoe',
+		'--spec-draft-cpu-mask', '--spec-draft-cpu-mask-batch',
+		'--spec-draft-cpu-strict', '--spec-draft-cpu-strict-batch', '--spec-draft-cpu-range',
+		'--lookup-cache-static', '--lookup-cache-dynamic',
+		'--backend-sampling', '--reasoning-preserve', '--no-reasoning-preserve',
+		'--slot-prompt-similarity', '--lora', '--lora-scaled', '--lora-init-without-apply',
+		'--mmproj-url', '--mmproj-auto', '--no-mmproj-auto', '--mmproj-device',
+		'--mmproj-offload', '--no-mmproj-offload',
+	],
+};
+
+const draftSpec = (overrides: Partial<typeof DEFAULT_LAUNCH_PARAMS.specDecode> = {}) => ({
+	...DEFAULT_LAUNCH_PARAMS.specDecode,
+	enabled: true,
+	mode: 'draft' as const,
+	draftModelPath: '/models/draft.gguf',
+	...overrides,
+});
+
+describe('v0.3.0 parameter alignment', () => {
+	it('emits draft KV cache quantization only when non-F16 and a draft model exists', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({ draftKvQuantK: EKvQuantType.Q8_0, draftKvQuantV: EKvQuantType.Q5_0 }),
+		}), [], 10453, V030_CAPABILITIES);
+		expect(args[args.indexOf('--cache-type-k-draft') + 1]).toBe('q8_0');
+		expect(args[args.indexOf('--cache-type-v-draft') + 1]).toBe('q5_0');
+
+		const f16Args = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({ draftKvQuantK: EKvQuantType.F16 }),
+		}), [], 10453, V030_CAPABILITIES);
+		expect(f16Args).not.toContain('--cache-type-k-draft');
+
+		// ngram has no draft model — never emit draft-only controls
+		const ngramArgs = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({ mode: 'ngram', draftModelPath: '', draftKvQuantK: EKvQuantType.Q8_0 }),
+		}), [], 10453, V030_CAPABILITIES);
+		expect(ngramArgs).not.toContain('--cache-type-k-draft');
+	});
+
+	it('emits draft execution controls with modern flag names', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({
+				draftThreads: 4, draftThreadsBatch: 8,
+				draftPoll: true, draftPollBatch: false,
+				draftPrio: 2, draftPrioBatch: 1,
+				draftCpuMoe: true, draftNCpuMoe: 3,
+				draftCpuMask: '0x3', draftCpuStrict: true, draftCpuRange: '0-3',
+			}),
+		}), [], 10453, V030_CAPABILITIES);
+		expect(args[args.indexOf('--spec-draft-threads') + 1]).toBe('4');
+		expect(args[args.indexOf('--spec-draft-threads-batch') + 1]).toBe('8');
+		expect(args[args.indexOf('--spec-draft-poll') + 1]).toBe('1');
+		expect(args[args.indexOf('--spec-draft-poll-batch') + 1]).toBe('0');
+		expect(args[args.indexOf('--spec-draft-prio') + 1]).toBe('2');
+		expect(args[args.indexOf('--spec-draft-prio-batch') + 1]).toBe('1');
+		expect(args).toContain('--spec-draft-cpu-moe');
+		expect(args[args.indexOf('--spec-draft-ncmoe') + 1]).toBe('3');
+		expect(args[args.indexOf('--spec-draft-cpu-mask') + 1]).toBe('0x3');
+		expect(args[args.indexOf('--spec-draft-cpu-strict') + 1]).toBe('1');
+		expect(args[args.indexOf('--spec-draft-cpu-range') + 1]).toBe('0-3');
+	});
+
+	it('falls back to legacy draft-control aliases on older backends', () => {
+		const legacyCaps: ILlamaBackendCapabilities = {
+			...B10453_CAPABILITIES,
+			supportedFlags: [
+				...B10453_CAPABILITIES.supportedFlags,
+				'--threads-draft', '--threads-batch-draft', '--poll-draft', '--prio-draft', '--cpu-moe-draft',
+			],
+		};
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({ draftThreads: 4, draftPoll: true, draftPrio: 2, draftCpuMoe: true }),
+		}), [], 10453, legacyCaps);
+		expect(args[args.indexOf('--threads-draft') + 1]).toBe('4');
+		expect(args[args.indexOf('--poll-draft') + 1]).toBe('1');
+		expect(args[args.indexOf('--prio-draft') + 1]).toBe('2');
+		expect(args).toContain('--cpu-moe-draft');
+		expect(args).not.toContain('--spec-draft-threads');
+	});
+
+	it('emits lookup caches only while speculative decoding is enabled', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: draftSpec({ lookupCacheStatic: '/cache/static.bin', lookupCacheDynamic: '/cache/dyn.bin' }),
+		}), [], 10453, V030_CAPABILITIES);
+		expect(args[args.indexOf('--lookup-cache-static') + 1]).toBe('/cache/static.bin');
+		expect(args[args.indexOf('--lookup-cache-dynamic') + 1]).toBe('/cache/dyn.bin');
+
+		const offArgs = buildArgs('/models/m.gguf', null, makeParams({
+			specDecode: { ...DEFAULT_LAUNCH_PARAMS.specDecode, lookupCacheStatic: '/cache/static.bin' },
+		}), [], 10453, V030_CAPABILITIES);
+		expect(offArgs).not.toContain('--lookup-cache-static');
+	});
+
+	it('emits backend-sampling and the reasoning-preserve tristate', () => {
+		const on = buildArgs('/models/m.gguf', null, makeParams({ backendSampling: true, reasoningPreserve: true }), [], 10453, V030_CAPABILITIES);
+		expect(on).toContain('--backend-sampling');
+		expect(on).toContain('--reasoning-preserve');
+		expect(on).not.toContain('--no-reasoning-preserve');
+
+		const off = buildArgs('/models/m.gguf', null, makeParams({ reasoningPreserve: false }), [], 10453, V030_CAPABILITIES);
+		expect(off).toContain('--no-reasoning-preserve');
+
+		const defaults = buildArgs('/models/m.gguf', null, makeParams(), [], 10453, V030_CAPABILITIES);
+		expect(defaults).not.toContain('--reasoning-preserve');
+		expect(defaults).not.toContain('--no-reasoning-preserve');
+	});
+
+	it('emits slot prompt similarity and LoRA flags', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			slotPromptSimilarity: 0.5,
+			loraAdapters: '/loras/a.gguf,/loras/b.gguf',
+			loraScaled: '/loras/a.gguf:0.8',
+			loraInitWithoutApply: true,
+		}), [], 10453, V030_CAPABILITIES);
+		expect(args[args.indexOf('--slot-prompt-similarity') + 1]).toBe('0.5');
+		expect(args[args.indexOf('--lora') + 1]).toBe('/loras/a.gguf,/loras/b.gguf');
+		expect(args[args.indexOf('--lora-scaled') + 1]).toBe('/loras/a.gguf:0.8');
+		expect(args).toContain('--lora-init-without-apply');
+	});
+
+	it('emits mmproj loading controls as a tristate family', () => {
+		const args = buildArgs('/models/m.gguf', '/models/mmproj.gguf', makeParams({
+			mmprojUrl: 'https://example.com/mmproj.gguf',
+			mmprojAuto: false,
+			mmprojDevice: 'CUDA0',
+			mmprojOffload: false,
+		}), [], 10453, V030_CAPABILITIES);
+		expect(args[args.indexOf('--mmproj-url') + 1]).toBe('https://example.com/mmproj.gguf');
+		expect(args).toContain('--no-mmproj-auto');
+		expect(args[args.indexOf('--mmproj-device') + 1]).toBe('CUDA0');
+		expect(args).toContain('--no-mmproj-offload');
+
+		const defaults = buildArgs('/models/m.gguf', '/models/mmproj.gguf', makeParams(), [], 10453, V030_CAPABILITIES);
+		expect(defaults).not.toContain('--mmproj-auto');
+		expect(defaults).not.toContain('--no-mmproj-auto');
+	});
+});
