@@ -59,6 +59,28 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
 
+      # release.sh bumps release.json/tauri.conf.json/package.json/package-lock.json
+      # in-place but never commits them; persist the bump so the tag created by
+      # the release step below lands on the versioned commit.
+      - name: Persist version bump
+        id: bump
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release.json package.json package-lock.json packages/desktop/tauri.conf.json packages/desktop/Cargo.toml
+          if git diff --cached --quiet; then
+            echo "No version files changed; nothing to commit."
+          else
+            git commit -m "release: bump version"
+            if git push; then
+              echo "Version bump pushed to the repository."
+            else
+              echo "::warning::Push of the version bump commit failed; artifact upload and release creation are unaffected."
+            fi
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
       - name: Resolve version
         id: version
         run: |
@@ -87,6 +109,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
+          # Land the tag on the version-bump commit (falls back to the trigger
+          # SHA when no version files changed).
+          target_commitish: ${{ steps.bump.outputs.sha }}
           name: warpdrv ${{ steps.version.outputs.tag }}
           draft: true
           prerelease: true
