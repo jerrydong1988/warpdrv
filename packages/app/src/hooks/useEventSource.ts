@@ -3,11 +3,8 @@ import { useStore } from '@/store';
 
 export function useEventSource() {
 	useEffect(() => {
-		console.log('[SSE] Creating EventSource connection to /api/events');
-		const port = (import.meta as any).env.DEV
-			// @ts-ignore
-			? __CONTROL_API_PORT__
-			: window.location.port || '4400';
+		// Same-origin endpoint — the Vite dev proxy and the production server
+		// both route /api/events to the control plane.
 		const eventSource = new EventSource(`/api/events`);
 
 		eventSource.onopen = () => {

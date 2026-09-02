@@ -25,6 +25,11 @@ packages/app/dist/
 .easier-code/
 .claude/settings.local.json
 
+# Environment files — never commit secrets
+.env
+.env.*
+!.env.example
+
 node_modules
 dist
 dist-ssr

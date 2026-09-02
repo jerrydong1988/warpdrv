@@ -129,10 +129,8 @@ async function main() {
 	}
 
 	// console.log('[debug] PATH:', process.env.PATH || '(not set)');
-	console.log('[debug] HOME:', process.env.HOME || '(not set)');
 	console.log('[debug] RESOURCE_DIR:', process.env.RESOURCE_DIR);
 	console.log('[debug] execPath:', process.execPath);
-	console.log('[debug] pkg:', (process as any).pkg);
 	await runMigrations();
 
 	// Ensure default settings exist

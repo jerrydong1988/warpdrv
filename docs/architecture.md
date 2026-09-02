@@ -9,7 +9,7 @@
 
 ## 技术栈 & 规模
 
-- **语言**：TypeScript 417 文件为绝对主体；Rust 2（`realmcore` 原生核心）；SCSS/CSS 31（样式）；YAML/Bash/TOML 少量脚本与配置。
+- **语言**：TypeScript 417 文件为绝对主体；Rust 2（`packages/desktop` Tauri 壳）；SCSS/CSS 31（样式）；YAML/Bash/TOML 少量脚本与配置。
 - **结构**：pnpm workspace monorepo，`packages/*` + `tools/` + `landing/`（落地页）。
 
 ## 包 / 模块地图（按图谱节点数排序）
@@ -20,7 +20,7 @@
 | **server** | 444 | 后端 HTTP API：模型 scan / cache / download、拉起推理服务 |
 | **bridge** | 318 | **编排核心**：MCP 桥接、elicitation 注册表、spawnServer / proxy / killServer |
 | **shared** | 195 | 跨包共享类型与工具 |
-| **realmcore** | 129 | Rust 原生核心（解析 / ingest / GGUF 相关） |
+| **realmcore** | 129 | TypeScript 事件/Applet 框架（EventNode 路由、WSTransport 等，被 server+app 共用） |
 | **warpmcp** | 81 | warp 的 MCP server |
 | **desktop** | 20 | 桌面壳（Tauri，见 `binaries/`、`target/`） |
 
