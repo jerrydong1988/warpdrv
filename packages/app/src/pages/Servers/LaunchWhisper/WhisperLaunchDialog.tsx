@@ -486,7 +486,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 								_disabled={{ opacity: 0.3, cursor: 'not-allowed' }} borderRadius="lg" fontSize="13px" fontWeight="600" px="6"
 								transition="all 0.2s ease" onClick={handleLaunch}>
 								{launching ? <Box className="animate-spin" w="4" h="4" border="2px solid currentColor" borderTopColor="transparent" borderRadius="full" /> : <RotateCcw size={14} />}
-								Restart
+								{t('servers:actions.restart')}
 							</Button>
 						) : (
 							<Button size="sm" disabled={!canLaunch || launching}
@@ -495,7 +495,7 @@ export const WhisperLaunchDialog = React.memo(({ onClose, serverId }: IWhisperLa
 								_disabled={{ opacity: 0.3, cursor: 'not-allowed' }} borderRadius="lg" fontSize="13px" fontWeight="600" px="6"
 								transition="all 0.2s ease" onClick={handleLaunch}>
 								{launching ? <Box className="animate-spin" w="4" h="4" border="2px solid currentColor" borderTopColor="transparent" borderRadius="full" /> : <Play size={14} />}
-								Launch
+								{t('servers:launch.launch')}
 							</Button>
 						)}
 					</HStack>

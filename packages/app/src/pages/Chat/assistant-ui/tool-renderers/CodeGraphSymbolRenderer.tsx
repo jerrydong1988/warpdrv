@@ -3,6 +3,7 @@ import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { FileCode } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface INode { symbol: string; kind: string; language: string; filePath: string; startLine: number; endLine: number; signature?: string; }
 
@@ -14,6 +15,7 @@ const KIND_COLORS: Record<string, string> = {
 export const CodeGraphSymbolRenderer = React.memo((props: {
 	symbolId?: string; symbol?: string; result?: unknown;
 }) => {
+	const { t } = useTranslation('chat');
 	const { symbolId, symbol, result } = props;
 	const text = extractResultText(result);
 	let nodes: INode[] | null = null;
@@ -47,7 +49,7 @@ export const CodeGraphSymbolRenderer = React.memo((props: {
 											<Text fontSize="calc(var(--chat-font-size) - 2px)" fontFamily="mono" color="var(--wc-text-faint)">{String(n.filePath)}:{String(n.startLine)}-{String(n.endLine)}</Text>
 						</Box>
 					))}
-										{nodes.length > 1 && <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length} matches — ambiguous symbol name</Text>}
+										{nodes.length > 1 && <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-faint)" fontStyle="italic">{nodes.length}{t('tool.ambiguousSymbolMatches')}</Text>}
 				</VStack>
 			)}
 		</Box>
@@ -64,12 +66,13 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
 		return { symbolId, symbol };
 	},
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
     const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
     const label = symbolId ?? symbol ?? '';
     const truncated = label.length > 60 ? label.slice(0, 57) + '...' : label;
     return (
-      <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>
+      <Text whiteSpace="nowrap">{t('tool.codeSymbol')}{truncated}</Text>
     );
   }),
 };

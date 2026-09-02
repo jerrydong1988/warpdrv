@@ -226,7 +226,7 @@ bg="var(--wc-bg-subtle)"
 															fontSize="12px"
 															onClick={handleAddAlias}
 														>
-															Add
+															{t('actions.add')}
 														</Button>
 													</HStack>
 												</Popover.Body>

@@ -7,10 +7,12 @@ import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import type { IGuardrailDefinition, IMode, TModeId } from '@warpcore/shared';
 import { updateModeGuardrails as updateModeGuardrailsApi } from '@/api/mode-services';
+import { useTranslation } from 'react-i18next';
 
 const EMPTY_GUARDRAILS: Record<string, IGuardrailDefinition> = {};
 
 export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: string; value: string[]; onClick?: (e: React.MouseEvent) => void }) => {
+	const { t } = useTranslation('common');
 	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
 	const guardrailNames = useMemo(() => Object.keys(guardrails), [guardrails]);
 	const [isOpen, setIsOpen] = useState(false);
@@ -64,7 +66,7 @@ export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: s
 				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
 			>
 				<Text fontSize="xs" color={value.length > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
-					{value.length > 0 ? `${value.length} guardrail${value.length > 1 ? 's' : ''}` : 'No guardrails'}
+					{value.length > 0 ? t('ui.guardrailsCount', { count: value.length }) : t('ui.noGuardrails')}
 				</Text>
 			</Box>
 			{isOpen && createPortal(
@@ -85,7 +87,7 @@ export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: s
 					}}
 				>
 					{guardrailNames.length === 0 ? (
-						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>No guardrails</div>
+						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>{t('ui.noGuardrails')}</div>
 					) : (
 						guardrailNames.map(name => {
 							const isSelected = selectedSet.has(name);
@@ -126,6 +128,7 @@ export const ModeGuardrailPicker = memo(({ modeId, value, onClick }: { modeId: s
 });
 
 export const GuardrailBadge = memo(() => {
+	const { t } = useTranslation('common');
 	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
 	const threadState = useStore(s => s.getCurrentThreadState());
 	const setThreadState = useStore(s => s.setThreadState);
@@ -232,7 +235,7 @@ export const GuardrailBadge = memo(() => {
 					}}
 				>
 					{guardrailNames.length === 0 ? (
-						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>No guardrails</div>
+						<div style={{ fontSize: '0.75rem', color: 'var(--wc-text-faint)', padding: '4px' }}>{t('ui.noGuardrails')}</div>
 					) : (
 						guardrailNames.map(name => {
 							const isSelected = activeNames.includes(name);

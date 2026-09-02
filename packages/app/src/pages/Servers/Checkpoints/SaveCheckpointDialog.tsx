@@ -8,6 +8,7 @@ import { useToast } from '@/components/ToastProvider';
 import type { IServer, ICheckpoint, ISlotLiveState, ISlotLiveMetadata, TSlotId } from '@warpcore/shared';
 import { ECheckpointSaveMode } from '@warpcore/shared';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
+import { formatDate, formatNumber } from '@/utils/intl';
 
 type TSaveTab = 'REPLACE_LATEST' | 'NEW';
 type TSlotMode = 'ALL' | 'LATEST' | 'LARGEST' | 'SLOT';
@@ -161,7 +162,7 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 										<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('checkpoints.overwriting')}</Text>
 										<Text fontSize="13px" color="var(--wc-text-primary)" mt="0.5">{latestForServer.name}</Text>
 										<Text fontSize="11px" color="var(--wc-text-tertiary)" mt="0.5">
-											{new Date(latestForServer.createdAt).toLocaleString()}
+											{formatDate(new Date(latestForServer.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}
 										</Text>
 									</Box>
 								)}
@@ -213,7 +214,7 @@ export function SaveCheckpointDialog({ server, isOpen, onClose }: ISaveCheckpoin
 										<HStack justify="space-between">
 											<Text fontSize="11px" color="var(--wc-text-tertiary)">{t('common:ui.context')}</Text>
 											<Text fontSize="12px" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace'>
-												{previewSlot.cachedTokens.toLocaleString()} / {previewSlot.nCtx.toLocaleString()}
+												{formatNumber(previewSlot.cachedTokens)} / {formatNumber(previewSlot.nCtx)}
 											</Text>
 										</HStack>
 										{previewMeta && (

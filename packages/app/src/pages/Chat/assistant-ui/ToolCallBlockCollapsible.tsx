@@ -13,6 +13,7 @@ import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } fr
 import { ToolCallBlockBody } from './ToolCallBlockBody';
 import { MiniToolCallUiSpace } from '../ui-space/MiniToolCallUiSpace';
 import { computeModeUnionTools } from '@/lib/toolUtils';
+import { useTranslation } from 'react-i18next';
 
 const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
@@ -22,12 +23,13 @@ const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.ERROR]: 'var(--wc-accent-red)',
 };
 
-const statusLabels: Record<EToolCallStatus, string> = {
-	[EToolCallStatus.PENDING]: 'Awaiting approval',
-	[EToolCallStatus.DENIED]: 'Denied',
-	[EToolCallStatus.EXECUTING]: 'Running',
-	[EToolCallStatus.COMPLETED]: 'Completed',
-	[EToolCallStatus.ERROR]: 'Error',
+// Maps a status to its i18n key; the component translates at render time.
+const statusLabelKeys: Record<EToolCallStatus, string> = {
+	[EToolCallStatus.PENDING]: 'toolStatus.awaitingApproval',
+	[EToolCallStatus.DENIED]: 'toolStatus.denied',
+	[EToolCallStatus.EXECUTING]: 'toolStatus.running',
+	[EToolCallStatus.COMPLETED]: 'toolStatus.completed',
+	[EToolCallStatus.ERROR]: 'toolStatus.error',
 };
 
 interface IToolCallBlockCollapsibleProps {
@@ -43,6 +45,7 @@ interface IToolCallBlockCollapsibleProps {
 export const ToolCallBlockCollapsible = React.memo(({
 	toolCallId, toolName, serverName, args, result, status, messageId
 }: IToolCallBlockCollapsibleProps) => {
+	const { t } = useTranslation('chat');
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const { currentServerId } = useContext(ServerStatusContext);
 	const currentSystemPrompt = useStore(s => s.currentSystemPrompt);
@@ -175,26 +178,26 @@ export const ToolCallBlockCollapsible = React.memo(({
 						{!isPending && isExecuting && (
 							<HStack gap="1">
 								<Loader size={11} color={statusColor} className="animate-spin" />
-								<Text fontSize="var(--chat-font-size)" color={statusColor}>{statusLabels[displayStatus]}</Text>
+								<Text fontSize="var(--chat-font-size)" color={statusColor}>{t(statusLabelKeys[displayStatus])}</Text>
 							</HStack>
 						)}
 						{displayStatus === EToolCallStatus.COMPLETED && <Check size={11} color={statusColor} />}
 						{displayStatus === EToolCallStatus.DENIED && (
 							<HStack gap="1">
 								<Ban size={11} color={statusColor} />
-								<Text fontSize="var(--chat-font-size)" color={statusColor}>{statusLabels[displayStatus]}</Text>
+								<Text fontSize="var(--chat-font-size)" color={statusColor}>{t(statusLabelKeys[displayStatus])}</Text>
 							</HStack>
 						)}
 						{displayStatus === EToolCallStatus.ERROR && (
 						<HStack gap="1">
 											<AlertCircle size={11} color={statusColor} />
-								<Text fontSize="var(--chat-font-size)" color={statusColor}>{statusLabels[displayStatus]}</Text>
+								<Text fontSize="var(--chat-font-size)" color={statusColor}>{t(statusLabelKeys[displayStatus])}</Text>
 							</HStack>
 						)}
 						{isPending && deciding && (
 							<HStack gap="1">
 								<Loader size={11} color="var(--wc-text-muted)" className="animate-spin" />
-								<Text fontSize="var(--chat-font-size)" color="var(--wc-text-muted)">Processing...</Text>
+								<Text fontSize="var(--chat-font-size)" color="var(--wc-text-muted)">{t('toolStatus.processing')}</Text>
 							</HStack>
 						)}
 						{isPending && !deciding && (
@@ -211,7 +214,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 									cursor="pointer"
 									onClick={(e) => { e.stopPropagation(); handleDecision('approve'); }}
 								>
-									<HStack gap="1"><Check size={12} /><Text fontSize="var(--chat-font-size)">Allow Once</Text></HStack>
+									<HStack gap="1"><Check size={12} /><Text fontSize="var(--chat-font-size)">{t('common:ui.allowOnce')}</Text></HStack>
 								</Box>
 								<Box
 									as="button"
@@ -225,7 +228,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 									cursor="pointer"
 									onClick={(e) => { e.stopPropagation(); handleAlwaysApprove(); }}
 								>
-									<HStack gap="1"><Lock size={12} /><Text fontSize="var(--chat-font-size)">Allow Always</Text></HStack>
+									<HStack gap="1"><Lock size={12} /><Text fontSize="var(--chat-font-size)">{t('common:ui.allowAlways')}</Text></HStack>
 								</Box>
 								<Box
 									as="button"
@@ -239,7 +242,7 @@ export const ToolCallBlockCollapsible = React.memo(({
 									cursor="pointer"
 									onClick={(e) => { e.stopPropagation(); handleDecision('deny'); }}
 								>
-									<HStack gap="1"><X size={12} /><Text fontSize="var(--chat-font-size)">Deny</Text></HStack>
+									<HStack gap="1"><X size={12} /><Text fontSize="var(--chat-font-size)">{t('common:ui.deny')}</Text></HStack>
 								</Box>
 							</HStack>
 						)}

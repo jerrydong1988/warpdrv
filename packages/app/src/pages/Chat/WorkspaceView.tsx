@@ -13,15 +13,17 @@ import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
 import type { IMode, TModeId } from '@warpcore/shared';
 import { ServerDot } from '@/components/ServerPicker';
 import { SelectField } from '@/pages/Servers/LaunchServer/Helpers';
+import { formatDate } from '@/utils/intl';
 
 interface IChatThread extends IBridgeChatThread {
 	messageCount?: number;
 	totalTokens?: number;
 }
 
-function formatDate(ts: number): string {
-	const d = new Date(ts);
-	return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+// Follows the app locale via utils/intl (dates were previously hardcoded to
+// 'en-US' and rendered English months in the zh-CN UI).
+function formatThreadDate(ts: number): string {
+	return formatDate(new Date(ts), { month: 'short', day: 'numeric' });
 }
 
 function WorkspaceRenameInput({ value, onSave, onCancel }: { value: string; onSave: (v: string) => void; onCancel: () => void }) {
@@ -108,11 +110,11 @@ function WorkspaceThreadRow({ thread, onSelect, onSetStarred, containerId }: Wor
 					)}
 					{(thread.messageCount ?? 0) > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
-							{thread.messageCount} msg
+							{thread.messageCount} {t('chat:threadList.msg')}
 						</Text>
 					)}
 					<Text fontSize="11px" color="var(--wc-text-disabled)">
-						{formatDate(thread.updatedAt)}
+						{formatThreadDate(thread.updatedAt)}
 					</Text>
 				</HStack>
 			</HStack>
@@ -365,10 +367,10 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
-				<Text style={{ color: "var(--wc-text-secondary)", fontSize: "14px", textTransform: "uppercase" }}>Workspace Defaults</Text><br/>
+				<Text style={{ color: "var(--wc-text-secondary)", fontSize: "14px", textTransform: "uppercase" }}>{t('chat:workspace.workspaceDefaults')}</Text><br/>
 				<Box w="full">
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-						Project Root
+						{t('chat:workspace.projectRoot')}
 					</Text>
 					<HStack gap="2">
 						<Input
@@ -382,7 +384,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 									setWorkspaceState(folderId, { projectRoot: prValue.trim() });
 								}
 							}}
-							placeholder="No project root set"
+							placeholder={t('chat:workspace.noProjectRootSet')}
 							fontFamily='"Geist Mono", monospace'
 							bg="var(--wc-bg-card)"
 							borderColor="var(--wc-border-default)"
@@ -398,7 +400,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 							minW="8"
 							px="0"
 							onClick={handleBrowseProjectRoot}
-							title="Browse directory"
+							title={t('common:ui.browseDirectory')}
 						>
 							<FolderInput size={14} />
 						</Button>
@@ -409,7 +411,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				<HStack w="full" gap="2" mt="2" mb="2">
 					<Box flex="1" position="relative">
 						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
-							Server
+							{t('common:ui.server')}
 						</Text>
 						<HStack
 							gap="2"
@@ -435,7 +437,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 								</>
 							) : (
 								<>
-									<Text flex="1" color="var(--wc-text-faint)">Select</Text>
+									<Text flex="1" color="var(--wc-text-faint)">{t('common:ui.select')}</Text>
 									<ChevronDown size={12} style={{ opacity: 0.4 }} />
 								</>
 							)}
@@ -477,27 +479,27 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 									</HStack>
 								))}
 								{servers.length === 0 && (
-									<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">No servers</Text>
+									<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noServers')}</Text>
 								)}
 							</Box>
 						)}
 					</Box>
 					<SelectField
-						label="System Prompt"
+						label={t('common:ui.systemPrompt')}
 						value={defaultPresetId ?? ''}
 						options={['', ...chatPresets.map(p => p.id)]}
-						optionLabels={{ '': 'None', ...Object.fromEntries(chatPresets.map(p => [p.id, p.name])) }}
+						optionLabels={{ '': t('common:ui.none'), ...Object.fromEntries(chatPresets.map(p => [p.id, p.name])) }}
 						onChange={handleDefaultPresetChange}
 					/>
 					<SelectField
-						label="Mode"
+						label={t('common:ui.mode')}
 						value={defaultModeId ?? ''}
 						options={['', ...Object.values(modes).map(m => m.id)]}
-						optionLabels={{ '': 'None', ...Object.fromEntries(Object.values(modes).map(m => [m.id, m.name])) }}
+						optionLabels={{ '': t('common:ui.none'), ...Object.fromEntries(Object.values(modes).map(m => [m.id, m.name])) }}
 						onChange={handleDefaultModeChange}
 					/>
 					<SelectField
-						label="Reasoning"
+						label={t('common:ui.reasoning')}
 						value={defaultReasoningEffort ?? EReasoningEffort.NONE}
 						options={Object.values(EReasoningEffort)}
 						optionLabels={{ none: 'None', low: 'Low', medium: 'Medium', high: 'High' }}

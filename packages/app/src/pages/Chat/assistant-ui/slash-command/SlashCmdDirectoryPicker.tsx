@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FolderInput } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { useTranslation } from "react-i18next";
 
 type SlashCmdDirectoryPickerProps = {
 	value: string;
@@ -18,6 +19,7 @@ export const SlashCmdDirectoryPicker: React.FC<SlashCmdDirectoryPickerProps> = (
 	onChange,
 }) => {
 	const { toast } = useToast();
+	const { t } = useTranslation('chat');
 	const [isHovered, setIsHovered] = useState(false);
 
 	const handleBrowse = async () => {
@@ -37,7 +39,7 @@ export const SlashCmdDirectoryPicker: React.FC<SlashCmdDirectoryPickerProps> = (
 				if (err.name !== "AbortError") console.error("[SlashCmdDirectoryPicker] Failed:", err);
 			}
 		} else {
-			toast("error", "Directory picker not supported in this browser. Type the path manually.");
+			toast("error", t('slashCmd.directoryPickerUnsupported'));
 		}
 	};
 

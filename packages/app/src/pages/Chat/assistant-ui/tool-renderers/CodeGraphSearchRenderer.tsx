@@ -3,6 +3,7 @@ import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface INode { symbol: string; kind: string; filePath: string; startLine: number; }
 
@@ -68,6 +69,7 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
 		return { query, kind, filePath, limit };
 	},
   renderMini: React.memo(({ args, result }) => {
+    const { t } = useTranslation('chat');
     const query = typeof args.query === 'string' ? args.query : '';
     const truncated = query.length > 50 ? query.slice(0, 47) + '...' : query;
     const countLabel = useMemo(() => {
@@ -82,7 +84,7 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
     }, [result]);
     return (
       <Text whiteSpace="nowrap">
-        Code Search "{truncated}"
+        {t('tool.codeSearch')}{truncated}"
         {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
       </Text>
     );

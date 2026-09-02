@@ -37,6 +37,7 @@ const EMPTY_ARRAY: Array<any> = [];
 const EMPTY_OBJ: Record<any, any> = {};
 
 const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: IToolAttachment[]; onChange: (tools: IToolAttachment[]) => void; onClick?: (e: React.MouseEvent) => void }) => {
+	const { t } = useTranslation();
 	const mcpServers = useStore(s => s.mcpServers);
 	const [isOpen, setIsOpen] = useState(false);
 	const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
@@ -97,7 +98,7 @@ const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: I
 				onClick={(e) => { onClick?.(e); setIsOpen(!isOpen); }}
 			>
 				<Text fontSize="xs" color={totalSelected > 0 ? 'var(--wc-text-primary)' : 'var(--wc-text-faint)'}>
-					{totalSelected > 0 ? `${totalSelected} tool(s)` : 'All tool calls'}
+					{totalSelected > 0 ? t('chat:toolList.toolCount', { count: totalSelected }) : t('chat:toolList.allToolCalls')}
 				</Text>
 			</Box>
 			{isOpen && (
@@ -200,6 +201,7 @@ function useModeItems(): TDropdownItem[] {
 }
 
 const TodoPanel = React.memo(() => {
+	const { t } = useTranslation();
 	const threadId = useStore(s => s.currentThreadId);
 	const todos = useStore(s => {
 		if (!threadId) return EMPTY_TODOS;
@@ -319,7 +321,7 @@ const TodoPanel = React.memo(() => {
 		return (
 			<Box p="3">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center" mb="2">
-					No todos yet
+					{t('common:ui.noTodosYet')}
 				</Text>
 				<Input
 					size="xs"
@@ -327,7 +329,7 @@ const TodoPanel = React.memo(() => {
 					value={addText}
 					onChange={(e) => setAddText(e.target.value)}
 					onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
-					placeholder="Add todo..."
+					placeholder={t('common:ui.addTodo')}
 				/>
 			</Box>
 		);
@@ -456,13 +458,13 @@ const TodoPanel = React.memo(() => {
 				value={addText}
 				onChange={(e) => setAddText(e.target.value)}
 				onKeyDown={(e) => { if (e.key === 'Enter') addTodo(); }}
-				placeholder="Add todo..."
+				placeholder={t('common:ui.addTodo')}
 			/>
 
 			{deleteConfirm !== null && (
 				<ConfirmDialog
-					title="Delete Todo"
-					message={`Are you sure you want to delete "${todos[deleteConfirm]?.text}"?`}
+					title={t('common:ui.deleteTodo')}
+					message={t('common:ui.deleteTodoConfirm', { name: todos[deleteConfirm]?.text ?? '' })}
 					isOpen={true}
 					onConfirm={() => deleteTodo(deleteConfirm)}
 					onCancel={() => setDeleteConfirm(null)}
@@ -474,6 +476,7 @@ const TodoPanel = React.memo(() => {
 });
 
 const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponentDef; children: React.ReactNode }) => {
+	const { t } = useTranslation();
 	const messageId = useAuiState(s => s.message.id);
 	const slashCommands = useStore(s => s.messageStates[messageId]?.slashCommands);
 	const hasCompact = (slashCommands as Array<IExtractedSlashCommand> | undefined)?.some(cmd => cmd.name === 'compact');
@@ -484,7 +487,7 @@ const CompactIndicator = React.memo(({ def, children }: { def: TUiSpaceComponent
 			<Box display="flex" alignItems="center" gap="2" mb="2">
 				<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
 				<Text fontSize="xs" fontWeight="600" color="var(--wc-accent-yellow-glow)" letterSpacing="0.1em">
-					COMPACTION
+					{t('common:ui.compaction')}
 				</Text>
 				<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
 			</Box>
@@ -589,14 +592,14 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 				<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Server
+							{t('common:ui.server')}
 						</Text>
 						<ServerPicker value={guardrail.serverId} onChange={(id) => updateGuardrail({ serverId: id })} />
 					</Box>
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Trigger only on tool calls
+							{t('common:ui.triggerOnlyOnToolCalls')}
 						</Text>
 						<GuardrailToolPicker
 							value={guardrail.triggerOnTools || []}
@@ -620,13 +623,13 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 								<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 							</Switch.Control>
 						</Switch.Root>
-						<Text fontSize="xs" color="var(--wc-text-primary)">Enable thinking</Text>
+						<Text fontSize="xs" color="var(--wc-text-primary)">{t('common:ui.enableThinking')}</Text>
 					</Flex>
 
 					{!!guardrail.inferenceParams?.enableThinking && (
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Reasoning effort
+								{t('common:ui.reasoningEffort')}
 							</Text>
 							<SegmentGroup.Root value={guardrail.inferenceParams?.reasoningEffort as string || 'medium'} onValueChange={(details) => {
 								const newParams = { ...(guardrail.inferenceParams || {}), reasoningEffort: details.value };
@@ -655,7 +658,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Include previous n messages
+							{t('common:ui.includePreviousNMessages')}
 						</Text>
 						<Input
 							size="xs"
@@ -670,7 +673,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 
 					<Box>
 						<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-							Custom Prompt
+							{t('common:ui.customPrompt')}
 						</Text>
 						<Textarea
 							size="xs"
@@ -680,7 +683,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 							onBlur={handlePromptBlur}
 							rows={3}
 							resize="vertical"
-							placeholder="Custom rules..."
+							placeholder={t('common:ui.customRules')}
 						/>
 					</Box>
 
@@ -699,7 +702,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 							onClick={() => setDeleteConfirmOpen(true)}
 						>
 							<Trash2 size={10} style={{ marginRight: '4px' }} />
-							Delete
+							{t('common:ui.delete')}
 						</Button>
 					</Flex>
 				</VStack>
@@ -707,12 +710,12 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Guardrail"
-					message={`Are you sure you want to delete "${draftName}"?`}
+					title={t('common:ui.deleteGuardrail')}
+					message={t('common:ui.deleteNamedItemConfirm', { name: draftName })}
 					isOpen={true}
 					onConfirm={handleDelete}
 					onCancel={() => setDeleteConfirmOpen(false)}
-					confirmLabel="Delete"
+					confirmLabel={t('common:ui.delete')}
 				/>
 			)}
 		</Box>
@@ -720,6 +723,7 @@ const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDefinitio
 });
 
 const GuardrailsPanel = React.memo(() => {
+	const { t } = useTranslation();
 	const guardrails = useStore(s => s.guardrails) || EMPTY_GUARDRAILS;
 	const items = Object.values(guardrails);
 
@@ -727,7 +731,7 @@ const GuardrailsPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No guardrails
+					{t('common:ui.noGuardrails')}
 				</Text>
 			</Box>
 		);
@@ -743,6 +747,7 @@ const GuardrailsPanel = React.memo(() => {
 });
 
 const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
+	const { t } = useTranslation();
 	const [expanded, setExpanded] = useState(false);
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 	const [draftName, setDraftName] = useDependantState(mode.name);
@@ -834,7 +839,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 					<VStack gap="2.5" px="2.5" pb="2.5" pt="0" align="stretch">
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Color
+								{t('common:ui.color')}
 							</Text>
 							<ColorPicker.Root defaultValue={parseColor(draftColor)} onValueChange={(details) => {
 								const hex = details.value.toString('hex');
@@ -857,7 +862,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Allowed tools
+								{t('common:ui.allowedTools')}
 							</Text>
 							<GuardrailToolPicker
 								value={draftTools}
@@ -868,7 +873,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Active guardrails
+								{t('common:ui.activeGuardrails')}
 							</Text>
 							<ModeGuardrailPicker
 								modeId={mode.id}
@@ -879,13 +884,13 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 						<Box>
 							<Text fontSize="9px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.04em" mb="1">
-								Tail prompt
+								{t('common:ui.tailPrompt')}
 							</Text>
 							<Textarea
 								size="xs"
 								fontSize="xs"
 								rows={3}
-								placeholder="Optional tail prompt..."
+								placeholder={t('common:ui.optionalTailPromptPlaceholder')}
 								value={draftPrompt}
 								onChange={(e) => setDraftPrompt(e.target.value)}
 								onBlur={handlePromptBlur}
@@ -905,7 +910,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
 							>
 								<Trash2 size={12} />
-								Delete
+								{t('common:ui.delete')}
 							</Button>
 						</Flex>
 					</VStack>
@@ -914,12 +919,12 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Mode"
-					message={`Are you sure you want to delete "${mode.name}"?`}
+					title={t('common:ui.deleteMode')}
+					message={t('common:ui.deleteNamedItemConfirm', { name: mode.name })}
 					isOpen={true}
 					onConfirm={handleDelete}
 					onCancel={() => setDeleteConfirmOpen(false)}
-					confirmLabel="Delete"
+					confirmLabel={t('common:ui.delete')}
 				/>
 			)}
 		</>
@@ -927,6 +932,7 @@ const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 });
 
 const ModesPanel = React.memo(() => {
+	const { t } = useTranslation();
 	const modes = useStore(s => s.modes);
 	const threads = useStore(s => s.threads);
 	const currentThreadId = useStore(s => s.currentThreadId);
@@ -942,7 +948,7 @@ const ModesPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No modes
+					{t('common:ui.noModes')}
 				</Text>
 			</Box>
 		);
@@ -966,6 +972,7 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 	isProcessing: boolean;
 	processingNames: string[];
 }) => {
+	const { t } = useTranslation();
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 	const totalViolations = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.VIOLATION).length, [issues]);
 	const totalWarnings = useMemo(() => issues.filter(i => i.issue.type === EGuardrailIssueType.WARNING).length, [issues]);
@@ -1003,10 +1010,10 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 								{isProcessing && <Spinner size="xs" color="var(--wc-text-muted)" />}
 								{allClear && <GoShieldCheck size={chatFontSize} color="var(--wc-accent-green-icon)" opacity={0.8} />}
 								{totalViolations > 0 && (
-									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalViolations} Violations</Badge>
+									<Badge color="var(--wc-accent-red)" bg="var(--wc-accent-red-bg-8)" px="1.5" py="0.5" fontSize="11px">{t('common:ui.violationsCount', { count: totalViolations })}</Badge>
 								)}
 								{totalWarnings > 0 && (
-									<Badge color="var(--wc-accent-yellow)" bg="var(--wc-accent-yellow-bg-8)" px="1.5" py="0.5" fontSize="11px">{totalWarnings} Warnings</Badge>
+									<Badge color="var(--wc-accent-yellow)" bg="var(--wc-accent-yellow-bg-8)" px="1.5" py="0.5" fontSize="11px">{t('common:ui.warningsCount', { count: totalWarnings })}</Badge>
 								)}
 							</HStack>
 							<HStack gap="2" align="center">
@@ -1016,12 +1023,12 @@ const GuardrailAccordion = React.memo(({ children, issues, isProcessing, process
 						<AccordionItemContent>
 							<Box p="2.5">
 								{allClear
-									? <Text fontSize="sm" color="var(--wc-accent-green)">All clear</Text>
+									? <Text fontSize="sm" color="var(--wc-accent-green)">{t('common:ui.allClear')}</Text>
 									: <VStack gap="2" align="stretch">
 										{processingNames.map(name => (
 											<HStack key={name} gap="2">
 												<Spinner size="sm" />
-												<Text fontSize="sm" color="var(--wc-text-muted)">Processing {name}...</Text>
+												<Text fontSize="sm" color="var(--wc-text-muted)">{t('common:ui.processing', { name })}</Text>
 											</HStack>
 										))}
 										{issues.map(({ guardrailName, issue }, i) => (
@@ -1141,6 +1148,7 @@ const MiniToolCallGuardrailIndicator = React.memo(({ children, toolCallId, messa
 });
 
 const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName: string; item: IGuardrailIssue }) => {
+	const { t } = useTranslation();
 	const addAnnotation = useStore(s => s.addAnnotation);
 	const isViolation = item.type === EGuardrailIssueType.VIOLATION;
 
@@ -1160,7 +1168,7 @@ const GuardrailIssueItem = React.memo(({ guardrailName, item }: { guardrailName:
 				<Box
 					as="button"
 					onClick={() => addAnnotation(item.quote, item.issue)}
-					title="Add to annotations"
+					title={t('common:ui.addToAnnotations')}
 					flexShrink={0}
 					ml="2"
 					p="1"

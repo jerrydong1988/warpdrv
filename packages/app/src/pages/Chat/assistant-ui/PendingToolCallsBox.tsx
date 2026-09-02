@@ -15,6 +15,7 @@ import { useToast } from '@/components/ToastProvider';
 import { decideMcpToolCall, setThreadToolPermission, fetchThreadPermissions } from '@/api/mcpServices';
 import { useDependantState } from '@/hooks/useDependantState';
 import { computeModeUnionTools } from '@/lib/toolUtils';
+import { useTranslation } from 'react-i18next';
 
 const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.PENDING]: 'var(--wc-accent-yellow-strong)',
@@ -24,16 +25,9 @@ const statusColors: Record<EToolCallStatus, string> = {
 	[EToolCallStatus.ERROR]: 'var(--wc-accent-red)',
 };
 
-const statusLabels: Record<EToolCallStatus, string> = {
-	[EToolCallStatus.PENDING]: 'Awaiting approval',
-	[EToolCallStatus.DENIED]: 'Denied',
-	[EToolCallStatus.EXECUTING]: 'Running',
-	[EToolCallStatus.COMPLETED]: 'Completed',
-	[EToolCallStatus.ERROR]: 'Error',
-};
-
 export const PendingToolCallsBox = React.memo(() => {
 	// ===== All hooks first, unconditionally =====
+	const { t } = useTranslation('chat');
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const headMessageIdByThread = useStore(s => s.headMessageIdByThread);
 	const messagesByThread = useStore(s => s.messagesByThread);
@@ -171,11 +165,11 @@ export const PendingToolCallsBox = React.memo(() => {
 				tools.attachedTools ?? undefined,
 				tools.skipToolsSave
 			);
-			toast.toast('success', `"${toolName}" will always be approved for this thread`);
+			toast.toast('success', t('toolStatus.alwaysApprovedToast', { toolName }));
 		} finally {
 			setDeciding(false);
 		}
-	}, [currentCall?.id, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools, toast]);
+	}, [currentCall?.id, toolName, serverName, currentThreadId, currentServerId, currentSystemPrompt, currentInferenceParams, attachAllTools, attachedTools, isModeActive, modeUnionTools, toast, t]);
 
 	// Render the tool call body using the same logic as ToolCallBlockWrapper
 	const body = useMemo(() => {
@@ -229,7 +223,7 @@ export const PendingToolCallsBox = React.memo(() => {
 			<HStack gap="2" px="3" py="2" borderBottomWidth={1} borderBottomColor="var(--wc-border-subtle)">
 				<Wrench size={13} color="var(--wc-text-tertiary)" />
 				<Text fontSize="calc(var(--chat-font-size) - 3px)" fontWeight="600" color="var(--wc-text-primary)">
-						Tool Calls ({pendingCalls.length} Pending)
+						{t('toolStatus.pendingHeader', { count: pendingCalls.length })}
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -243,7 +237,7 @@ export const PendingToolCallsBox = React.memo(() => {
 					color="var(--wc-text-muted)"
 					_hover={{ bg: 'var(--wc-bg-hover)', color: 'var(--wc-accent-red)' }}
 					onClick={() => setDismissedAnchorKey(null)}
-					title="Dismiss"
+					title={t('common:ui.dismiss')}
 				>
 					<X size={12} />
 				</Box>
@@ -302,7 +296,7 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<Check size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Allow Once</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.allowOnce')}</Text>
 					</HStack>
 				</Box>
 				<Box
@@ -321,7 +315,7 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<Lock size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Allow Always</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.allowAlways')}</Text>
 					</HStack>
 				</Box>
 				<Box
@@ -340,7 +334,7 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<X size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Deny</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{t('common:ui.deny')}</Text>
 					</HStack>
 				</Box>
 			</HStack>

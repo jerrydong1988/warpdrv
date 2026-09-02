@@ -52,7 +52,7 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 				}
 			} catch (err: any) {
 				if (err.name !== 'AbortError') {
-					toast('error', 'Directory picker not supported. Type the path manually.');
+					toast('error', t('common:toast.directoryPickerNotSupported'));
 				}
 			}
 		}
@@ -66,7 +66,7 @@ export function StepModelFolders({ goNext, goPrev, finishOnboarding }: IStepProp
 			await scanModels();
 			setHasScanned(true);
 		} catch {
-			toast('error', 'Scan failed');
+			toast('error', t('common:toast.scanFailed'));
 		} finally {
 			setIsScanning(false);
 		}

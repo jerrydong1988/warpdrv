@@ -3,8 +3,10 @@ import { Input, Button, HStack, Text } from '@chakra-ui/react';
 import { FolderInput } from 'lucide-react';
 import { useStore } from '@/store';
 import { useDependantState } from '@/hooks/useDependantState';
+import { useTranslation } from 'react-i18next';
 
 export const ProjectRootPicker = () => {
+	const { t } = useTranslation('chat');
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const activeWorkspaceId = useStore(s => s.activeWorkspaceId);
 	const projectRoot = useStore(s =>
@@ -34,7 +36,7 @@ export const ProjectRootPicker = () => {
 		<>
 			{typeof workspaceProjectRoot === 'string' && workspaceProjectRoot && (
 				<Text fontSize="10px" color="var(--wc-text-faint)" mb="1" fontFamily="monospace">
-					Workspace root: {workspaceProjectRoot}
+					{t('workspace.workspaceRoot')} {workspaceProjectRoot}
 				</Text>
 			)}
 			<HStack gap="2">
@@ -49,7 +51,7 @@ export const ProjectRootPicker = () => {
 					timerRef.current = setTimeout(flush, 400);
 				}}
 				onBlur={flush}
-				placeholder="No project root set"
+				placeholder={t('workspace.noProjectRootSet')}
 				fontFamily='"Geist Mono", monospace'
 				bg="var(--wc-bg-card)"
 				borderColor="var(--wc-border-default)"
@@ -63,6 +65,7 @@ export const ProjectRootPicker = () => {
 };
 
 const BrowseButton = () => {
+	const { t } = useTranslation('chat');
 	const currentThreadId = useStore(s => s.currentThreadId);
 	const setThreadState = useStore(s => s.setThreadState);
 
@@ -92,7 +95,7 @@ const BrowseButton = () => {
 					setThreadState(currentThreadId, { projectRoot: path });
 				}
 			}}
-			title="Browse directory"
+			title={t('common:ui.browseDirectory')}
 		>
 			<FolderInput size={14} />
 		</Button>

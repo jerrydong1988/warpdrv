@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18next from 'i18next';
 import { Dialog, Portal, Box, Text, HStack, VStack, Button, Spinner } from '@chakra-ui/react';
 import { Upload } from 'lucide-react';
 import { useStore } from '@/store';
 import { restoreCheckpointsMapped, restartServer } from '@/api/services';
 import { useToast } from '@/components/ToastProvider';
+import { formatBytes, formatAge } from '@/utils/intl';
 import type { IServer, ICheckpoint, ICheckpointSlotMapping, TCheckpointId, TSlotId } from '@warpcore/shared';
 import { EServerStatus } from '@warpcore/shared';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
@@ -16,23 +16,6 @@ interface ILoadCheckpointDialogProps {
 	server: IServer;
 	isOpen: boolean;
 	onClose: () => void;
-}
-
-function formatBytes(n: number): string {
-	if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-	if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(0)} MB`;
-	if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
-	return `${n} B`;
-}
-
-function formatAge(createdAt: number): string {
-	const ms = Date.now() - createdAt;
-	const mins = Math.floor(ms / 60000);
-	if (mins < 60) return i18next.t('servers:checkpoints.ageMinutes', { count: mins });
-	const hours = Math.floor(mins / 60);
-	if (hours < 24) return i18next.t('servers:checkpoints.ageHours', { count: hours });
-	const days = Math.floor(hours / 24);
-	return i18next.t('servers:checkpoints.ageDays', { count: days });
 }
 
 export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpointDialogProps) {

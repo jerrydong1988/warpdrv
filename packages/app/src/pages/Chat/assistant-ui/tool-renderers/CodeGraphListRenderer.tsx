@@ -5,6 +5,7 @@ import { extractResultText, splitPath, relativePath } from './utils';
 import { PathDisplay } from './path-display';
 import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface INode { symbol: string; kind: string; filePath: string; startLine: number; }
 
@@ -63,6 +64,7 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
 		return { path };
 	},
   renderMini: React.memo(({ args, result }) => {
+    const { t } = useTranslation('chat');
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState();
       const wsRoot = s.activeWorkspaceId ? s.workspaceStates[s.activeWorkspaceId]?.projectRoot : undefined;
@@ -82,7 +84,7 @@ export const CodeGraphListRendererMeta: IToolCallRenderer = {
     }, [result]);
     return (
       <Text whiteSpace="nowrap">
-        Code List{' '}
+        {t('tool.codeList')}{' '}
         <PathDisplay dir={dir} file={file} />
         {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
       </Text>

@@ -5,6 +5,7 @@ import { extractResultText, splitPath, relativePath } from './utils';
 import { PathDisplay } from './path-display';
 import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface IRgMatch { file: string; line: number; text: string; }
 
@@ -81,6 +82,7 @@ export const RgRendererMeta: IToolCallRenderer = {
 		return { pattern, path, type, caseSensitive, maxResults, contextLines };
 	},
   renderMini: React.memo(({ args, result }) => {
+    const { t } = useTranslation('chat');
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState();
       const wsRoot = s.activeWorkspaceId ? s.workspaceStates[s.activeWorkspaceId]?.projectRoot : undefined;
@@ -103,7 +105,7 @@ export const RgRendererMeta: IToolCallRenderer = {
       const { dir, file } = splitPath(relativePath(path, projectRoot));
       return (
         <Text whiteSpace="nowrap">
-          grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> in{' '}
+          {t('tool.grepPrefix')}<Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text> {t('tool.grepIn')}{' '}
           <PathDisplay dir={dir} file={file} />
           {countLabel && <Text as="span" color="var(--wc-text-muted)">{countLabel}</Text>}
         </Text>
@@ -111,7 +113,7 @@ export const RgRendererMeta: IToolCallRenderer = {
     }
     return (
       <Text whiteSpace="nowrap">
-        grep <Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text>
+        {t('tool.grepPrefix')}<Text as="span" color="var(--wc-text-muted)">"{truncated}"</Text>
         {countLabel && <Text as="span" color="var(--wc-text-muted)">{countLabel}</Text>}
       </Text>
     );

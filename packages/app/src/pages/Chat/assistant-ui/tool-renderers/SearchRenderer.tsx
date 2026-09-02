@@ -3,6 +3,7 @@ import { Box, Text, HStack, VStack, Link } from '@chakra-ui/react';
 import { Search, ExternalLink } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface ISearchResult {
 	title?: string;
@@ -83,11 +84,12 @@ export const SearchRendererMeta: IToolCallRenderer = {
 		return { query };
 	},
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
     if (typeof query !== 'string') return '';
     const truncated = query.length > 60 ? query.slice(0, 57) + '...' : query;
     return (
-      <Text whiteSpace="nowrap">Search "{truncated}"</Text>
+      <Text whiteSpace="nowrap">{t('tool.search')} "{truncated}"</Text>
     );
   }),
 };

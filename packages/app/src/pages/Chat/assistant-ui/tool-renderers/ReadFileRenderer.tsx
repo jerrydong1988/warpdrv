@@ -5,6 +5,7 @@ import { extractResultText, splitPath, relativePath } from './utils';
 import { PathDisplay } from './path-display';
 import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 export const ReadFileRenderer = React.memo((props: {
 	path?: string,
@@ -90,6 +91,7 @@ export const ReadFileRendererMeta: IToolCallRenderer = {
 		return { path, head, tail, offset, length, lineStart, lineEnd };
 	},
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState();
       const wsRoot = s.activeWorkspaceId ? s.workspaceStates[s.activeWorkspaceId]?.projectRoot : undefined;
@@ -109,7 +111,7 @@ export const ReadFileRendererMeta: IToolCallRenderer = {
     }
     return (
       <Text whiteSpace="nowrap">
-        Read{' '}
+        {t('tool.read')}{' '}
         <PathDisplay dir={dir} file={file} />
         {parts.length > 0 && <Text as="span" color="var(--wc-text-faint)"> ({parts.join(', ')})</Text>}
       </Text>

@@ -311,7 +311,7 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 												</Text>
 												{isOverridden && (
 													<Text fontSize="8px" color="var(--wc-text-faint)" textTransform="uppercase" flexShrink={0}>
-														override
+														{t('common:ui.override')}
 													</Text>
 												)}
 											</HStack>

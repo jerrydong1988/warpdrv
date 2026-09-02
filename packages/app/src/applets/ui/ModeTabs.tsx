@@ -3,6 +3,7 @@ import { Tabs, Box } from '@chakra-ui/react';
 import { TiFlowSwitch } from 'react-icons/ti';
 import { useStore } from '@/store';
 import type { IMode, TModeId } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 
 const EMPTY_MODES: Record<TModeId, IMode> = {};
 
@@ -29,6 +30,7 @@ const baseTriggerStyle = {
 };
 
 export const ModeTabs = memo(() => {
+    const { t } = useTranslation('common');
     const modes = useStore(s => s.modes) ?? EMPTY_MODES;
     const currentThreadId = useStore(s => s.currentThreadId);
     const threads = useStore(s => s.threads);
@@ -67,7 +69,7 @@ export const ModeTabs = memo(() => {
                         size={14}
                         color={!modeId ? 'var(--wc-text-primary)' : 'var(--wc-text-muted)'}
                     />
-                    Default
+                    {t('ui.default')}
                 </Tabs.Trigger>
 
                 {availableModes.map((m: IMode) => {

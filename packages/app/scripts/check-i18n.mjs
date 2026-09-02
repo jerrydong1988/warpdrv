@@ -147,6 +147,100 @@ for (const filePath of walk(sourceRoot).filter((file) => /\.(ts|tsx)$/.test(file
   visit(sourceFile);
 }
 
+// ---- Hardcoded user-visible literal detection (.tsx only) ------------------
+// Flags JSX text nodes, visible JSX attributes (title/placeholder/aria-label/
+// label/alt) and toast() messages that are still plain English literals. The
+// allowlist covers product names and technical terms; ordinary sentences must
+// go through t(). New hits fail the check, so this also guards regressions.
+const HARDCODED_ALLOWLIST = [
+  'WarpCore', 'warpdrv', 'WarpDrv', 'Kokoro', 'Whisper', 'whisper', 'llama', 'LLAMA',
+  'GGUF', 'gguf', 'MCP', 'mcp', 'JSON', 'SQLite', 'sqlite', 'HuggingFace', 'Hugging Face',
+  'Hub', 'TTS', 'PTT', 'Flash Attention', 'MTP', 'Ngram', 'ngram', 'DFlash', 'DSpark',
+  'Inter', 'Dracula', 'Nord', 'Tokyo Night', 'Gruvbox', 'Rose Pine', 'Catppuccin',
+  'Solarized', 'Kimbie', 'Everforest', 'Monokai', 'Palenight', 'Obsidian', 'Kanagawa',
+  'Vesper', 'Min', 'Amoled', 'Same as target', 'Jinja', 'jinja', 'FFmpeg', 'ffmpeg',
+  'mmproj', 'callers', 'callees', 'truncated', 'Open in browser', 'To-Do', 'Mirostat',
+  'KV Cache', 'Wrench', 'Draft Model', 'Tools Off', 'esc', 'ngl', 'mmproj.GGUF',
+  'WarpDrv', 'Hub', 'Code Graph', 'N-gram', 'M-Gram',
+  'Port', 'guide', '/path/to/llama-server', '--custom-flag', 'Strix Halo', 'ROCm',
+  'e.g. ROCm 7.2 — Strix Halo', '/path/to/models', '{"temperature": 0.7, "topP": 0.9}',
+  'wc_', 'px', 'MB', 'GB', 'KB', 'grep', '~90 MB',
+  'N-Match', 'N-Min', 'N-Max', 'GPU', 'Preserve Thinking', '--some-flag value',
+  'e.g. whisper-large, stt-primary', 'sample', 'exit', 'Active', 'results', 'found', 'tok', 'backends',
+  'GPU Layers', 'auto',
+];
+const VISIBLE_JSX_PROPS = new Set(['title', 'placeholder', 'aria-label', 'label', 'alt', 'description', 'defaultValue']);
+
+const hasLetters = (value) => (value.match(/[A-Za-z]/g) || []).length >= 2;
+
+// Match longest entries first: a short entry like 'llama' would otherwise
+// consume the match for a longer one like '/path/to/llama-server' and leave
+// letter fragments behind.
+const HARDCODED_ALLOWLIST_SORTED = [...HARDCODED_ALLOWLIST].sort((a, b) => b.length - a.length);
+
+function isAllowedLiteral(value) {
+  let rest = value.trim();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const allowed of HARDCODED_ALLOWLIST_SORTED) {
+      if (rest.includes(allowed)) {
+        rest = rest.split(allowed).join(' ');
+        changed = true;
+      }
+    }
+  }
+  return !/[A-Za-z]/.test(rest);
+}
+
+function flagLiteral(filePath, sourceFile, node, value, kind) {
+  const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+  errors.push(`${path.relative(appRoot, filePath)}:${line}: untranslated ${kind} literal ${JSON.stringify(value.slice(0, 80))}`);
+}
+
+for (const filePath of walk(sourceRoot).filter((file) => file.endsWith('.tsx'))) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  function visit(node) {
+    if (ts.isJsxText(node)) {
+      // Strip HTML entities (&nbsp; &amp; …) and @handles before judging —
+      // neither is a translatable sentence.
+      const text = node.text.replace(/&[a-z]+;/g, ' ').replace(/@[\w-]+/g, ' ');
+      if (hasLetters(text) && !isAllowedLiteral(text)) flagLiteral(filePath, sourceFile, node, text, 'JSX text');
+    } else if (ts.isJsxAttribute(node) && VISIBLE_JSX_PROPS.has(node.name.text)) {
+      const init = node.initializer;
+      if (init && ts.isStringLiteral(init) && hasLetters(init.text) && !isAllowedLiteral(init.text)) {
+        flagLiteral(filePath, sourceFile, node, init.text, `prop ${node.name.text}`);
+      }
+    } else if (ts.isCallExpression(node) && node.arguments.length > 0) {
+      const expression = node.expression;
+      const isToastCall =
+        (ts.isIdentifier(expression) && expression.text === 'toast') ||
+        (ts.isPropertyAccessExpression(expression) && expression.name.text === 'toast');
+      if (isToastCall) {
+        // toast('error', message) / toast.toast('success', message): the
+        // message is the LAST argument; a leading variant string must not be
+        // mistaken for a translatable message.
+        const candidate = [...node.arguments].reverse().find((arg) => ts.isStringLiteral(arg));
+        const args = node.arguments;
+        const messageIndex = args.length >= 2 && ts.isStringLiteral(args[0]) ? args.length - 1 : 0;
+        const message = args[messageIndex];
+        if (candidate && message && ts.isStringLiteral(message) && hasLetters(message.text) && !isAllowedLiteral(message.text)) {
+          flagLiteral(filePath, sourceFile, node, message.text, 'toast');
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+}
+
 const identicalValues = [];
 for (const namespace of enNamespaces) {
   for (const [key, value] of Object.entries(resources.en[namespace] ?? {})) {

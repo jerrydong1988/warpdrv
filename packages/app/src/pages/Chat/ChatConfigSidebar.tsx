@@ -379,7 +379,7 @@ export function ChatConfigContentPanel({
 
 			{/* Project Root */}
 			<Box>
-				<SectionHeader title="Project Root" />
+				<SectionHeader title={t('chat:workspace.projectRoot')} />
 				<ProjectRootPicker />
 			</Box>
 

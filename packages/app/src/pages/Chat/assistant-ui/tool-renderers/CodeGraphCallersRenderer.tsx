@@ -3,6 +3,7 @@ import { Box, Text, HStack, VStack, Badge } from '@chakra-ui/react';
 import { GitPullRequest, ChevronDown, ChevronRight, Check, AlertTriangle } from 'lucide-react';
 import { extractResultText } from './utils';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface INode { symbol: string; kind: string; filePath: string; startLine: number; resolved?: boolean; }
 
@@ -67,6 +68,7 @@ export const CodeGraphCallersRendererMeta: IToolCallRenderer = {
 		return { symbolId, symbol, depth };
 	},
   renderMini: React.memo(({ args, result }) => {
+    const { t } = useTranslation('chat');
     const symbolId = typeof args.symbol_id === 'string' ? args.symbol_id : undefined;
     const symbol = typeof args.symbol === 'string' ? args.symbol : undefined;
     const target = symbolId ?? symbol ?? '';
@@ -83,7 +85,7 @@ export const CodeGraphCallersRendererMeta: IToolCallRenderer = {
     }, [result]);
     return (
       <Text whiteSpace="nowrap">
-        Code Callers of {truncated}
+        {t('tool.codeCallersOf')}{truncated}
         {countLabel && <Text as="span" color="var(--wc-text-faint)">{countLabel}</Text>}
       </Text>
     );

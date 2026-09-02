@@ -29,7 +29,7 @@ interface ISlotPillProps {
 }
 
 function SlotPill({ slot, metadata }: ISlotPillProps) {
-
+	const { t } = useTranslation('servers');
 	const isPrompt = slot?.isProcessing && slot?.prefillProgress !== null;
 	const isGen = slot?.isProcessing && slot?.prefillProgress === null;
 
@@ -71,7 +71,7 @@ function SlotPill({ slot, metadata }: ISlotPillProps) {
 				<Text fontWeight="600">S{slot?.slotId}</Text>
 				<Text>{label}</Text>
 				{msgCount !== null && (
-					<Text color="var(--wc-text-muted)" ml="auto">{msgCount} msg</Text>
+					<Text color="var(--wc-text-muted)" ml="auto">{msgCount} {t('actions.msg')}</Text>
 				)}
 			</HStack>
 			<Box

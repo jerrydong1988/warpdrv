@@ -5,6 +5,7 @@ import { extractResultText, splitPath, relativePath } from './utils';
 import { PathDisplay } from './path-display';
 import { useStore } from '@/store';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface ITreeEntry {
 	name: string;
@@ -178,6 +179,7 @@ export const ListRendererMeta: IToolCallRenderer = {
 		return false;
 	},
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState();
       const wsRoot = s.activeWorkspaceId ? s.workspaceStates[s.activeWorkspaceId]?.projectRoot : undefined;
@@ -188,13 +190,13 @@ export const ListRendererMeta: IToolCallRenderer = {
       const { dir, file } = splitPath(relativePath(path, projectRoot));
       return (
         <Text whiteSpace="nowrap">
-          List{' '}
+          {t('tool.list')}{' '}
           <PathDisplay dir={dir} file={file} />
         </Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">List (project root)</Text>
+      <Text whiteSpace="nowrap">{t('tool.listProjectRoot')}</Text>
     );
   }),
 };

@@ -6,6 +6,7 @@ import { useStore } from '@/store';
 import { extractResultText, splitPath, relativePath } from './utils';
 import { PathDisplay } from './path-display';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 export enum EDiffStrategy {
 	FIND_REPLACE = 'find_replace',
@@ -177,6 +178,7 @@ export const DiffRendererMeta: IToolCallRenderer = {
 		return false;
 	},
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const projectRoot = useStore(s => {
       const ts = s.getCurrentThreadState();
       const wsRoot = s.activeWorkspaceId ? s.workspaceStates[s.activeWorkspaceId]?.projectRoot : undefined;
@@ -187,7 +189,7 @@ export const DiffRendererMeta: IToolCallRenderer = {
     const { dir, file } = splitPath(relativePath(path, projectRoot));
     return (
       <Text whiteSpace="nowrap">
-        Edit{' '}
+        {t('tool.edit')}{' '}
         <PathDisplay dir={dir} file={file} />
       </Text>
     );

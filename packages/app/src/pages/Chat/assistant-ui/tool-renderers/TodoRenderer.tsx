@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Box, Text, HStack, VStack } from '@chakra-ui/react';
 import { Square, CheckSquare, SquareCheck } from 'lucide-react';
 import type { IToolCallRenderer, TCanRenderResult } from '@/store/types';
+import { useTranslation } from 'react-i18next';
 
 interface ITodoItem {
   text: string;
@@ -153,15 +154,16 @@ export const TodoListRendererMeta: IToolCallRenderer = {
     return {};
   },
   renderMini: React.memo(({ args, result }) => {
+    const { t } = useTranslation('chat');
     const items = extractTodoArray(args ?? result);
     if (items) {
       const done = items.filter(i => i.status === 'done').length;
       return (
-        <Text whiteSpace="nowrap">To-dos {done}/{items.length}</Text>
+        <Text whiteSpace="nowrap">{t('tool.toDos')} {done}/{items.length}</Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">To-dos</Text>
+      <Text whiteSpace="nowrap">{t('tool.toDos')}</Text>
     );
   }),
 };
@@ -174,6 +176,7 @@ export const TodoItemRenderer = React.memo((props: {
   index?: number;
   result?: unknown;
 }) => {
+  const { t } = useTranslation('chat');
   const itemFromIndex = useMemo(() => {
     if (props.index === undefined || !props.result) return null;
     const items = extractTodoArray(props.result);
@@ -210,7 +213,7 @@ export const TodoItemRenderer = React.memo((props: {
     return (
       <Box px="3" py="2">
                 <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)" fontStyle="italic">
-                  Removed item #{props.index}
+                  {t('tool.removedItem', { index: props.index })}
                 </Text>
       </Box>
     );
@@ -218,7 +221,7 @@ export const TodoItemRenderer = React.memo((props: {
 
   return (
     <Box px="3" py="2">
-            <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">Todo item</Text>
+            <Text fontSize="calc(var(--chat-font-size) - 2px)" color="var(--wc-text-muted)">{t('tool.todoItem')}</Text>
     </Box>
   );
 });
@@ -247,24 +250,25 @@ export const TodoItemRendererMeta: IToolCallRenderer = {
     return false;
   },
   renderMini: React.memo(({ args }) => {
+    const { t } = useTranslation('chat');
     const itemKey = args.todo ?? args.task ?? args.item ?? args.entry;
     if (itemKey && typeof itemKey === 'object') {
       const text = extractText(itemKey as Record<string, unknown>);
       if (text) {
         const truncated = text.length > 60 ? text.slice(0, 57) + '...' : text;
         return (
-          <Text whiteSpace="nowrap">Todo: {truncated}</Text>
+          <Text whiteSpace="nowrap">{t('tool.todoPrefix')}{truncated}</Text>
         );
       }
     }
     const idx = extractIndex(args);
     if (idx !== undefined) {
       return (
-        <Text whiteSpace="nowrap">Item #{idx}</Text>
+        <Text whiteSpace="nowrap">{t('tool.itemHash', { index: idx })}</Text>
       );
     }
     return (
-      <Text whiteSpace="nowrap">Todo item</Text>
+      <Text whiteSpace="nowrap">{t('tool.todoItem')}</Text>
     );
   }),
 };

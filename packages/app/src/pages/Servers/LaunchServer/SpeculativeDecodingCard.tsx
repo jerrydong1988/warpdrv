@@ -188,7 +188,7 @@ export const SpeculativeDecodingCard = React.memo(({
 								)}
 								{selectedDraftEntry?.file.metadata && (
 									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">
-										<HStack gap="1.5"><Layers size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{selectedDraftEntry.file.metadata.nLayers} layers</Text></HStack>
+										<HStack gap="1.5"><Layers size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{t('common:ui.layersCount', { count: selectedDraftEntry.file.metadata.nLayers })}</Text></HStack>
 										<HStack gap="1.5"><Cpu size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{selectedDraftEntry.file.metadata.paramCount}</Text></HStack>
 										<Text fontSize="11px" color="var(--wc-accent-purple-icon)" fontFamily='"Geist Mono", monospace'>{formatSize(selectedDraftEntry.model.totalSizeMb)}</Text>
 									</HStack>
@@ -286,7 +286,7 @@ export const SpeculativeDecodingCard = React.memo(({
 								<Box px="3" py="2" bg="var(--wc-bg-subtle)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-border-default)">
 									<HStack gap="2">
 										<AlertTriangle size={14} color="var(--wc-text-warning)" />
-									<Text fontSize="11px" color="var(--wc-text-warning)">DFlash/DSpark require Flash Attention. Enable it in Options.</Text>
+									<Text fontSize="11px" color="var(--wc-text-warning)">{t('common:ui.dflashRequiresFlashAttention')}</Text>
 									</HStack>
 								</Box>
 							)}
@@ -294,24 +294,24 @@ export const SpeculativeDecodingCard = React.memo(({
 								<Box px="3" py="2" bg="var(--wc-bg-subtle)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-border-default)">
 									<HStack gap="2">
 										<AlertTriangle size={14} color="var(--wc-text-warning)" />
-										<Text fontSize="11px" color="var(--wc-text-warning)">ubatch-size ({ubatchSize}) must be ≥ n-max ({specDecode.specDraftNMax}). Adjust in Batch Size settings.</Text>
+										<Text fontSize="11px" color="var(--wc-text-warning)">{t('common:ui.ubatchNMaxHint', { ubatch: ubatchSize, nMax: specDecode.specDraftNMax })}</Text>
 									</HStack>
 								</Box>
 							)}
 							<Box>
-								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">Draft Model</Text>
+								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftModel')}</Text>
 								{!targetArchitecture ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">Select a target model first to see compatible draft models.</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.selectATargetModelFirstToSeeCompatibleDraftModels')}</Text>
 								) : draftModelEntries.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">No compatible draft models found. Draft models must share the same architecture ({targetArchitecture}).</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.noCompatibleDraftModelsFoundDraftModelsMustShareTheSameArchitecture', { architecture: targetArchitecture })}</Text>
 								) : (
 									<ModelCombobox entries={draftModelEntries} selectedPath={specDecode.draftModelPath || null}
 										onSelect={(path) => onSpecParamChange('draftModelPath', path)}
-										placeholder="Search compatible draft models..." />
+										placeholder={t('common:ui.searchCompatibleDraftModels')} />
 								)}
 								{selectedDraftEntry?.file.metadata && (
 									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">
-										<HStack gap="1.5"><Layers size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{selectedDraftEntry.file.metadata.nLayers} layers</Text></HStack>
+										<HStack gap="1.5"><Layers size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{t('common:ui.layersCount', { count: selectedDraftEntry.file.metadata.nLayers })}</Text></HStack>
 										<HStack gap="1.5"><Cpu size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{selectedDraftEntry.file.metadata.paramCount}</Text></HStack>
 										<Text fontSize="11px" color="var(--wc-accent-purple-icon)" fontFamily='"Geist Mono", monospace'>{formatSize(selectedDraftEntry.model.totalSizeMb)}</Text>
 									</HStack>
@@ -320,10 +320,10 @@ export const SpeculativeDecodingCard = React.memo(({
 
 							{deviceOptions.length > 0 && (
 								<Box>
-									<SelectField label="Draft Device" value={specDecode.draftDevice} options={['', ...deviceOptions]}
+									<SelectField label={t('common:ui.draftDevice')} value={specDecode.draftDevice} options={['', ...deviceOptions]}
 										onChange={v => onSpecParamChange('draftDevice', v)} mono
-										optionLabels={{ '': 'Same as target', ...deviceIdToName }} />
-									<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">Leave empty to use target device.</Text>
+										optionLabels={{ '': t('common:ui.sameAsTarget'), ...deviceIdToName }} />
+									<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">{t('common:ui.leaveEmptyToUseTargetDevice')}</Text>
 								</Box>
 							)}
 

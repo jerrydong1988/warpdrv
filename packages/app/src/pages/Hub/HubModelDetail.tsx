@@ -10,6 +10,7 @@ import { Card } from '../../components/Card';
 import { DirPickerPopover } from './DirPickerPopover';
 import { fetchHubModel, startHubDownload } from '../../api/services';
 import { openExternal } from '../../utils/openExternal';
+import { formatBytes, formatDate as formatDateLocale } from '../../utils/intl';
 import { useToast } from '../../components/ToastProvider';
 import Markdown from 'markdown-to-jsx';
 import DOMPurify from 'dompurify';
@@ -79,18 +80,9 @@ function getTotalSizeForModel(files: IHubFile[], primaryFile: IHubFile): number 
 		.reduce((sum, f) => sum + f.size, 0);
 }
 
-function formatBytes(bytes: number): string {
-	if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
-	if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + ' MB';
-	if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
-	return bytes + ' B';
-}
-
 function formatDate(dateStr: string): string {
 	if (!dateStr) return '';
-	return new Date(dateStr).toLocaleDateString('en-US', {
-		year: 'numeric', month: 'short', day: 'numeric',
-	});
+	return formatDateLocale(new Date(dateStr), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatCount(n: number): string {

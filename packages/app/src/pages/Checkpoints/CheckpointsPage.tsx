@@ -12,23 +12,7 @@ import { openExternal } from '../../utils/openExternal';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
 import { useToast } from '../../components/ToastProvider';
 import type { ICheckpoint, TCheckpointId, TCheckpointSortField, TSortOrder } from '@warpcore/shared';
-
-function formatBytes(n: number): string {
-	if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-	if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(0)} MB`;
-	if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
-	return `${n} B`;
-}
-
-function formatAge(createdAt: number): string {
-	const ms = Date.now() - createdAt;
-	const mins = Math.floor(ms / 60000);
-	if (mins < 60) return `${mins}m ago`;
-	const hours = Math.floor(mins / 60);
-	if (hours < 24) return `${hours}h ago`;
-	const days = Math.floor(hours / 24);
-	return `${days}d ago`;
-}
+import { formatBytes, formatAge, formatNumber } from '../../utils/intl';
 
 export function CheckpointsPage() {
 	const { t } = useTranslation('checkpoints');
@@ -195,7 +179,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 							</Text>
 						)}
 						<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-							{cp.tokens.toLocaleString()} {t('tok')}
+							{formatNumber(cp.tokens)} {t('tok')}
 						</Text>
 						<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
 							{formatBytes(cp.sizeBytes)}
@@ -353,7 +337,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 									<VStack gap="0" align="stretch" flex="1">
 										<Text fontSize="13px" color="var(--wc-text-primary)" fontWeight="500">{b.name}</Text>
 										<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-											{b.items.length} {t('slots')} · {formatBytes(b.totalSize)} · {b.totalTokens.toLocaleString()} {t('tok')} · {formatAge(b.createdAt)}
+											{b.items.length} {t('slots')} · {formatBytes(b.totalSize)} · {formatNumber(b.totalTokens)} {t('tok')} · {formatAge(b.createdAt)}
 										</Text>
 									</VStack>
 									<Button size="xs" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-accent-red)', bg: 'var(--wc-accent-red-bg-8)' }} borderRadius="md" onClick={() => setDeletingBundleId(b.bundleId)}>
@@ -391,7 +375,7 @@ _hover={{ bg: 'var(--wc-bg-hover)' }}
 										<Text fontSize="13px" color="var(--wc-text-primary)" fontWeight="500">{cp.name}</Text>
 									)}
 									<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
-										{t('slot', { index: cp.slotIndex })} · {cp.tokens.toLocaleString()} {t('tok')} · {formatBytes(cp.sizeBytes)} · {formatAge(cp.createdAt)}
+										{t('slot', { index: cp.slotIndex })} · {formatNumber(cp.tokens)} {t('tok')} · {formatBytes(cp.sizeBytes)} · {formatAge(cp.createdAt)}
 									</Text>
 								</HStack>
 								<Text fontSize="10px" color="var(--wc-text-faint)" fontFamily='"Geist Mono", monospace'>

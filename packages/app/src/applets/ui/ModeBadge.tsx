@@ -6,6 +6,7 @@ import { TiFlowSwitch } from 'react-icons/ti';
 import { computePosition, flip, shift, offset } from '@floating-ui/dom';
 import { useStore } from '@/store';
 import type { IMode, TModeId } from '@warpcore/shared';
+import { useTranslation } from 'react-i18next';
 
 const EMPTY_MODES: Record<TModeId, IMode> = {};
 
@@ -18,6 +19,7 @@ const hexToRgba = (hex: string): string => {
 };
 
 export const ModeBadge = memo(() => {
+    const { t } = useTranslation('common');
     const modes = useStore(s => s.modes) ?? EMPTY_MODES;
     const currentThreadId = useStore(s => s.currentThreadId);
     const threads = useStore(s => s.threads);
@@ -154,14 +156,14 @@ export const ModeBadge = memo(() => {
                         }}
                     >
                         {!isActive && <Check size={14} color="var(--wc-accent-purple)" />}
-                        <span style={{ flex: 1 }}>Default</span>
+                        <span style={{ flex: 1 }}>{t('ui.default')}</span>
                     </div>
 
                     <div style={{ height: '1px', background: 'var(--wc-border-subtle)', margin: '4px 0' }} />
 
                     {availableModes.length === 0 ? (
                         <div style={{ padding: '8px 12px', fontSize: '0.75rem', color: 'var(--wc-text-faint)' }}>
-                            No modes available
+                            {t('ui.noModesAvailable')}
                         </div>
                     ) : (
                         availableModes.map((m: IMode) => {

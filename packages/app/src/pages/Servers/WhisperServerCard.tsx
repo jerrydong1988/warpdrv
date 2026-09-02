@@ -189,7 +189,7 @@ export const WhisperServerCard = React.memo(({
 															fontSize="12px"
 															onClick={handleAddAlias}
 														>
-															Add
+															{t('actions.add')}
 														</Button>
 													</HStack>
 												</Popover.Body>

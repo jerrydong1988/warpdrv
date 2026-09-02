@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { computePosition, flip, shift, offset } from "@floating-ui/dom";
 import { ChevronDown, Check, Shield } from "lucide-react";
 import { useStore } from "@/store";
+import { useTranslation } from "react-i18next";
 
 type SlashCmdGuardrailsProps = {
   value: string;
@@ -21,6 +22,7 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
   onFocus,
   onBlur,
 }) => {
+  const { t } = useTranslation('common');
   const guardrails = useStore((s) => s.guardrails);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement | null>(null);
@@ -201,7 +203,7 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
                   textAlign: "center",
                 }}
               >
-                No guardrails available
+                {t('ui.noGuardrails')}
               </div>
             )}
             {availableGuardrails.map((g) => {

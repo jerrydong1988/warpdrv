@@ -9,6 +9,7 @@ import type { IAccessTokenInfo } from '@warpcore/shared';
 import { useListQuery, useMutation } from '../../hooks/useQuery';
 import { fetchTokens, deleteToken } from '../../api/services';
 import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
+import { formatDate as formatDateLocale } from '../../utils/intl';
 import { TokenDialog } from './TokenDialog';
 
 function RoleBadge({ token }: { token: IAccessTokenInfo }) {
@@ -128,7 +129,7 @@ function ScopePills({ value }: { value: true | string[] }) {
 }
 
 function formatDate(ts: number): string {
-	return new Date(ts).toLocaleDateString('en-US', {
+	return formatDateLocale(new Date(ts), {
 		month: 'short',
 		day: 'numeric',
 		year: 'numeric',
