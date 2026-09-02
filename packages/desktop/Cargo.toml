@@ -7,7 +7,7 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png", "devtools", "wry"] }
+tauri = { version = "2", features = ["tray-icon", "image-png", "wry"] }
 enigo = { version = "0.6", features = ["wayland", "libei_tokio"] }
 rdev = "0.5"
 tauri-plugin-shell = "2"
