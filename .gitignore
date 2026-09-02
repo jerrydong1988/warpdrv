@@ -36,6 +36,9 @@ dist-ssr
 *.local
 .data
 
+# Test coverage reports
+coverage/
+
 # Editor directories and files
 .idea
 .DS_Store

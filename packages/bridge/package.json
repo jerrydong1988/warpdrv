@@ -5,7 +5,8 @@
   "description": "Chat engine with MCP tool orchestration for OpenAI-compatible inference servers",
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "exports": {
     ".": "./src/types/index.ts",
