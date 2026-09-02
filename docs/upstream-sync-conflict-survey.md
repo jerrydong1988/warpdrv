@@ -1,3 +1,7 @@
+> ## ⚠️ 决定归档（2026-09-02）
+>
+> 本项目已决定**独立维护，不再与上游（mikjee/warpdrv）对齐同步**。本文档保留为历史档案：冲突摸底数据与合并路线（A/B/C）不再作为行动依据。自 2026-09-02 起，安全加固与 i18n 以本仓库自身演进为准；`release.json` 更新检查已改指本仓库（jerrydong1988/warpdrv）。完整审计见 `docs/audit-report-2026-09-02.md`。
+
 # Upstream 同步冲突摸底清单（fork master `549c339` × upstream/master v0.6.17）
 
 > 生成日期：2026-08-28 · 方法：只读 merge-tree 侦察，未改动工作树
