@@ -1,6 +1,11 @@
 import type { Request, Response } from 'express';
 import { createSession } from 'better-sse';
 
+// Long-lived SSE sessions accumulate (each holds a socket + heartbeat state).
+// The app opens a handful per window; anything beyond this cap is a runaway
+// client or a leak, so refuse instead of growing without bound.
+const MAX_SESSIONS = 32;
+
 export class SSEManager {
 	private sessions: Array<{ session: any; req: Request; res: Response }> = [];
 	private intervals: Record<string, { callback: () => unknown | null; intervalMs: number; timer: NodeJS.Timeout }>;
@@ -59,6 +64,12 @@ export class SSEManager {
 		console.log('[SSE] New connection established');
 
 		try {
+			if (this.sessions.length >= MAX_SESSIONS) {
+				console.error(`[SSE] Refusing connection: ${MAX_SESSIONS}-session cap reached`);
+				res.status(503).end();
+				onDisconnect();
+				return;
+			}
 			const session = await createSession(req, res);
 			const sessionInfo = { session, req, res };
 			this.sessions.push(sessionInfo);
