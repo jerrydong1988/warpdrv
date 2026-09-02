@@ -3,39 +3,18 @@ import path from 'path';
 import os from 'os';
 import { spawn, execFileSync } from 'child_process';
 import AdmZip from 'adm-zip';
-import { EPostActionType, EPostActionStatus, type IDownload, type IDownloadPostAction } from '@warpcore/shared';
+import { EPostActionType, EPostActionStatus, type IDownload } from '@warpcore/shared';
 import { validateBackend } from './backendValidator';
 import { validateWhisperBackend } from './whisperBackendValidator';
 import { locateBinary } from './binaryLocator';
-import { getAllDownloads } from './downloadManager';
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { emitDevicesUpdate } from '../routes/backends';
 import type { IBackend, IWhisperBackend } from '@warpcore/shared';
-import { EValidationStatus, EDownloadStatus } from '@warpcore/shared';
+import { EValidationStatus } from '@warpcore/shared';
 import crypto from 'crypto';
 const BACKENDS_PREFIX = 'backends:';
 const WHISPER_BACKENDS_PREFIX = 'whisperBackends:';
-interface IGroupResolution {
-	done: boolean;
-	anyFailed: boolean;
-}
-async function isGroupResolved(groupKey: string, currentId: string): Promise<IGroupResolution> {
-	const all = await getAllDownloads();
-	const group = all.filter(d => d.groupKey === groupKey);
-	if (group.length === 0) return { done: false, anyFailed: false };
-	const siblings = group.filter(d => d.id !== currentId);
-	const done = siblings.every(d =>
-		d.status === EDownloadStatus.COMPLETED ||
-		d.status === EDownloadStatus.FAILED ||
-		d.status === EDownloadStatus.CANCELLED
-	);
-	const anyFailed = group.some(d =>
-		d.status === EDownloadStatus.FAILED ||
-		d.status === EDownloadStatus.CANCELLED
-	);
-	return { done, anyFailed };
-}
 type TPersistFn = (dl: IDownload) => Promise<void>;
 type TEmitFn = (dl: IDownload) => void;
 type TPostActionHandler = (dl: IDownload, payload: Record<string, unknown>) => Promise<void>;

@@ -18,7 +18,6 @@ import type {
 	ISettings,
 	TCheckpointId,
 	TBundleId,
-	TServerId,
 	TSlotId,
 	TFingerprintHash,
 } from '@warpcore/shared';
@@ -334,7 +333,6 @@ export async function restoreCheckpoint(req: IRestoreCheckpointRequest): Promise
 	const server = await store.get<IServer>(`${SERVERS_PREFIX}${req.targetServerId}`);
 	if (!server) throw new Error(`Target server not found: ${req.targetServerId}`);
 
-	const dir = await getCheckpointsDir();
 	const all = await listCheckpoints({ serverId: null, threadId: null });
 
 	let toRestore: ICheckpoint[];

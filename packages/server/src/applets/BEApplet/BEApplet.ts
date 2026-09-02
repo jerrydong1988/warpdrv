@@ -1,7 +1,7 @@
 import type { TAppletDefinition, IAppletFn } from '@warpcore/realmcore';
 import { EAppletHostType, EAppletScope } from '@warpcore/realmcore';
 import type { IAppletAPIBE } from '../lib/types';
-import type { IGuardrailDefinition, IGuardrailIssue, IServer, ITodoItem, IMode } from '@warpcore/shared';
+import type { IGuardrailDefinition, IGuardrailIssue, IServer, IMode } from '@warpcore/shared';
 import { EServerStatus } from '@warpcore/shared';
 import { COMPACTION_PROMPT, CORE_INSTRUCTION_PROMPT, GUARDRAIL_PROMPT, GUARDRAIL_RULESET_GENERIC_PROMPT, TRAILING_SYSTEM_PROMPT, ALLOWED_TOOLS_PROMPT } from './prompts';
 import { store } from '../../util/store';
@@ -85,7 +85,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 
             let content = '';
             let isToolsIncluded = false;
-            let isTodosIncluded = false;
+            const isTodosIncluded = false;
 
             // --- Mode tools section ---
 
@@ -223,7 +223,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
                 messages: Array<TOpenAIMessage>;
                 message: IChatMessage,
             };
-            const { threadId, messageId, inferenceUrl, messages, message } = payload;
+            const { threadId, messageId, messages } = payload;
 
             const threadState = await api.eventNode.invoke(
                 '/warpcore',

@@ -25,7 +25,7 @@ export const CodeGraphSymbolRenderer = React.memo((props: {
 			const r = d?.result ?? d;
 			if (Array.isArray(r)) nodes = r;
 			else if (r && typeof r === 'object') nodes = [r];
-		} catch {}
+		} catch { /* best-effort */ }
 	}
 	const label = symbolId ?? symbol ?? '(no symbol)';
 

@@ -528,12 +528,14 @@ export async function stopModelProxy(): Promise<void> {
 	proxyServerInstance = null;
 	proxyError = null;
 
-	return new Promise(async (resolve) => {
-		server.close(async () => {
-			console.log('[WarpCore] Model proxy stopped');
-			const status = await getProxyStatus();
-			sseManager.emit('proxy:update', status);
-			resolve();
+	return new Promise((resolve) => {
+		server.close(() => {
+			void (async () => {
+				console.log('[WarpCore] Model proxy stopped');
+				const status = await getProxyStatus();
+				sseManager.emit('proxy:update', status);
+				resolve();
+			})();
 		});
 	});
 }

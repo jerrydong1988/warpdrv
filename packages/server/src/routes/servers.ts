@@ -2,10 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { store } from '../util/store';
 import {
-	buildServerArgs,
-	spawnServer,
 	killServer,
-	isProcessAlive,
 	getServerLogs,
 	clearServerLogs,
 	SERVERS_PREFIX,
@@ -22,10 +19,8 @@ import type {
 	IServerCreatePayload,
 	IBackend,
 	IBackendGroup,
-	ISettings,
 } from '@warpcore/shared';
 import { EServerStatus } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
 
 const PREFIX = SERVERS_PREFIX;
 

@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useStore } from '@/store';
 
-export interface ISlashCommandApi {
-}
+// Placeholder API object for slash command execution. Slash commands receive
+// `{}` today; this type exists so future fields have a home.
+export type ISlashCommandApi = object;
 
 export function useSlashCommandProcessor() {
     const executeCommands = useCallback(async (extraParams?: Record<string, string>) => {

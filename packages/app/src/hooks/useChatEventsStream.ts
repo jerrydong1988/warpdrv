@@ -168,6 +168,7 @@ export function useChatEventsStream() {
 				}
 				break;
 case 'inference.ended':
+			{
 				applyInferenceEnded(event.threadId, event.messageId);
 				tryAutoEmbed(event.messageId, event.threadId);
 				const vadActive = useStore.getState().vadActive;
@@ -175,7 +176,8 @@ case 'inference.ended':
 				if (vadActive) {
 					useStore.getState().ttsClearSpokenIndex(event.messageId);
 				}
-				break;
+			}
+			break;
 			case 'inference.error':
 				applyInferenceError(event.threadId, event.messageId, event.error);
 				break;

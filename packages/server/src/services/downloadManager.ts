@@ -348,7 +348,7 @@ export async function cancelDownload(id: TDownloadId): Promise<boolean> {
 
 	// Clean up partial file - use resumeState.filePath if available, otherwise fallback to default
 	const partial = dl.resumeState?.filePath ?? (dl.destPath + '.download');
-	try { fs.unlinkSync(partial); } catch {}
+	try { fs.unlinkSync(partial); } catch { /* best-effort */ }
 
 	return true;
 }

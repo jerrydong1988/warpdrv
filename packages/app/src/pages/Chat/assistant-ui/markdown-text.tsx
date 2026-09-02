@@ -37,7 +37,7 @@ import { TooltipIconButton } from "./tooltip-icon-button";
 import { MermaidDiagram } from "./mermaid-diagram";
 import { cn } from "@/lib/utils";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const PRISM_THEME_MAP: Record<string, any> = {
   "dark": vscDarkPlus,
   "light": oneLight,

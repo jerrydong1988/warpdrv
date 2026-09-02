@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import fs from 'fs';
-import path from 'path';
 import { store } from '../util/store';
 import {
 	startDownload,

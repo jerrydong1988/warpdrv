@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-"use client";
 
 import { ComponentPropsWithRef, forwardRef } from "react";
 import { Slot } from "radix-ui";

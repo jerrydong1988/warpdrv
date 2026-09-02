@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process';
 import net from 'net';
 import type { IWhisperServer, IWhisperLaunchParams, IWhisperBackend } from '@warpcore/shared';
-import { EWhisperServerStatus, DEFAULT_WHISPER_LAUNCH_PARAMS, DEFAULT_SETTINGS, type ISettings } from '@warpcore/shared';
+import { EWhisperServerStatus, DEFAULT_SETTINGS, type ISettings } from '@warpcore/shared';
 import { parseArgTokens } from '../util/shellArgs';
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
@@ -276,7 +276,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 			}
 			try {
 				killProcessTree(pidToUse, 'SIGKILL');
-			} catch {}
+			} catch { /* best-effort */ }
 			forceKillTimer = setTimeout(() => finish(true), 200);
 		}, 5000);
 	});
@@ -292,7 +292,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 
 		try {
 			killProcessTree(pid, 'SIGTERM');
-		} catch {}
+		} catch { /* best-effort */ }
 
 		return new Promise((resolve) => {
 			let settled = false;
@@ -317,7 +317,7 @@ export async function killWhisperServer(serverId: string, pid?: number): Promise
 				if (!isProcessAlive(pid)) { settle(true); return; }
 				try {
 					killProcessTree(pid, 'SIGKILL');
-				} catch {}
+				} catch { /* best-effort */ }
 				setTimeout(() => settle(true), 200);
 			}, 5000);
 		});

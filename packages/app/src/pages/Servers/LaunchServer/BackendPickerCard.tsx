@@ -274,7 +274,7 @@ export const BackendPickerCard = React.memo(({
 				}
 			}
 		}
-	}, [selectedBackendId, selectedBackend]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [selectedBackendId, selectedBackend]);
 
 	// GPU layers auto
 	const gpuLayersAuto = params.gpuLayersAuto ?? false;
@@ -292,7 +292,7 @@ export const BackendPickerCard = React.memo(({
 				onParamChange('gpuSplitValues', values);
 			}
 		}
-	}, [params.multiGpu, devices.length]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [params.multiGpu, devices.length]);
 
 	const maxLayers = meta?.nLayers ?? 999;
 

@@ -57,7 +57,7 @@ export function groupSplitFilesByModel(files: IHubFile[]): Map<string, IHubFile[
 	for (const file of files) {
 		if (!file.isGguf && !file.isWhisperBin) continue;
 
-		const { shardIndex, shardTotal, parentModel } = extractShardInfo(file.filename);
+		const { shardIndex, parentModel } = extractShardInfo(file.filename);
 
 		let key: string;
 		if (shardIndex !== null && parentModel) {
@@ -82,10 +82,6 @@ export function groupSplitFilesByModel(files: IHubFile[]): Map<string, IHubFile[
  * Also marks the primary file (first shard or non-shard) for display purposes
  */
 export function processGgufFiles(files: IHubFile[]): IHubFile[] {
-	// Group by parent model
-	const groups = groupSplitFilesByModel(files);
-
-	// Process each file
 	const processed: IHubFile[] = [];
 
 	for (const file of files) {
@@ -143,7 +139,7 @@ export async function fetchFilesFromDirectories(
 					// Don't recurse deeper than one level
 				}
 			}
-		} catch {}
+		} catch { /* best-effort */ }
 	}
 
 	return allFiles;

@@ -3,8 +3,6 @@ import crypto from 'crypto';
 import http from 'node:http';
 import { store } from '../util/store';
 import {
-	buildWhisperArgs,
-	spawnWhisperServer,
 	killWhisperServer,
 	getWhisperServerLogs,
 	clearWhisperServerLogs,
@@ -16,7 +14,6 @@ import { sseManager } from '../services/sseManagerInstance';
 import type {
 	IWhisperServer,
 	IWhisperServerCreatePayload,
-	IWhisperBackend,
 } from '@warpcore/shared';
 import { EWhisperServerStatus } from '@warpcore/shared';
 

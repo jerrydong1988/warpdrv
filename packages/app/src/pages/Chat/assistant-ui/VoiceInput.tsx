@@ -213,7 +213,7 @@ export const VoiceInput = React.memo(({ threadId, onTranscript, aui, onStreamCha
 						} else {
 							// Annotation injection moved to FEApplet bridge.preCompletion hook
 							// const annotations = useStore.getState().annotations;
-							let fullText = text;
+							const fullText = text;
 							// if (annotations.length > 0) {
 							// 	const lines = annotations.map((a, i) => `${i + 1}. "${a.selectedText}"\n   ${a.comment}`);
 							// 	fullText = lines.join('\n\n') + '\n\n' + text;

@@ -34,7 +34,7 @@ export function resolveBashPath(): string {
 		const found = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n')[0];
 		if (found && existsSync(found)) { cachedShellPath = found; return found; }
 	}
-	catch {}
+	catch { /* best-effort */ }
 
 	throw new BashNotFoundError();
 }

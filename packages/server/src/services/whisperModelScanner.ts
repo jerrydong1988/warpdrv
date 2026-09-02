@@ -10,13 +10,6 @@ const WHISPER_MODELS_CACHE_KEY = 'whisperModels:cache';
 
 // Scan all configured model roots for whisper models
 export async function scanAllWhisperModelRoots(roots: string[]): Promise<IWhisperModel[]> {
-	let cachedModels: IWhisperModel[] = [];
-	try {
-		cachedModels = await store.get<IWhisperModel[]>(WHISPER_MODELS_CACHE_KEY) ?? [];
-	} catch {
-		// Ignore cache errors
-	}
-
 	const scanned: IWhisperModel[] = [];
 	for (const root of roots) {
 		const models = await scanDirRecursive(root, null);

@@ -617,7 +617,7 @@ export async function killServer(serverId: string, pid?: number): Promise<boolea
 			// Send SIGTERM to process tree
             try {
                 killProcessTree(pidToUse!, 'SIGTERM');
-            } catch (err) {
+            } catch {
                 if (isProcessAlive(pidToUse!)) {
                     finish(false);
                 } else {

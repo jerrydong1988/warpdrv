@@ -88,7 +88,7 @@ export class SSEManager {
 				}
 			}
 
-			await new Promise<void>((resolve, reject) => {
+			await new Promise<void>((resolve, _reject) => {
 				req.on('close', () => resolve());
 				req.on('error', () => resolve());
 			});

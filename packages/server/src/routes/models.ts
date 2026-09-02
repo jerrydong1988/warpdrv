@@ -5,7 +5,6 @@ import { sseManager } from '../services/sseManagerInstance';
 import type { ISettings, IModel } from '@warpcore/shared';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
 import { parseGgufMetadata } from '../services/ggufParser';
-import type { IGgufFile } from '@warpcore/shared';
 
 const SETTINGS_KEY = 'settings:general';
 const MODELS_KEY = 'models:cache';

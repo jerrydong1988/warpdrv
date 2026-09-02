@@ -78,11 +78,11 @@ export function InputFormGenerator({ inputs, values, onChange, disabled = false 
 									onCheckedChange={(d: { checked: boolean }) => onChange(input.name, !!d.checked)}
 								>
 									<Switch.HiddenInput />
-									<Switch.Control css={{ bg: Boolean(value) ? 'var(--wc-accent-blue)' : 'var(--wc-bg-surface)' }}>
+									<Switch.Control css={{ bg: value ? 'var(--wc-accent-blue)' : 'var(--wc-bg-surface)' }}>
 										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-secondary)">{Boolean(value) ? 'true' : 'false'}</Text>
+								<Text fontSize="12px" color="var(--wc-text-secondary)">{value ? 'true' : 'false'}</Text>
 							</HStack>
 						)}
 

@@ -22,7 +22,7 @@ export const RgRenderer = React.memo((props: {
 			const d = JSON.parse(text);
 			matches = Array.isArray(d?.matches) ? d.matches : null;
 			truncated = !!d?.truncated;
-		} catch {}
+		} catch { /* best-effort */ }
 	}
 	const [expanded, setExpanded] = useState(false);
 
@@ -98,7 +98,7 @@ export const RgRendererMeta: IToolCallRenderer = {
         const parsed = JSON.parse(text);
         const c = parsed?.matches?.length;
         if (typeof c === 'number') return ` (${c} match${c === 1 ? '' : 'es'})`;
-      } catch {}
+      } catch { /* best-effort */ }
       return '';
     }, [result]);
     if (path) {

@@ -31,7 +31,7 @@ async function fetchLatestArray(url: string): Promise<IGithubRelease[] | null> {
 		return null;
 	}
 }
-function parseUpstreamAsset(asset: IGithubReleaseAsset, tag: string): IBackendAsset | null {
+function parseUpstreamAsset(asset: IGithubReleaseAsset, _tag: string): IBackendAsset | null {
 	const name = asset.name;
 	if (!name.startsWith('llama-') || !name.includes('-bin-')) return null;
 	if (name.startsWith('cudart-')) return null;

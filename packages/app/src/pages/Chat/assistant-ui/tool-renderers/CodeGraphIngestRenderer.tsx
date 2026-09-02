@@ -20,7 +20,7 @@ export const CodeGraphIngestRenderer = React.memo((props: {
 	const text = extractResultText(result);
 	let stats: IIngestStats | null = null;
 	if (text) {
-		try { stats = JSON.parse(text); } catch {}
+		try { stats = JSON.parse(text); } catch { /* best-effort */ }
 	}
 
 	const statEntries = stats ? Object.entries(stats).filter(([, v]) => typeof v === 'number') as [keyof IIngestStats, number][] : [];

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { nanoid } from 'nanoid';
-import { listModes, putMode, deleteMode, getMode } from '../services/modeStore';
+import { putMode, deleteMode, getMode } from '../services/modeStore';
 import { sseManager } from '../services/sseManagerInstance';
 import type { IMode, IModeCreatePayload, IToolAttachment } from '@warpcore/shared';
 

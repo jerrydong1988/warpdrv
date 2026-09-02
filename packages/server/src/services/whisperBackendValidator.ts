@@ -1,8 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
-import type { IWhisperBackend } from '@warpcore/shared';
-import { EValidationStatus } from '@warpcore/shared';
 
 const execFileAsync = promisify(execFile);
 
@@ -26,7 +24,7 @@ export async function validateWhisperBackend(binaryPath: string): Promise<IWhisp
 		const output = stdout + stderr;
 
 		// Parse version from whisper-server output
-		const versionMatch = output.match(/version\s+v?(\d+\.\d+[\.\d]*)/i);
+		const versionMatch = output.match(/version\s+v?(\d+\.\d+[\d.]*)/i);
 		const version = versionMatch ? versionMatch[1]! : 'unknown';
 
 		return { valid: true, version, error: null };

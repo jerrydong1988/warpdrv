@@ -23,7 +23,6 @@ import type { IPersistence } from '@warpcore/bridge';
 import type {
 	ICodeGraphNode,
 	ICodeGraphEdge,
-	ICodeGraphFile,
 	ICodeGraphIngestResult,
 	ICodeGraphSearchOptions,
 } from '@warpcore/shared';
@@ -214,7 +213,7 @@ export class CodeGraphService {
 		relativePath: string,
 		scope: string[],
 		language: string,
-		parentNodes: ICodeGraphNode[] = [],
+		_parentNodes: ICodeGraphNode[] = [],
 		seenIds: Record<string, number> = {},
 	): ICodeGraphNode[] {
 		const nodes: ICodeGraphNode[] = [];

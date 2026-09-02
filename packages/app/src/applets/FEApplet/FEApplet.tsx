@@ -137,7 +137,7 @@ const GuardrailToolPicker = React.memo(({ value, onChange, onClick }: { value: I
 									textTransform="uppercase"
 									letterSpacing="0.05em"
 									_hover={{ bg: 'var(--wc-bg-card)' }}
-									onClick={(e) => { e.stopPropagation(); setExpandedServers(prev => { const n = new Set(prev); isExpanded ? n.delete(serverName) : n.add(serverName); return n; })}}
+									onClick={(e) => { e.stopPropagation(); setExpandedServers(prev => { const n = new Set(prev); if (isExpanded) n.delete(serverName); else n.add(serverName); return n; })}}
 								>
 									<span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 										{isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}

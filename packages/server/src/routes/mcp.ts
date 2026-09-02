@@ -124,7 +124,7 @@ mcpRouter.post('/servers/:name/refresh', async (req, res) => {
 mcpRouter.post('/reload', async (req, res) => {
 	try {
 		const config = readMcpConfig();
-		for (const [name, entry] of Object.entries(config.mcpServers)) {
+		for (const [name] of Object.entries(config.mcpServers)) {
 			await mcpClient.reconnect(name);
 		}
 		res.json({ ok: true, data: null, error: null });

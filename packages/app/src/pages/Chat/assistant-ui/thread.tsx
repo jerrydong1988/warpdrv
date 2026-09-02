@@ -149,7 +149,7 @@ export const Thread: FC<{
 	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
-		let resolveFn: (() => void) | null = null as (() => void) | null;
+		const resolveFn: (() => void) | null = null as (() => void) | null;
 		const handleConfirm = async () => {
 			setDeletingLoading(true);
 			try {

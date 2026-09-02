@@ -15,7 +15,7 @@ const PATTERNS = {
 	yamlKeyValue: /^[\s]+(\w+):[\s]+([^\n]+)/gm,
 	
 	// Markdown table with parameter names
-	markdownTable: /[\|]\s*(\w[\s\w]*)\s*[\|]\s*([^\|]+)[\|]/g,
+	markdownTable: /[|]\s*(\w[\s\w]*)\s*[|]\s*([^|]+)[|]/g,
 	
 	// Bullet list with parameter names
 	bulletList: /[-*]\s*(\w[\s\w]*):?\s*([^\n]+)/gi,

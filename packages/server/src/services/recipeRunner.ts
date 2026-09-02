@@ -202,6 +202,7 @@ export function validateRecipeBody(body: string): void {
 
 	// Reject control characters — the body is executed via `bash -c`, where a
 	// newline is a statement separator and would bypass every pattern below.
+	// eslint-disable-next-line no-control-regex -- this regex exists to match control characters and reject them
 	if (/[\x00-\x1f\x7f]/.test(body)) {
 		throw new Error('Recipe steps cannot contain control characters (newlines, tabs, etc.)');
 	}
@@ -222,7 +223,7 @@ export function validateRecipeBody(body: string): void {
 		throw new Error('Recipe steps cannot contain variable expansion');
 	}
 
-	if (/\`/.test(trimmed)) {
+	if (/`/.test(trimmed)) {
 		throw new Error('Recipe steps cannot contain backtick command substitution');
 	}
 

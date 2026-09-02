@@ -6,7 +6,7 @@ import { store } from '../util/store';
 import { sseManager } from '../services/sseManagerInstance';
 import type { IChatThreadCreatePayload, IChatMessageCreatePayload } from '@warpcore/shared';
 import { EServerStatus } from '@warpcore/shared';
-import { EChatRole, EMessagePartType, ICompletionRequest, type IFolder } from '@warpcore/bridge';
+import { EChatRole, ICompletionRequest, type IFolder } from '@warpcore/bridge';
 import { folderNameToTopic } from '@warpcore/bridge/util/topic';
 import type { IServer } from '@warpcore/shared';
 import { embeddingManager } from '../services/embeddingManager';
@@ -39,7 +39,7 @@ chatRouter.get('/threads', async (req, res) => {
 		try {
 			const body = req.body as IChatThreadCreatePayload;
 			const now = Date.now();
-			const thread = await persistence.createThread({
+			await persistence.createThread({
 				id: body.id ?? crypto.randomUUID(),
 				title: body.title ?? 'New Chat',
 				folderId: body.folderId ?? null,
@@ -632,7 +632,7 @@ chatRouter.get('/events', async (req, res) => {
 			// console.log('[Chat SSE] Client disconnected');
 			resolve();
 		});
-		req.on('error', (err) => {
+		req.on('error', () => {
 			// console.error('[Chat SSE] Connection error:', err);
 			resolve();
 		});

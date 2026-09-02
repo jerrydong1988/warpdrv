@@ -74,7 +74,7 @@ export function useRealm(currentThreadId: string | null) {
 			// future explicit reconnect) instead of leaving a dead connection.
 			realmRef.current = null;
 		};
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+	}, []);
 
 	useEffect(() => {
 		if (!isParentAttached) return;

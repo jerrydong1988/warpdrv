@@ -53,7 +53,7 @@ const reportError = (payload: Record<string, unknown>) => {
 			body: JSON.stringify(payload),
 			keepalive: true,
 		}).catch(() => {});
-	} catch {}
+	} catch { /* best-effort */ }
 };
 
 window.addEventListener('error', (e) => {

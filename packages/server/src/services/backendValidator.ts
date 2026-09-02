@@ -216,7 +216,7 @@ async function getVersion(binaryPath: string, buildNumber: number): Promise<stri
 		}
 
 		return parts.length > 0 ? parts.join(', ') : 'unknown';
-	} catch (err) {
+	} catch {
 	// console.log(`[getVersion] error for ${binaryPath}:`, String(err));
 		return null;
 	}
@@ -319,7 +319,6 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 			rocmIdx++;
 		}
 		// Parse Vulkan devices
-		let vulkanIdx = 0;
 		const vulkanVerboseMatch = output.matchAll(/ggml_vulkan: (\d+) = (.+?) \|/g);
 		// Build a name→type map for O(1) lookup
 		const nameToBackendType = new Map<string, EDeviceBackendType>();
@@ -346,7 +345,6 @@ async function listDevices(binaryPath: string, backendId: string): Promise<IDevi
 				devices.push(vulkanDevice);
 				nameToBackendType.set(baseName, EDeviceBackendType.VULKAN);
 			}
-			vulkanIdx++;
 		}
 	} catch {
 		// llama-cli might not exist or might fail

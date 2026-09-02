@@ -18,7 +18,7 @@ export const CodeGraphSearchRenderer = React.memo((props: {
 	const { query, kind, filePath, limit, result } = props;
 	const text = extractResultText(result);
 	let nodes: INode[] | null = null;
-	if (text) { try { const d = JSON.parse(text); nodes = Array.isArray(d?.results) ? d.results : null; } catch {} }
+	if (text) { try { const d = JSON.parse(text); nodes = Array.isArray(d?.results) ? d.results : null; } catch { /* best-effort */ } }
 	const [expanded, setExpanded] = useState(false);
 
 	const bits: string[] = [];
@@ -79,7 +79,7 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
         const parsed = JSON.parse(text);
         const c = parsed?.results?.length;
         if (typeof c === 'number' && c > 0) return ` — ${c} result${c === 1 ? '' : 's'}`;
-      } catch {}
+      } catch { /* best-effort */ }
       return '';
     }, [result]);
     return (
