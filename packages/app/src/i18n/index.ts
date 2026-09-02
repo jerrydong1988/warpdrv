@@ -111,7 +111,16 @@ export async function setLocale(locale: SupportedLocale): Promise<void> {
 	}
 	if (!i18next.isInitialized) await initI18n(locale);
 	else if (normalizeLocale(i18next.resolvedLanguage) !== locale) await i18next.changeLanguage(locale);
-	if (globalThis.document?.documentElement) globalThis.document.documentElement.lang = locale;
+	applyDocumentAttributes(locale);
+}
+
+// Keep <html lang> and <html dir> in sync with the active locale. dir makes
+// the app RTL-ready: rtl locales flip the document direction, everything else
+// stays ltr (today's locales are en/zh-CN — both ltr).
+function applyDocumentAttributes(locale: string): void {
+	if (!globalThis.document?.documentElement) return;
+	globalThis.document.documentElement.lang = locale;
+	globalThis.document.documentElement.dir = /^(ar|he|fa|ur)(-|$)/i.test(locale) ? 'rtl' : 'ltr';
 }
 
 export async function initI18n(locale: SupportedLocale = getPreferredLocale()): Promise<void> {
@@ -129,13 +138,17 @@ export async function initI18n(locale: SupportedLocale = getPreferredLocale()): 
 			defaultNS: 'common',
 			ns: NAMESPACES,
 			returnNull: false,
+			// Fail loudly when a key is missing (the rendered output still falls
+			// back to the key itself) — silently rendering raw keys is how dead
+			// translations linger.
+			missingKeyHandler: (_lngs, namespace, key) => {
+				console.warn(`[i18n] Missing translation key "${namespace}:${key}"`);
+			},
 			interpolation: {
 				escapeValue: false,
 			},
 		}).then(() => {
-			if (globalThis.document?.documentElement) {
-				globalThis.document.documentElement.lang = normalizeLocale(i18next.resolvedLanguage) ?? locale;
-			}
+			applyDocumentAttributes(normalizeLocale(i18next.resolvedLanguage) ?? locale);
 		}).catch((error) => {
 			initializationPromise = null;
 			console.error('i18n initialization failed:', error);
