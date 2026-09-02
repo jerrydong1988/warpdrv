@@ -6,7 +6,6 @@
 import type {
 	TThreadId,
 	TMessageId,
-	TMessagePartId,
 	TToolCallId,
 	TFolderId,
 	IFolder,

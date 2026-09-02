@@ -357,7 +357,7 @@ export class SqlitePersistence implements IPersistence {
 		if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
 		this.db = new Database(this.dbPath, {
-			nativeBinding: (process as any).pkg
+			nativeBinding: (process as { pkg?: unknown }).pkg
 				? path.join(process.env.WARPCORE_RESOURCE_DIR ?? path.dirname(process.execPath), 'binaries', 'better_sqlite3.node')
 				: undefined
 		});
@@ -735,7 +735,7 @@ export class SqlitePersistence implements IPersistence {
 			throw new Error('Cannot delete root message');
 		}
 
-		this.db!.transaction((() => {
+		this.db!.transaction(() => {
 			this.db!.prepare(`UPDATE ${this.t.messages} SET parentId = ? WHERE parentId = ?`).run(msg.parentId, id);
 			// Parts must go too: they are only referenced by messageId, and the FTS
 			// rows are removed by the AFTER DELETE trigger on message_parts. Without
@@ -743,7 +743,7 @@ export class SqlitePersistence implements IPersistence {
 			this.db!.prepare(`DELETE FROM ${this.t.messageParts} WHERE messageId = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messages} WHERE id = ?`).run(id);
 			this.db!.prepare(`DELETE FROM ${this.t.messageStates} WHERE messageId = ?`).run(id);
-		}) as any)();
+		})();
 	}
 
 	async getMessages(threadId: TThreadId): Promise<IChatMessage[]> {
@@ -994,7 +994,7 @@ export class SqlitePersistence implements IPersistence {
 
   private preprocessQuery(q: string): string {
 		// Strip FTS5 special chars and SQL logical operators to prevent query injection
-		const stripped = q.replace(/[\"\(\)\:\^\-\*]/g, ' ')
+		const stripped = q.replace(/[":()^*-]/g, ' ')
 			// Remove logical operators that could alter FTS semantics
 			.replace(/\bAND\b|\bOR\b|\bNOT\b/gi, ' ')
 			// Strip unbalanced parens

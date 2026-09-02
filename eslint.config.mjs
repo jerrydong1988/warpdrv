@@ -1,7 +1,8 @@
 // ESLint flat config — scoped to the core TypeScript packages.
-// `shared` and `realmcore` are the composite packages that CI builds
-// with `tsc -b`; keeping them lint-clean is the gate. Server/app are
-// typechecked separately (their larger surface is migrated incrementally).
+// `shared`, `realmcore` and `bridge` are the typed-lint packages; CI builds
+// shared/realmcore with `tsc -b` and typechecks bridge/server/app/warpmcp
+// directly. Server/app are linted incrementally (their larger surface is
+// migrated gradually), but all packages are typechecked.
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
@@ -12,7 +13,7 @@ export default tseslint.config(
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 	{
-		files: ['packages/shared/src/**/*.ts', 'packages/realmcore/src/**/*.ts'],
+		files: ['packages/shared/src/**/*.ts', 'packages/realmcore/src/**/*.ts', 'packages/bridge/src/**/*.ts'],
 		languageOptions: {
 			parserOptions: {
 				projectService: true,

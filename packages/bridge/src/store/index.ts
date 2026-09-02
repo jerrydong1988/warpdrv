@@ -11,6 +11,7 @@ import type {
 	IToolCall,
 	IToolAttachment,
 	IMessagePatch,
+	IMessagePartText,
 	TThreadId,
 	TMessageId,
 	TMessagePartId,
@@ -255,7 +256,6 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					const part = msg.content.find(p => p.id === buffer.partId);
 					if (part && (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING)) {
 						part.text += buffer.chunk;
-					} else {
 					}
 				}
 				delete draft.chunksByMessageId[msg.id];
@@ -342,12 +342,12 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 					if (existingPart && (existingPart.type === EMessagePartType.TEXT || existingPart.type === EMessagePartType.REASONING)) {
 						existingPart.text += buf.chunk;
 					} else {
-						const newPart = {
+						const newPart: IMessagePartText = {
 							id: buf.partId,
 							type: EMessagePartType.TEXT,
 							orderIndex: msg.content.length,
 							text: buf.chunk,
-						} as any;
+						};
 						msg.content.push(newPart);
 					}
 				};
@@ -355,12 +355,12 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				// Helper to create part if it doesn't exist
 				const ensurePartExists = () => {
 					if (!part) {
-						const newPart = {
+						const newPart: IMessagePartText = {
 							id: partId,
 							type: EMessagePartType.TEXT,
 							orderIndex: msg.content.length,
 							text: deltaText,
-						} as any;
+						};
 						msg.content.push(newPart);
 					} else {
 						if (part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING) {

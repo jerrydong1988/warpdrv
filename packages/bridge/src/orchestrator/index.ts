@@ -15,7 +15,6 @@ import type { IMcpClient, IPermissions, IPersistence, IBridgeBroadcaster } from 
 import type {
 	ICompletionRequest,
 	IToolDefinition,
-	IToolAttachment,
 	IToolCall,
 	IOpenAITool,
 	IChatMessageStats,
@@ -25,10 +24,7 @@ import type {
 	TMessageId,
 	TThreadId,
 	TFolderId,
-	IFolder,
-	IWorkspace,
 } from '../types';
-import { folderNameToTopic } from '../util/topic';
 import { EChatRole, EMessagePartType, EToolCallStatus, EToolApprovalMode } from '../types';
 import { parseSSEBuffer, accumulateToolCallDelta, finalizeToolCalls, type IToolCallAccumulator } from '../parser';
 import { validateToolArgs, cleanSchema } from '../validation';
@@ -263,7 +259,7 @@ export class Orchestrator {
 	private async buildMessageChain(
 		request: ICompletionRequest,
 		fromMessageId: TMessageId | undefined,
-		extraMessages: Array<any> = [],
+		extraMessages: Array<TOpenAIMessage> = [],
 	): Promise<Array<TOpenAIMessage>> {
 		const baseMessages: Array<TOpenAIMessage> = [];
 
@@ -456,7 +452,7 @@ export class Orchestrator {
 			const enabledTools = await this.resolveEnabledTools(request);
 
 			// Build base messages for LLM context — V2: from persistence
-			let baseMessages = await this.buildMessageChain(request, request.parentId ?? undefined);
+			const baseMessages = await this.buildMessageChain(request, request.parentId ?? undefined);
 			if (userMsg) {
 				userMsg = await this.eventNode.pipe(
 					'bridge.preConvertNewMsg',
@@ -913,13 +909,13 @@ export class Orchestrator {
 
 		messages.push({
 			role: 'assistant',
-			content: fullText || (null as any),
+			content: fullText || null,
 			tool_calls: finalToolCalls.map(tc => ({
 				id: tc.id,
 				type: 'function',
 				function: { name: tc.name, arguments: tc.arguments },
 			})),
-		} as any);
+		});
 
 		if (finalToolCalls.length === 0 || finishReason !== 'tool_calls') {
 			return { hadToolCalls: false, needsAsk: false, lastToolMessageId: null };
@@ -1018,7 +1014,7 @@ export class Orchestrator {
 					role: 'tool',
 					content: toolCallRecord.result!,
 					tool_call_id: tc.id,
-				} as any);
+				});
 				continue;
 			}
 
@@ -1047,7 +1043,7 @@ export class Orchestrator {
 					role: 'tool',
 					content: deniedTc.result!,
 					tool_call_id: tc.id,
-				} as any);
+				});
 				continue;
 			}
 
@@ -1081,7 +1077,7 @@ export class Orchestrator {
 					role: 'tool',
 					content: resultStr,
 					tool_call_id: tc.id,
-				} as any);
+				});
 			} catch (err) {
 				const errorMsg = err instanceof Error ? err.message : String(err);
 				const errorResult = JSON.stringify({ error: errorMsg });
@@ -1101,7 +1097,7 @@ export class Orchestrator {
 					role: 'tool',
 					content: errorResult,
 					tool_call_id: tc.id,
-				} as any);
+				});
 			}
 		}
 

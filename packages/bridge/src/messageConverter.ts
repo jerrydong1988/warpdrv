@@ -3,12 +3,12 @@
 // Message conversion utilities - universal (no Node/browser deps)
 // ============================================================
 
-import type { IChatMessage, IToolCall } from './types';
+import type { IChatMessage, IMessagePartToolCall, IToolCall } from './types';
 import { EChatRole, EMessagePartType, EToolCallStatus } from './types';
 
 export type TOpenAIMessage = {
 	role: 'system' | 'user' | 'assistant' | 'tool';
-	content?: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+	content?: string | Array<{ type: string; text?: string; image_url?: { url: string } }> | null;
 	tool_calls?: Array<{
 		id: string;
 		type: 'function';
@@ -90,7 +90,7 @@ export function convertMessagesToOpenAIFormat(
 				const toolCalls: TOpenAIMessage['tool_calls'] = [];
 
 				for (const part of toolCallParts) {
-					const toolCallId = (part as any).toolCallId;
+					const toolCallId = (part as IMessagePartToolCall).toolCallId;
 					const tc = toolCallId ? toolCallsById[toolCallId] : undefined;
 
 					if (tc) {
@@ -118,7 +118,7 @@ export function convertMessagesToOpenAIFormat(
 				const toolCallParts = msg.content.filter(p => p.type === EMessagePartType.TOOL_CALL);
 
 				for (const part of toolCallParts) {
-					const toolCallId = (part as any).toolCallId;
+					const toolCallId = (part as IMessagePartToolCall).toolCallId;
 					const tc = toolCallId ? toolCallsById[toolCallId] : undefined;
 
 					if (tc) {

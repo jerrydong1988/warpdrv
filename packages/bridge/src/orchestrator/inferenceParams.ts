@@ -9,49 +9,102 @@ export function normalizeLlamaReasoningFormat(value: unknown): string | undefine
 	return REASONING_FORMAT_ALIASES[value] ?? value;
 }
 
+// Narrowers: params arrive as Record<string, unknown> (UI/settings blobs).
+// Reject mistyped values instead of forwarding them to llama.cpp.
+const toNumber = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
+const toBoolean = (value: unknown): boolean | undefined => (typeof value === 'boolean' ? value : undefined);
+const toArray = (value: unknown): unknown[] | undefined => (Array.isArray(value) ? value : undefined);
+const toRecord = (value: unknown): Record<string, unknown> | undefined =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+		? value as Record<string, unknown>
+		: undefined;
+
 export function buildLlamaInferenceParams(params: Record<string, unknown>): Record<string, unknown> {
-	const p = params as any;
+	const p: Record<string, unknown> = params;
+
+	const temperature = toNumber(p.temperature);
+	const topP = toNumber(p.topP);
+	const topK = toNumber(p.topK);
+	const maxTokens = toNumber(p.maxTokens);
+	const frequencyPenalty = toNumber(p.frequencyPenalty);
+	const presencePenalty = toNumber(p.presencePenalty);
+	const seed = toNumber(p.seed);
+	const repeatPenalty = toNumber(p.repeatPenalty);
+	const minP = toNumber(p.minP);
+	const mirostatMode = toNumber(p.mirostatMode);
+	const mirostatTau = toNumber(p.mirostatTau);
+	const mirostatEta = toNumber(p.mirostatEta);
+	const cachePrompt = toBoolean(p.cachePrompt);
+	const responseFormat = typeof p.responseFormat === 'string' ? p.responseFormat : undefined;
 	const reasoningFormat = normalizeLlamaReasoningFormat(p.reasoningFormat);
+	const reasoningEffort = typeof p.reasoningEffort === 'string' ? p.reasoningEffort : undefined;
+	const reasoningBudgetTokens = toNumber(p.reasoningBudgetTokens);
+	const reasoningBudgetMessage = typeof p.reasoningBudgetMessage === 'string' ? p.reasoningBudgetMessage : undefined;
+	const enableThinking = toBoolean(p.enableThinking);
+	const typicalP = toNumber(p.typicalP);
+	const ignoreEos = toBoolean(p.ignoreEos);
+	const logitBias = toArray(p.logitBias);
+	const dryMultiplier = toNumber(p.dryMultiplier);
+	const dryBase = toNumber(p.dryBase);
+	const dryAllowedLength = toNumber(p.dryAllowedLength);
+	const dryPenaltyLastN = toNumber(p.dryPenaltyLastN);
+	const topNSigma = toNumber(p.topNSigma);
+	const xtcProbability = toNumber(p.xtcProbability);
+	const xtcThreshold = toNumber(p.xtcThreshold);
+	const dynatempRange = toNumber(p.dynatempRange);
+	const dynatempExponent = toNumber(p.dynatempExponent);
+	const repeatLastN = toNumber(p.repeatLastN);
+	const nProbs = toNumber(p.n_probs);
+	const samplers = toArray(p.samplers);
+	const grammar = p.grammar;
+	const jsonSchema = p.jsonSchema;
+	const adaptiveTarget = toNumber(p.adaptiveTarget);
+	const adaptiveDecay = toNumber(p.adaptiveDecay);
+	const extraSamplingParams = toRecord(p.extraSamplingParams);
+	const stopSequences = toArray(p.stopSequences);
+
 	return {
-		...(p.temperature !== undefined ? { temperature: p.temperature } : {}),
-		...(p.topP !== undefined ? { top_p: p.topP } : {}),
-		...(p.topK !== undefined ? { top_k: p.topK } : {}),
-		...(p.maxTokens > 0 ? { max_tokens: p.maxTokens } : {}),
-		...(p.frequencyPenalty ? { frequency_penalty: p.frequencyPenalty } : {}),
-		...(p.presencePenalty ? { presence_penalty: p.presencePenalty } : {}),
-		...(p.seed >= 0 ? { seed: p.seed } : {}),
-		...(p.repeatPenalty !== 1.0 ? { repeat_penalty: p.repeatPenalty } : {}),
-		...(p.minP > 0 ? { min_p: p.minP } : {}),
-		...(p.mirostatMode > 0 ? { mirostat: p.mirostatMode, mirostat_tau: p.mirostatTau, mirostat_eta: p.mirostatEta } : {}),
-		...(p.cachePrompt ? { cache_prompt: true } : {}),
-		...(p.responseFormat && p.responseFormat !== 'text' ? { response_format: { type: p.responseFormat } } : {}),
-		...(reasoningFormat !== undefined ? { reasoning_format: reasoningFormat } : {}),
-		...(p.reasoningEffort !== undefined ? { reasoning_effort: p.reasoningEffort } : {}),
-		...(p.reasoningBudgetTokens !== undefined ? { reasoning_budget_tokens: p.reasoningBudgetTokens } : {}),
-		...(p.reasoningBudgetMessage ? { reasoning_budget_message: p.reasoningBudgetMessage } : {}),
-		...(p.enableThinking !== undefined
-			? { chat_template_kwargs: { enable_thinking: p.enableThinking } }
+		...(temperature !== undefined ? { temperature } : {}),
+		...(topP !== undefined ? { top_p: topP } : {}),
+		...(topK !== undefined ? { top_k: topK } : {}),
+		...(maxTokens !== undefined && maxTokens > 0 ? { max_tokens: maxTokens } : {}),
+		...(frequencyPenalty ? { frequency_penalty: frequencyPenalty } : {}),
+		...(presencePenalty ? { presence_penalty: presencePenalty } : {}),
+		...(seed !== undefined && seed >= 0 ? { seed } : {}),
+		...(repeatPenalty !== undefined && repeatPenalty !== 1.0 ? { repeat_penalty: repeatPenalty } : {}),
+		...(minP !== undefined && minP > 0 ? { min_p: minP } : {}),
+		...(mirostatMode !== undefined && mirostatMode > 0
+			? { mirostat: mirostatMode, mirostat_tau: mirostatTau, mirostat_eta: mirostatEta }
 			: {}),
-		...(p.typicalP !== undefined ? { typical_p: p.typicalP } : {}),
-		...(p.ignoreEos !== undefined ? { ignore_eos: p.ignoreEos } : {}),
-		...(p.logitBias && p.logitBias.length ? { logit_bias: p.logitBias } : {}),
-		...(p.dryMultiplier ? { dry_multiplier: p.dryMultiplier } : {}),
-		...(p.dryBase ? { dry_base: p.dryBase } : {}),
-		...(p.dryAllowedLength ? { dry_allowed_length: p.dryAllowedLength } : {}),
-		...(p.dryPenaltyLastN ? { dry_penalty_last_n: p.dryPenaltyLastN } : {}),
-		...(p.topNSigma !== undefined ? { top_n_sigma: p.topNSigma } : {}),
-		...(p.xtcProbability ? { xtc_probability: p.xtcProbability } : {}),
-		...(p.xtcThreshold ? { xtc_threshold: p.xtcThreshold } : {}),
-		...(p.dynatempRange ? { dynatemp_range: p.dynatempRange } : {}),
-		...(p.dynatempExponent ? { dynatemp_exponent: p.dynatempExponent } : {}),
-		...(p.repeatLastN !== undefined ? { repeat_last_n: p.repeatLastN } : {}),
-		...(p.n_probs !== undefined ? { n_probs: p.n_probs } : {}),
-		...(p.samplers && p.samplers.length ? { samplers: p.samplers } : {}),
-		...(p.grammar ? { grammar: p.grammar } : {}),
-		...(p.jsonSchema ? { json_schema: p.jsonSchema } : {}),
-		...(p.adaptiveTarget ? { adaptive_target: p.adaptiveTarget } : {}),
-		...(p.adaptiveDecay ? { adaptive_decay: p.adaptiveDecay } : {}),
-		...(p.extraSamplingParams ? { ...p.extraSamplingParams } : {}),
-		...(p.stopSequences && p.stopSequences.length ? { stop: p.stopSequences } : {}),
+		...(cachePrompt ? { cache_prompt: true } : {}),
+		...(responseFormat && responseFormat !== 'text' ? { response_format: { type: responseFormat } } : {}),
+		...(reasoningFormat !== undefined ? { reasoning_format: reasoningFormat } : {}),
+		...(reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
+		...(reasoningBudgetTokens !== undefined ? { reasoning_budget_tokens: reasoningBudgetTokens } : {}),
+		...(reasoningBudgetMessage ? { reasoning_budget_message: reasoningBudgetMessage } : {}),
+		...(enableThinking !== undefined
+			? { chat_template_kwargs: { enable_thinking: enableThinking } }
+			: {}),
+		...(typicalP !== undefined ? { typical_p: typicalP } : {}),
+		...(ignoreEos !== undefined ? { ignore_eos: ignoreEos } : {}),
+		...(logitBias && logitBias.length ? { logit_bias: logitBias } : {}),
+		...(dryMultiplier ? { dry_multiplier: dryMultiplier } : {}),
+		...(dryBase ? { dry_base: dryBase } : {}),
+		...(dryAllowedLength ? { dry_allowed_length: dryAllowedLength } : {}),
+		...(dryPenaltyLastN ? { dry_penalty_last_n: dryPenaltyLastN } : {}),
+		...(topNSigma !== undefined ? { top_n_sigma: topNSigma } : {}),
+		...(xtcProbability ? { xtc_probability: xtcProbability } : {}),
+		...(xtcThreshold ? { xtc_threshold: xtcThreshold } : {}),
+		...(dynatempRange ? { dynatemp_range: dynatempRange } : {}),
+		...(dynatempExponent ? { dynatemp_exponent: dynatempExponent } : {}),
+		...(repeatLastN !== undefined ? { repeat_last_n: repeatLastN } : {}),
+		...(nProbs !== undefined ? { n_probs: nProbs } : {}),
+		...(samplers && samplers.length ? { samplers } : {}),
+		...(grammar ? { grammar } : {}),
+		...(jsonSchema ? { json_schema: jsonSchema } : {}),
+		...(adaptiveTarget ? { adaptive_target: adaptiveTarget } : {}),
+		...(adaptiveDecay ? { adaptive_decay: adaptiveDecay } : {}),
+		...(extraSamplingParams ? { ...extraSamplingParams } : {}),
+		...(stopSequences && stopSequences.length ? { stop: stopSequences } : {}),
 	};
 }

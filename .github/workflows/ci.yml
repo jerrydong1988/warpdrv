@@ -42,6 +42,9 @@ jobs:
       - name: Run app tests
         run: npm test -w @warpcore/app
 
+      - name: Run bridge tests
+        run: npm test -w @warpcore/bridge
+
       # Composite packages (shared/realmcore) must emit fresh declarations
       # first — the server and app projects resolve them via their dist outputs.
       - name: Build shared declarations
@@ -52,6 +55,12 @@ jobs:
 
       - name: Typecheck app
         run: npx tsc -p packages/app/tsconfig.json --noEmit
+
+      - name: Typecheck bridge
+        run: npx tsc -p packages/bridge/tsconfig.json --noEmit
+
+      - name: Typecheck warpmcp
+        run: npx tsc -p packages/warpmcp/tsconfig.json --noEmit
 
       - name: Build frontend
         run: npx vite build
