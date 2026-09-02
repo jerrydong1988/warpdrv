@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { store } from '../util/store';
 import { validateBearerToken } from './tokens';
+import { rateLimiter } from '../middleware/rateLimiter';
 import type { IAccessToken, IAccessTokenInfo, ISettings } from '@warpcore/shared';
 import { isRemote } from '../middleware/auth';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
@@ -30,7 +31,9 @@ function toInfo(token: IAccessToken): IAccessTokenInfo {
 }
 
 // POST /api/auth/login - validate token, set cookie
-authRouter.post('/login', async (req, res) => {
+// Tight per-IP budget: every attempt runs a bcrypt comparison, so an open
+// login endpoint without a throttle doubles as a CPU-exhaustion vector.
+authRouter.post('/login', rateLimiter({ windowMs: 60_000, max: 10 }), async (req, res) => {
 	const authHeader = req.headers.authorization;
 	const token = await validateBearerToken(authHeader);
 

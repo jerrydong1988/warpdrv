@@ -155,6 +155,7 @@
     "UPDATE_CHECK_FAILED": "检查更新失败",
     "NO_MODEL_DIRECTORIES": "未配置模型目录",
     "NO_ACTIVE_COMPLETION": "没有活跃的补全",
+    "TOO_MANY_REQUESTS": "请求过于频繁，请稍后再试。",
     "componentError": "组件错误"
   },
   "checkpoints": {

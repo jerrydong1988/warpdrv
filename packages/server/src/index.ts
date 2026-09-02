@@ -36,6 +36,7 @@ import { modesRouter } from './routes/modes';
 import { guardrailsRouter } from './routes/guardrails';
 import { checkpointsRouter } from './routes/checkpoints';
 import { clientLogsRouter, clientLogsBodyParser } from './routes/clientLogs';
+import { rateLimiter } from './middleware/rateLimiter';
 import { whisperBackendsRouter } from './routes/whisperBackends';
 import { whisperServersRouter } from './routes/whisperServers';
 import { whisperModelsRouter, loadCachedWhisperModels, getCachedWhisperModels } from './routes/whisperModels';
@@ -231,6 +232,13 @@ async function main() {
 	app.use('/api/client-log', clientLogsBodyParser);
 	app.use(express.json({ limit: '32mb' }));
 	app.use(cookieParser());
+
+	// Global request throttle. The control plane is unauthenticated on
+	// localhost by default and can be bound to a non-loopback host, so every
+	// route (including the bcrypt-comparing login and the state-changing
+	// control plane) gets a per-IP budget. The anonymous log route keeps its
+	// own stricter limiter on top of this one.
+	app.use('/api', rateLimiter({ windowMs: 60_000, max: 300 }));
 	// Auth routes (no middleware - public endpoints)
 	app.use('/api/auth', authRouter);
 	// Client log route (no auth — server may not be up when errors occur)

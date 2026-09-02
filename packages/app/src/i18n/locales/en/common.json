@@ -155,6 +155,7 @@
     "UPDATE_CHECK_FAILED": "Failed to check for updates",
     "NO_MODEL_DIRECTORIES": "No model directories configured",
     "NO_ACTIVE_COMPLETION": "No active completion",
+    "TOO_MANY_REQUESTS": "Too many requests. Please try again later.",
     "componentError": "Component Error"
   },
   "checkpoints": {
