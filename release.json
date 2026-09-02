@@ -1,6 +1,6 @@
 {
 	"version": "0.5.8",
-	"updateCheckUrl": "https://raw.githubusercontent.com/mikjee/warpdrv/master/release.json",
-	"downloadUrl": "https://github.com/mikjee/warpdrv/releases/latest",
+	"updateCheckUrl": "https://raw.githubusercontent.com/jerrydong1988/warpdrv/master/release.json",
+	"downloadUrl": "https://github.com/jerrydong1988/warpdrv/releases/latest",
 	"notes": ""
 }
