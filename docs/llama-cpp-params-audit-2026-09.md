@@ -98,7 +98,20 @@
 
 ---
 
-## 5. 附录
+## 6. 实施状态（2026-09-02 已全部落地 ✅）
+
+| 批次 | 内容 | 提交 |
+|---|---|---|
+| 1 | `--cache-type-k-draft/-v-draft`、`--dry-sequence-breaker`（API 层）、`--reasoning-preserve/--no-reasoning-preserve` 三态、`--backend-sampling` | `0f8a8db`（服务端）+ `c87b855`（UI） |
+| 2 | `--spec-draft-threads/-threads-batch/-poll/-poll-batch/-prio/-prio-batch/-cpu-mask/-cpu-mask-batch/-cpu-strict/-cpu-strict-batch/-cpu-moe/-ncmoe/-cpu-range`、`--lookup-cache-static/-dynamic`、`--slot-prompt-similarity`、UI 高级折叠区 | `0f8a8db` + `c87b855` |
+| 3 | `--lora/--lora-scaled/--lora-init-without-apply` + OptionsCard 选择器 | `0f8a8db` + `c87b855` |
+| 4 | `--mmproj-url/--mmproj-auto/--mmproj-device/--mmproj-offload` + MultiModalCard 字段组；ngram 变体 UI（核验时发现**已存在**于 SpeculativeDecodingCard，无需新增） | `0f8a8db` + `c87b855` |
+
+- 所有 CLI 参数走 `pushSupportedOption`/`pushSupportedFlag` 能力探测（含旧别名族回退，如 `--spec-draft-threads` → `--threads-draft`）。
+- 回归测试：buildArgs 新增 7 个用例（33 个总计）、inferenceParams 新增 dry_sequence_breaker 用例；server 230 / bridge 64 / warpmcp 25 / realmcore 225 / app 6 全部通过；i18n 1598 keys/语言完全对称。
+- 验证门禁：`npm run lint`（0 错误）、全量 tsc、i18n:check（含硬编码检测）全绿。
+
+## 7. 附录
 
 - 官方 v0.3.0 全部 331 个 flag 标记见同目录 `llama-cpp-v0.3.0-flags.txt`。
 - warpdrv 侧提取证据：`packages/server/src/services/processManager.ts:130-228, 304-370`、`packages/shared/src/flagMappings.ts`、`packages/shared/src/types.ts:146-217`、`packages/bridge/src/orchestrator/inferenceParams.ts`。
