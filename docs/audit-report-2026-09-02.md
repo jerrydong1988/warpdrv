@@ -146,3 +146,32 @@
 ---
 
 *四轨审计证据链：主审计员代码质量/架构/桌面壳自查 + 三个专项子代理报告（工程实践 62 分、i18n 72 分、依赖与安全 72 分）。全部关键发现经主审计员抽样复核（shell_exec 接线、EVAL_FLAGS 误拒、translateServerError 文本匹配、PendingToolCallsBox 硬编码、release.json 指向上游等均逐条验证）。*
+
+---
+
+## 8. 修复状态（2026-09-02 实施完毕）
+
+本报告全部 P1 与关键 P2 已于同日修复、验证并合入 master（`npm run i18n:check`、`npm run lint`、五包测试、全量 tsc 全部通过后逐项提交）。独立维护决策（不再与上游对齐）已归档于 `docs/upstream-sync-conflict-survey.md` 顶部。
+
+| # | 问题 | 状态 | 修复要点 |
+|---|---|---|---|
+| P1-1 | warpmcp shell_exec 路径沙箱接线失效 | ✅ `a532863` | 接线 `deps.getFsAllowedRoots()`；导出 `buildToolEntries` 供回归测试（3 个接线用例） |
+| P1-2 | 桌面权限面集群（键盘监听/按键注入/shell 权限/webkit 放行/DevTools） | ✅ `98a6b2b` | rdev 仅聚焦或命中 PTT 键时转发；type_text 加聚焦守卫；capabilities 移除 execute/kill；webkit 权限默认拒绝仅放行 UserMedia；devtools feature 移除 |
+| P1-3 | bridge 零测试且无门禁 | ✅ `56b0fa1` `00de398` | 61 个单元测试；bridge 接入 CI 测试+tsc+eslint（14 处 any 清零） |
+| P1-4 | server 路由 0 集成测试 / app 0.2% 覆盖 | ✅ 部分 | 新增 auth 路由真实 HTTP 集成测试（3 用例）+ 错误字面量覆盖测试（216 用例）；覆盖率工具仍为遗留项（P2 遗留） |
+| P1-6 | 服务端错误文本匹配翻译 | ✅ `a12501c` | 值不匹配字面量对齐；26 个漏译 key 补齐；新增 errorLiterals 覆盖测试防回归 |
+| P1-7 | 聊天关键路径 20+ 处硬编码 | ✅ `3d33d59` | ~80 处硬编码清零（审批按钮/thread/侧栏/工作区/护栏/模式/错误边界/全部 tool-renderers/服务器卡片/whisper 对话框）；check-i18n.mjs 新增硬编码检测门禁 |
+| P1-8 | 28 处 count 零复数形式 | ✅ `21507db` | 全部补 `_one`/`_other`；check-i18n.mjs 校验复数对完整性 |
+| P2 | EVAL_FLAGS 过度拦截 | ✅ `a532863` | 收窄为按命令族生效（mkdir -p/grep -i/cp -r/npx -p/cargo -r 恢复可用，回归用例锁定） |
+| P2 | 全局速率限制缺失 | ✅ `06d2297` `b9e1e2d` | /api 全局限流（300/min/IP）+ 登录 10/min；修复多实例共享桶缺陷；auth 路由集成测试 |
+| P2 | 生产无 CSP/安全头、无压缩 | ✅ `12342b3` `8ae7b03` | serveStatic 注入真实 CSP（含 WASM hash 与内联脚本哈希）+ nosniff；vite 生产 minify、去 sourcemap；dev 中间件路径穿越防护 |
+| P2 | 版本事实源分散 | ✅ `a532863` | warpmcp 运行时读 release.json（第 4 个事实源消除） |
+| P2 | CI 门禁覆盖不全 | ✅ `00de398` `5910316` | bridge/warpmcp tsc + bridge 测试 + lint 三包；windows-msi 补 lint/全测试/全 tsc |
+| P2 | 构建链碎片化 | ✅ `ddf344f` | server 打包收敛为 build.mjs；desktop prepare.mjs 使干净 checkout 可复现构建；release workflow 持久化版本 bump（tag 落在 bump 提交） |
+| P2 | fork 更新检查指向上游 | ✅ `b9c4bab` | release.json 改指 jerrydong1988/warpdrv |
+| P2 | 日期/数字未本地化 | ✅ `3d33d59` | utils/intl.ts（Intl 按 resolvedLanguage）+ 3 处 'en-US' 与 formatBytes/formatAge 重复实现收敛 |
+| P2 | landing 依赖裸星号 | ✅ `5910316` | 锁定 astro ^7.1.6 / starlight ^0.41.6 |
+| 附赠 | bridge 线程级工具审批从未生效 | ✅ `00de398` | 修复被行尾注释吞掉的 return（符合原设计意图，测试锁定） |
+| 附赠 | rateLimiter 多实例共享桶互相污染 | ✅ `b9e1e2d` | 桶与清理定时器移入工厂函数（每实例独立） |
+
+**遗留（P3/低危，记录在案未实施）**：覆盖率工具与门禁、Prettier/.editorconfig、eslint 扩展到 server/app、warpmcp `(a:any)` 处理器类型化、SSE 连接上限、store 全量写盘去抖、ElicitationRegistry TTL、下载二进制校验和、landing 站 i18n 与 CI 接入、RTL 就绪性。
