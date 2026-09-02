@@ -71,7 +71,21 @@ describe('validateShellCommand — injection hardening', () => {
 		expectRejected('node -e console.log', /evaluate arbitrary code/);
 		expectRejected('npm -c x', /evaluate arbitrary code/);
 		expectRejected('node --eval x', /evaluate arbitrary code/);
+		expectRejected('node -p 1+1', /evaluate arbitrary code/);
+		expectRejected('npx -c echo hi', /evaluate arbitrary code/);
 		expectRejected('python --eval "x"', /not in the allowed list/); // python not allowlisted anyway
+	});
+
+	it('keeps legitimate flags on non-runtime commands', () => {
+		// Regression guard: the eval-flag check must not leak onto plain
+		// commands whose flags collide with eval flags (-p/-r/-c/-i).
+		expect(() => validateShellCommand('mkdir -p foo')).not.toThrow();
+		expect(() => validateShellCommand('cp -r a b')).not.toThrow();
+		expect(() => validateShellCommand('rm -r d')).not.toThrow();
+		expect(() => validateShellCommand('grep -i x f')).not.toThrow();
+		expect(() => validateShellCommand('wc -c f')).not.toThrow();
+		expect(() => validateShellCommand('cargo build -r')).not.toThrow();
+		expect(() => validateShellCommand('npx -p typescript tsc --version')).not.toThrow();
 	});
 
 	it('rejects credential assignments in args', () => {

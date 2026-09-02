@@ -1,5 +1,7 @@
 import express from 'express';
 import type { Server } from 'http';
+import fs from 'node:fs';
+import path from 'node:path';
 import { Server as McpServer } from '@modelcontextprotocol/sdk/server/index.js';
 import { randomUUID } from 'crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -34,13 +36,45 @@ const SERVER_NAME = 'warpmcp';
 let httpServer: Server | null = null;
 let currentPort: number | null = null;
 let currentBindHost: string | null = null;
-function buildMcpServer(deps: IWarpmcpDeps): McpServer {
-	const tools = [
+
+// Resolve the repository-level release.json the same way the server does
+// (packages/server/src/routes/update.ts): the packaged resource dir takes
+// precedence, then walk up from the current directory. Keeps the MCP server
+// version from drifting from the app version when releases are cut.
+function getVersion(): string {
+	const candidates: string[] = [];
+	const resourceDir = process.env.WARPCORE_RESOURCE_DIR;
+	if (resourceDir) {
+		candidates.push(path.join(resourceDir, 'release.json'));
+		candidates.push(path.join(resourceDir, '_up_', '_up_', 'release.json'));
+	}
+	let directory = process.cwd();
+	for (let depth = 0; depth < 6; depth++) {
+		candidates.push(path.join(directory, 'release.json'));
+		const parent = path.dirname(directory);
+		if (parent === directory) break;
+		directory = parent;
+	}
+	for (const candidate of candidates) {
+		try {
+			const parsed = JSON.parse(fs.readFileSync(candidate, 'utf8')) as { version?: unknown };
+			if (typeof parsed.version === 'string' && parsed.version.length > 0) return parsed.version;
+		} catch { /* keep walking */ }
+	}
+	return '0.5.8';
+}
+
+// Exported for tests so the deps→handler wiring is covered directly (see
+// tests/tool_wiring.test.ts). The shell_exec entry in particular must receive
+// deps.getFsAllowedRoots — a previous regression registered it without deps,
+// silently disabling the path/cwd sandbox the tool description promises.
+export function buildToolEntries(deps: IWarpmcpDeps) {
+	return [
 		{ def: fileReadDefinition, handler: (a: any) => fileReadHandler(deps, a) },
 		{ def: fileWriteDefinition, handler: (a: any) => fileWriteHandler(deps, a) },
 		{ def: filePatchDefinition, handler: (a: any) => filePatchHandler(deps, a) },
 		{ def: dirListDefinition, handler: (a: any) => dirListHandler(deps, a) },
-		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a) },
+		{ def: shellExecDefinition, handler: (a: any) => shellExecHandler(a, deps.getFsAllowedRoots()) },
 		{ def: fetchDefinition, handler: (a: any) => fetchHandler(a) },
 		{ def: embeddingSearchDefinition, handler: (a: any) => embeddingSearchHandler(deps, a) },
 		{ def: todoReadDefinition, handler: (a: any) => todoReadHandler(deps, a) },
@@ -57,12 +91,15 @@ function buildMcpServer(deps: IWarpmcpDeps): McpServer {
 		{ def: codeGraphCallersDefinition, handler: (a: any) => codeGraphCallersHandler(deps, a) },
 		{ def: codeGraphCalleesDefinition, handler: (a: any) => codeGraphCalleesHandler(deps, a) },
 		{ def: codeGraphListDefinition, handler: (a: any) => codeGraphListHandler(deps, a) },
-			{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
-			{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
-			{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
-		];
-	// Keep in sync with release.json / root package.json version.
-	const server = new McpServer({ name: SERVER_NAME, version: '0.5.8' }, { capabilities: { tools: {} } });
+		{ def: codeGraphClearDefinition, handler: (a: any) => codeGraphClearHandler(deps, a) },
+		{ def: chatSearchDefinition, handler: (a: any) => chatSearchHandler(deps, a) },
+		{ def: chatGetMessageDefinition, handler: (a: any) => chatGetMessageHandler(deps, a) },
+	];
+}
+
+function buildMcpServer(deps: IWarpmcpDeps): McpServer {
+	const tools = buildToolEntries(deps);
+	const server = new McpServer({ name: SERVER_NAME, version: getVersion() }, { capabilities: { tools: {} } });
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(t => t.def) }));
 	server.setRequestHandler(CallToolRequestSchema, async (request) => {
 		const { name, arguments: args } = request.params;

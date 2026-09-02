@@ -30,11 +30,18 @@ const ALLOWED_COMMANDS = new Set([
 ]);
 
 // Flags that make the (still allowlisted) runtimes evaluate arbitrary code or
-// load arbitrary modules.
-const EVAL_FLAGS = [
-	'-e', '-p', '--eval', '--print', '-c', '--check', '-i', '--interactive',
-	'-r', '--require', '--import', '--loader', '--exec', '--shell',
-];
+// load arbitrary modules. Scoped per command family: `-p` means `--print`
+// (evaluate) for node but "package" for `npx -p`, and none of these flags are
+// meaningful for cargo/rustc/clippy-driver. The check must apply ONLY to these
+// runtimes — applying it to every allowlisted command wrongly rejected plain
+// flags like `mkdir -p`, `cp -r`, `rm -r`, `grep -i` or `wc -c`.
+const EVAL_FLAGS_BY_COMMAND: Readonly<Record<string, readonly string[]>> = {
+	node: ['-e', '--eval', '-p', '--print', '-r', '--require', '--import', '--loader', '-i', '--interactive', '-c', '--check'],
+	npx: ['-e', '--eval', '-c', '--shell', '-r', '--require', '--import', '--loader', '-i', '--interactive'],
+	npm: ['-c', '--shell'],
+	yarn: ['-c', '--shell'],
+	pnpm: ['-c', '--shell'],
+};
 
 // Cap buffered child output. resultLimit only bounds the tool *result*; without
 // a cap here, `cat huge-file` could exhaust the process heap while streaming.
@@ -153,11 +160,17 @@ export function validateShellCommand(command: string, allowedRoots?: string[], c
 		throw new ShellCommandValidationError(`Command '${base}' is not in the allowed list`);
 	}
 
-	// Block eval-style flags on the allowlisted runtimes (node -e, node -r x.js, …)
+	// Block eval-style flags on the runtimes that can act on them (node -e,
+	// node -r x.js, npx -c '…', …). Other allowlisted commands keep their own
+	// legitimate flags (`mkdir -p`, `grep -i`, `cp -r`, `cargo build -r`).
 	const argsPart = trimmed.slice(firstToken.length).trim();
-	const flagMatch = argsPart.match(/-{1,2}[a-zA-Z]+/g);
-	if (flagMatch && flagMatch.some(f => EVAL_FLAGS.includes(f.toLowerCase()))) {
-		throw new ShellCommandValidationError(`Flag '${flagMatch.find(f => EVAL_FLAGS.includes(f.toLowerCase()))}' is not allowed (would evaluate arbitrary code)`);
+	const evalFlags = EVAL_FLAGS_BY_COMMAND[base];
+	if (evalFlags && evalFlags.length > 0) {
+		const flagMatch = argsPart.match(/-{1,2}[a-zA-Z]+/g);
+		const blockedFlag = flagMatch?.find(f => evalFlags.includes(f.toLowerCase()));
+		if (blockedFlag) {
+			throw new ShellCommandValidationError(`Flag '${blockedFlag}' is not allowed (would evaluate arbitrary code)`);
+		}
 	}
 
 	// Block common env-injection patterns in remaining args
