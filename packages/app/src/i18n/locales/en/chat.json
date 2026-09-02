@@ -5,6 +5,7 @@
     "deleteChat": "Delete Chat",
     "send": "Send",
     "stop": "Stop",
+    "stopGenerating": "Stop generating",
     "regenerate": "Regenerate",
     "copyMessage": "Copy message",
     "editMessage": "Edit message",
@@ -24,8 +25,12 @@
   },
   "search": {
     "typeToSearch": "Type to search your chats",
-    "matchCount": "{{count}} match(es)",
-    "resultCount": "{{count}} result(s)",
+    "matchCount": "{{count}} matches",
+    "matchCount_one": "{{count}} match",
+    "matchCount_other": "{{count}} matches",
+    "resultCount": "{{count}} results",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results",
     "threadLabel": "Thread"
   },
   "threadSearch": {
@@ -35,9 +40,32 @@
   },
   "toolList": {
     "allTools": "All tools",
+    "allToolCalls": "All tool calls",
     "noToolsAvailable": "No tools available",
-    "toolCount": "{{count}} Tool(s)",
+    "toolCount": "{{count}} tools",
+    "toolCount_one": "{{count}} tool",
+    "toolCount_other": "{{count}} tools",
+    "toolsOff": "Tools Off",
     "off": "Off"
+  },
+  "sidebar": {
+    "search": "Search in Chat",
+    "applets": "Applets",
+    "guardrails": "Guardrails",
+    "todos": "Todos",
+    "modes": "Modes",
+    "permissions": "Permissions",
+    "config": "Config"
+  },
+  "reasoning": {
+    "thinking": "Thinking",
+    "thinkingTokens": " ({{count}} tks)",
+    "off": "off",
+    "effortLabel": "Effort {{level}}",
+    "none": "None",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
   },
   "labels": {
     "noChatsDesc": "Start a new conversation to begin",
@@ -82,6 +110,7 @@
   },
   "composer": {
     "placeholder": "Type a message...",
+    "sendMessagePlaceholder": "Send a message...",
     "attachFile": "Attach file",
     "voiceInput": "Voice input",
     "stopRecording": "Stop recording",
@@ -95,6 +124,7 @@
   "dialogs": {
     "deleteThreadTitle": "Delete conversation?",
     "deleteThreadMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "deleteMessageTitle": "Delete Message",
     "deleteMessageConfirm": "Are you sure you want to delete this message?"
   },
   "toast": {
@@ -119,7 +149,24 @@
     "lines": "{{count}} lines",
     "read": "Read",
     "output": "Output",
-    "codeGraphCleared": "Code Graph cleared"
+    "codeGraphCleared": "Code Graph cleared",
+    "codeCallersOf": "Code Callers of ",
+    "codeCalleesOf": "Code Callees of ",
+    "codeList": "Code List",
+    "codeSearch": "Code Search \"",
+    "codeSymbol": "Code Symbol: ",
+    "ambiguousSymbolMatches": " matches — ambiguous symbol name",
+    "edit": "Edit",
+    "list": "List",
+    "listProjectRoot": "List (project root)",
+    "embed": "Embed \"",
+    "toDos": "To-dos",
+    "removedItem": "Removed item #{{index}}",
+    "todoItem": "Todo item",
+    "todoPrefix": "Todo: ",
+    "itemHash": "Item #{{index}}",
+    "grepPrefix": "grep ",
+    "grepIn": "in"
   },
   "dynamic": {
     "attachmentAriaLabel": "{{type}} attachment",
@@ -136,12 +183,17 @@
   },
   "slashCmd": {
     "noMatches": "No matches",
-    "noServers": "No servers available"
+    "noServers": "No servers available",
+    "directoryPickerUnsupported": "Directory picker not supported in this browser. Type the path manually."
   },
   "workspace": {
     "topicEmpty": "Topic cannot be empty",
     "topicReserved": "Topic \"global\" is reserved",
-    "topicUpdateFailed": "Failed to update topic"
+    "topicUpdateFailed": "Failed to update topic",
+    "workspaceDefaults": "Workspace Defaults",
+    "workspaceRoot": "Workspace root: ",
+    "projectRoot": "Project Root",
+    "noProjectRootSet": "No project root set"
   },
   "toolStatus": {
     "awaitingApproval": "Awaiting approval",
@@ -149,6 +201,9 @@
     "running": "Running",
     "completed": "Completed",
     "error": "Error",
+    "processing": "Processing...",
+    "pendingHeader": "Tool Calls ({{count}} Pending)",
+    "alwaysApprovedToast": "\"{{toolName}}\" will always be approved for this thread",
     "calling": "calling: {{tools}}..."
   }
 }

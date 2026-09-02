@@ -15,6 +15,8 @@
     "saveCheckpoint": "保存检查点",
     "loadCheckpoint": "加载检查点",
     "add": "添加",
+    "msg": "条消息",
+    "restart": "重启",
     "removeAlias": "移除别名",
     "clear": "清除",
     "download": "下载",
@@ -121,6 +123,8 @@
     "checkpointSaved": "检查点已保存",
     "checkpointLoaded": "检查点已加载",
     "checkpointsSaved": "已保存 {{count}} 个检查点",
+  "checkpointsSaved_one": "已保存 {{count}} 个检查点",
+  "checkpointsSaved_other": "已保存 {{count}} 个检查点",
     "saveCheckpointFailed": "保存失败",
     "deleteFailed": "删除失败"
   },

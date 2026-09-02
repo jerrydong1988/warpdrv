@@ -1,6 +1,8 @@
 {
   "title": "MCP 服务器",
   "subtitle": "已配置 {{count}} 台服务器",
+  "subtitle_one": "已配置 {{count}} 台服务器",
+  "subtitle_other": "已配置 {{count}} 台服务器",
   "actions": {
     "addServer": "添加 MCP 服务器",
     "editServer": "编辑服务器",
@@ -57,6 +59,8 @@
     "noServersDesc": "点击 + 添加一个，或直接编辑 JSON。",
     "allToolsAvailable": "所有工具可用",
     "toolsAvailable": "{{count}} 个工具可用",
+    "toolsAvailable_one": "{{count}} 个工具可用",
+    "toolsAvailable_other": "{{count}} 个工具可用",
     "noTools": "无工具",
     "builtinServer": "内置服务器 (warpmcp)"
   },

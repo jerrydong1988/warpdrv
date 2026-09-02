@@ -5,6 +5,7 @@
     "deleteChat": "删除聊天",
     "send": "发送",
     "stop": "停止",
+    "stopGenerating": "停止生成",
     "regenerate": "重新生成",
     "copyMessage": "复制消息",
     "editMessage": "编辑消息",
@@ -25,7 +26,11 @@
   "search": {
     "typeToSearch": "输入关键词搜索聊天记录",
     "matchCount": "{{count}} 处匹配",
+    "matchCount_one": "{{count}} 处匹配",
+    "matchCount_other": "{{count}} 处匹配",
     "resultCount": "{{count}} 条结果",
+    "resultCount_one": "{{count}} 条结果",
+    "resultCount_other": "{{count}} 条结果",
     "threadLabel": "对话线程"
   },
   "threadSearch": {
@@ -35,9 +40,32 @@
   },
   "toolList": {
     "allTools": "全部工具",
+    "allToolCalls": "全部工具调用",
     "noToolsAvailable": "无可用工具",
     "toolCount": "{{count}} 个工具",
+    "toolCount_one": "{{count}} 个工具",
+    "toolCount_other": "{{count}} 个工具",
+    "toolsOff": "工具关闭",
     "off": "关闭"
+  },
+  "sidebar": {
+    "search": "在聊天中搜索",
+    "applets": "小程序",
+    "guardrails": "护栏",
+    "todos": "待办",
+    "modes": "模式",
+    "permissions": "权限",
+    "config": "配置"
+  },
+  "reasoning": {
+    "thinking": "思考过程",
+    "thinkingTokens": "（约 {{count}} tokens）",
+    "off": "关闭",
+    "effortLabel": "思考强度 {{level}}",
+    "none": "无",
+    "low": "低",
+    "medium": "中",
+    "high": "高"
   },
   "labels": {
     "noChatsDesc": "开始一个新对话",
@@ -82,6 +110,7 @@
   },
   "composer": {
     "placeholder": "输入消息...",
+    "sendMessagePlaceholder": "发送消息...",
     "attachFile": "附加文件",
     "voiceInput": "语音输入",
     "stopRecording": "停止录音",
@@ -95,6 +124,7 @@
   "dialogs": {
     "deleteThreadTitle": "删除对话？",
     "deleteThreadMessage": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。",
+    "deleteMessageTitle": "删除消息",
     "deleteMessageConfirm": "确定要删除此消息吗？"
   },
   "toast": {
@@ -119,7 +149,24 @@
     "lines": "{{count}} 行",
     "read": "读取",
     "output": "输出",
-    "codeGraphCleared": "代码图谱已清除"
+    "codeGraphCleared": "代码图谱已清除",
+    "codeCallersOf": "代码调用方：",
+    "codeCalleesOf": "代码被调用方：",
+    "codeList": "代码清单",
+    "codeSearch": "代码搜索 “",
+    "codeSymbol": "代码符号：",
+    "ambiguousSymbolMatches": " 个匹配 — 符号名有歧义",
+    "edit": "编辑",
+    "list": "列表",
+    "listProjectRoot": "列表（项目根目录）",
+    "embed": "嵌入 “",
+    "toDos": "待办事项",
+    "removedItem": "已移除条目 #{{index}}",
+    "todoItem": "待办条目",
+    "todoPrefix": "待办：",
+    "itemHash": "条目 #{{index}}",
+    "grepPrefix": "grep ",
+    "grepIn": "在"
   },
   "dynamic": {
     "attachmentAriaLabel": "{{type}}附件",
@@ -136,12 +183,17 @@
   },
   "slashCmd": {
     "noMatches": "无匹配项",
-    "noServers": "无可用服务器"
+    "noServers": "无可用服务器",
+    "directoryPickerUnsupported": "此浏览器不支持目录选择器，请手动输入路径。"
   },
   "workspace": {
     "topicEmpty": "主题不能为空",
     "topicReserved": "主题 \"global\" 为保留名称",
-    "topicUpdateFailed": "更新主题失败"
+    "topicUpdateFailed": "更新主题失败",
+    "workspaceDefaults": "工作区默认设置",
+    "workspaceRoot": "工作区根目录：",
+    "projectRoot": "项目根目录",
+    "noProjectRootSet": "未设置项目根目录"
   },
   "toolStatus": {
     "awaitingApproval": "等待批准",
@@ -149,6 +201,9 @@
     "running": "运行中",
     "completed": "已完成",
     "error": "错误",
+    "processing": "处理中...",
+    "pendingHeader": "工具调用（{{count}} 个待处理）",
+    "alwaysApprovedToast": "“{{toolName}}”将在本线程中始终自动批准",
     "calling": "正在调用：{{tools}}..."
   }
 }

@@ -1,6 +1,8 @@
 {
   "title": "配置方案",
   "subtitle": "{{count}} 个配置方案",
+  "subtitle_one": "{{count}} 个配置方案",
+  "subtitle_other": "{{count}} 个配置方案",
   "searchPlaceholder": "搜索配置方案...",
   "actions": {
     "runRecipe": "运行配置方案",
@@ -70,7 +72,11 @@
     "preview": "预览",
     "fixSourceError": "请修复源码错误以查看预览。",
     "inputsCount": "输入项（{{count}}）",
-    "stepsCount": "步骤（{{count}}）"
+    "inputsCount_one": "输入项（{{count}}）",
+    "inputsCount_other": "输入项（{{count}}）",
+    "stepsCount": "步骤（{{count}}）",
+    "stepsCount_one": "步骤（{{count}}）",
+    "stepsCount_other": "步骤（{{count}}）"
   },
   "toast": {
     "recipeStarted": "配置方案已启动",

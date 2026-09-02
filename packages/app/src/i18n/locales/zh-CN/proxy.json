@@ -1,6 +1,8 @@
 {
   "title": "路由器",
   "subtitle_running": "{{count}} 条粘性路由",
+  "subtitle_running_one": "{{count}} 条粘性路由",
+  "subtitle_running_other": "{{count}} 条粘性路由",
   "subtitle_stopped": "已停止",
   "subtitle_error": "错误",
   "status": {

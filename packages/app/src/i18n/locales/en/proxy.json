@@ -1,6 +1,8 @@
 {
   "title": "Router",
   "subtitle_running": "{{count}} sticky routes",
+  "subtitle_running_one": "{{count}} sticky route",
+  "subtitle_running_other": "{{count}} sticky routes",
   "subtitle_stopped": "Stopped",
   "subtitle_error": "Error",
   "status": {

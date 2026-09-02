@@ -1,6 +1,8 @@
 {
   "title": "KV Cache",
   "subtitle": "{{count}} Checkpoints",
+  "subtitle_one": "{{count}} Checkpoint",
+  "subtitle_other": "{{count}} Checkpoints",
   "searchPlaceholder": "Search checkpoints...",
   "sortFields": {
     "recency": "Recently Saved",
@@ -25,13 +27,29 @@
     "deleting": "Deleting...",
     "deleteBundleTitle": "Delete bundle?",
     "deleteBundleMessage": "This will remove all {{count}} checkpoints in this bundle. This action cannot be undone.",
+    "deleteBundleMessage_one": "This will remove {{count}} checkpoint in this bundle. This action cannot be undone.",
+    "deleteBundleMessage_other": "This will remove all {{count}} checkpoints in this bundle. This action cannot be undone.",
     "deleteAll": "Delete all"
   },
   "toast": {
     "deleted": "Checkpoint deleted",
     "deleteFailed": "Delete failed",
-    "bundleDeleted": "Deleted {{count}} checkpoint(s)",
+    "bundleDeleted": "Deleted {{count}} checkpoints",
+    "bundleDeleted_one": "Deleted {{count}} checkpoint",
+    "bundleDeleted_other": "Deleted {{count}} checkpoints",
     "renamed": "Renamed",
     "renameFailed": "Rename failed"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} minutes ago",
+    "minutesAgo_one": "{{count}} minute ago",
+    "minutesAgo_other": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "hoursAgo_other": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
   }
 }

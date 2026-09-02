@@ -32,6 +32,8 @@
   },
   "labels": {
     "devices": "{{count}} 个设备",
+    "devices_one": "{{count}} 个设备",
+    "devices_other": "{{count}} 个设备",
     "defaultPort": "端口：{{port}}",
     "active": "活跃",
     "noBackends": "尚未配置后端",
@@ -41,6 +43,8 @@
     "validationFailed": "验证失败",
     "unknown": "未知",
     "members": "成员（{{count}}）",
+    "members_one": "成员（{{count}}）",
+    "members_other": "成员（{{count}}）",
     "currentActive": "当前活跃",
     "current": "当前",
     "newActive": "新活跃"
@@ -93,6 +97,8 @@
     "to": "切换至",
     "deleted": "（已删除）",
     "affectedServers": "受影响的运行中服务器（{{count}}）",
+    "affectedServers_one": "受影响的运行中服务器（{{count}}）",
+    "affectedServers_other": "受影响的运行中服务器（{{count}}）",
     "noRunningServers": "没有运行中的服务器使用此组",
     "restarting": "重启中...",
     "restarted": "已重启",

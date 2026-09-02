@@ -1,6 +1,8 @@
 {
   "title": "KV 缓存",
   "subtitle": "{{count}} 个检查点",
+  "subtitle_one": "{{count}} 个检查点",
+  "subtitle_other": "{{count}} 个检查点",
   "searchPlaceholder": "搜索检查点...",
   "sortFields": {
     "recency": "最近保存",
@@ -25,13 +27,29 @@
     "deleting": "删除中...",
     "deleteBundleTitle": "删除捆绑包？",
     "deleteBundleMessage": "这将删除此捆绑包中的全部 {{count}} 个检查点。此操作不可撤销。",
+    "deleteBundleMessage_one": "这将删除此捆绑包中的 {{count}} 个检查点。此操作不可撤销。",
+    "deleteBundleMessage_other": "这将删除此捆绑包中的全部 {{count}} 个检查点。此操作不可撤销。",
     "deleteAll": "全部删除"
   },
   "toast": {
     "deleted": "检查点已删除",
     "deleteFailed": "删除失败",
     "bundleDeleted": "已删除 {{count}} 个检查点",
+    "bundleDeleted_one": "已删除 {{count}} 个检查点",
+    "bundleDeleted_other": "已删除 {{count}} 个检查点",
     "renamed": "已重命名",
     "renameFailed": "重命名失败"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "minutesAgo_one": "{{count}} 分钟前",
+    "minutesAgo_other": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "hoursAgo_one": "{{count}} 小时前",
+    "hoursAgo_other": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前",
+    "daysAgo_one": "{{count}} 天前",
+    "daysAgo_other": "{{count}} 天前"
   }
 }

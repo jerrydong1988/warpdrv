@@ -1,6 +1,8 @@
 {
   "title": "Recipes",
   "subtitle": "{{count}} recipes",
+  "subtitle_one": "{{count}} recipe",
+  "subtitle_other": "{{count}} recipes",
   "searchPlaceholder": "Search recipes...",
   "actions": {
     "runRecipe": "Run Recipe",
@@ -70,7 +72,11 @@
     "preview": "Preview",
     "fixSourceError": "Fix the source error to see preview.",
     "inputsCount": "Inputs ({{count}})",
-    "stepsCount": "Steps ({{count}})"
+    "inputsCount_one": "Inputs ({{count}})",
+    "inputsCount_other": "Inputs ({{count}})",
+    "stepsCount": "Steps ({{count}})",
+    "stepsCount_one": "Steps ({{count}})",
+    "stepsCount_other": "Steps ({{count}})"
   },
   "toast": {
     "recipeStarted": "Recipe started",

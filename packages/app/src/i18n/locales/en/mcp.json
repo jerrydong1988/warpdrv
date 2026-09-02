@@ -1,6 +1,8 @@
 {
   "title": "MCP Servers",
   "subtitle": "{{count}} servers configured",
+  "subtitle_one": "{{count}} server configured",
+  "subtitle_other": "{{count}} servers configured",
   "actions": {
     "addServer": "Add MCP Server",
     "editServer": "Edit Server",
@@ -57,6 +59,8 @@
     "noServersDesc": "Click + to add one, or edit the JSON directly.",
     "allToolsAvailable": "All tools available",
     "toolsAvailable": "{{count}} tools available",
+    "toolsAvailable_one": "{{count}} tool available",
+    "toolsAvailable_other": "{{count}} tools available",
     "noTools": "No tools",
     "builtinServer": "Built-in Server (warpmcp)"
   },
