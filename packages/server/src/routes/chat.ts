@@ -77,7 +77,7 @@ chatRouter.get('/threads/:threadId/embeddings', async (req, res) => {
 		const threadId = req.params.threadId;
 		const serverId = req.query.serverId as string;
 		if (!serverId) {
-			res.status(400).json({ ok: false, data: null, error: 'serverId required' });
+			res.status(400).json({ ok: false, data: null, error: 'Server ID is required' });
 			return;
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
@@ -100,7 +100,7 @@ chatRouter.post('/embedding/configure', async (req, res) => {
 	try {
 		const { serverId } = req.body as { serverId: string };
 		if (!serverId) {
-			return res.status(400).json({ ok: false, error: 'serverId required' });
+			return res.status(400).json({ ok: false, error: 'Server ID is required' });
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
 		if (!server) {
@@ -194,7 +194,7 @@ chatRouter.get('/search', async (req, res) => {
 			return res.status(400).json({ ok: false, data: null, error: 'Invalid or missing mode' });
 		}
 		if (mode === 'thread' && !threadId) {
-			return res.status(400).json({ ok: false, data: null, error: 'threadId required for thread mode' });
+			return res.status(400).json({ ok: false, data: null, error: 'Thread ID is required for thread mode' });
 		}
 
 		if (mode === 'threads') {
@@ -306,7 +306,7 @@ chatRouter.post('/folders', async (req, res) => {
 			const topic = folderNameToTopic(folderName);
 			const unique = await persistence.isTopicUnique(topic);
 			if (!unique) {
-				return res.status(409).json({ ok: false, data: null, error: `Topic "${topic}" already exists` });
+				return res.status(409).json({ ok: false, data: null, error: `Topic already exists: ${topic}` });
 			}
 			const folder: IFolder = {
 				id: crypto.randomUUID(),
@@ -348,7 +348,7 @@ chatRouter.put('/folders/:id/topic', async (req, res) => {
 			}
 			const unique = await persistence.isTopicUnique(topic, req.params.id);
 			if (!unique) {
-				return res.status(409).json({ ok: false, data: null, error: `Topic "${topic}" already exists or is reserved` });
+				return res.status(409).json({ ok: false, data: null, error: `Topic already exists or is reserved: ${topic}` });
 			}
 			const oldTopic = folder.topic;
 			await persistence.updateFolder(req.params.id, { topic });
@@ -725,7 +725,7 @@ chatRouter.post('/tool-calls/:id/resume', async (req, res) => {
 		return;
 	}
 	if (!threadId || !serverId) {
-		res.status(400).json({ ok: false, data: null, error: 'Missing threadId or serverId' });
+		res.status(400).json({ ok: false, data: null, error: 'Missing thread ID or server ID' });
 		return;
 	}
 

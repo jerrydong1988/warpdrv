@@ -64,11 +64,11 @@ kokoroRouter.get('/status', async (_req, res) => {
 kokoroRouter.post('/tts/start', express.json(), (req, res) => {
 	const { text, voice } = req.body || {};
 	if (!isKokoroReady()) {
-		res.json({ ok: false, data: null, error: 'kokoro not ready' });
+		res.json({ ok: false, data: null, error: 'Kokoro not ready' });
 		return;
 	}
 	if (typeof text !== 'string' || typeof voice !== 'string') {
-		res.json({ ok: false, data: null, error: 'invalid params' });
+		res.json({ ok: false, data: null, error: 'Invalid params' });
 		return;
 	}
 	const streamId = registerStream(text, voice);
