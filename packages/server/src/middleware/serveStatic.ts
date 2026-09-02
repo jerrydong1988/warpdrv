@@ -39,6 +39,38 @@ export function serveStaticApp(app: express.Express): void {
 
 	console.log(`[WarpCore] Serving frontend from ${staticDir}`);
 
+	// Security headers for the production frontend. The desktop window loads
+	// this origin (http://localhost:<port>), so the Tauri CSP from
+	// tauri.conf.json does not apply here — this header is the real CSP.
+	// Notes:
+	//  * 'wasm-unsafe-eval' is required by onnxruntime-web / VAD (WebAssembly).
+	//  * The sha256 entry allows the single inline platform-detection script
+	//    in index.html; regenerate it if that script changes.
+	//  * style-src keeps 'unsafe-inline' for the inline critical CSS in
+	//    index.html and emotion/Chakra runtime style tags.
+	const CSP_HEADER = [
+		"default-src 'self'",
+		"script-src 'self' 'wasm-unsafe-eval' 'sha256-2atInzy1c/37fklkSMDxOMKoiYONqTrq9KxIzphJ+Kw='",
+		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+		"font-src 'self' https://fonts.gstatic.com",
+		"img-src 'self' data: blob: https:",
+		"media-src 'self' blob: data:",
+		"connect-src 'self' ws: wss:",
+		"worker-src 'self' blob:",
+		"child-src 'self' blob:",
+		"object-src 'none'",
+		"base-uri 'self'",
+		"form-action 'self'",
+		"frame-ancestors 'none'",
+	].join('; ');
+
+	app.use((req, res, next) => {
+		res.setHeader('Content-Security-Policy', CSP_HEADER);
+		res.setHeader('X-Content-Type-Options', 'nosniff');
+		res.setHeader('Referrer-Policy', 'no-referrer');
+		next();
+	});
+
 	app.use(express.static(staticDir, { index: 'index.html' }));
 
 	// SPA fallback with auth check

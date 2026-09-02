@@ -92,7 +92,11 @@ export class SSEManager {
 					const handlers = this.disconnectHandlers[channel];
 					if (!handlers) continue;
 					for (const handler of handlers) {
-						try { await handler(); } catch {}
+						try { await handler(); } catch (err) {
+							// Disconnect handlers run best-effort while the client
+							// is already gone — log, never throw.
+							console.error(`[SSE] Disconnect handler error for ${channel}:`, err);
+						}
 					}
 				}
 			})();

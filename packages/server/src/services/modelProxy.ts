@@ -94,54 +94,18 @@ async function getAllWhisperAliases(): Promise<string[]> {
 	return [...aliases];
 }
 
-// Extract model field from multipart form-data
-function extractModelFromMultipart(req: express.Request): Promise<string | null> {
-	return new Promise((resolve) => {
-		const bb = busboy({ headers: req.headers });
-		let model: string | null = null;
-		let consumed = 0;
-		const maxConsume = 1024 * 1024; // 1MB max for parsing
-
-		bb.on('field', (name, value) => {
-			if (name === 'model') model = value;
-		});
-
-		bb.on('file', (_name, _file) => {
-			_consume(_file);
-		});
-
-		bb.on('finish', () => resolve(model));
-
-		// Consume the request body but limit to avoid buffering large files
-		req.on('data', (chunk: Buffer) => {
-			consumed += chunk.length;
-			if (consumed <= maxConsume) {
-				bb.write(chunk);
-			}
-		});
-		req.on('end', () => {
-			if (consumed <= maxConsume) bb.end();
-			else bb.end();
-		});
-
-		function _consume(stream: NodeJS.ReadableStream) {
-			stream.on('data', () => {});
-			stream.resume();
-		}
-	});
-}
-
 // How long an upstream (llama.cpp / whisper.cpp) may take to start responding
 // before the proxied request is torn down. Generations are long-lived, so this
 // is deliberately generous — it exists to stop permanently wedged sockets.
 const PROXY_UPSTREAM_TIMEOUT_MS = 10 * 60 * 1000;
 
-// NOTE: this file used to carry a second, unused forwarding helper
-// (`proxyRequest`) that held the disconnect handling and header allowlist while
-// the live handlers did not. It was dead code and has been removed; the /v1/
+// NOTE: this file used to carry two unused helpers (`proxyRequest` and
+// `extractModelFromMultipart`) that held security-relevant logic while the
+// live handlers did not. They were dead code and have been removed; the /v1/
 // handlers below now own those guarantees (client-disconnect propagation,
-// upstream timeout, minimal forwarded headers). Keeping a second copy of a
-// security-relevant helper around is how fixes end up applied to the wrong path.
+// upstream timeout, minimal forwarded headers, multipart model extraction via
+// busboy over the buffered body). Keeping a second copy of a security-relevant
+// helper around is how fixes end up applied to the wrong path.
 
 // Extract model name from request body (for POST requests)
 // Needs raw body parsing since we also pipe it through
