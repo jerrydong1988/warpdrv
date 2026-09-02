@@ -66,11 +66,24 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 const origConsoleError = console.error;
+// JSON.stringify throws on circular references and BigInt — a broken console
+// override must never take the original error down with it, so every argument
+// is rendered defensively.
+const describeLogArg = (a: unknown): string => {
+	if (a instanceof Error) return a.stack ?? a.message;
+	if (typeof a === 'string') return a;
+	try {
+		const json = JSON.stringify(a);
+		return json === undefined ? String(a) : json;
+	} catch {
+		return String(a);
+	}
+};
 console.error = (...args) => {
 	origConsoleError(...args);
 	reportError({
 		level: 'error',
-		message: args.map(a => a instanceof Error ? a.stack ?? a.message : typeof a === 'string' ? a : JSON.stringify(a)).join(' '),
+		message: args.map(describeLogArg).join(' '),
 	});
 };
 

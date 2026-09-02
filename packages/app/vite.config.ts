@@ -43,11 +43,10 @@ export default defineConfig({
 			configureServer(server) {
 				server.middlewares.use('/onnxruntime', (req, res, next) => {
 					const cleanUrl = (req.url || '').split('?')[0];
-					const filePath = path.join(
-						__dirname,
-						'../../node_modules/onnxruntime-web/dist',
-						cleanUrl
-					);
+					const baseDir = path.resolve(__dirname, '../../node_modules/onnxruntime-web/dist');
+					const filePath = path.resolve(path.join(baseDir, cleanUrl));
+					// Containment guard: reject requests that escape the dist dir.
+					if (filePath !== baseDir && !filePath.startsWith(baseDir + path.sep)) return next();
 					if (!fs.existsSync(filePath)) return next();
 					const ext = path.extname(filePath);
 					res.setHeader('Content-Type',
@@ -58,11 +57,17 @@ export default defineConfig({
 				server.middlewares.use('/vad', (req, res, next) => {
 					const cleanUrl = (req.url || '').split('?')[0];
 					// Check node_modules first (worklet bundle), fall back to public/vad (model file)
-					const candidates = [
-						path.join(__dirname, '../../node_modules/@ricky0123/vad-web/dist', cleanUrl),
-						path.join(__dirname, 'public/vad', cleanUrl),
+					const bases = [
+						path.resolve(__dirname, '../../node_modules/@ricky0123/vad-web/dist'),
+						path.resolve(__dirname, 'public/vad'),
 					];
-					const filePath = candidates.find(p => fs.existsSync(p));
+					let filePath: string | null = null;
+					for (const baseDir of bases) {
+						const candidate = path.resolve(path.join(baseDir, cleanUrl));
+						// Containment guard: reject requests that escape the base dir.
+						if (candidate !== baseDir && !candidate.startsWith(baseDir + path.sep)) continue;
+						if (fs.existsSync(candidate)) { filePath = candidate; break; }
+					}
 					if (!filePath) return next();
 					const ext = path.extname(filePath);
 					const contentType =
@@ -99,7 +104,7 @@ export default defineConfig({
 	worker: {
 		format: 'es',
 	},
-	build: { sourcemap: true, minify: false },
+	build: { sourcemap: false, minify: 'esbuild' },
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname, './src'),
