@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ElicitationRegistry } from '../src/mcp/elicitationRegistry';
 import type { IElicitationResponse } from '../src/types';
 
@@ -76,5 +76,34 @@ describe('ElicitationRegistry', () => {
 		expect(registry.resolve('req-1', accept)).toBe(true);
 		await expect(second).resolves.toEqual(accept);
 		expect(registry.has('req-1')).toBe(false);
+	});
+
+	describe('timeout', () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it('rejects an unanswered elicitation after the timeout and clears it', async () => {
+			const registry = new ElicitationRegistry();
+			const pending = registry.register('req-1', 'server-a', 5000);
+			const rejection = expect(pending).rejects.toThrow('Elicitation timed out');
+
+			vi.advanceTimersByTime(5000);
+			await rejection;
+			expect(registry.has('req-1')).toBe(false);
+		});
+
+		it('resolve clears the timer so a late timeout does not fire', async () => {
+			const registry = new ElicitationRegistry();
+			const pending = registry.register('req-1', 'server-a', 5000);
+			expect(registry.resolve('req-1', accept)).toBe(true);
+			await expect(pending).resolves.toEqual(accept);
+
+			vi.advanceTimersByTime(60_000);
+			expect(registry.has('req-1')).toBe(false);
+		});
 	});
 });
