@@ -93,6 +93,32 @@ export interface IParsedDefaultArgsParams {
 	[key: string]: boolean | ELlamaLoadMode | ELlamaFlashAttentionMode | undefined;
 }
 
+export interface ILlamaLoadModeParams {
+	loadMode?: ELlamaLoadMode;
+	mlock?: boolean;
+	mmap?: boolean;
+	directIo?: boolean;
+}
+
+// Resolve the canonical model-loading mode while preserving compatibility with
+// server configurations saved before --load-mode replaced the legacy toggles.
+export function resolveLlamaLoadMode(params: ILlamaLoadModeParams): ELlamaLoadMode {
+	if (params.loadMode) return params.loadMode;
+	if (params.directIo) return ELlamaLoadMode.DIO;
+	if (params.mmap && params.mlock) return ELlamaLoadMode.MMAP_MLOCK;
+	if (params.mmap) return ELlamaLoadMode.MMAP;
+	if (params.mlock) return ELlamaLoadMode.MLOCK;
+	return ELlamaLoadMode.NONE;
+}
+
+export function llamaLoadModeToLegacyParams(loadMode: ELlamaLoadMode): Pick<ILlamaLoadModeParams, 'mmap' | 'mlock' | 'directIo'> {
+	return {
+		mmap: loadMode === ELlamaLoadMode.MMAP || loadMode === ELlamaLoadMode.MMAP_MLOCK,
+		mlock: loadMode === ELlamaLoadMode.MLOCK || loadMode === ELlamaLoadMode.MMAP_MLOCK,
+		directIo: loadMode === ELlamaLoadMode.DIO,
+	};
+}
+
 function getOptionValue(args: string[], aliases: string[]): string | undefined {
 	for (let index = 0; index < args.length; index++) {
 		const arg = args[index]!;
@@ -149,9 +175,7 @@ export function parseDefaultArgsToParams(defaultArgs: string[]): IParsedDefaultA
 	const loadMode = parseLoadMode(defaultArgs, argsSet);
 	if (loadMode) {
 		result.loadMode = loadMode;
-		result.mmap = loadMode === ELlamaLoadMode.MMAP || loadMode === ELlamaLoadMode.MMAP_MLOCK;
-		result.mlock = loadMode === ELlamaLoadMode.MLOCK || loadMode === ELlamaLoadMode.MMAP_MLOCK;
-		result.directIo = loadMode === ELlamaLoadMode.DIO;
+		Object.assign(result, llamaLoadModeToLegacyParams(loadMode));
 	}
 
 	return result;

@@ -3,14 +3,16 @@
 // security-critical behaviors: host binding, flag ordering, tokenization
 // of user extraArgs, and dedupe of -fa/-ngl.
 import { describe, it, expect, vi, } from 'vitest';
-import { buildArgs } from '../src/services/processManager';
+import { buildArgs, resolveMmprojSource } from '../src/services/processManager';
 import {
 	DEFAULT_LAUNCH_PARAMS,
 	EKvQuantType,
 	ELlamaFlashAttentionMode,
 	ELlamaLoadMode,
 	ESpecType,
+	llamaLoadModeToLegacyParams,
 	parseDefaultArgsToParams,
+	resolveLlamaLoadMode,
 	type ILaunchParams,
 	type ILlamaBackendCapabilities,
 } from '@warpcore/shared';
@@ -66,6 +68,20 @@ describe('backend default argument migration', () => {
 		expect(parseDefaultArgsToParams(['--no-mmap']).loadMode).toBe(ELlamaLoadMode.NONE);
 		expect(parseDefaultArgsToParams(['--no-mmap', '--mlock']).loadMode).toBe(ELlamaLoadMode.MLOCK);
 		expect(parseDefaultArgsToParams(['--mlock']).loadMode).toBe(ELlamaLoadMode.MMAP_MLOCK);
+	});
+
+	it('keeps an explicit load mode authoritative over stale legacy toggle fields', () => {
+		expect(resolveLlamaLoadMode({
+			loadMode: ELlamaLoadMode.NONE,
+			mmap: true,
+			mlock: true,
+			directIo: true,
+		})).toBe(ELlamaLoadMode.NONE);
+		expect(llamaLoadModeToLegacyParams(ELlamaLoadMode.NONE)).toEqual({
+			mmap: false,
+			mlock: false,
+			directIo: false,
+		});
 	});
 });
 
@@ -556,10 +572,30 @@ describe('v0.3.0 parameter alignment', () => {
 		expect(args).toContain('--no-mmproj-auto');
 		expect(args[args.indexOf('--mmproj-device') + 1]).toBe('CUDA0');
 		expect(args).toContain('--no-mmproj-offload');
+		expect(args[args.indexOf('--mmproj') + 1]).toBe('/models/mmproj.gguf');
 
 		const defaults = buildArgs('/models/m.gguf', '/models/mmproj.gguf', makeParams(), [], 10453, V030_CAPABILITIES);
 		expect(defaults).not.toContain('--mmproj-auto');
 		expect(defaults).not.toContain('--no-mmproj-auto');
+	});
+
+	it('resolves one unambiguous projector source and disables all sources with multimodal off', () => {
+		expect(resolveMmprojSource(false, {
+			mmprojPath: '/models/custom.gguf',
+			mmprojUrl: 'https://example.com/mmproj.gguf',
+		}, '/models/detected.gguf')).toEqual({ localPath: null, url: undefined });
+
+		expect(resolveMmprojSource(true, {
+			mmprojPath: ' /models/custom.gguf ',
+			mmprojUrl: 'https://example.com/mmproj.gguf',
+		}, '/models/detected.gguf')).toEqual({ localPath: '/models/custom.gguf', url: undefined });
+
+		expect(resolveMmprojSource(true, {
+			mmprojUrl: ' https://example.com/mmproj.gguf ',
+		}, '/models/detected.gguf')).toEqual({ localPath: null, url: 'https://example.com/mmproj.gguf' });
+
+		expect(resolveMmprojSource(true, {}, '/models/detected.gguf'))
+			.toEqual({ localPath: '/models/detected.gguf', url: undefined });
 	});
 
 	it('omits every v0.3.0 option that a probed backend does not support', () => {

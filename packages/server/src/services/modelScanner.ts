@@ -13,6 +13,18 @@ const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
 // mmproj pattern
 const MMPROJ_REGEX = /mmproj/i;
 
+export async function findMmprojFilePaths(dirPath: string): Promise<string[]> {
+	try {
+		const entries = await fs.readdir(dirPath, { withFileTypes: true });
+		return entries
+			.filter(entry => entry.isFile() && /\.gguf$/i.test(entry.name) && MMPROJ_REGEX.test(entry.name))
+			.map(entry => path.join(dirPath, entry.name))
+			.sort((a, b) => a.localeCompare(b));
+	} catch {
+		return [];
+	}
+}
+
 function makeModelId(dirPath: string, parentModel: string): string {
 	return crypto.createHash('md5').update(`${dirPath}:${parentModel}`).digest('hex').slice(0, 12);
 }
@@ -53,11 +65,11 @@ async function buildGgufFile(
 }
 
 // Recursively walk a directory, emitting IModels for each shard bundle found
-// ancestorMmproj: nearest mmproj seen on the descent path so far (null at root)
+// ancestorMmprojFiles: nearest mmproj set seen on the descent path so far
 // userSegment: first dir name under root (null until we descend one level)
 async function scanDirRecursive(
 	dirPath: string,
-	ancestorMmproj: IGgufFile | null,
+	ancestorMmprojFiles: IGgufFile[],
 	userSegment: string | null,
 	cachedModels: IModel[],
 	visitedPaths: Set<string>,
@@ -70,7 +82,9 @@ async function scanDirRecursive(
 		return [];
 	}
 
-	const ggufEntries = entries.filter(e => e.isFile() && e.name.endsWith('.gguf'));
+	const ggufEntries = entries
+		.filter(e => e.isFile() && /\.gguf$/i.test(e.name))
+		.sort((a, b) => a.name.localeCompare(b.name));
 	const subDirs = entries.filter(e => e.isDirectory());
 
 	const results: IModel[] = [];
@@ -96,9 +110,12 @@ async function scanDirRecursive(
 		}
 	}
 
-	// Resolve mmproj for this dir: same-dir wins over ancestor
-	const sameDirMmproj = dirFiles.find(f => f.isMmproj) ?? null;
-	const effectiveMmproj = sameDirMmproj ?? ancestorMmproj;
+	// Resolve mmproj candidates for this dir: same-dir wins over the nearest
+	// ancestor. Keep every candidate so the launch UI can expose an explicit
+	// choice; the first deterministic filename remains the automatic default.
+	const sameDirMmprojFiles = dirFiles.filter(f => f.isMmproj);
+	const effectiveMmprojFiles = sameDirMmprojFiles.length > 0 ? sameDirMmprojFiles : ancestorMmprojFiles;
+	const effectiveMmproj = effectiveMmprojFiles[0] ?? null;
 
 	// Group non-mmproj files in this dir by parentModel and emit IModels
 	const modelGroups = new Map<string, IGgufFile[]>();
@@ -110,7 +127,7 @@ async function scanDirRecursive(
 	}
 
 	for (const [parentModel, groupFiles] of modelGroups) {
-		const allGroupFiles = effectiveMmproj ? [...groupFiles, effectiveMmproj] : groupFiles;
+		const allGroupFiles = effectiveMmprojFiles.length > 0 ? [...groupFiles, ...effectiveMmprojFiles] : groupFiles;
 
 		const modelFiles = groupFiles;
 		const nonShardFiles = modelFiles.filter(f => f.shardIndex === null);
@@ -155,7 +172,7 @@ async function scanDirRecursive(
 	}
 
 	// Recurse into subdirs (with symlink cycle detection)
-	const childMmproj = sameDirMmproj ?? ancestorMmproj;
+	const childMmprojFiles = sameDirMmprojFiles.length > 0 ? sameDirMmprojFiles : ancestorMmprojFiles;
 
 	for (const subDir of subDirs) {
 		const childPath = path.join(dirPath, subDir.name);
@@ -163,7 +180,7 @@ async function scanDirRecursive(
 		if (visitedPaths.has(resolvedChildPath)) continue; // Skip symlink cycle / already-visited dir
 		visitedPaths.add(resolvedChildPath);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels, visitedPaths);
+		const childModels = await scanDirRecursive(childPath, childMmprojFiles, childUserSegment, cachedModels, visitedPaths);
 		results.push(...childModels);
 	}
 
@@ -185,7 +202,7 @@ export async function scanAllModelRoots(roots: string[]): Promise<IModel[]> {
 	for (const root of roots) {
 		const visited = new Set<string>();
 		try { visited.add(await fs.realpath(root)); } catch { visited.add(path.resolve(root)); }
-		const models = await scanDirRecursive(root, null, null, cachedModels, visited);
+		const models = await scanDirRecursive(root, [], null, cachedModels, visited);
 		scanned.push(...models);
 	}
 

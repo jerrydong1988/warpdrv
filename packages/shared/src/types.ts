@@ -245,6 +245,7 @@ export interface ILaunchParams {
 	loraAdapters?: string;
 	loraScaled?: string;
 	loraInitWithoutApply?: boolean;
+	mmprojPath?: string; // explicit local projector; empty/undefined uses the detected model-side projector
 	mmprojUrl?: string;
 	mmprojAuto?: boolean;
 	mmprojDevice?: string;

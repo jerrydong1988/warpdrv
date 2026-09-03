@@ -88,6 +88,10 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 	}, [modelsArr]);
 
 	const selectedEntry = useMemo(() => modelEntries.find(e => e.file.filePath === selectedModelPath), [modelEntries, selectedModelPath]);
+	const mmprojFiles = useMemo(
+		() => selectedEntry?.model.files.filter(file => file.isMmproj) ?? [],
+		[selectedEntry],
+	);
 
 	// Resolve active backend (needed for spec decode device options + launch validation)
 	const selectedBackend = useMemo(() => {
@@ -250,7 +254,14 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 						{/* Right column */}
 						<VStack gap="5" flex="1" minW="0" align="stretch">
 							<ContextKVCard params={params} onParamChange={updateParam} meta={meta} />
-							<MultiModalCard useMultiModal={useMultiModal} onUseMultiModalChange={setUseMultiModal} hasMmproj={!!selectedEntry?.model.mmprojFile} params={params} onParamChange={updateParam} />
+							<MultiModalCard
+								useMultiModal={useMultiModal}
+								onUseMultiModalChange={setUseMultiModal}
+								detectedMmproj={selectedEntry?.model.mmprojFile ?? null}
+								mmprojFiles={mmprojFiles}
+								params={params}
+								onParamChange={updateParam}
+							/>
 							<EmbeddingCard useEmbedding={params.useEmbedding ?? false} onUseEmbeddingChange={v => updateParam('useEmbedding', v)} />
 							<RecommendedParamsCard
 								useRecommended={useRecommendedInferParams} onUseRecommendedChange={setUseRecommendedInferParams}
@@ -262,7 +273,13 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 									else toast('error', result.error ?? t('toast.recommendedParamsSaveFailed'));
 								}}
 							/>
-							<OptionsCard params={params} onParamChange={updateParam} />
+							<OptionsCard
+								params={params}
+								onParamChange={updateParam}
+								availableLoadModes={selectedBackend?.capabilities?.supportedFlags.includes('--load-mode')
+									? selectedBackend.capabilities.loadModes
+									: undefined}
+							/>
 						</VStack>
 					</Flex>
 				</Box>

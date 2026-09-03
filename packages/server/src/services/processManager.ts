@@ -1,8 +1,9 @@
 import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import http from 'http';
 import net from 'net';
+import path from 'path';
 import type { IServer, ILaunchParams, IBackend, IBackendGroup, ISettings, ISpecDecodeParams, ILlamaBackendCapabilities } from '@warpcore/shared';
-import { EServerStatus, EKvQuantType, ELlamaFlashAttentionMode, ELlamaLoadMode, DEFAULT_SETTINGS } from '@warpcore/shared';
+import { EServerStatus, EKvQuantType, ELlamaFlashAttentionMode, ELlamaLoadMode, DEFAULT_SETTINGS, resolveLlamaLoadMode } from '@warpcore/shared';
 import { bootstrapServer, teardownServer, parseLogLine } from './slotStateTracker';
 import { listCheckpoints, restoreCheckpoint, saveCheckpoint, getCheckpointsDir } from './checkpointService';
 import { ECheckpointSaveMode } from '@warpcore/shared';
@@ -12,6 +13,7 @@ import { getCachedModels } from '../routes/models';
 import { startStatsPolling, stopStatsPolling } from './statsPoller';
 import { refreshBackendCompatibility } from './backendValidator';
 import { parseArgTokens } from '../util/shellArgs';
+import { findMmprojFilePaths } from './modelScanner';
 
 export const SERVERS_PREFIX = 'servers:';
 const SETTINGS_KEY = 'settings:general';
@@ -333,15 +335,6 @@ function stripControlledDefaultArgs(defaultArgs: string[], capabilities?: ILlama
 	return args;
 }
 
-function resolveLoadMode(params: ILaunchParams): ELlamaLoadMode {
-	if (params.loadMode) return params.loadMode;
-	if (params.directIo) return ELlamaLoadMode.DIO;
-	if (params.mmap && params.mlock) return ELlamaLoadMode.MMAP_MLOCK;
-	if (params.mmap) return ELlamaLoadMode.MMAP;
-	if (params.mlock) return ELlamaLoadMode.MLOCK;
-	return ELlamaLoadMode.NONE;
-}
-
 function appendLegacyLoadMode(args: string[], loadMode: ELlamaLoadMode): void {
 	switch (loadMode) {
 		case ELlamaLoadMode.NONE:
@@ -362,7 +355,7 @@ function appendLegacyLoadMode(args: string[], loadMode: ELlamaLoadMode): void {
 }
 
 function appendLoadMode(args: string[], params: ILaunchParams, capabilities?: ILlamaBackendCapabilities): void {
-	const requested = resolveLoadMode(params);
+	const requested = resolveLlamaLoadMode(params);
 	if (!capabilities?.supportedFlags.includes('--load-mode')) {
 		appendLegacyLoadMode(args, requested);
 		return;
@@ -372,6 +365,22 @@ function appendLoadMode(args: string[], params: ILaunchParams, capabilities?: IL
 		: capabilities.loadModes.includes(ELlamaLoadMode.AUTO) ? ELlamaLoadMode.AUTO
 			: null;
 	if (loadMode) args.push('--load-mode', loadMode);
+}
+
+export function resolveMmprojSource(
+	enabled: boolean,
+	params: Pick<ILaunchParams, 'mmprojPath' | 'mmprojUrl'>,
+	detectedPath: string | null,
+): { localPath: string | null; url: string | undefined } {
+	if (!enabled) return { localPath: null, url: undefined };
+
+	const explicitPath = params.mmprojPath?.trim();
+	if (explicitPath) return { localPath: explicitPath, url: undefined };
+
+	const url = params.mmprojUrl?.trim();
+	if (url) return { localPath: null, url };
+
+	return { localPath: detectedPath, url: undefined };
 }
 
 // Build the llama-server command line args from params
@@ -1082,10 +1091,30 @@ export async function launchServer(server: IServer): Promise<void> {
 	if (!backend) throw new Error('No backend or backend group configured');
 
 	const model = getCachedModels().find(m => m.primaryFile?.filePath === server.modelPath);
-	const mmprojPath = model?.mmprojFile?.filePath && server.useMultiModal ? model.mmprojFile.filePath : null;
+	let detectedMmprojPath = model?.mmprojFile?.filePath ?? null;
+	if (
+		server.useMultiModal === true
+		&& !server.params.mmprojPath?.trim()
+		&& !server.params.mmprojUrl?.trim()
+		&& !detectedMmprojPath
+	) {
+		const discoveredPaths = await findMmprojFilePaths(path.dirname(server.modelPath));
+		detectedMmprojPath = discoveredPaths[0] ?? null;
+	}
+	const mmprojSource = resolveMmprojSource(
+		server.useMultiModal === true,
+		server.params,
+		detectedMmprojPath,
+	);
 
 	// Append recommended inference params to extraArgs if enabled
 	const launchParams = { ...server.params };
+	launchParams.mmprojUrl = mmprojSource.url;
+	if (server.useMultiModal !== true) {
+		launchParams.mmprojAuto = undefined;
+		launchParams.mmprojDevice = undefined;
+		launchParams.mmprojOffload = undefined;
+	}
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	launchParams.inferenceExposeExternal = settings.inferenceExposeExternal ?? false;
 	if (server.useRecommendedInferenceParams && model?.recommendedInferenceParams) {
@@ -1135,7 +1164,7 @@ export async function launchServer(server: IServer): Promise<void> {
 
 	const args = await buildServerArgs(
 		server.modelPath,
-		mmprojPath,
+		mmprojSource.localPath,
 		launchParams,
 		backend.defaultArgs,
 		buildNumber,
