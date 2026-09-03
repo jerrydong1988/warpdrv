@@ -27,11 +27,13 @@ describe('buildToolEntries wiring', () => {
 		await expect(handler({ command: 'cat /etc/passwd' })).rejects.toThrow(/outside the allowed roots/);
 	});
 
+	// Real process spawn — cold CI runners (AV scan, node startup) have
+	// exceeded vitest's default 5s here; allow a generous ceiling.
 	it('shell_exec handler runs allowlisted commands without absolute paths', async () => {
 		const handler = findHandler(makeDeps(['/safe-root']), 'shell_exec');
 		const result = await handler({ command: 'node --version' }) as { exitCode: number | null };
 		expect(result.exitCode).toBe(0);
-	});
+	}, 15000);
 
 	it('dir_list handler also receives deps (rejects paths outside roots)', async () => {
 		const handler = findHandler(makeDeps(['/safe-root']), 'dir_list');
