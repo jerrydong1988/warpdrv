@@ -1,8 +1,8 @@
 name: Windows MSI
 
 on:
-  push:
-    branches: ['codex/**']
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 permissions:
