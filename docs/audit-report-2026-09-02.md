@@ -181,8 +181,8 @@
 | warpmcp 处理器 `(a:any)` | ✅ `6214ab2` | `Parameters<typeof handler>` 类型化，auth/rg 残余 any 一并清除 |
 | SSE 连接上限 | ✅ `da38c8c` | 32 会话上限，超额 503 |
 | ElicitationRegistry TTL | ✅ `f31e32d` | 30 分钟超时拒绝 + 假定时器测试 |
-| 覆盖率工具与 CI | ✅ `a6dbbf3` | @vitest/coverage-v8 五包接入 + 根脚本；基线 realmcore 77% / warpmcp 21% / bridge 11% / server 7% / app <1%；阈值门禁后置 |
-| eslint 扩展 server/app | ✅ `4d2e291` | server 强制 no-unused-vars（47 处死代码清除）；app 推荐规则 error + unused warn（~320 处历史遗留警告，后续清扫）；首轮修复 21 空 catch、5 表达式语句、3 失效 disable 注释等 |
+| 覆盖率工具与 CI | ✅ `a6dbbf3` + 2026-09-03 维护修复 | @vitest/coverage-v8 五包接入 + 根脚本；CI 已改为执行覆盖率测试并按当前实测基线设不可退步阈值 |
+| eslint 扩展 server/app | ✅ `4d2e291` + 2026-09-03 维护修复 | server 强制 no-unused-vars；app 历史遗留 warning 暂不批量改写，但根 lint 已用 `--max-warnings 321` 建立不可增长门禁 |
 | landing CI 接入 | ✅ `a6dbbf3` | ci.yml 增加 landing npm ci + astro build 步骤（本地验证 15 页构建通过） |
 | landing i18n（zh-CN 文档翻译） | ⏸ 记录 | 内容工作量（12 篇指南）超出工程修复范围；Starlight locales 结构已就绪，翻译可由内容 PR 完成 |
 | @types/socket.io 废弃包 | ✅ `a6dbbf3` | 彻底移除：该 DefinitelyTyped stub 会遮蔽 socket.io-client v4 自带类型并破坏 app tsc |
@@ -195,3 +195,16 @@
 | server tsconfig 跨树 include | ✅ `da38c8c` | 移除 tools/test-gguf.ts include |
 
 **第二轮验证**：lint 0 错误（server 全强制）；i18n:check 1550 keys；五包测试（realmcore 225 + server 216 + warpmcp 25 + bridge 63 + app 6 = 535）；全部 tsc 通过；coverage 五包报告生成。
+
+---
+
+## 9. 维护复核与修复（2026-09-03）
+
+针对后续 55 个提交的复核已完成以下修复：
+
+- llama.cpp v0.3.0 新增的 backend-sampling、reasoning、slot 与 mmproj 参数全部改为依据已探测的 `supportedFlags` 发射；新增“已探测后端不支持时全部省略”的回归测试。
+- Tiptap 依赖族统一升级至 3.31.0，间接依赖 `fast-uri` / `qs` 更新到修复版本；官方 registry 的生产依赖 `npm audit` 重新归零。
+- CI 的五包普通测试收敛为五包覆盖率测试，并按 2026-09-03 实测值建立每包 statements/branches/functions/lines 最低阈值。
+- app 历史遗留 lint warning 建立 321 条上限，新增 warning 会让 CI 失败。
+- 删除被误提交到 `src/` 的无效备份 `StepInstallers.tsx.old`，并通过 `.gitignore` 防止 `.old` 备份再次入库。
+- 上游同步策略在 `docs/upstream-sync-conflict-survey.md` 固化为“发布前评估、逐项挑选、独立 PR 验证”，不再把分叉计数当作全量合并理由。
