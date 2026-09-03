@@ -105,6 +105,7 @@ export interface IBackendGroupUpdatePayload {
 export interface IGgufMetadata {
 	architecture: string;
 	paramCount: string; // "27B", "122B (10B active)", etc.
+	parameterCount?: number; // exact count derived from GGUF tensor shapes
 	quantType: string; // "Q6_K_XL", "MXFP4", "IQ3_XXS", etc.
 	nLayers: number;
 	nKvHeads: number;
@@ -115,6 +116,7 @@ export interface IGgufMetadata {
 	vocabSize: number; // tokenizer vocabulary size, 0 if unknown
 	tensorCount?: number; // tensor count, used to distinguish compact sidecars
 	nextnPredictLayers?: number; // built-in/external MTP (NextN) layer count
+	parserVersion?: number; // invalidates stale scan-cache metadata after parser changes
 }
 // ============================================================
 // Models (scanned from disk)
@@ -124,6 +126,8 @@ export interface IGgufFile {
 	fileName: string;
 	filePath: string; // absolute path
 	sizeMb: number;
+	sizeBytes?: number; // exact size; sizeMb is retained for API/UI compatibility
+	modifiedAtMs?: number; // cache validation for files replaced in place
 	metadata: IGgufMetadata | null; // null if parse failed
 	shardIndex: number | null; // 1-based, null if not a shard
 	shardTotal: number | null;

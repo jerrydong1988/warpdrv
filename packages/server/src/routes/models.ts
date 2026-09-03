@@ -4,7 +4,7 @@ import { scanAllModelRoots } from '../services/modelScanner';
 import { sseManager } from '../services/sseManagerInstance';
 import type { ISettings, IModel } from '@warpcore/shared';
 import { DEFAULT_SETTINGS } from '@warpcore/shared';
-import { parseGgufMetadata } from '../services/ggufParser';
+import { GGUF_METADATA_PARSER_VERSION } from '../services/ggufParser';
 
 const SETTINGS_KEY = 'settings:general';
 const MODELS_KEY = 'models:cache';
@@ -17,19 +17,27 @@ let lastScanAt = 0;
 export async function loadCachedModels(): Promise<void> {
 	try {
 		const cached = await store.get<IModel[]>(MODELS_KEY);
-		if (cached && cached.length > 0) {
+		const cacheNeedsMetadataRefresh = cached?.some(model => model.files.some(file =>
+			!file.isMmproj && file.metadata?.parserVersion !== GGUF_METADATA_PARSER_VERSION,
+		)) ?? false;
+		if (cached && cached.length > 0 && !cacheNeedsMetadataRefresh) {
 			cachedModels = cached;
 			lastScanAt = Date.now();
 			console.log(`[models] Loaded ${cachedModels.length} cached models`);
 		} else {
-			// No cache - perform initial scan
+			// No cache, or a parser upgrade made its metadata stale.
 			const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 			if (settings.modelRoots.length > 0) {
-				console.log('[models] No cache found, scanning...');
+				console.log(cacheNeedsMetadataRefresh
+					? '[models] Metadata cache is stale, rescanning...'
+					: '[models] No cache found, scanning...');
 				cachedModels = await scanAllModelRoots(settings.modelRoots);
 				lastScanAt = Date.now();
 				await store.put(MODELS_KEY, cachedModels);
 				console.log(`[models] Initial scan complete: ${cachedModels.length} models`);
+			} else if (cached && cached.length > 0) {
+				cachedModels = cached;
+				lastScanAt = Date.now();
 			}
 		}
 	} catch (err) {
@@ -59,12 +67,12 @@ modelsRouter.post('/scan', async (_req, res) => {
 
 // Shared scan implementation — used by the HTTP route and the download
 // RESCAN_MODELS post-action.
-export async function rescanAllModels(): Promise<IModel[]> {
+export async function rescanAllModels(forceFilePaths: ReadonlySet<string> = new Set()): Promise<IModel[]> {
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	if (settings.modelRoots.length === 0) return cachedModels;
 
 	const before = cachedModels.length;
-	cachedModels = await scanAllModelRoots(settings.modelRoots);
+	cachedModels = await scanAllModelRoots(settings.modelRoots, forceFilePaths);
 	lastScanAt = Date.now();
 	await store.put(MODELS_KEY, cachedModels);
 
@@ -132,13 +140,18 @@ modelsRouter.post('/:id/reparse', async (req, res) => {
 		return;
 	}
 
-	model.primaryFile.metadata = await parseGgufMetadata(model.primaryFile.filePath);
-
-	try {
-		await store.put(MODELS_KEY, cachedModels);
-		sseManager.emit('models:update', [model]);
-		res.json({ ok: true, data: model, error: null });
-	} catch (err) {
-		res.json({ ok: false, data: null, error: String(err) });
+	// A split GGUF needs every shard reparsed before its exact parameter count
+	// can be reconstructed. Force only this model's files while retaining cache
+	// hits for the rest of the configured roots.
+	const forceFilePaths = new Set(
+		model.files.filter(file => !file.isMmproj).map(file => file.filePath),
+	);
+	const reparsedModels = await rescanAllModels(forceFilePaths);
+	const reparsedModel = reparsedModels.find(candidate => candidate.id === modelId);
+	if (!reparsedModel) {
+		res.status(404).json({ ok: false, data: null, error: 'Model or primary file not found' });
+		return;
 	}
+
+	res.json({ ok: true, data: reparsedModel, error: null });
 });
