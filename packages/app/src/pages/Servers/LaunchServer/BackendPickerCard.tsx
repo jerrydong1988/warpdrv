@@ -424,8 +424,11 @@ export const BackendPickerCard = React.memo(
 			if (selectedBackendId && selectedBackend && !appliedRef.current) {
 				appliedRef.current = true;
 				const defaults = sharedParseDefaultArgsToParams(selectedBackend.defaultArgs);
+				if (defaults.flashAttnMode !== undefined)
+					onParamChange("flashAttnMode", defaults.flashAttnMode);
 				if (defaults.flashAttn !== undefined)
 					onParamChange("flashAttn", defaults.flashAttn);
+				if (defaults.loadMode !== undefined) onParamChange("loadMode", defaults.loadMode);
 				if (defaults.mlock !== undefined) onParamChange("mlock", defaults.mlock);
 				if (defaults.mmap !== undefined) onParamChange("mmap", defaults.mmap);
 				if (defaults.directIo !== undefined) onParamChange("directIo", defaults.directIo);

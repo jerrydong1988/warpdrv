@@ -1,21 +1,45 @@
 import i18nextSingleton from "i18next";
 import { Box, Flex, HStack, Input, Text, VStack } from "@chakra-ui/react";
-import type { ILaunchParams } from "@warpcore/shared";
+import {
+	ELlamaFlashAttentionMode,
+	ELlamaLoadMode,
+	llamaLoadModeToLegacyParams,
+	resolveLlamaLoadMode,
+	type ILaunchParams,
+} from "@warpcore/shared";
 import React from "react";
 import { Card } from "@/components/Card";
-import { NumberField, ToggleChip } from "./Helpers";
+import { NumberField, SelectField, ToggleChip } from "./Helpers";
 
 export const OptionsCard = React.memo(
 	({
 		params,
 		onParamChange,
+		availableLoadModes,
 	}: {
 		params: ILaunchParams;
 		onParamChange: (
 			key: keyof ILaunchParams,
 			value: ILaunchParams[keyof ILaunchParams],
 		) => void;
+		availableLoadModes?: ELlamaLoadMode[];
 	}) => {
+		const loadMode = resolveLlamaLoadMode(params);
+		const loadModeOptions = availableLoadModes?.length
+			? availableLoadModes.includes(loadMode) ? availableLoadModes : [loadMode, ...availableLoadModes]
+			: Object.values(ELlamaLoadMode);
+		const flashAttnMode = params.flashAttnMode
+			?? (params.flashAttn ? ELlamaFlashAttentionMode.ON : ELlamaFlashAttentionMode.OFF);
+		const flashAttnEnabled = flashAttnMode !== ELlamaFlashAttentionMode.OFF;
+		const updateLoadMode = (value: string) => {
+			const nextMode = value as ELlamaLoadMode;
+			const legacyParams = llamaLoadModeToLegacyParams(nextMode);
+			onParamChange("loadMode", nextMode);
+			onParamChange("mmap", legacyParams.mmap);
+			onParamChange("mlock", legacyParams.mlock);
+			onParamChange("directIo", legacyParams.directIo);
+		};
+
 		return (
 			<Card>
 				<VStack align="stretch" gap="3">
@@ -28,26 +52,29 @@ export const OptionsCard = React.memo(
 
 						{i18nextSingleton.t("common:ui.options")}
 					</Text>
+					<SelectField
+						label={i18nextSingleton.t("common:ui.loadMode")}
+						value={loadMode}
+						options={loadModeOptions}
+						onChange={updateLoadMode}
+						optionLabels={{
+							[ELlamaLoadMode.AUTO]: i18nextSingleton.t("common:ui.loadModeAuto"),
+							[ELlamaLoadMode.NONE]: i18nextSingleton.t("common:ui.loadModeNone"),
+							[ELlamaLoadMode.MMAP]: i18nextSingleton.t("common:ui.loadModeMmap"),
+							[ELlamaLoadMode.MLOCK]: i18nextSingleton.t("common:ui.loadModeMlock"),
+							[ELlamaLoadMode.MMAP_MLOCK]: i18nextSingleton.t("common:ui.loadModeMmapMlock"),
+							[ELlamaLoadMode.DIO]: i18nextSingleton.t("common:ui.loadModeDio"),
+						}}
+					/>
 					<HStack gap="2" flexWrap="wrap">
 						<ToggleChip
 							label="Flash Attention"
-							active={params.flashAttn}
-							onClick={() => onParamChange("flashAttn", !params.flashAttn)}
-						/>
-						<ToggleChip
-							label={i18nextSingleton.t("common:ui.loadModeMlock")}
-							active={params.mlock}
-							onClick={() => onParamChange("mlock", !params.mlock)}
-						/>
-						<ToggleChip
-							label={i18nextSingleton.t("common:ui.mmap")}
-							active={params.mmap}
-							onClick={() => onParamChange("mmap", !params.mmap)}
-						/>
-						<ToggleChip
-							label={i18nextSingleton.t("common:ui.directIO")}
-							active={params.directIo}
-							onClick={() => onParamChange("directIo", !params.directIo)}
+							active={flashAttnEnabled}
+							onClick={() => {
+								const nextMode = flashAttnEnabled ? ELlamaFlashAttentionMode.OFF : ELlamaFlashAttentionMode.ON;
+								onParamChange("flashAttnMode", nextMode);
+								onParamChange("flashAttn", nextMode !== ELlamaFlashAttentionMode.OFF);
+							}}
 						/>
 						<ToggleChip
 							label={i18nextSingleton.t("common:ui.noWarmup")}
