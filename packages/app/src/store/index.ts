@@ -352,6 +352,7 @@ export const useStore = create<AppState>()(
 				annotatorVisible: annotations.annotatorVisible!,
 				addAnnotation: annotations.addAnnotation!,
 				removeAnnotation: annotations.removeAnnotation!,
+				updateAnnotation: annotations.updateAnnotation!,
 				clearAnnotations: annotations.clearAnnotations!,
 				setAnnotatorVisible: annotations.setAnnotatorVisible!,
 

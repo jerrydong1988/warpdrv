@@ -1,5 +1,5 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Check, Minus, Monitor, Send, Square, X } from "lucide-react";
+import { Check, CornerUpLeft, Minus, Monitor, Send, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import type { TThreadId } from "@warpcore/bridge";
@@ -13,6 +13,10 @@ export const MonitorBox = memo(() => {
 	const setMonitorBoxOpen = useStore((s) => s.setMonitorBoxOpen);
 	const currentThreadId = useStore((s) => s.currentThreadId);
 	const threads = useStore((s) => s.threads);
+	const parentThreadId = useStore((s) =>
+		s.currentThreadId ? (s.threads[s.currentThreadId]?.parentId ?? null) : null,
+	);
+	const setCurrentThreadId = useStore((s) => s.setCurrentThreadId);
 
 	const childThreadIds = useMemo(() => {
 		if (!currentThreadId) return [] as TThreadId[];
@@ -185,6 +189,28 @@ export const MonitorBox = memo(() => {
 					Agent Monitor
 				</Text>
 				<Box flex="1" />
+				{parentThreadId && (
+					<Box
+						as="button"
+						type="button"
+						display="flex"
+						alignItems="center"
+						gap="1"
+						py="0.5"
+						px="1.5"
+						borderRadius="sm"
+						fontSize="xs"
+						fontWeight="500"
+						color="var(--wc-text-muted)"
+						cursor="pointer"
+						_hover={{ bg: "var(--wc-bg-hover)", color: "var(--wc-accent-blue)" }}
+						onClick={() => setCurrentThreadId(parentThreadId)}
+						title="Go to main thread"
+					>
+						<CornerUpLeft size={11} />
+						Go to main thread
+					</Box>
+				)}
 				<Box
 					as="button"
 					display="flex"

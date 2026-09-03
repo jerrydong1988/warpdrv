@@ -1,5 +1,5 @@
 import { Box, Flex, Text, VStack } from "@chakra-ui/react";
-import { EKvQuantType, type ILaunchParams } from "@warpcore/shared";
+import { effectiveContextPerChat, EKvQuantType, type ILaunchParams } from "@warpcore/shared";
 import React from "react";
 import { Card } from "@/components/Card";
 import { NumberField, OptionalNumberField, SelectField, SliderNumberField } from "./Helpers";
@@ -21,6 +21,17 @@ export const ContextKVCard = React.memo(
 	}) => {
 		const maxContext = meta?.contextLength ?? 131072;
 		const hasModelContext = !!meta;
+
+		const perChat = effectiveContextPerChat(params);
+		const fmtK = (v: number) => (v > 1000 ? `${(v / 1000).toFixed(0)}k` : String(v));
+		const perChatLabel =
+			params.contextSize === 0
+				? "Effective per-chat: auto (model default)"
+				: params.kvUnified
+					? `Effective per-chat: ${fmtK(perChat)} (KV unified)`
+					: params.parallelSlots > 1
+						? `Effective per-chat: ${fmtK(perChat)} (${fmtK(params.contextSize)} / ${params.parallelSlots} slots)`
+						: `Effective per-chat: ${fmtK(perChat)}`;
 
 		return (
 			<Card>
@@ -49,6 +60,9 @@ export const ContextKVCard = React.memo(
 							suffix="0 = auto"
 						/>
 					)}
+					<Text fontSize="11px" color="var(--wc-text-secondary)">
+						{perChatLabel}
+					</Text>
 					<Text
 						fontSize="11px"
 						color="var(--wc-text-tertiary)"

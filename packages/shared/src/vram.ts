@@ -60,3 +60,16 @@ export function kvQuantToNumeric(kvQuant: string): number {
 			return 16;
 	}
 }
+
+// Calculate the effective context size available to a single chat.
+// When kvUnified is true, all slots share the same KV cache, so each chat
+// gets the full contextSize. Otherwise the context is split equally across
+// parallelSlots.
+export function effectiveContextPerChat(
+	p: Pick<import("./types").ILaunchParams, "contextSize" | "parallelSlots" | "kvUnified">,
+): number {
+	if (!p.contextSize || p.contextSize <= 0) return 0;
+	if (p.kvUnified) return p.contextSize;
+	const slots = p.parallelSlots > 0 ? p.parallelSlots : 1;
+	return Math.floor(p.contextSize / slots);
+}
