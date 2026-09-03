@@ -54,6 +54,8 @@
     "guardrails": "护栏",
     "todos": "待办",
     "modes": "模式",
+    "prompts": "提示词",
+    "agents": "智能体",
     "permissions": "权限",
     "config": "配置"
   },

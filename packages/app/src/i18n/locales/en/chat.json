@@ -54,6 +54,8 @@
     "guardrails": "Guardrails",
     "todos": "Todos",
     "modes": "Modes",
+    "prompts": "Prompts",
+    "agents": "Agents",
     "permissions": "Permissions",
     "config": "Config"
   },
