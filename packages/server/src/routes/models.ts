@@ -12,36 +12,57 @@ const MODELS_KEY = 'models:cache';
 // Cached scan results (refreshed on demand)
 let cachedModels: IModel[] = [];
 let lastScanAt = 0;
+let pendingStartupRefreshReason: 'missing' | 'stale' | null = null;
+let activeRescan: Promise<IModel[]> | null = null;
+let scanStartedAt = 0;
+let lastScanError: string | null = null;
 
-// Load cached models from store on startup, or scan if cache is empty
+// Hydrate immediately from disk on startup. A missing or stale cache is
+// refreshed only after the HTTP listener is ready, so a large GGUF library
+// never blocks the desktop shell while it waits for the control API port.
 export async function loadCachedModels(): Promise<void> {
+	pendingStartupRefreshReason = null;
 	try {
 		const cached = await store.get<IModel[]>(MODELS_KEY);
 		const cacheNeedsMetadataRefresh = cached?.some(model => model.files.some(file =>
 			!file.isMmproj && file.metadata?.parserVersion !== GGUF_METADATA_PARSER_VERSION,
 		)) ?? false;
-		if (cached && cached.length > 0 && !cacheNeedsMetadataRefresh) {
+
+		if (cached && cached.length > 0) {
 			cachedModels = cached;
 			lastScanAt = Date.now();
-			console.log(`[models] Loaded ${cachedModels.length} cached models`);
+			console.log(`[models] Loaded ${cachedModels.length} cached models${cacheNeedsMetadataRefresh ? ' (metadata refresh pending)' : ''}`);
 		} else {
-			// No cache, or a parser upgrade made its metadata stale.
+			cachedModels = [];
+			lastScanAt = 0;
+		}
+
+		if (!cached?.length || cacheNeedsMetadataRefresh) {
 			const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 			if (settings.modelRoots.length > 0) {
-				console.log(cacheNeedsMetadataRefresh
-					? '[models] Metadata cache is stale, rescanning...'
-					: '[models] No cache found, scanning...');
-				cachedModels = await scanAllModelRoots(settings.modelRoots);
-				lastScanAt = Date.now();
-				await store.put(MODELS_KEY, cachedModels);
-				console.log(`[models] Initial scan complete: ${cachedModels.length} models`);
-			} else if (cached && cached.length > 0) {
-				cachedModels = cached;
-				lastScanAt = Date.now();
+				pendingStartupRefreshReason = cacheNeedsMetadataRefresh ? 'stale' : 'missing';
 			}
 		}
 	} catch (err) {
 		console.warn('[models] Failed to load cached models:', err);
+	}
+}
+
+// Called after httpServer.listen(). The returned promise is intentionally safe
+// to run in the background; callers may await it in tests or maintenance tools.
+export async function startPendingModelRefresh(): Promise<IModel[] | null> {
+	const reason = pendingStartupRefreshReason;
+	if (!reason) return null;
+	pendingStartupRefreshReason = null;
+	console.log(reason === 'stale'
+		? '[models] Refreshing stale metadata cache in the background...'
+		: '[models] Building initial model cache in the background...');
+
+	try {
+		return await rescanAllModels();
+	} catch (err) {
+		pendingStartupRefreshReason = reason;
+		throw err;
 	}
 }
 
@@ -67,7 +88,7 @@ modelsRouter.post('/scan', async (_req, res) => {
 
 // Shared scan implementation — used by the HTTP route and the download
 // RESCAN_MODELS post-action.
-export async function rescanAllModels(forceFilePaths: ReadonlySet<string> = new Set()): Promise<IModel[]> {
+async function performRescanAllModels(forceFilePaths: ReadonlySet<string>): Promise<IModel[]> {
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	if (settings.modelRoots.length === 0) return cachedModels;
 
@@ -84,6 +105,44 @@ export async function rescanAllModels(forceFilePaths: ReadonlySet<string> = new 
 	return cachedModels;
 }
 
+export function rescanAllModels(forceFilePaths: ReadonlySet<string> = new Set()): Promise<IModel[]> {
+	// Ordinary refreshes share the current scan. A forced reparse queues behind
+	// it so the explicit user request is not lost.
+	if (activeRescan && forceFilePaths.size === 0) return activeRescan;
+
+	const previousScan = activeRescan;
+	const scan = (async () => {
+		if (previousScan) {
+			try {
+				await previousScan;
+			} catch {
+				// A forced reparse should still get its own attempt.
+			}
+		}
+		lastScanError = null;
+		return performRescanAllModels(forceFilePaths);
+	})();
+
+	activeRescan = scan;
+	if (scanStartedAt === 0) scanStartedAt = Date.now();
+	void scan.then(
+		() => {
+			if (activeRescan === scan) {
+				activeRescan = null;
+				scanStartedAt = 0;
+			}
+		},
+		(err: unknown) => {
+			lastScanError = err instanceof Error ? err.message : String(err);
+			if (activeRescan === scan) {
+				activeRescan = null;
+				scanStartedAt = 0;
+			}
+		},
+	);
+	return scan;
+}
+
 // GET /api/models/scan-status
 modelsRouter.get('/scan-status', (_req, res) => {
 	res.json({
@@ -91,6 +150,10 @@ modelsRouter.get('/scan-status', (_req, res) => {
 		data: {
 			modelCount: cachedModels.length,
 			lastScanAt,
+			isScanning: activeRescan !== null,
+			scanStartedAt,
+			lastScanError,
+			refreshPending: pendingStartupRefreshReason !== null,
 		},
 		error: null,
 	});

@@ -39,7 +39,11 @@ vi.mock('../src/services/ggufParser', () => ({
 	inferQuantTypeFromFileName: vi.fn(() => 'unknown'),
 }));
 
-import { findMmprojFilePaths, scanAllModelRoots } from '../src/services/modelScanner';
+import {
+	findMmprojFilePaths,
+	MODEL_SCAN_PARSE_CONCURRENCY,
+	scanAllModelRoots,
+} from '../src/services/modelScanner';
 
 const tempRoots: string[] = [];
 
@@ -81,6 +85,33 @@ describe('model scanner projector discovery', () => {
 });
 
 describe('model scanner metadata accuracy', () => {
+	it('parses independent GGUF files concurrently without exceeding the global limit', async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'warpcore-concurrency-'));
+		tempRoots.push(root);
+		await Promise.all(Array.from({ length: 8 }, async (_value, index) => {
+			const modelDir = path.join(root, 'publisher', `Model-${index}`);
+			await fs.mkdir(modelDir, { recursive: true });
+			await fs.writeFile(path.join(modelDir, `Model-${index}-Q4_K_M.gguf`), 'model');
+		}));
+
+		let active = 0;
+		let maxActive = 0;
+		mocks.parseGgufMetadata.mockImplementation(async () => {
+			active += 1;
+			maxActive = Math.max(maxActive, active);
+			await new Promise(resolve => setTimeout(resolve, 10));
+			active -= 1;
+			return mocks.defaultMetadata();
+		});
+
+		const models = await scanAllModelRoots([root]);
+
+		expect(models).toHaveLength(8);
+		expect(maxActive).toBeGreaterThan(1);
+		expect(maxActive).toBeLessThanOrEqual(MODEL_SCAN_PARSE_CONCURRENCY);
+		expect(mocks.parseGgufMetadata).toHaveBeenCalledTimes(8);
+	});
+
 	it('parses every shard and sums exact tensor-shape parameter counts', async () => {
 		const root = await fs.mkdtemp(path.join(os.tmpdir(), 'warpcore-shards-'));
 		tempRoots.push(root);

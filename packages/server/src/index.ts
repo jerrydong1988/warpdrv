@@ -45,7 +45,12 @@ import { hardwareRouter } from "./routes/hardware";
 import { hubRouter } from "./routes/hub";
 import { kokoroRouter } from "./routes/kokoro";
 import { mcpRouter } from "./routes/mcp";
-import { getCachedModels, loadCachedModels, modelsRouter } from "./routes/models";
+import {
+	getCachedModels,
+	loadCachedModels,
+	modelsRouter,
+	startPendingModelRefresh,
+} from "./routes/models";
 import { modesRouter } from "./routes/modes";
 import { presetsRouter } from "./routes/presets";
 import { promptsRouter } from "./routes/prompts";
@@ -589,6 +594,14 @@ async function main() {
 		if (envPort) {
 			console.log(`[WarpCore] Port set via CONTROL_API_PORT environment variable`);
 		}
+		// Give the desktop health check and first UI requests a clear event-loop
+		// turn before any cold GGUF parsing begins.
+		const modelRefreshTimer = setTimeout(() => {
+			void startPendingModelRefresh().catch((err) => {
+				console.error("[models] Background startup refresh failed:", err);
+			});
+		}, 500);
+		modelRefreshTimer.unref?.();
 	});
 
 	process.on("exit", () => {
