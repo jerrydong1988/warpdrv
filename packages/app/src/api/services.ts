@@ -163,7 +163,14 @@ export async function scanWhisperModels() {
 }
 
 export async function fetchScanStatus() {
-	return api.get<{ modelCount: number; lastScanAt: number }>("/models/scan-status");
+	return api.get<{
+		modelCount: number;
+		lastScanAt: number;
+		isScanning: boolean;
+		scanStartedAt: number;
+		lastScanError: string | null;
+		refreshPending: boolean;
+	}>("/models/scan-status");
 }
 
 export async function updateModel(id: string, data: { recommendedInferenceParams?: string }) {

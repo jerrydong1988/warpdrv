@@ -14,6 +14,28 @@ import { store } from '../util/store';
 import type { Dirent } from 'node:fs';
 
 const MODELS_CACHE_KEY = 'models:cache';
+export const MODEL_SCAN_PARSE_CONCURRENCY = 4;
+
+type TaskLimiter = <T>(task: () => Promise<T>) => Promise<T>;
+
+function createTaskLimiter(maxConcurrent: number): TaskLimiter {
+	let active = 0;
+	const waiters: Array<() => void> = [];
+
+	return async <T>(task: () => Promise<T>): Promise<T> => {
+		if (active >= maxConcurrent) {
+			await new Promise<void>(resolve => waiters.push(resolve));
+		}
+		active += 1;
+
+		try {
+			return await task();
+		} finally {
+			active -= 1;
+			waiters.shift()?.();
+		}
+	};
+}
 
 // Shard pattern: -00001-of-00003.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
@@ -42,6 +64,7 @@ async function buildGgufFile(
 	fileName: string,
 	cachedFilesByPath: Map<string, IGgufFile>,
 	forceFilePaths: ReadonlySet<string>,
+	runParseLimited: TaskLimiter,
 ): Promise<IGgufFile> {
 	const filePath = path.join(dirPath, fileName);
 	const stat = await fs.stat(filePath);
@@ -65,7 +88,7 @@ async function buildGgufFile(
 	// model's exact parameter count can be reconstructed instead of estimating
 	// it from the combined byte size.
 	if (!isMmproj && !metadata) {
-		metadata = await parseGgufMetadata(filePath);
+		metadata = await runParseLimited(() => parseGgufMetadata(filePath));
 		if (!metadata) metadata = fallbackMetadata(filePath, stat.size);
 	}
 
@@ -112,6 +135,7 @@ async function scanDirRecursive(
 	cachedModels: IModel[],
 	visitedPaths: Set<string>,
 	forceFilePaths: ReadonlySet<string>,
+	runParseLimited: TaskLimiter,
 ): Promise<IModel[]> {
 	let entries: Dirent[];
 	try {
@@ -124,7 +148,9 @@ async function scanDirRecursive(
 	const ggufEntries = entries
 		.filter(e => e.isFile() && /\.gguf$/i.test(e.name))
 		.sort((a, b) => a.name.localeCompare(b.name));
-	const subDirs = entries.filter(e => e.isDirectory());
+	const subDirs = entries
+		.filter(e => e.isDirectory())
+		.sort((a, b) => a.name.localeCompare(b.name));
 
 	const results: IModel[] = [];
 
@@ -135,19 +161,25 @@ async function scanDirRecursive(
 		for (const f of m.files) cachedFilesByPath.set(f.filePath, f);
 	}
 
-	const dirFiles: IGgufFile[] = [];
-	for (const entry of ggufEntries) {
+	const dirFiles = (await Promise.all(ggufEntries.map(async entry => {
 		// A single unreadable/corrupt file must not abort the whole scan
 		// (previously one bad file killed the root scan and overwrote the
 		// model cache with a partial result).
 		try {
-			const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath, forceFilePaths);
+			const ggufFile = await buildGgufFile(
+				dirPath,
+				entry.name,
+				cachedFilesByPath,
+				forceFilePaths,
+				runParseLimited,
+			);
 			// if (ggufFile.metadata?.architecture === 'whisper') continue;
-			dirFiles.push(ggufFile);
+			return ggufFile;
 		} catch (err) {
 			console.error(`[modelScanner] Skipping unreadable GGUF ${path.join(dirPath, entry.name)}:`, err instanceof Error ? err.message : err);
+			return null;
 		}
-	}
+	}))).filter((file): file is IGgufFile => file !== null);
 
 	// Resolve mmproj candidates for this dir: same-dir wins over the nearest
 	// ancestor. Keep every candidate so the launch UI can expose an explicit
@@ -240,22 +272,23 @@ async function scanDirRecursive(
 	// Recurse into subdirs (with symlink cycle detection)
 	const childMmprojFiles = sameDirMmprojFiles.length > 0 ? sameDirMmprojFiles : ancestorMmprojFiles;
 
-	for (const subDir of subDirs) {
+	const childResults = await Promise.all(subDirs.map(async subDir => {
 		const childPath = path.join(dirPath, subDir.name);
 		const resolvedChildPath = await fs.realpath(childPath).catch(() => childPath);
-		if (visitedPaths.has(resolvedChildPath)) continue; // Skip symlink cycle / already-visited dir
+		if (visitedPaths.has(resolvedChildPath)) return []; // Skip symlink cycle / already-visited dir
 		visitedPaths.add(resolvedChildPath);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(
+		return scanDirRecursive(
 			childPath,
 			childMmprojFiles,
 			childUserSegment,
 			cachedModels,
 			visitedPaths,
 			forceFilePaths,
+			runParseLimited,
 		);
-		results.push(...childModels);
-	}
+	}));
+	for (const childModels of childResults) results.push(...childModels);
 
 	return results;
 }
@@ -273,14 +306,14 @@ export async function scanAllModelRoots(
 	}
 
 	const beforeCount = cachedModels.length;
+	const runParseLimited = createTaskLimiter(MODEL_SCAN_PARSE_CONCURRENCY);
 
-	const scanned: IModel[] = [];
-	for (const root of roots) {
+	const rootResults = await Promise.all(roots.map(async root => {
 		const visited = new Set<string>();
 		try { visited.add(await fs.realpath(root)); } catch { visited.add(path.resolve(root)); }
-		const models = await scanDirRecursive(root, [], null, cachedModels, visited, forceFilePaths);
-		scanned.push(...models);
-	}
+		return scanDirRecursive(root, [], null, cachedModels, visited, forceFilePaths, runParseLimited);
+	}));
+	const scanned = rootResults.flat();
 
 	const scannedIds = new Set(scanned.map(m => m.id));
 	const removed = cachedModels.filter(m => !scannedIds.has(m.id)).length;
