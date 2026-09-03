@@ -113,6 +113,8 @@ export interface IGgufMetadata {
 	contextLength: number; // model's native max context
 	fileSize: number; // bytes
 	vocabSize: number; // tokenizer vocabulary size, 0 if unknown
+	tensorCount?: number; // tensor count, used to distinguish compact sidecars
+	nextnPredictLayers?: number; // built-in/external MTP (NextN) layer count
 }
 // ============================================================
 // Models (scanned from disk)

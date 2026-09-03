@@ -249,8 +249,55 @@ describe('buildArgs dedupe and flags', () => {
 			B10453_CAPABILITIES,
 		);
 		expect(args[args.indexOf('--spec-draft-n-max') + 1]).toBe('3');
+		expect(args).not.toContain('--spec-draft-model');
+		expect(args).not.toContain('--model-draft');
 		expect(args).not.toContain('--draft-max');
 		expect(args).not.toContain('--draft-min');
+	});
+
+	it('loads an external MTP sidecar with current draft-model flags', () => {
+		const args = buildArgs(
+			'/models/target.gguf',
+			null,
+			makeParams({ specDecode: {
+				...DEFAULT_LAUNCH_PARAMS.specDecode,
+				enabled: true,
+				mode: 'mtp',
+				draftModelPath: '/models/mtp-target.gguf',
+				draftDevice: 'Vulkan0',
+				draftGpuLayers: 12,
+			} }),
+			[],
+			10453,
+			B10453_CAPABILITIES,
+		);
+		expect(args[args.indexOf('--spec-type') + 1]).toBe('draft-mtp');
+		expect(args[args.indexOf('--spec-draft-model') + 1]).toBe('/models/mtp-target.gguf');
+		expect(args[args.indexOf('--spec-draft-device') + 1]).toBe('Vulkan0');
+		expect(args[args.indexOf('--spec-draft-ngl') + 1]).toBe('12');
+	});
+
+	it('loads an external MTP sidecar with legacy draft-model aliases', () => {
+		const args = buildArgs(
+			'/models/target.gguf',
+			null,
+			makeParams({ specDecode: {
+				...DEFAULT_LAUNCH_PARAMS.specDecode,
+				enabled: true,
+				mode: 'mtp',
+				draftModelPath: '/models/mtp-target.gguf',
+				draftDevice: 'CUDA0',
+				draftGpuLayers: 7,
+				draftContextSize: 4096,
+			} }),
+			[],
+			9000,
+		);
+		expect(args[args.indexOf('--spec-type') + 1]).toBe('draft-mtp');
+		expect(args[args.indexOf('--model-draft') + 1]).toBe('/models/mtp-target.gguf');
+		expect(args[args.indexOf('--device-draft') + 1]).toBe('CUDA0');
+		expect(args[args.indexOf('--gpu-layers-draft') + 1]).toBe('7');
+		expect(args[args.indexOf('--ctx-size-draft') + 1]).toBe('4096');
 	});
 
 	it('maps ngram-mod controls to the mod n-match/min/max family', () => {

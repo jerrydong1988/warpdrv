@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Box, Flex, Text, HStack, VStack, Button } from '@chakra-ui/react';
 import { RefreshCw, Zap, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,7 @@ import { EmbeddingCard } from './EmbeddingCard';
 import { RecommendedParamsCard } from './RecommendedParamsCard';
 import { OptionsCard } from './OptionsCard';
 import { Footer } from './Footer';
+import { getAutoSelectedDraftModelPath, getDraftModelCandidates } from './draftModelSelection';
 
 interface ILaunchServerDialogProps {
 	onClose: () => void;
@@ -104,18 +105,33 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 	), [selectedBackendDevices]);
 	const deviceOptions = useMemo(() => selectedBackendDevices.map(d => d.id), [selectedBackendDevices]);
 
-	// Draft model entries
+	// Draft model entries. Block-draft/Eagle sidecars use dedicated GGUF
+	// architectures; external MTP sidecars retain the target architecture.
 	const targetArchitecture = selectedEntry?.file.metadata?.architecture ?? null;
+	const specDecodeMode = params.specDecode.mode ?? 'draft';
 	const draftModelEntries = useMemo(() => {
-		if (!targetArchitecture) return [];
-		return modelEntries.filter(e => {
-			if (e.file.metadata?.architecture !== targetArchitecture) return false;
-			if (e.file.filePath === selectedModelPath) return false;
-			return true;
-		});
-	}, [modelEntries, targetArchitecture, selectedModelPath]);
+		return getDraftModelCandidates(modelEntries, selectedEntry, specDecodeMode, params.specDecode.specType);
+	}, [modelEntries, params.specDecode.specType, selectedEntry, specDecodeMode]);
 
 	const selectedDraftEntry = modelEntries.find(e => e.file.filePath === params.specDecode.draftModelPath);
+
+	// Selecting a mode with one compatible sidecar beside the target model should
+	// work without another manual choice. Never replace an explicit/custom path.
+	useEffect(() => {
+		if (!params.specDecode.enabled) return;
+		const autoPath = getAutoSelectedDraftModelPath(
+			draftModelEntries,
+			selectedModelPath,
+			params.specDecode.draftModelPath,
+			specDecodeMode,
+			params.specDecode.specType,
+		);
+		if (!autoPath) return;
+		setParams(prev => ({
+			...prev,
+			specDecode: { ...prev.specDecode, draftModelPath: autoPath },
+		}));
+	}, [draftModelEntries, params.specDecode.draftModelPath, params.specDecode.enabled, params.specDecode.specType, selectedModelPath, specDecodeMode]);
 
 	// Model metadata
 	const meta = selectedEntry?.file.metadata ?? null;
@@ -224,7 +240,8 @@ export const LaunchServerDialog = React.memo(({ onClose, serverId }: ILaunchServ
 							/>
 							<SpeculativeDecodingCard
 								specDecode={params.specDecode} onSpecParamChange={updateSpecParam}
-								targetArchitecture={targetArchitecture} draftModelEntries={draftModelEntries} selectedDraftEntry={selectedDraftEntry ?? null}
+								targetArchitecture={targetArchitecture} targetModelPath={selectedModelPath}
+								draftModelEntries={draftModelEntries} selectedDraftEntry={selectedDraftEntry ?? null}
 								deviceOptions={deviceOptions} deviceIdToName={deviceIdToName}
 								flashAttn={(params.flashAttnMode ?? (params.flashAttn ? ELlamaFlashAttentionMode.ON : ELlamaFlashAttentionMode.OFF)) !== ELlamaFlashAttentionMode.OFF} ubatchSize={params.ubatchSize}
 							/>
