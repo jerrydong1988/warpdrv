@@ -9,6 +9,8 @@ import os from "os";
 import path from "path";
 
 export function getDataDir(): string {
+	const override = process.env.WARPCORE_DATA_DIR;
+	if (override && override.trim()) return override;
 	const platform = os.platform();
 	if (platform === "win32") return path.join(os.homedir(), "AppData", "Roaming", "warpcore");
 	if (platform === "darwin")

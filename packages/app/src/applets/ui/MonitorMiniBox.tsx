@@ -1,10 +1,11 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { Bot, ChevronUp, Send } from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { consumeSubthreadNotifications } from "@/api/services";
 
-const EMPTY = {};
+const EMPTY: Record<string, never> = {};
 
 export const MonitorMiniBox = memo(() => {
 	const currentThreadId = useStore((s) => s.currentThreadId);
@@ -30,7 +31,7 @@ export const MonitorMiniBox = memo(() => {
 		const ids: string[] = [];
 		for (const id of Object.keys(threadNotifs)) {
 			const n = threadNotifs[id];
-			if (n.senderType === "thread" && n.senderId !== currentThreadId) {
+			if (n?.senderType === "thread" && n.senderId !== currentThreadId) {
 				ids.push(id);
 			}
 		}
@@ -85,7 +86,7 @@ export const MonitorMiniBox = memo(() => {
 				cursor="pointer"
 				_hover={{ borderColor: "var(--wc-accent-purple-border, rgba(167,139,250,0.25))" }}
 				onClick={handleExpand}
-				title="Expand monitoring box"
+				title={i18nextSingleton.t("common:ui.expandMonitoringBox")}
 			>
 				<Bot size={16} color="var(--wc-text-secondary)" />
 				<Text
@@ -97,7 +98,7 @@ export const MonitorMiniBox = memo(() => {
 					overflow="hidden"
 					textOverflow="ellipsis"
 				>
-					{count} Agent Message{count !== 1 ? "s" : ""}
+					{count}  {i18nextSingleton.t("common:ui.agentMessage")}{count !== 1 ? "s" : ""}
 				</Text>
 				<ChevronUp size={14} color="var(--wc-text-muted)" />
 			</HStack>
@@ -121,11 +122,12 @@ export const MonitorMiniBox = memo(() => {
 				transition="all 0.15s ease"
 				_hover={sendDisabled ? undefined : { bg: "var(--wc-bg-selected)" }}
 				onClick={handleSend}
-				disabled={sendDisabled}
+				aria-disabled={sendDisabled}
 				title={isRunning ? "Wait for inference to finish" : undefined}
 			>
 				<Send size={11} />
-				Send Through
+
+				{i18nextSingleton.t("common:ui.sendThrough")}
 			</Box>
 		</Box>
 	);

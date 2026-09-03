@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
@@ -34,7 +35,7 @@ export const CodeGraphSymbolRenderer = React.memo(
 				const r = d?.result ?? d;
 				if (Array.isArray(r)) nodes = r;
 				else if (r && typeof r === "object") nodes = [r];
-			} catch {}
+			} catch { /* fall back to the raw tool arguments */ }
 		}
 		const label = symbolId ?? symbol ?? "(no symbol)";
 
@@ -101,7 +102,7 @@ export const CodeGraphSymbolRenderer = React.memo(
 								color="var(--wc-text-faint)"
 								fontStyle="italic"
 							>
-								{nodes.length} matches — ambiguous symbol name
+								{nodes.length}  {i18nextSingleton.t("chat:tool.ambiguousSymbolMatches")}
 							</Text>
 						)}
 					</VStack>
@@ -125,6 +126,6 @@ export const CodeGraphSymbolRendererMeta: IToolCallRenderer = {
 		const symbol = typeof args.symbol === "string" ? args.symbol : undefined;
 		const label = symbolId ?? symbol ?? "";
 		const truncated = label.length > 60 ? label.slice(0, 57) + "..." : label;
-		return <Text whiteSpace="nowrap">Code Symbol: {truncated}</Text>;
+		return <Text whiteSpace="nowrap">{i18nextSingleton.t("chat:tool.codeSymbol")} {truncated}</Text>;
 	}),
 };

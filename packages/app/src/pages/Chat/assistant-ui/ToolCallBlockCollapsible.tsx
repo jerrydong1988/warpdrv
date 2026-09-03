@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
 import {
@@ -71,7 +72,7 @@ export const ToolCallBlockCollapsible = React.memo(
 		const attachAllTools = useStore((s) => s.attachAllTools);
 		const attachedTools = useStore((s) => s.attachedTools);
 		const modes = useStore((s) => s.modes);
-		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId);
+		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId) as string | undefined;
 		const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 		const currentMode = modeId ? modes[modeId] : null;
 		const isModeActive = !!currentMode;
@@ -83,7 +84,7 @@ export const ToolCallBlockCollapsible = React.memo(
 
 		const [isOpen, setIsOpen] = useState(false);
 		const [deciding, setDeciding] = useState(false);
-		const toast = useToast();
+		const { toast } = useToast();
 
 		const handleDecision = useCallback(
 			async (decision: "approve" | "deny") => {
@@ -160,11 +161,7 @@ export const ToolCallBlockCollapsible = React.memo(
 					tools.attachedTools,
 					tools.skipToolsSave,
 				);
-				toast({
-					title: `"${toolName}" will always be approved for this thread`,
-					status: "success",
-					duration: 3000,
-				});
+				toast("success", `"${toolName}" will always be approved for this thread`);
 			} finally {
 				setDeciding(false);
 			}
@@ -222,7 +219,7 @@ export const ToolCallBlockCollapsible = React.memo(
 							cursor="pointer"
 							title={
 								displayStatus === EToolCallStatus.ERROR
-									? toolCall?.error
+									? (toolCall?.error ?? undefined)
 									: undefined
 							}
 							_hover={{ opacity: 0.8 }}
@@ -323,7 +320,8 @@ export const ToolCallBlockCollapsible = React.memo(
 											fontSize="var(--chat-font-size)"
 											color="var(--wc-text-muted)"
 										>
-											Processing...
+
+											{i18nextSingleton.t("chat:toolStatus.processing")}
 										</Text>
 									</HStack>
 								)}
@@ -347,7 +345,8 @@ export const ToolCallBlockCollapsible = React.memo(
 											<HStack gap="1">
 												<Check size={12} />
 												<Text fontSize="var(--chat-font-size)">
-													Allow Once
+
+													{i18nextSingleton.t("common:ui.allowOnce")}
 												</Text>
 											</HStack>
 										</Box>
@@ -369,7 +368,8 @@ export const ToolCallBlockCollapsible = React.memo(
 											<HStack gap="1">
 												<Lock size={12} />
 												<Text fontSize="var(--chat-font-size)">
-													Allow Always
+
+													{i18nextSingleton.t("common:ui.allowAlways")}
 												</Text>
 											</HStack>
 										</Box>
@@ -390,7 +390,7 @@ export const ToolCallBlockCollapsible = React.memo(
 										>
 											<HStack gap="1">
 												<X size={12} />
-												<Text fontSize="var(--chat-font-size)">Deny</Text>
+												<Text fontSize="var(--chat-font-size)">{i18nextSingleton.t("common:ui.deny")}</Text>
 											</HStack>
 										</Box>
 									</HStack>

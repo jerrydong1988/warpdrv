@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { Check, ChevronDown, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -206,7 +207,8 @@ export const SlashCmdGuardrails: React.FC<SlashCmdGuardrailsProps> = ({
 									textAlign: "center",
 								}}
 							>
-								No guardrails available
+
+								{i18nextSingleton.t("common:ui.noGuardrailsAvailable")}
 							</div>
 						)}
 						{availableGuardrails.map((g) => {

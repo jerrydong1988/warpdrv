@@ -1,11 +1,11 @@
-import { useAuiState } from "@assistant-ui/react";
-import { Box } from "@chakra-ui/react";
-import emojiRegex from "emoji-regex";
-import { Loader2, Volume2 } from "lucide-react";
-import React, { type FC, useCallback, useMemo } from "react";
-import { FaStop } from "react-icons/fa";
-import removeMd from "remove-markdown";
-import { useStore } from "@/store";
+import React, { useCallback, useMemo, type FC } from 'react';
+import { Volume2, Loader2 } from 'lucide-react';
+import { FaStop } from 'react-icons/fa';
+import { useAuiState } from '@assistant-ui/react';
+import { useStore } from '@/store';
+import { Box } from '@chakra-ui/react';
+import removeMd from 'remove-markdown';
+import emojiRegex from 'emoji-regex';
 
 const ActionBarIcon: FC<{ children: React.ReactNode; onClick?: () => void }> = ({
 	children,

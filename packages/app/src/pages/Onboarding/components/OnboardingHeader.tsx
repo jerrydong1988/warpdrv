@@ -1,4 +1,5 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
+
+import { Box, Text, HStack } from '@chakra-ui/react';
 
 interface IOnboardingHeaderProps {
 	title: string;

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	AssistantRuntimeProvider,
 	type ThreadMessage,
@@ -28,6 +29,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRealm } from "@/hooks/useRealm";
 import { useThreadsAndFolders } from "@/hooks/useThreadsAndFolders";
 import { useStore } from "@/store";
+import { EChatSidebarTab } from "@/store/slices/chatSidebar";
 import type { AppState } from "@/store/types";
 import { Thread } from "./assistant-ui/thread";
 import { ThreadList } from "./assistant-ui/thread-list";
@@ -633,9 +635,9 @@ const ChatInner = React.memo(
 				const currentM = modeId ? st.modes[modeId] : null;
 				if (currentM) {
 					const threadMsgs = st.messagesByThread[currentThreadId] || {};
-					let currId = parentId;
+					let currId: string | null = parentId;
 					while (currId) {
-						const msg = threadMsgs[currId];
+						const msg = threadMsgs[currId] as (typeof threadMsgs)[string] | undefined;
 						if (!msg) break;
 						if (msg.role === "user") {
 							await updateMessageState(msg.id, {
@@ -849,7 +851,7 @@ export const ChatPage = React.memo(() => {
 		},
 		{
 			onActivate: () => {
-				openChatSidebarTab("search");
+				openChatSidebarTab(EChatSidebarTab.SEARCH);
 				setTimeout(() => {
 					const input = document.querySelector(
 						"#chat-thread-search-input",
@@ -882,14 +884,14 @@ export const ChatPage = React.memo(() => {
 	return (
 		<Flex direction="column" h="100%" overflow="hidden">
 			<PageHeader
-				title="Chat"
+				title={i18nextSingleton.t("chat:title")}
 				icon={<MessageSquare size={20} />}
 				actionsRight={
 					<>
 						<Popover.Root>
 							<Popover.Trigger asChild>
 								<IconButton
-									aria-label="Chat settings"
+									aria-label={i18nextSingleton.t("common:chat.settingsAriaLabel")}
 									variant="ghost"
 									size="sm"
 									borderWidth="1px"
@@ -927,7 +929,8 @@ export const ChatPage = React.memo(() => {
 													fontWeight="600"
 													color="var(--wc-text-heading)"
 												>
-													Chat Appearance
+
+													{i18nextSingleton.t("common:chat.appearance")}
 												</Text>
 
 												<VStack align="stretch" gap="2">
@@ -936,7 +939,8 @@ export const ChatPage = React.memo(() => {
 															fontSize="11px"
 															color="var(--wc-text-muted)"
 														>
-															Font Size
+
+															{i18nextSingleton.t("common:ui.fontSize")}
 														</Text>
 														<Text
 															fontSize="11px"
@@ -972,7 +976,8 @@ export const ChatPage = React.memo(() => {
 														fontSize="11px"
 														color="var(--wc-text-muted)"
 													>
-														Font Family
+
+														{i18nextSingleton.t("common:ui.fontFamily")}
 													</Text>
 													<Combobox.Root
 														collection={fontFamilyCollection}
@@ -1041,7 +1046,8 @@ export const ChatPage = React.memo(() => {
 																			fontSize="11px"
 																			color="var(--wc-text-primary)"
 																		>
-																			Default (Inter)
+
+																			{i18nextSingleton.t("common:ui.defaultInter")}
 																		</Text>
 																		<Combobox.ItemIndicator />
 																	</Combobox.Item>
@@ -1078,7 +1084,7 @@ export const ChatPage = React.memo(() => {
 												</VStack>
 
 												<Switch.Root
-													label="Fixed chat width"
+													label={i18nextSingleton.t("common:ui.fixedChatWidth")}
 													checked={chatFixedWidth}
 													onCheckedChange={(details) =>
 														updateSettings({
@@ -1110,7 +1116,8 @@ export const ChatPage = React.memo(() => {
 														}
 														userSelect="none"
 													>
-														Fixed width
+
+														{i18nextSingleton.t("common:ui.fixedWidth")}
 													</Switch.Label>
 												</Switch.Root>
 											</VStack>
@@ -1120,7 +1127,7 @@ export const ChatPage = React.memo(() => {
 							</Portal>
 						</Popover.Root>
 						<IconButton
-							aria-label="Toggle right panel"
+							aria-label={i18nextSingleton.t("common:chat.toggleRightPanel")}
 							variant="ghost"
 							size="sm"
 							borderWidth="1px"
@@ -1141,7 +1148,7 @@ export const ChatPage = React.memo(() => {
 				actions={
 					<>
 						<IconButton
-							aria-label="Toggle threads list"
+							aria-label={i18nextSingleton.t("common:chat.toggleThreadsList")}
 							variant="ghost"
 							size="sm"
 							mr="5"
@@ -1168,7 +1175,8 @@ export const ChatPage = React.memo(() => {
 							onClick={() => setCurrentThreadId(nanoid(6))}
 						>
 							<Plus size={15} />
-							New Chat
+
+							{i18nextSingleton.t("chat:actions.newChat")}
 						</Button>
 						<Box
 							className="drag"

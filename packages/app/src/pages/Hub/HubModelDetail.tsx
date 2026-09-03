@@ -1,50 +1,31 @@
+import React, { useState, useEffect } from 'react';
+import { Box, Text, HStack, VStack, Flex, Badge, Button, Spinner, AccordionRoot, AccordionItem as AccordionItemComp, AccordionItemTrigger, AccordionItemContent, Link } from '@chakra-ui/react';
 import {
-	AccordionItem as AccordionItemComp,
-	AccordionItemContent,
-	AccordionItemTrigger,
-	AccordionRoot,
-	Badge,
-	Box,
-	Button,
-	Flex,
-	HStack,
-	Link,
-	Spinner,
-	Text,
-	VStack,
-} from "@chakra-ui/react";
-import type { IHubFile, IHubModelDetail } from "@warpcore/shared";
-import DOMPurify from "dompurify";
-import {
-	ArrowDownToLine,
-	Calendar,
-	CheckCircle,
-	ChevronDown,
-	Clock,
-	Download,
-	FileText,
-	HardDriveDownload,
-	Heart,
-	Layers,
-} from "lucide-react";
-import Markdown from "markdown-to-jsx";
-import React, { useEffect, useState } from "react";
-import { fetchHubModel, startHubDownload } from "../../api/services";
-import { Card } from "../../components/Card";
-import { useToast } from "../../components/ToastProvider";
-import { openExternal } from "../../utils/openExternal";
-import { DirPickerPopover } from "./DirPickerPopover";
-import "./markdown.css";
+	Download, Heart, Clock, Calendar, CheckCircle,
+	ArrowDownToLine, FileText, Layers, ChevronDown, HardDriveDownload,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { IHubModelDetail, IHubFile } from '@warpcore/shared';
+import { EHubSource } from '@warpcore/shared';
+import { Card } from '../../components/Card';
+import { DirPickerPopover } from './DirPickerPopover';
+import { fetchHubModel, startHubDownload } from '../../api/services';
+import { openExternal } from '../../utils/openExternal';
+import { formatBytes, formatDate as formatDateLocale } from '../../utils/intl';
+import { useToast } from '../../components/ToastProvider';
+import Markdown from 'markdown-to-jsx';
+import DOMPurify from 'dompurify';
+import './markdown.css';
 
 // Browser-compatible path utilities (no Node.js path module)
 function getBasename(filepath: string): string {
-	return filepath.split("/").pop() ?? filepath;
+	return filepath.split('/').pop() ?? filepath;
 }
 
 function getDirname(filepath: string): string {
-	const parts = filepath.split("/");
-	if (parts.length <= 1) return "";
-	return parts.slice(0, -1).join("/");
+	const parts = filepath.split('/');
+	if (parts.length <= 1) return '';
+	return parts.slice(0, -1).join('/');
 }
 
 // Group files by parent model for split file handling
@@ -63,7 +44,7 @@ function groupFilesByModel(files: IHubFile[]): Map<string, IHubFile[]> {
 			key = file.parentModel;
 		} else {
 			// Not a shard - use the filename itself as the key (without .gguf/.bin extension)
-			key = file.filename.replace(/\.(gguf|bin)$/i, "");
+			key = file.filename.replace(/\.(gguf|bin)$/i, '');
 		}
 
 		if (!groups.has(key)) {
@@ -80,267 +61,222 @@ function getGroupKey(file: IHubFile): string {
 	if (file.parentModel) {
 		return file.parentModel; // Already includes directory path from backend
 	}
-	return file.filename.replace(/\.(gguf|bin)$/i, "");
+	return file.filename.replace(/\.(gguf|bin)$/i, '');
 }
 
 // Get all file parts for a model (all shards of a split model)
 function getFilePartsForModel(files: IHubFile[], primaryFile: IHubFile): string[] {
 	const key = getGroupKey(primaryFile);
 	return files
-		.filter((f) => getGroupKey(f) === key)
+		.filter(f => getGroupKey(f) === key)
 		.sort((a, b) => (a.shardIndex ?? 0) - (b.shardIndex ?? 0))
-		.map((f) => f.filename);
+		.map(f => f.filename);
 }
 
 // Get total size for a model (sum of all parts for split models)
 function getTotalSizeForModel(files: IHubFile[], primaryFile: IHubFile): number {
 	const key = getGroupKey(primaryFile);
-	return files.filter((f) => getGroupKey(f) === key).reduce((sum, f) => sum + f.size, 0);
-}
-
-function formatBytes(bytes: number): string {
-	if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + " GB";
-	if (bytes >= 1048576) return (bytes / 1048576).toFixed(0) + " MB";
-	if (bytes >= 1024) return (bytes / 1024).toFixed(0) + " KB";
-	return bytes + " B";
+	return files
+		.filter(f => getGroupKey(f) === key)
+		.reduce((sum, f) => sum + f.size, 0);
 }
 
 function formatDate(dateStr: string): string {
-	if (!dateStr) return "";
-	return new Date(dateStr).toLocaleDateString("en-US", {
-		year: "numeric",
-		month: "short",
-		day: "numeric",
-	});
+	if (!dateStr) return '';
+	return formatDateLocale(new Date(dateStr), { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatCount(n: number): string {
-	if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
-	if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+	if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+	if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
 	return String(n);
 }
 
-import { QUANT_COLORS } from "@/lib/constants";
+import { QUANT_COLORS } from '@/lib/constants';
 
 interface IHubModelDetailProps {
 	modelId: string;
 	modelRoots: string[];
+	source: EHubSource;
 }
 
-const FileRow = React.memo(
-	({
-		file,
-		modelRoots,
-		author,
-		modelName,
-		allFiles,
-		existsInRoot,
-	}: {
-		file: IHubFile;
-		modelRoots: string[];
-		author: string;
-		modelName: string;
-		allFiles: IHubFile[];
-		existsInRoot: string | null;
-	}) => {
-		const { toast } = useToast();
-		const [showDirPicker, setShowDirPicker] = useState(false);
-		const [downloading, setDownloading] = useState(false);
-		const quantColor = QUANT_COLORS[file.quantType] ?? "var(--wc-text-tertiary)";
+// External web page for a repo on its hub
+function hubWebUrl(source: EHubSource, author: string, modelId: string): string {
+	if (source === EHubSource.MODELSCOPE) return `https://modelscope.cn/${author}/${modelId}`;
+	return `https://huggingface.co/${author}/${modelId}`;
+}
 
-		// Get all file parts for multi-part downloads
-		const fileParts = getFilePartsForModel(allFiles, file);
+// Compact "27.3B" style rendering of a raw parameter count
+function formatParams(params: number | undefined): string | null {
+	if (!params || !Number.isFinite(params) || params <= 0) return null;
+	const billions = params / 1e9;
+	const rounded = billions >= 10 ? Math.round(billions) : Number(billions.toFixed(1));
+	return `${rounded}B`;
+}
 
-		// Calculate total size (sum of all parts for split models)
-		const totalSize = getTotalSizeForModel(allFiles, file);
+const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, existsInRoot, source }: {
+	file: IHubFile;
+	modelRoots: string[];
+	author: string;
+	modelName: string;
+	allFiles: IHubFile[];
+	existsInRoot: string | null;
+	source: EHubSource;
+}) => {
+	const { t } = useTranslation('hub');
+	const { toast } = useToast();
+	const [showDirPicker, setShowDirPicker] = useState(false);
+	const [downloading, setDownloading] = useState(false);
+	const quantColor = QUANT_COLORS[file.quantType] ?? 'var(--wc-text-tertiary)';
 
-		const handleDownload = async (destRoot: string) => {
-			console.log("[HubModelDetail] Download clicked:", {
-				filename: file.filename,
-				parentModel: file.parentModel,
-				groupKey: getGroupKey(file),
-				fileParts,
-				destRoot,
-			});
+	// Get all file parts for multi-part downloads
+	const fileParts = getFilePartsForModel(allFiles, file);
 
-			setDownloading(true);
-			const result = await startHubDownload({
-				author,
-				modelName,
-				filename: file.filename,
-				destRoot,
-				fileParts: fileParts.length > 1 ? fileParts : undefined,
-			});
-			setDownloading(false);
-			if (result.ok) {
-				const partText = fileParts.length > 1 ? ` (${fileParts.length} parts)` : "";
-				toast("success", `Downloading ${file.parentModel ?? file.filename}${partText}`);
-			} else {
-				toast("error", result.error ?? "Download failed");
-			}
-		};
+	// Calculate total size (sum of all parts for split models)
+	const totalSize = getTotalSizeForModel(allFiles, file);
 
-		const handleDownloadClick = () => {
-			if (modelRoots.length === 1) {
-				handleDownload(modelRoots[0]!);
-			} else {
-				setShowDirPicker(true);
-			}
-		};
+	const handleDownload = async (destRoot: string) => {
+		console.log('[HubModelDetail] Download clicked:', {
+			filename: file.filename,
+			parentModel: file.parentModel,
+			groupKey: getGroupKey(file),
+			fileParts,
+			destRoot,
+		});
 
-		return (
-			<Card>
-				<Flex justify="space-between" align="center">
-					<HStack gap="3" flex="1" minW="0">
-						<Flex
-							w="8"
-							h="8"
-							borderRadius="md"
-							alignItems="center"
-							justifyContent="center"
-							bg={
-								file.isDownloaded
-									? "var(--wc-accent-green-bg-8)"
-									: "var(--wc-bg-card)"
-							}
-							flexShrink={0}
-						>
-							{file.isDownloaded ? (
-								<CheckCircle size={16} color="var(--wc-accent-green)" />
-							) : (
-								<Layers size={16} color="var(--wc-text-tertiary)" />
-							)}
-						</Flex>
-						<Box flex="1" minW="0">
-							{/* Display parent model name for split files, or basename for regular files */}
-							<Text
-								fontSize="12px"
-								fontWeight="500"
-								color="var(--wc-text-primary)"
-								fontFamily='"Geist Mono", monospace'
-								lineClamp={1}
-							>
-								{file.parentModel ?? getBasename(file.filename)}
+		setDownloading(true);
+		const result = await startHubDownload({
+			source,
+			author,
+			modelName,
+			filename: file.filename,
+			destRoot,
+			fileParts: fileParts.length > 1 ? fileParts : undefined,
+		});
+		setDownloading(false);
+		if (result.ok) {
+			const partText = fileParts.length > 1 ? ` (${fileParts.length} parts)` : '';
+			toast('success', t('toast.downloading', { name: file.parentModel ?? file.filename, partText }));
+		} else {
+			toast('error', result.error ?? t('toast.downloadFailed'));
+		}
+	};
+
+	const handleDownloadClick = () => {
+		if (modelRoots.length === 1) {
+			handleDownload(modelRoots[0]!);
+		} else {
+			setShowDirPicker(true);
+		}
+	};
+
+	return (
+		<Card>
+			<Flex justify="space-between" align="center">
+				<HStack gap="3" flex="1" minW="0">
+					<Flex
+						w="8" h="8" borderRadius="md" alignItems="center" justifyContent="center"
+						bg={file.isDownloaded ? 'var(--wc-accent-green-bg-8)' : 'var(--wc-bg-card)'}
+						flexShrink={0}
+					>
+						{file.isDownloaded
+							? <CheckCircle size={16} color="var(--wc-accent-green)" />
+							: <Layers size={16} color="var(--wc-text-tertiary)" />
+						}
+					</Flex>
+					<Box flex="1" minW="0">
+						{/* Display parent model name for split files, or basename for regular files */}
+						<Text fontSize="12px" fontWeight="500" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' lineClamp={1}>
+							{file.parentModel ?? getBasename(file.filename)}
+						</Text>
+						<HStack gap="2" mt="0.5" flexWrap="wrap">
+							<Text fontSize="11px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>
+								{formatBytes(totalSize)}
 							</Text>
-							<HStack gap="2" mt="0.5" flexWrap="wrap">
-								<Text
-									fontSize="11px"
-									color="var(--wc-text-muted)"
-									fontFamily='"Geist Mono", monospace'
-								>
-									{formatBytes(totalSize)}
+							{/* Show total parts if this is a multi-part file */}
+							{fileParts.length > 1 && (
+								<Text fontSize="10px" color="var(--wc-text-faint)">
+{t('detail.partsCount', { count: fileParts.length })}
 								</Text>
-								{/* Show total parts if this is a multi-part file */}
-								{fileParts.length > 1 && (
-									<Text fontSize="10px" color="var(--wc-text-faint)">
-										{fileParts.length} parts
-									</Text>
-								)}
-								{/* Show directory path if file is nested */}
-								{file.filename.includes("/") && (
-									<Text fontSize="10px" color="var(--wc-text-faint)">
-										in {getDirname(file.filename)}
-									</Text>
-								)}
-								{file.isDownloaded && file.downloadedInRoot && (
-									<Text
-										fontSize="10px"
-										color="var(--wc-accent-green-icon)"
-										lineClamp={1}
-									>
-										in {file.downloadedInRoot}
-									</Text>
-								)}
-							</HStack>
+							)}
+							{/* Show directory path if file is nested */}
+							{file.filename.includes('/') && (
+								<Text fontSize="10px" color="var(--wc-text-faint)">
+									{t('detail.inDir', { dir: getDirname(file.filename) })}
+								</Text>
+							)}
+							{file.isDownloaded && file.downloadedInRoot && (
+								<Text fontSize="10px" color="var(--wc-accent-green-icon)" lineClamp={1}>
+									{t('detail.inDir', { dir: file.downloadedInRoot })}
+								</Text>
+							)}
+						</HStack>
+					</Box>
+				</HStack>
+
+				<HStack gap="2" flexShrink={0}>
+					{file.quantType && (
+						<Badge
+							px="2" py="0.5" borderRadius="md" fontSize="11px" fontWeight="600"
+							bg={`color-mix(in srgb, ${quantColor} 12%, transparent)`}
+							color={quantColor}
+							borderWidth="1px" borderColor={`color-mix(in srgb, ${quantColor} 20%, transparent)`}
+						>
+							{file.quantType}
+						</Badge>
+					)}
+
+					{file.isDownloaded ? (
+						<Badge
+							px="2.5" py="1" borderRadius="lg" fontSize="11px" fontWeight="500"
+							bg="var(--wc-accent-green-bg-8)" color="var(--wc-accent-green)"
+							borderWidth="1px" borderColor="var(--wc-accent-green-border)"
+						>
+							<CheckCircle size={11} /> {t('detail.downloaded')}
+						</Badge>
+					) : (
+						<Box position="relative">
+							<Button
+								size="xs" px="3" borderRadius="lg" fontSize="11px" fontWeight="500"
+								bg="var(--wc-accent-blue-bg-10)" color="var(--wc-accent-blue)"
+								borderWidth="1px" borderColor="var(--wc-accent-blue-border)"
+								_hover={{ bg: 'var(--wc-accent-blue-hover-bg)' }}
+								onClick={handleDownloadClick}
+								disabled={downloading}
+							>
+								{downloading ? <Spinner size="xs" /> : <ArrowDownToLine size={12} />}
+								{fileParts.length > 1 ? t('detail.downloadParts', { count: fileParts.length }) : t('actions.download')}
+							</Button>
+							{showDirPicker && (
+								<DirPickerPopover
+									roots={modelRoots}
+									existsInRoot={existsInRoot}
+									onSelect={handleDownload}
+									onClose={() => setShowDirPicker(false)}
+								/>
+							)}
 						</Box>
-					</HStack>
+					)}
+				</HStack>
+			</Flex>
+		</Card>
+	);
+});
 
-					<HStack gap="2" flexShrink={0}>
-						{file.quantType && (
-							<Badge
-								px="2"
-								py="0.5"
-								borderRadius="md"
-								fontSize="11px"
-								fontWeight="600"
-								bg={`color-mix(in srgb, ${quantColor} 12%, transparent)`}
-								color={quantColor}
-								borderWidth="1px"
-								borderColor={`color-mix(in srgb, ${quantColor} 20%, transparent)`}
-							>
-								{file.quantType}
-							</Badge>
-						)}
-
-						{file.isDownloaded ? (
-							<Badge
-								px="2.5"
-								py="1"
-								borderRadius="lg"
-								fontSize="11px"
-								fontWeight="500"
-								bg="var(--wc-accent-green-bg-8)"
-								color="var(--wc-accent-green)"
-								borderWidth="1px"
-								borderColor="var(--wc-accent-green-border)"
-							>
-								<CheckCircle size={11} /> Downloaded
-							</Badge>
-						) : (
-							<Box position="relative">
-								<Button
-									size="xs"
-									px="3"
-									borderRadius="lg"
-									fontSize="11px"
-									fontWeight="500"
-									bg="var(--wc-accent-blue-bg-10)"
-									color="var(--wc-accent-blue)"
-									borderWidth="1px"
-									borderColor="var(--wc-accent-blue-border)"
-									_hover={{ bg: "var(--wc-accent-blue-hover-bg)" }}
-									onClick={handleDownloadClick}
-									disabled={downloading}
-								>
-									{downloading ? (
-										<Spinner size="xs" />
-									) : (
-										<ArrowDownToLine size={12} />
-									)}
-									{fileParts.length > 1
-										? `Download ${fileParts.length} parts`
-										: "Download"}
-								</Button>
-								{showDirPicker && (
-									<DirPickerPopover
-										roots={modelRoots}
-										existsInRoot={existsInRoot}
-										onSelect={handleDownload}
-										onClose={() => setShowDirPicker(false)}
-									/>
-								)}
-							</Box>
-						)}
-					</HStack>
-				</Flex>
-			</Card>
-		);
-	},
-);
-
-export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDetailProps) => {
+export const HubModelDetail = React.memo(({ modelId, modelRoots, source }: IHubModelDetailProps) => {
+	const { t } = useTranslation('hub');
 	const [detail, setDetail] = useState<IHubModelDetail | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	const [author, name] = modelId.split("/");
+	const [author, name] = modelId.split('/');
 
 	useEffect(() => {
 		setLoading(true);
-		fetchHubModel(author!, name!).then((result) => {
+		fetchHubModel(author!, name!, source).then(result => {
 			if (result.ok) setDetail(result.data);
 			setLoading(false);
 		});
-	}, [modelId]);
+	}, [modelId, source]);
 
 	if (loading) {
 		return (
@@ -353,7 +289,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 	if (!detail) {
 		return (
 			<Flex h="100%" alignItems="center" justifyContent="center">
-				<Text color="var(--wc-text-faint)">Failed to load model details</Text>
+				<Text color="var(--wc-text-faint)">{t('detail.failedToLoad')}</Text>
 			</Flex>
 		);
 	}
@@ -379,91 +315,75 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 	}
 
 	// Sort display files by size
-	const displayWithSize = displayFiles.map((f) => ({
-		file: f,
-		totalSize: getTotalSizeForModel(allModelFiles, f),
-	}));
+	const displayWithSize = displayFiles.map(f => ({ file: f, totalSize: getTotalSizeForModel(allModelFiles, f) }));
 	displayWithSize.sort((a, b) => a.totalSize - b.totalSize);
-	const sortedFiles = displayWithSize.map((d) => d.file);
+	const sortedFiles = displayWithSize.map(d => d.file);
 
 	// Count fully downloaded models (all parts must be downloaded)
 	let downloadedCount = 0;
 	for (const files of fileGroups.values()) {
-		if (files.every((f) => f.isDownloaded)) downloadedCount++;
+		if (files.every(f => f.isDownloaded)) downloadedCount++;
 	}
 	const totalModels = fileGroups.size;
 	const totalGgufFiles = allModelFiles.length;
 
 	// Find if any file from this repo exists in a root (for dir picker hint)
-	const existsInRoot =
-		detail.files.find((f: IHubFile) => f.downloadedInRoot)?.downloadedInRoot ?? null;
+	const existsInRoot = detail.files.find((f: IHubFile) => f.downloadedInRoot)?.downloadedInRoot ?? null;
 
 	return (
 		<Box p="6">
 			<VStack align="stretch" gap="6">
 				{/* Header */}
 				<Box>
-					<Link
-						href={`https://huggingface.co/${detail.author}/${detail.modelId}`}
-						display="block"
-						color="var(--wc-text-faint)"
-						fontSize="11px"
-						mb="1"
-						_hover={{ color: "var(--wc-text-muted)" }}
-						onClick={(e) => {
-							e.preventDefault();
-							openExternal(
-								`https://huggingface.co/${detail.author}/${detail.modelId}`,
-							);
-						}}
-					>
+					<Link href={hubWebUrl(source, detail.author, detail.modelId)} display="block" color="var(--wc-text-faint)" fontSize="11px" mb="1"
+						_hover={{ color: 'var(--wc-text-muted)' }}
+						onClick={(e) => { e.preventDefault(); openExternal(hubWebUrl(source, detail.author, detail.modelId)); }}>
 						{detail.author}
 					</Link>
-					<Link
-						href={`https://huggingface.co/${detail.author}/${detail.modelId}`}
-						display="block"
-						fontSize="22px"
-						fontWeight="700"
-						color="var(--wc-text-primary)"
-						letterSpacing="-0.02em"
-						_hover={{
-							color: "var(--wc-accent-blue)",
-							textDecoration: "underline",
-							cursor: "pointer",
-						}}
-						onClick={(e) => {
-							e.preventDefault();
-							openExternal(
-								`https://huggingface.co/${detail.author}/${detail.modelId}`,
-							);
-						}}
-					>
+					<Link href={hubWebUrl(source, detail.author, detail.modelId)} display="block" fontSize="22px" fontWeight="700" color="var(--wc-text-primary)" letterSpacing="-0.02em"
+						_hover={{ color: 'var(--wc-accent-blue)', textDecoration: 'underline', cursor: 'pointer' }}
+						onClick={(e) => { e.preventDefault(); openExternal(hubWebUrl(source, detail.author, detail.modelId)); }}>
 						{detail.modelId}
 					</Link>
+
+					<HStack gap="2" mt="2" flexWrap="wrap">
+						<Badge
+							px="2" py="0.5" borderRadius="md" fontSize="10px"
+							bg={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple-bg-8)' : 'var(--wc-accent-blue-bg-8)'}
+							color={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple)' : 'var(--wc-accent-blue)'}
+							borderWidth="1px"
+							borderColor={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple-border)' : 'var(--wc-accent-blue-border)'}
+						>
+							{source === EHubSource.MODELSCOPE ? t('source.modelscope') : t('source.huggingface')}
+						</Badge>
+						{formatParams(detail.params) && (
+							<Badge
+								px="2" py="0.5" borderRadius="md" fontSize="10px"
+								bg="var(--wc-bg-card)" color="var(--wc-text-muted)"
+								borderWidth="1px" borderColor="var(--wc-border-subtle)"
+							>
+								{formatParams(detail.params)}
+							</Badge>
+						)}
+					</HStack>
 
 					<HStack gap="4" mt="3" flexWrap="wrap">
 						<HStack gap="1.5" color="var(--wc-text-muted)">
 							<Download size={13} />
-							<Text fontSize="12px" fontFamily='"Geist Mono", monospace'>
-								{formatCount(detail.downloads)}
-							</Text>
-							<Text fontSize="11px" color="var(--wc-text-faint)">
-								downloads
-							</Text>
+							<Text fontSize="12px" fontFamily='"Geist Mono", monospace'>{formatCount(detail.downloads)}</Text>
+							<Text fontSize="11px" color="var(--wc-text-faint)">{t('detail.downloadsLabel')}</Text>
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-muted)">
 							<Heart size={13} />
-							<Text fontSize="12px" fontFamily='"Geist Mono", monospace'>
-								{formatCount(detail.likes)}
-							</Text>
+							<Text fontSize="12px" fontFamily='"Geist Mono", monospace'>{formatCount(detail.likes)}</Text>
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-faint)">
 							<Calendar size={12} />
-							<Text fontSize="11px">Created {formatDate(detail.createdAt)}</Text>
+							<Text fontSize="11px">{t('detail.created', { date: formatDate(detail.createdAt) })}</Text>
 						</HStack>
 						<HStack gap="1.5" color="var(--wc-text-faint)">
 							<Clock size={12} />
-							<Text fontSize="11px">Updated {formatDate(detail.lastModified)}</Text>
+							<Text fontSize="11px">{t('detail.updated', { date: formatDate(detail.lastModified) })}</Text>
 						</HStack>
 					</HStack>
 
@@ -471,22 +391,16 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 						<HStack gap="1.5" mt="3" flexWrap="wrap">
 							{detail.tags.slice(0, 15).map((tag: string) => (
 								<Badge
-									key={tag}
-									px="2"
-									py="0.5"
-									borderRadius="md"
-									fontSize="10px"
-									bg="var(--wc-bg-card)"
-									color="var(--wc-text-muted)"
-									borderWidth="1px"
-									borderColor="var(--wc-border-subtle)"
+									key={tag} px="2" py="0.5" borderRadius="md" fontSize="10px"
+									bg="var(--wc-bg-card)" color="var(--wc-text-muted)"
+									borderWidth="1px" borderColor="var(--wc-border-subtle)"
 								>
 									{tag}
 								</Badge>
 							))}
 							{detail.tags.length > 15 && (
 								<Text fontSize="10px" color="var(--wc-text-disabled)">
-									+{detail.tags.length - 15} more
+									{t('detail.moreTags', { count: detail.tags.length - 15 })}
 								</Text>
 							)}
 						</HStack>
@@ -498,83 +412,42 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 					<AccordionRoot collapsible defaultValue={[]} w="full">
 						<AccordionItemComp value="downloads" w="full">
 							<AccordionItemTrigger
-								w="full"
-								p="4"
-								borderRadius="xl"
-								bg={`linear-gradient(135deg, ${downloadedCount === totalGgufFiles ? "var(--wc-accent-green-bg-8)" : "var(--wc-accent-blue-bg-10)"} 0%, transparent 100%)`}
+								w="full" p="4" borderRadius="xl"
+								bg={`linear-gradient(135deg, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-green-bg-8)' : 'var(--wc-accent-blue-bg-10)'} 0%, transparent 100%)`}
 								borderWidth="1px"
-								borderColor={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? "var(--wc-accent-green)" : "var(--wc-accent-blue)"} 25%, var(--wc-border-subtle))`}
-								_hover={{ bg: "var(--wc-accent-blue-bg-8)" }}
+								borderColor={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} 25%, var(--wc-border-subtle))`}
+								_hover={{ bg: 'var(--wc-accent-blue-bg-8)' }}
 								focusRing="none"
 							>
 								<Flex w="full" justify="space-between" align="center">
 									<Flex gap="4" flex="1" minW="0">
 										<Box
-											w="12"
-											h="12"
-											borderRadius="lg"
-											display="flex"
-											alignItems="center"
-											justifyContent="center"
-											bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? "var(--wc-accent-green)" : "var(--wc-accent-blue)"} 15%, transparent)`}
+											w="12" h="12" borderRadius="lg" display="flex" alignItems="center" justifyContent="center"
+											bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} 15%, transparent)`}
 										>
-											<HardDriveDownload
-												size={20}
-												color={
-													downloadedCount === totalGgufFiles
-														? "var(--wc-accent-green)"
-														: "var(--wc-accent-blue)"
-												}
-											/>
+											<HardDriveDownload size={20} color={downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} />
 										</Box>
 
 										<VStack align="start" gap="0.5">
-											<Text
-												fontSize="14px"
-												fontWeight="600"
-												color="var(--wc-text-primary)"
-											>
-												Download Files
+											<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">
+												{t('detail.downloadFiles')}
 											</Text>
 											<HStack gap="2">
-												<Text
-													fontSize="12px"
-													color={
-														downloadedCount === totalGgufFiles
-															? "var(--wc-accent-green)"
-															: "var(--wc-accent-blue)"
-													}
-													fontWeight="500"
-												>
-													{totalModels} model
-													{totalModels !== 1 ? "s" : ""} ({totalGgufFiles}{" "}
-													file{totalGgufFiles !== 1 ? "s" : ""})
+												<Text fontSize="12px" color={downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} fontWeight="500">
+													{t('detail.modelFilesCount', { models: totalModels, files: totalGgufFiles })}
 												</Text>
 												<Text fontSize="12px" color="var(--wc-text-muted)">
-													({downloadedCount} downloaded)
+													{t('detail.downloadedCount', { count: downloadedCount })}
 												</Text>
 											</HStack>
 										</VStack>
 									</Flex>
 
 									<Box
-										w="8"
-										h="8"
-										borderRadius="md"
-										display="flex"
-										alignItems="center"
-										justifyContent="center"
-										flexShrink={0}
-										bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? "var(--wc-accent-green)" : "var(--wc-accent-blue)"} 10%, transparent)`}
-									>
-										<ChevronDown
-											size={16}
-											color={
-												downloadedCount === totalGgufFiles
-													? "var(--wc-accent-green)"
-													: "var(--wc-accent-blue)"
-											}
-										/>
+										w="8" h="8" borderRadius="md" display="flex" alignItems="center" justifyContent="center" flexShrink={0}
+bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} 10%, transparent)`}
+										>
+										<ChevronDown size={16} color={downloadedCount === totalGgufFiles ? 'var(--wc-accent-green)' : 'var(--wc-accent-blue)'} />
 									</Box>
 								</Flex>
 							</AccordionItemTrigger>
@@ -590,6 +463,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 											author={detail.author}
 											modelName={detail.modelId}
 											existsInRoot={existsInRoot}
+											source={source}
 										/>
 									))}
 								</VStack>
@@ -602,8 +476,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 				{otherFiles.length > 0 && (
 					<Box mt="4">
 						<Text fontSize="12px" color="var(--wc-text-faint)">
-							{otherFiles.length} other file{otherFiles.length > 1 ? "s" : ""}{" "}
-							(config, tokenizer, etc.)
+							{t('detail.otherFiles', { count: otherFiles.length })}
 						</Text>
 					</Box>
 				)}
@@ -614,7 +487,7 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 						<HStack gap="2" mb="3">
 							<FileText size={14} color="var(--wc-text-tertiary)" />
 							<Text fontSize="13px" fontWeight="600" color="var(--wc-text-secondary)">
-								README
+{t('detail.readme')}
 							</Text>
 						</HStack>
 						<Box className="markdown-container">
@@ -624,38 +497,14 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 									overrides: {
 										a: {
 											component: ({ children, href, ...props }: any) => {
-												if (!href || !/^https?:\/\//.test(href))
-													return <span>{children}</span>;
-												return (
-													<a
-														href={href}
-														rel="noopener noreferrer"
-														onClick={(e: any) => {
-															e.preventDefault();
-															openExternal(href);
-														}}
-														{...props}
-													>
-														{children}
-													</a>
-												);
+												if (!href || !/^https?:\/\//.test(href)) return <span>{children}</span>;
+												return <a href={href} rel="noopener noreferrer" onClick={(e: any) => { e.preventDefault(); openExternal(href); }} {...props}>{children}</a>;
 											},
 										},
 										img: {
 											component: ({ src, alt, ...props }: any) => {
 												if (!src || !/^https?:\/\//.test(src)) return null;
-												return (
-													<img
-														src={src}
-														alt={alt ?? ""}
-														loading="lazy"
-														style={{
-															maxWidth: "100%",
-															borderRadius: "8px",
-														}}
-														{...props}
-													/>
-												);
+												return <img src={src} alt={alt ?? ''} loading="lazy" style={{ maxWidth: '100%', borderRadius: '8px' }} {...props} />;
 											},
 										},
 										script: { component: () => null },
@@ -668,38 +517,12 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 							>
 								{DOMPurify.sanitize(detail.readme, {
 									ALLOWED_TAGS: [
-										"h1",
-										"h2",
-										"h3",
-										"h4",
-										"h5",
-										"h6",
-										"p",
-										"br",
-										"hr",
-										"ul",
-										"ol",
-										"li",
-										"a",
-										"img",
-										"code",
-										"pre",
-										"blockquote",
-										"table",
-										"thead",
-										"tbody",
-										"tr",
-										"th",
-										"td",
-										"strong",
-										"em",
-										"del",
-										"sup",
-										"sub",
-										"span",
-										"div",
+										'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr',
+										'ul', 'ol', 'li', 'a', 'img', 'code', 'pre', 'blockquote',
+										'table', 'thead', 'tbody', 'tr', 'th', 'td',
+										'strong', 'em', 'del', 'sup', 'sub', 'span', 'div',
 									],
-									ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "id"],
+									ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id'],
 									ALLOW_DATA_ATTR: false,
 								})}
 							</Markdown>

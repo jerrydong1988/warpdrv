@@ -1,13 +1,15 @@
-import { Box } from "@chakra-ui/react";
-import { Check, Loader2, Mic, Volume2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { FaStop } from "react-icons/fa";
-import TextareaAutosize from "react-textarea-autosize";
-import { useStore } from "@/store";
-import { useDictation } from "./DictationContext";
-import { setKokoroCurrentRequestId, startStream, stopTTS } from "./KokoroTTS";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Check, Loader2, Mic, Volume2 } from 'lucide-react';
+import { FaStop } from 'react-icons/fa';
+import { Box } from '@chakra-ui/react';
+import TextareaAutosize from 'react-textarea-autosize';
+import { useStore } from '@/store';
+import { setKokoroCurrentRequestId, startStream, stopTTS } from './KokoroTTS';
+import { useDictation } from './DictationContext';
 
 export const SelectionPopover = () => {
+	const { t } = useTranslation();
 	const ref = useRef<HTMLDivElement>(null);
 	const visibleRef = useRef(false);
 	const dirtyRef = useRef(false);
@@ -232,7 +234,7 @@ export const SelectionPopover = () => {
 				flexShrink={0}
 				_hover={{ bg: "var(--wc-bg-selected)", color: "var(--wc-text-heading)" }}
 				onClick={handleTTS}
-				title={isMyTTS ? "Stop" : "Read aloud"}
+				title={isMyTTS ? 'Stop' : t('common:ui.readAloud')}
 			>
 				{isMyTTS ? (
 					isSpeaking ? (
@@ -267,13 +269,7 @@ export const SelectionPopover = () => {
 				flexShrink={0}
 				_hover={{ bg: "var(--wc-bg-selected)", color: "var(--wc-text-heading)" }}
 				onClick={handleDictationToggle}
-				title={
-					dictationActive && dictationSource === "popover"
-						? "Stop dictation"
-						: dictationActive
-							? "Dictation active (composer)"
-							: "Dictate…"
-				}
+				title={dictationActive && dictationSource === 'popover' ? t('common:ui.stopDictation') : dictationActive ? t('common:ui.dictationActiveComposer') : t('common:ui.dictate')}
 				data-dictation-btn="popover"
 			>
 				{dictationTranscribing ? (
@@ -289,13 +285,8 @@ export const SelectionPopover = () => {
 			<TextareaAutosize
 				value={inputText}
 				onChange={(e) => setInputText(e.target.value)}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" && !e.shiftKey) {
-						e.preventDefault();
-						handleDone();
-					}
-				}}
-				placeholder="Annotate…"
+				onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleDone(); } }}
+				placeholder={t('common:ui.annotate')}
 				minRows={1}
 				maxRows={4}
 				style={{
@@ -329,7 +320,7 @@ export const SelectionPopover = () => {
 					flexShrink={0}
 					_hover={{ bg: "var(--wc-bg-selected)", color: "var(--wc-text-heading)" }}
 					onClick={handleDone}
-					title="Done"
+					title={t('common:ui.done')}
 				>
 					<Check size={14} />
 				</Box>

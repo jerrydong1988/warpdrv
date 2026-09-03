@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Text } from "@chakra-ui/react";
 import type { IAgent } from "@warpcore/shared";
 import { Bot, Check } from "lucide-react";
@@ -108,7 +109,8 @@ export const AgentPicker = React.memo(
 								textAlign="center"
 								p="3"
 							>
-								No agents available
+
+								{i18nextSingleton.t("common:ui.noAgentsAvailable")}
 							</Text>
 						)}
 						{availableAgents.map((agent) => {
@@ -139,10 +141,10 @@ export const AgentPicker = React.memo(
 											<Check size={12} color="var(--wc-accent-green)" />
 										)}
 										{!isSelected && (
-											<Bot
-												size={13}
-												color="var(--wc-text-muted)"
-												flexShrink={0}
+										<Bot
+											size={13}
+											color="var(--wc-text-muted)"
+											style={{ flexShrink: 0 }}
 											/>
 										)}
 										<Text fontWeight="600" fontSize="sm" flex="1" minW="0">
@@ -157,7 +159,7 @@ export const AgentPicker = React.memo(
 											px="1.5"
 											flexShrink={0}
 										>
-											{toolCount} tool{toolCount === 1 ? "" : "s"}
+											{toolCount}  {i18nextSingleton.t("common:ui.toolLowercase")}{toolCount === 1 ? "" : "s"}
 										</Badge>
 									</Box>
 									{agent.description && (

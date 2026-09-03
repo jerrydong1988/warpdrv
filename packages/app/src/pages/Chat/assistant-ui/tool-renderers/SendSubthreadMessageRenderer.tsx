@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { ArrowDown, ArrowUp, Loader, PauseCircle } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
@@ -74,14 +75,15 @@ export const SendSubthreadMessageRenderer = React.memo(
 							cursor={actioning ? "not-allowed" : "pointer"}
 							_hover={{ bg: "var(--wc-bg-hover)" }}
 							onClick={handleBackground}
-							title="Background this task"
+							title={i18nextSingleton.t("common:ui.backgroundThisTask")}
 						>
 							{actioning ? (
 								<Loader size={10} className="animate-spin" />
 							) : (
 								<PauseCircle size={10} />
 							)}
-							Background
+
+							{i18nextSingleton.t("common:ui.background")}
 						</Box>
 					)}
 				</HStack>
@@ -145,7 +147,8 @@ export const SendSubthreadMessageRendererMeta: IToolCallRenderer = {
 		return (
 			<HStack gap="2" align="center" flex="1" minW="0">
 				<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
-					Send{" "}
+
+					{i18nextSingleton.t("chat:actions.send")}{" "}
 					<Text as="span" color="var(--wc-text-muted)">
 						{dir}
 						{label}
@@ -168,14 +171,15 @@ export const SendSubthreadMessageRendererMeta: IToolCallRenderer = {
 						cursor={actioning ? "not-allowed" : "pointer"}
 						_hover={{ bg: "var(--wc-bg-hover)" }}
 						onClick={handleBackground}
-						title="Background this task"
+						title={i18nextSingleton.t("common:ui.backgroundThisTask")}
 					>
 						{actioning ? (
 							<Loader size={10} className="animate-spin" />
 						) : (
 							<PauseCircle size={10} />
 						)}
-						Background
+
+						{i18nextSingleton.t("common:ui.background")}
 					</Box>
 				)}
 			</HStack>

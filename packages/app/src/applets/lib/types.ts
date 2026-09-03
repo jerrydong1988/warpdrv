@@ -1,4 +1,4 @@
-import type { TAppletBaseAPI } from "@warpcore/realmcore/src/applet/types";
+import type { TAppletBaseAPI } from "@warpcore/realmcore";
 import type React from "react";
 import type { useStore } from "@/store";
 import type { ISlashCommand } from "@/store/slices/slashCommands";

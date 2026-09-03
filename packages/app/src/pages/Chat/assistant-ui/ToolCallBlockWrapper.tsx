@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
 import { AlertCircle, Ban, Check, Loader, Lock, Wrench, X } from "lucide-react";
@@ -62,7 +63,7 @@ export const ToolCallBlockWrapper = React.memo(
 		const attachAllTools = useStore((s) => s.attachAllTools);
 		const attachedTools = useStore((s) => s.attachedTools);
 		const modes = useStore((s) => s.modes);
-		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId);
+		const modeId = useStore((s) => s.getCurrentThreadState(s)?.modeId) as string | undefined;
 		const currentMode = modeId ? modes[modeId] : null;
 		const isModeActive = !!currentMode;
 
@@ -72,7 +73,7 @@ export const ToolCallBlockWrapper = React.memo(
 		);
 
 		const [deciding, setDeciding] = useState(false);
-		const toast = useToast();
+		const { toast } = useToast();
 
 		const handleDecision = useCallback(
 			async (decision: "approve" | "deny") => {
@@ -149,11 +150,7 @@ export const ToolCallBlockWrapper = React.memo(
 					tools.attachedTools,
 					tools.skipToolsSave,
 				);
-				toast({
-					title: `"${toolName}" will always be approved for this thread`,
-					status: "success",
-					duration: 3000,
-				});
+				toast("success", `"${toolName}" will always be approved for this thread`);
 			} finally {
 				setDeciding(false);
 			}
@@ -287,7 +284,6 @@ export const ToolCallBlockWrapper = React.memo(
 								<AlertCircle
 									size={11}
 									color={statusColor}
-									title={toolCall?.error}
 								/>
 								<Text
 									fontSize="calc(var(--chat-font-size) - 4px)"
@@ -308,11 +304,12 @@ export const ToolCallBlockWrapper = React.memo(
 									fontSize="calc(var(--chat-font-size) - 3px)"
 									color="var(--wc-text-muted)"
 								>
-									Processing...
+
+									{i18nextSingleton.t("chat:toolStatus.processing")}
 								</Text>
 							</>
 						)}
-						/* Approval buttons moved to ToolCallBlockCollapsible header
+						{/* Approval buttons moved to ToolCallBlockCollapsible header */}
 						{isPending && !deciding && (
 							<HStack gap="2">
 								<Box
@@ -329,7 +326,8 @@ export const ToolCallBlockWrapper = React.memo(
 									<HStack gap="1">
 										<Check size={12} />
 										<Text fontSize="calc(var(--chat-font-size) - 2px)">
-											Allow Once
+
+											{i18nextSingleton.t("common:ui.allowOnce")}
 										</Text>
 									</HStack>
 								</Box>
@@ -347,7 +345,8 @@ export const ToolCallBlockWrapper = React.memo(
 									<HStack gap="1">
 										<Lock size={12} />
 										<Text fontSize="calc(var(--chat-font-size) - 2px)">
-											Allow Always
+
+											{i18nextSingleton.t("common:ui.allowAlways")}
 										</Text>
 									</HStack>
 								</Box>
@@ -365,7 +364,8 @@ export const ToolCallBlockWrapper = React.memo(
 									<HStack gap="1">
 										<X size={12} />
 										<Text fontSize="calc(var(--chat-font-size) - 2px)">
-											Deny
+
+											{i18nextSingleton.t("common:ui.deny")}
 										</Text>
 									</HStack>
 								</Box>

@@ -1,4 +1,4 @@
-import type { IPersistence } from "@warpcore/bridge/types/interfaces";
+import type { IPersistence } from "@warpcore/bridge";
 import type { TThreadId } from "@warpcore/bridge/types";
 
 export class ThreadStatusLineManager {

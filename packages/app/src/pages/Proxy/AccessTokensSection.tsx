@@ -1,23 +1,19 @@
-import { Badge, Box, Collapsible, Flex, HStack, IconButton, Text, VStack } from "@chakra-ui/react";
-import type { IAccessTokenInfo } from "@warpcore/shared";
+import { useState, useCallback } from 'react';
 import {
-	ChevronDown,
-	ChevronRight,
-	Cpu,
-	Key,
-	Pencil,
-	Plus,
-	Shield,
-	Trash2,
-	Wrench,
-} from "lucide-react";
-import { useCallback, useState } from "react";
-import { deleteToken, fetchTokens } from "../../api/services";
-import { ConfirmDialog } from "../../components/dialogs/ConfirmDialog";
-import { useListQuery, useMutation } from "../../hooks/useQuery";
-import { TokenDialog } from "./TokenDialog";
+	Box, Text, HStack, VStack, Flex, Badge, IconButton,
+	Collapsible,
+} from '@chakra-ui/react';
+import { Key, Plus, Pencil, Trash2, ChevronDown, ChevronRight, Shield, Cpu, Wrench } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { IAccessTokenInfo } from '@warpcore/shared';
+import { useListQuery, useMutation } from '../../hooks/useQuery';
+import { fetchTokens, deleteToken } from '../../api/services';
+import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
+import { formatDate as formatDateLocale } from '../../utils/intl';
+import { TokenDialog } from './TokenDialog';
 
 function RoleBadge({ token }: { token: IAccessTokenInfo }) {
+	const { t } = useTranslation('proxy');
 	if (token.admin) {
 		return (
 			<Badge
@@ -32,20 +28,15 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 			>
 				<HStack gap="1">
 					<Shield size={11} />
-					<Text>Admin</Text>
+					<Text>{t('accessTokens.roles.admin')}</Text>
 				</HStack>
 			</Badge>
 		);
 	}
 
-	const hasInference =
-		token.inference === true || (Array.isArray(token.inference) && token.inference.length > 0);
-	const hasMcpLabelled =
-		token.mcp_labelled === true ||
-		(Array.isArray(token.mcp_labelled) && token.mcp_labelled.length > 0);
-	const hasMcpInline =
-		token.mcp_inline === true ||
-		(Array.isArray(token.mcp_inline) && token.mcp_inline.length > 0);
+	const hasInference = token.inference === true || (Array.isArray(token.inference) && token.inference.length > 0);
+	const hasMcpLabelled = token.mcp_labelled === true || (Array.isArray(token.mcp_labelled) && token.mcp_labelled.length > 0);
+	const hasMcpInline = token.mcp_inline === true || (Array.isArray(token.mcp_inline) && token.mcp_inline.length > 0);
 
 	return (
 		<HStack gap="1.5">
@@ -62,7 +53,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Cpu size={11} />
-						<Text>Inference</Text>
+						<Text>{t('accessTokens.roles.inference')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -79,7 +70,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Wrench size={11} />
-						<Text>MCP (L)</Text>
+						<Text>{t('accessTokens.roles.mcpLabelled')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -96,7 +87,7 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 				>
 					<HStack gap="1">
 						<Wrench size={11} />
-						<Text>MCP (I)</Text>
+						<Text>{t('accessTokens.roles.mcpInline')}</Text>
 					</HStack>
 				</Badge>
 			)}
@@ -105,10 +96,11 @@ function RoleBadge({ token }: { token: IAccessTokenInfo }) {
 }
 
 function ScopePills({ value }: { value: true | string[] }) {
+	const { t } = useTranslation('proxy');
 	if (value === true) {
 		return (
 			<Text fontSize="11px" color="var(--wc-text-muted)" fontStyle="italic">
-				All
+				{t('accessTokens.roles.all')}
 			</Text>
 		);
 	}
@@ -137,23 +129,22 @@ function ScopePills({ value }: { value: true | string[] }) {
 }
 
 function formatDate(ts: number): string {
-	return new Date(ts).toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
+	return formatDateLocale(new Date(ts), {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
 	});
 }
 
 export function AccessTokensSection() {
+	const { t } = useTranslation('proxy');
 	const [expanded, setExpanded] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingToken, setEditingToken] = useState<IAccessTokenInfo | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<IAccessTokenInfo | null>(null);
 
 	const fetcher = useCallback(() => fetchTokens(), []);
-	const { data: tokens, refetch } = useListQuery<IAccessTokenInfo>(fetcher, {
-		deepCompare: true,
-	});
+	const { data: tokens, refetch } = useListQuery<IAccessTokenInfo>(fetcher, { deepCompare: true });
 	const deleteMutation = useMutation(deleteToken);
 
 	const handleCreate = () => {
@@ -195,7 +186,7 @@ export function AccessTokensSection() {
 				justify="space-between"
 				cursor="pointer"
 				onClick={() => setExpanded(!expanded)}
-				_hover={{ bg: "var(--wc-bg-surface)" }}
+				_hover={{ bg: 'var(--wc-bg-surface)' }}
 				transition="background 0.15s ease"
 				mb="2"
 			>
@@ -205,7 +196,7 @@ export function AccessTokensSection() {
 					</Box>
 					<Key size={16} color="var(--wc-text-tertiary)" />
 					<Text fontSize="13px" fontWeight="600" color="var(--wc-text-primary)">
-						Access Tokens
+						{t('accessTokens.title')}
 					</Text>
 					<Badge
 						size="sm"
@@ -220,14 +211,11 @@ export function AccessTokensSection() {
 					</Badge>
 				</HStack>
 				<IconButton
-					aria-label="Create token"
+					aria-label={t('accessTokens.actions.createToken')}
 					size="xs"
 					variant="ghost"
 					color="var(--wc-text-tertiary)"
-					_hover={{
-						bg: "var(--wc-accent-blue-bg-12)",
-						color: "var(--wc-accent-blue-hover)",
-					}}
+					_hover={{ bg: 'var(--wc-accent-blue-bg-12)', color: 'var(--wc-accent-blue-hover)' }}
 					onClick={(e) => {
 						e.stopPropagation();
 						handleCreate();
@@ -242,14 +230,19 @@ export function AccessTokensSection() {
 				<Collapsible.Content>
 					<Box px="4" pb="3">
 						{tokens.length === 0 ? (
-							<Flex py="6" align="center" justify="center" direction="column" gap="2">
+							<Flex
+								py="6"
+								align="center"
+								justify="center"
+								direction="column"
+								gap="2"
+							>
 								<Key size={20} color="var(--wc-text-disabled)" />
 								<Text fontSize="12px" color="var(--wc-text-faint)">
-									No access tokens created yet
+									{t('accessTokens.empty')}
 								</Text>
 								<Text fontSize="11px" color="var(--wc-text-placeholder)">
-									Tokens are required when authentication is enabled for remote
-									access
+									{t('accessTokens.emptyDesc')}
 								</Text>
 							</Flex>
 						) : (
@@ -262,55 +255,20 @@ export function AccessTokensSection() {
 									borderBottomWidth="1px"
 									borderColor="var(--wc-border-subtle)"
 								>
-									<Text
-										flex="1.2"
-										fontSize="10px"
-										fontWeight="600"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-									>
-										Name
+									<Text flex="1.2" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+										{t('accessTokens.columns.name')}
 									</Text>
-									<Text
-										flex="0.8"
-										fontSize="10px"
-										fontWeight="600"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-									>
-										Token
+									<Text flex="0.8" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+										{t('accessTokens.columns.token')}
 									</Text>
-									<Text
-										flex="1"
-										fontSize="10px"
-										fontWeight="600"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-									>
-										Role
+									<Text flex="1" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+										{t('accessTokens.columns.role')}
 									</Text>
-									<Text
-										flex="1.5"
-										fontSize="10px"
-										fontWeight="600"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-									>
-										Scope
+									<Text flex="1.5" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+										{t('accessTokens.columns.scope')}
 									</Text>
-									<Text
-										flex="0.6"
-										fontSize="10px"
-										fontWeight="600"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-									>
-										Created
+									<Text flex="0.6" fontSize="10px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+										{t('accessTokens.columns.created')}
 									</Text>
 									<Box w="60px" />
 								</HStack>
@@ -323,26 +281,13 @@ export function AccessTokensSection() {
 										py="2"
 										gap="3"
 										borderRadius="lg"
-										_hover={{ bg: "var(--wc-bg-surface)" }}
+_hover={{ bg: 'var(--wc-bg-surface)' }}
 										transition="background 0.15s ease"
 									>
-										<Text
-											flex="1.2"
-											fontSize="12px"
-											color="var(--wc-text-secondary)"
-											fontWeight="500"
-											overflow="hidden"
-											textOverflow="ellipsis"
-											whiteSpace="nowrap"
-										>
+										<Text flex="1.2" fontSize="12px" color="var(--wc-text-secondary)" fontWeight="500" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
 											{token.name}
 										</Text>
-										<Text
-											flex="0.8"
-											fontSize="11px"
-											color="var(--wc-text-faint)"
-											fontFamily="mono"
-										>
+										<Text flex="0.8" fontSize="11px" color="var(--wc-text-faint)" fontFamily="mono">
 											{token.tokenPrefix}...
 										</Text>
 										<Box flex="1">
@@ -350,83 +295,49 @@ export function AccessTokensSection() {
 										</Box>
 										<Box flex="1.5">
 											{token.admin ? (
-												<Text
-													fontSize="11px"
-													color="var(--wc-text-muted)"
-													fontStyle="italic"
-												>
-													Unrestricted
+<Text fontSize="11px" color="var(--wc-text-muted)" fontStyle="italic">
+													{t('accessTokens.roles.unrestricted')}
 												</Text>
 											) : (
 												<VStack gap="0.5" align="start">
-													{(token.inference === true ||
-														(Array.isArray(token.inference) &&
-															token.inference.length > 0)) && (
+													{(token.inference === true || (Array.isArray(token.inference) && token.inference.length > 0)) && (
 														<ScopePills value={token.inference} />
 													)}
-													{(token.mcp_labelled === true ||
-														(Array.isArray(token.mcp_labelled) &&
-															token.mcp_labelled.length > 0)) && (
+													{(token.mcp_labelled === true || (Array.isArray(token.mcp_labelled) && token.mcp_labelled.length > 0)) && (
 														<HStack gap="1">
-															<Text
-																fontSize="9px"
-																color="var(--wc-accent-purple-icon)"
-																fontWeight="600"
-															>
-																L:
-															</Text>
-															<ScopePills
-																value={token.mcp_labelled}
-															/>
+															<Text fontSize="9px" color="var(--wc-accent-purple-icon)" fontWeight="600">L:</Text>
+															<ScopePills value={token.mcp_labelled} />
 														</HStack>
 													)}
-													{(token.mcp_inline === true ||
-														(Array.isArray(token.mcp_inline) &&
-															token.mcp_inline.length > 0)) && (
+													{(token.mcp_inline === true || (Array.isArray(token.mcp_inline) && token.mcp_inline.length > 0)) && (
 														<HStack gap="1">
-															<Text
-																fontSize="9px"
-																color="var(--wc-accent-purple-icon)"
-																fontWeight="600"
-															>
-																I:
-															</Text>
+															<Text fontSize="9px" color="var(--wc-accent-purple-icon)" fontWeight="600">I:</Text>
 															<ScopePills value={token.mcp_inline} />
 														</HStack>
 													)}
 												</VStack>
 											)}
 										</Box>
-										<Text
-											flex="0.6"
-											fontSize="11px"
-											color="var(--wc-text-faint)"
-										>
+										<Text flex="0.6" fontSize="11px" color="var(--wc-text-faint)">
 											{formatDate(token.createdAt)}
 										</Text>
 										<HStack gap="0.5" w="60px" justify="flex-end">
 											<IconButton
-												aria-label="Edit token"
+												aria-label={t('accessTokens.actions.editToken')}
 												size="xs"
 												variant="ghost"
 												color="var(--wc-text-faint)"
-												_hover={{
-													bg: "var(--wc-bg-hover)",
-													color: "var(--wc-text-secondary)",
-												}}
+												_hover={{ bg: 'var(--wc-bg-hover)', color: 'var(--wc-text-secondary)' }}
 												onClick={() => handleEdit(token)}
 											>
 												<Pencil size={13} />
 											</IconButton>
 											<IconButton
-												aria-label="Delete token"
+												aria-label={t('accessTokens.actions.deleteToken')}
 												size="xs"
 												variant="ghost"
 												color="var(--wc-text-faint)"
-												_hover={{
-													bg: "var(--wc-accent-red-alt-bg)",
-													color: "var(--wc-accent-red)",
-												}}
+												_hover={{ bg: 'var(--wc-accent-red-alt-bg)', color: 'var(--wc-accent-red)' }}
 												onClick={() => setDeleteTarget(token)}
 											>
 												<Trash2 size={13} />
@@ -453,9 +364,9 @@ export function AccessTokensSection() {
 			{deleteTarget && (
 				<ConfirmDialog
 					isOpen={!!deleteTarget}
-					title="Revoke Token"
-					message={`Revoke "${deleteTarget.name}"? Any client using this token will immediately lose access. This cannot be undone.`}
-					confirmLabel="Revoke"
+					title={t('accessTokens.dialog.revokeTitle')}
+					message={t('accessTokens.dialog.revokeMessage', { name: deleteTarget.name })}
+					confirmLabel={t('accessTokens.dialog.revokeConfirm')}
 					onConfirm={handleDelete}
 					onCancel={() => setDeleteTarget(null)}
 					isLoading={deleteMutation.loading}

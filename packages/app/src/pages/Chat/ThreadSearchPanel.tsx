@@ -1,5 +1,5 @@
+import i18nextSingleton from "i18next";
 import { Box, Flex, Input, Text } from "@chakra-ui/react";
-import type { ISearchResult } from "@warpcore/bridge";
 import { SearchIcon, XIcon } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { searchChatMessages } from "@/api/services";
@@ -99,12 +99,13 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				return;
 			}
 			timerRef.current = setTimeout(async () => {
+				if (!threadId) return;
 				setIsLoading(true);
 				try {
 					const res = await searchChatMessages(q, "thread", { threadId, limit: 50 });
 					if (res.ok && res.data) {
 						const entries: SearchResultEntry[] = res.data.map(
-							(item: ISearchResult) => item as unknown as SearchResultEntry,
+							(item) => item as unknown as SearchResultEntry,
 						);
 						setResults(entries);
 					} else {
@@ -146,7 +147,7 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				<Input
 					id="chat-thread-search-input"
 					variant="subtle"
-					placeholder="Search in thread..."
+					placeholder={i18nextSingleton.t("chat:threadSearch.placeholder")}
 					value={query}
 					onChange={(e) => {
 						setQuery(e.target.value);
@@ -204,7 +205,8 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				{!isLoading && hasQuery && results.length === 0 && (
 					<Flex justifyContent="center" py="8">
 						<Text fontSize="13px" color="var(--wc-text-muted)">
-							No results
+
+							{i18nextSingleton.t("common:ui.noResults")}
 						</Text>
 					</Flex>
 				)}
@@ -212,7 +214,8 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				{!hasQuery && !isLoading && (
 					<Flex justifyContent="center" py="8">
 						<Text fontSize="13px" color="var(--wc-text-disabled)">
-							Type to search this chat
+
+							{i18nextSingleton.t("chat:threadSearch.typeToSearch")}
 						</Text>
 					</Flex>
 				)}
@@ -220,7 +223,8 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 				{!threadId && (
 					<Flex justifyContent="center" py="8">
 						<Text fontSize="13px" color="var(--wc-text-disabled)">
-							No chat selected
+
+							{i18nextSingleton.t("chat:threadSearch.noChatSelected")}
 						</Text>
 					</Flex>
 				)}
@@ -271,7 +275,7 @@ export function ThreadSearchPanel({ threadId }: { threadId: string | null }) {
 					borderTop="1px solid var(--wc-border-subtle)"
 				>
 					<Text fontSize="11px" color="var(--wc-text-muted)">
-						{results.length} result{results.length > 1 ? "s" : ""}
+						{results.length}  {i18nextSingleton.t("common:ui.resultLowercase")}{results.length > 1 ? "s" : ""}
 					</Text>
 				</Flex>
 			)}

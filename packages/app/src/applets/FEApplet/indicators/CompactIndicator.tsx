@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { useAuiState } from "@assistant-ui/react";
 import { Box, Text } from "@chakra-ui/react";
 import React from "react";
@@ -25,7 +26,8 @@ export const CompactIndicator = React.memo(
 						color="var(--wc-accent-yellow-glow)"
 						letterSpacing="0.1em"
 					>
-						COMPACTION
+
+						{i18nextSingleton.t("common:ui.compaction")}
 					</Text>
 					<Box flex="1" borderTopWidth="2px" borderColor="var(--wc-accent-yellow-glow)" />
 				</Box>

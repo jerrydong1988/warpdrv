@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text } from "@chakra-ui/react";
 import React from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
@@ -23,5 +24,5 @@ export const CodeGraphClearRendererMeta: IToolCallRenderer = {
 	canRender: (args: Record<string, unknown>): TCanRenderResult => {
 		return {};
 	},
-	renderMini: React.memo(() => <Text whiteSpace="nowrap">Code Graph cleared</Text>),
+	renderMini: React.memo(() => <Text whiteSpace="nowrap">{i18nextSingleton.t("chat:tool.codeGraphCleared")}</Text>),
 };

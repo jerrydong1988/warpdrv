@@ -9,8 +9,9 @@ import path from "path";
 // Pattern for split GGUF files: model-00001-of-00002.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
 
-// Pattern to extract quant type from filename
-const QUANT_REGEX = /[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|F16|F32|BF16)/i;
+// Pattern to extract quant type from filename (fp16 covers llama.cpp's
+// "-fp16-" naming, which the bare F16 alternative never matched)
+const QUANT_REGEX = /[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|FP16|F16|F32|BF16)/i;
 
 interface IHubRawFile {
 	path: string;
@@ -57,7 +58,7 @@ export function groupSplitFilesByModel(files: IHubFile[]): Map<string, IHubFile[
 	for (const file of files) {
 		if (!file.isGguf && !file.isWhisperBin) continue;
 
-		const { shardIndex, shardTotal, parentModel } = extractShardInfo(file.filename);
+		const { shardIndex, parentModel } = extractShardInfo(file.filename);
 
 		let key: string;
 		if (shardIndex !== null && parentModel) {
@@ -82,10 +83,6 @@ export function groupSplitFilesByModel(files: IHubFile[]): Map<string, IHubFile[
  * Also marks the primary file (first shard or non-shard) for display purposes
  */
 export function processGgufFiles(files: IHubFile[]): IHubFile[] {
-	// Group by parent model
-	const groups = groupSplitFilesByModel(files);
-
-	// Process each file
 	const processed: IHubFile[] = [];
 
 	for (const file of files) {
@@ -143,7 +140,7 @@ export async function fetchFilesFromDirectories(
 					// Don't recurse deeper than one level
 				}
 			}
-		} catch {}
+		} catch { /* best-effort */ }
 	}
 
 	return allFiles;

@@ -1,0 +1,92 @@
+{
+  "title": "配置方案",
+  "subtitle": "{{count}} 个配置方案",
+  "subtitle_one": "{{count}} 个配置方案",
+  "subtitle_other": "{{count}} 个配置方案",
+  "searchPlaceholder": "搜索配置方案...",
+  "actions": {
+    "runRecipe": "运行配置方案",
+    "editRecipe": "编辑配置方案",
+    "deleteRecipe": "删除配置方案",
+    "createRecipe": "创建配置方案",
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "hide": "隐藏",
+    "runAgain": "再次运行",
+    "run": "运行",
+    "addStep": "添加步骤",
+    "removeStep": "移除步骤",
+    "stop": "停止",
+    "selectServer": "选择服务器",
+    "noServers": "无可用健康服务器"
+  },
+  "fields": {
+    "name": "名称",
+    "description": "描述",
+    "steps": "步骤",
+    "inputLabel": "标签",
+    "inputKey": "键",
+    "inputType": "类型",
+    "inputDefault": "默认值",
+    "inputChoices": "选项"
+  },
+  "labels": {
+    "noRecipes": "未配置方案",
+    "builtinRecipes": "内置配置方案",
+    "customRecipes": "自定义配置方案",
+    "inputs": "输入",
+    "steps": "步骤"
+  },
+  "stepStatus": {
+    "pending": "等待中",
+    "running": "运行中",
+    "ok": "正常",
+    "failed": "失败",
+    "cancelled": "已取消",
+    "skipped": "已跳过"
+  },
+  "runStatus": {
+    "running": "运行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "runDialog": {
+    "recipeInvalid": "配置方案无效",
+    "anotherRunning": "另一个配置方案正在运行中"
+  },
+  "stepPanel": {
+    "noOutput": "暂无输出..."
+  },
+  "inputForm": {
+    "noInputs": "此配置方案没有输入项。"
+  },
+  "editor": {
+    "editRecipe": "编辑配置方案",
+    "newRecipe": "新建配置方案",
+    "namePlaceholder": "方案名称",
+    "descriptionPlaceholder": "描述（可选）",
+    "source": "源码",
+    "valid": "有效",
+    "preview": "预览",
+    "fixSourceError": "请修复源码错误以查看预览。",
+    "inputsCount": "输入项（{{count}}）",
+    "inputsCount_one": "输入项（{{count}}）",
+    "inputsCount_other": "输入项（{{count}}）",
+    "stepsCount": "步骤（{{count}}）",
+    "stepsCount_one": "步骤（{{count}}）",
+    "stepsCount_other": "步骤（{{count}}）"
+  },
+  "toast": {
+    "recipeStarted": "配置方案已启动",
+    "recipeCancelled": "配置方案已取消",
+    "recipeSaved": "配置方案已保存",
+    "recipeDeleted": "配置方案已删除",
+    "saveFailed": "保存配置方案失败"
+  },
+  "dialogs": {
+    "deleteRecipeTitle": "删除配置方案？",
+    "deleteRecipeMessage": "确定要删除 \"{{name}}\" 吗？此操作不可撤销。"
+  }
+}

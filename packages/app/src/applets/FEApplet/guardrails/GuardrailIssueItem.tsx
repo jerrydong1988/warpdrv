@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Flex, HStack, Text } from "@chakra-ui/react";
 import type { IGuardrailIssue } from "@warpcore/shared";
 import { EGuardrailIssueType } from "@warpcore/shared";
@@ -53,7 +54,7 @@ export const GuardrailIssueItem = React.memo(
 					<Box
 						as="button"
 						onClick={() => addAnnotation(item.quote, item.issue)}
-						title="Add to annotations"
+						title={i18nextSingleton.t("common:ui.addToAnnotations")}
 						flexShrink={0}
 						ml="2"
 						p="1"

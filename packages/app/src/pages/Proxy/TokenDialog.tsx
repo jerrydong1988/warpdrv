@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Badge,
 	Box,
@@ -338,7 +339,8 @@ function ScopeSelector({
 						transition="all 0.15s ease"
 						opacity={disabled ? 0.4 : 1}
 					>
-						Specific
+
+						{i18nextSingleton.t("proxy:tokenDialog.specific")}
 					</Box>
 				</HStack>
 			</HStack>
@@ -379,7 +381,8 @@ function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
 				<HStack gap="2">
 					<AlertTriangle size={14} color="var(--wc-accent-yellow)" />
 					<Text fontSize="12px" fontWeight="600" color="var(--wc-accent-yellow-strong)">
-						Copy this token now — it will not be shown again
+
+						{i18nextSingleton.t("proxy:tokenDialog.copyWarning")}
 					</Text>
 				</HStack>
 				<HStack gap="2" bg="var(--wc-overlay-dim)" borderRadius="md" px="3" py="2">
@@ -394,7 +397,7 @@ function TokenCreatedDisplay({ rawToken }: { rawToken: string }) {
 						{rawToken}
 					</Text>
 					<IconButton
-						aria-label="Copy token"
+						aria-label={i18nextSingleton.t("proxy:tokenDialog.copyToken")}
 						size="xs"
 						variant="ghost"
 						color={copied ? "var(--wc-accent-green-icon)" : "var(--wc-text-tertiary)"}
@@ -459,7 +462,7 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 
 	const handleSave = async () => {
 		if (!name.trim()) {
-			toast("error", "Token name is required");
+			toast("error", i18nextSingleton.t("common:toast.tokenNameRequired"));
 			return;
 		}
 
@@ -481,7 +484,7 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 			};
 			const result = await updateMutation.mutate({ id: editingToken.id, payload });
 			if (result) {
-				toast("success", "Token updated");
+				toast("success", i18nextSingleton.t("common:toast.tokenUpdated"));
 				onClose();
 			}
 		} else {
@@ -555,7 +558,8 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 									<VStack gap="3" align="stretch">
 										<TokenCreatedDisplay rawToken={createdRawToken} />
 										<Text fontSize="11px" color="var(--wc-text-faint)">
-											Use this token in the Authorization header: Bearer{" "}
+
+											{i18nextSingleton.t("common:ui.bearerTokenHelp")}{" "}
 											{createdRawToken.substring(0, 11)}...
 										</Text>
 									</VStack>
@@ -571,12 +575,13 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 												textTransform="uppercase"
 												letterSpacing="0.05em"
 											>
-												Name
+
+												{i18nextSingleton.t("backends:sortFields.name")}
 											</Text>
 											<Input
 												value={name}
 												onChange={(e) => setName(e.target.value)}
-												placeholder="e.g. Mobile app, CI pipeline, Friend's access"
+												placeholder={i18nextSingleton.t("proxy:tokenDialog.namePlaceholder")}
 												size="sm"
 												bg="var(--wc-bg-interactive)"
 												borderColor="var(--wc-border-default)"
@@ -600,23 +605,24 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 												textTransform="uppercase"
 												letterSpacing="0.05em"
 											>
-												Access Level
+
+												{i18nextSingleton.t("proxy:tokenDialog.accessLevel")}
 											</Text>
 											<HStack gap="2">
 												<RoleOption
 													selected={isAdmin}
 													onClick={() => setRole("admin")}
 													icon={<Shield size={16} />}
-													label="Admin"
-													description="Full control API, inference, and MCP access"
+													label={i18nextSingleton.t("proxy:accessTokens.roles.admin")}
+													description={i18nextSingleton.t("proxy:tokenDialog.adminDesc")}
 													color="var(--wc-accent-red)"
 												/>
 												<RoleOption
 													selected={!isAdmin}
 													onClick={() => setRole("inference")}
 													icon={<Cpu size={16} />}
-													label="Inference"
-													description="Query models through the proxy server"
+													label={i18nextSingleton.t("proxy:accessTokens.roles.inference")}
+													description={i18nextSingleton.t("proxy:tokenDialog.inferenceDesc")}
 													color="var(--wc-accent-blue-hover)"
 												/>
 											</HStack>
@@ -625,7 +631,7 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 										{/* Inference scope - only shown if not admin */}
 										{!isAdmin && (
 											<ScopeSelector
-												label="Server Access"
+												label={i18nextSingleton.t("proxy:tokenDialog.serverAccess")}
 												allLabel="All Servers"
 												value={inference}
 												onChange={setInference}
@@ -640,14 +646,14 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 												<ToggleCheck
 													checked={mcpLabelledEnabled}
 													onChange={setMcpLabelledEnabled}
-													label="MCP Tools (Labelled)"
-													description="Allow calling MCP tools from mcp.json"
+													label={i18nextSingleton.t("proxy:tokenDialog.mcpLabelled")}
+													description={i18nextSingleton.t("proxy:tokenDialog.mcpLabelledDesc")}
 													disabled={isAdmin}
 												/>
 												{mcpLabelledEnabled && (
 													<Box pl="7">
 														<ScopeSelector
-															label="Tool Access (Labelled)"
+															label={i18nextSingleton.t("proxy:tokenDialog.toolAccessLabelled")}
 															allLabel="All Tools"
 															value={mcpLabelled}
 															onChange={setMcpLabelled}
@@ -659,14 +665,14 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 												<ToggleCheck
 													checked={mcpInlineEnabled}
 													onChange={setMcpInlineEnabled}
-													label="MCP Tools (Inline)"
-													description="Allow calling ephemeral MCP tools"
+													label={i18nextSingleton.t("proxy:tokenDialog.mcpInline")}
+													description={i18nextSingleton.t("proxy:tokenDialog.mcpInlineDesc")}
 													disabled={isAdmin}
 												/>
 												{mcpInlineEnabled && (
 													<Box pl="7">
 														<ScopeSelector
-															label="Tool Access (Inline)"
+															label={i18nextSingleton.t("proxy:tokenDialog.toolAccessInline")}
 															allLabel="All Tools"
 															value={mcpInline}
 															onChange={setMcpInline}
@@ -691,7 +697,8 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 										_hover={{ bg: "var(--wc-accent-blue-focus)" }}
 										fontSize="12px"
 									>
-										Done
+
+										{i18nextSingleton.t("common:actions.done")}
 									</Button>
 								) : (
 									<HStack gap="2">
@@ -703,7 +710,8 @@ export function TokenDialog({ open, onClose, editingToken }: ITokenDialogProps) 
 											_hover={{ bg: "var(--wc-bg-card)" }}
 											fontSize="12px"
 										>
-											Cancel
+
+											{i18nextSingleton.t("backends:actions.cancel")}
 										</Button>
 										<Button
 											size="sm"

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text } from "@chakra-ui/react";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import type { IGuardrailDefinition, TModeId } from "@warpcore/shared";
@@ -122,7 +123,8 @@ export const GuardrailPicker = memo(
 										padding: "4px",
 									}}
 								>
-									No guardrails
+
+									{i18nextSingleton.t("common:ui.noGuardrails")}
 								</div>
 							) : (
 								guardrailList.map((g) => {
@@ -363,7 +365,8 @@ export const GuardrailBadge = memo(() => {
 									padding: "4px",
 								}}
 							>
-								No guardrails
+
+								{i18nextSingleton.t("common:ui.noGuardrails")}
 							</div>
 						) : (
 							guardrailList.map((g) => {

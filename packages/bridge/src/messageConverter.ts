@@ -148,7 +148,9 @@ export function convertMessagesToOpenAIFormat(
 							role: "tool",
 							content:
 								tc.result ??
-								(tc.error ? JSON.stringify({ error: tc.error }) : "No results!"),
+								JSON.stringify({
+									error: tc.error ?? `Tool call ${tc.toolName} was never executed`,
+								}),
 							tool_call_id: tc.id,
 						});
 					}

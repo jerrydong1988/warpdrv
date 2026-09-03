@@ -6,7 +6,7 @@ import { APPLET_READY, APPLET_TERMINATE, type EAppletHostType, type EAppletScope
 
 export class AppletManager {
 	private activeApplets: Record<string, { host: AppletHost; eventNode: EventNode }> = {};
-	private terminatingHosts: Record<string, Promise<void>> = {};
+	private terminatingHosts: Record<string, Promise<void> | undefined> = {};
 
 	constructor(
 		public eventNode: EventNode,
@@ -68,9 +68,11 @@ export class AppletManager {
 			autoStartArr.map((appletName) => this.initialize(appletName, { preventReady: true })),
 		);
 
-		autoStartArr
-			.filter((_, i) => statusArr[i])
-			.map((appletName) => this.activeApplets[appletName].eventNode.broadcast(APPLET_READY));
+		await Promise.all(
+			autoStartArr
+				.filter((_, i) => statusArr[i])
+				.map((appletName) => this.activeApplets[appletName]?.eventNode.broadcast(APPLET_READY)),
+		);
 	}
 
 	public async updateScopeValue(newValue: string | undefined): Promise<void> {
@@ -89,11 +91,19 @@ export class AppletManager {
 		if (!entry) return Promise.resolve();
 
 		this.terminatingHosts[appletName] = (async () => {
-			await entry.eventNode.survey(APPLET_TERMINATE);
-			await entry.host.terminate();
-			await this.eventNode.removeChild(entry.eventNode.nodeId);
-			delete this.activeApplets[appletName];
-			delete this.terminatingHosts[appletName];
+			try {
+				await entry.eventNode.survey(APPLET_TERMINATE);
+				await entry.host.terminate();
+				await this.eventNode.removeChild(entry.eventNode.nodeId);
+			} catch (err) {
+				console.error(
+					`[AppletManager] ${appletName} terminate failed:`,
+					err instanceof Error ? err.message : err,
+				);
+			} finally {
+				delete this.activeApplets[appletName];
+				delete this.terminatingHosts[appletName];
+			}
 		})();
 		return this.terminatingHosts[appletName];
 	}

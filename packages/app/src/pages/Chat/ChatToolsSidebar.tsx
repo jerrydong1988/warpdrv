@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 // ============================================================
 // FILE: packages/app/src/components/ChatToolsSidebar.tsx
 // Tool list sidebar for the chat page.
@@ -169,7 +170,8 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 					textTransform="uppercase"
 					letterSpacing="0.05em"
 				>
-					Tools
+
+					{i18nextSingleton.t("common:ui.tools")}
 				</Text>
 				<Badge
 					fontSize="9px"
@@ -211,7 +213,8 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 							</Text>
 							{!serverEnabled && (
 								<Text fontSize="9px" color="var(--wc-accent-red-border)">
-									OFF
+
+									{i18nextSingleton.t("common:ui.off")}
 								</Text>
 							)}
 						</HStack>
@@ -256,7 +259,8 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 										px="2"
 										py="1"
 									>
-										No tools
+
+										{i18nextSingleton.t("common:ui.noTools")}
 									</Text>
 								)}
 							</VStack>
@@ -267,7 +271,8 @@ export function ChatToolsSidebar({ open, onToggle }: { open: boolean; onToggle: 
 
 			{serverEntries.length === 0 && (
 				<Text fontSize="11px" color="var(--wc-text-faint)" textAlign="center" py="4">
-					No MCP servers
+
+					{i18nextSingleton.t("common:ui.noMcpServers")}
 				</Text>
 			)}
 		</Box>
@@ -360,7 +365,8 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 							</Text>
 							{!serverEnabled && (
 								<Text fontSize="9px" color="var(--wc-accent-red-border)">
-									OFF
+
+									{i18nextSingleton.t("common:ui.off")}
 								</Text>
 							)}
 						</HStack>
@@ -412,7 +418,8 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 														textTransform="uppercase"
 														flexShrink={0}
 													>
-														override
+
+														{i18nextSingleton.t("common:ui.override")}
 													</Text>
 												)}
 											</HStack>
@@ -454,7 +461,8 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 										px="2"
 										py="1"
 									>
-										No tools
+
+										{i18nextSingleton.t("common:ui.noTools")}
 									</Text>
 								)}
 							</VStack>
@@ -465,7 +473,8 @@ export function ChatToolsContentPanel({ threadId }: { threadId?: string | null }
 
 			{serverEntries.length === 0 && (
 				<Text fontSize="11px" color="var(--wc-text-faint)" textAlign="center" py="4">
-					No MCP servers
+
+					{i18nextSingleton.t("common:ui.noMcpServers")}
 				</Text>
 			)}
 		</Box>

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Flex, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import type { ILaunchParams } from "@warpcore/shared";
 import React from "react";
@@ -24,7 +25,8 @@ export const OptionsCard = React.memo(
 						textTransform="uppercase"
 						letterSpacing="0.05em"
 					>
-						Options
+
+						{i18nextSingleton.t("common:ui.options")}
 					</Text>
 					<HStack gap="2" flexWrap="wrap">
 						<ToggleChip
@@ -33,22 +35,22 @@ export const OptionsCard = React.memo(
 							onClick={() => onParamChange("flashAttn", !params.flashAttn)}
 						/>
 						<ToggleChip
-							label="MLock"
+							label={i18nextSingleton.t("common:ui.loadModeMlock")}
 							active={params.mlock}
 							onClick={() => onParamChange("mlock", !params.mlock)}
 						/>
 						<ToggleChip
-							label="MMap"
+							label={i18nextSingleton.t("common:ui.mmap")}
 							active={params.mmap}
 							onClick={() => onParamChange("mmap", !params.mmap)}
 						/>
 						<ToggleChip
-							label="Direct I/O"
+							label={i18nextSingleton.t("common:ui.directIO")}
 							active={params.directIo}
 							onClick={() => onParamChange("directIo", !params.directIo)}
 						/>
 						<ToggleChip
-							label="No Warmup"
+							label={i18nextSingleton.t("common:ui.noWarmup")}
 							active={params.noWarmup}
 							onClick={() => onParamChange("noWarmup", !params.noWarmup)}
 						/>
@@ -58,7 +60,7 @@ export const OptionsCard = React.memo(
 							onClick={() => onParamChange("jinja", !params.jinja)}
 						/>
 						<ToggleChip
-							label="SWA Full"
+							label={i18nextSingleton.t("common:ui.swaFull")}
 							active={params.swaFull}
 							onClick={() => onParamChange("swaFull", !params.swaFull)}
 						/>
@@ -73,21 +75,21 @@ export const OptionsCard = React.memo(
 							}
 						/>
 						<ToggleChip
-							label="KV Unified"
+							label={i18nextSingleton.t("common:ui.kvUnified")}
 							active={params.kvUnified ?? false}
 							onClick={() => onParamChange("kvUnified", !(params.kvUnified ?? false))}
 						/>
 					</HStack>
 					<Flex gap="4">
 						<NumberField
-							label="Batch Size"
+							label={i18nextSingleton.t("common:ui.batchSize")}
 							value={params.batchSize}
 							onChange={(v) => onParamChange("batchSize", v)}
 							min={1}
 							step={256}
 						/>
 						<NumberField
-							label="Micro Batch"
+							label={i18nextSingleton.t("common:ui.microBatch")}
 							value={params.ubatchSize}
 							onChange={(v) => onParamChange("ubatchSize", v)}
 							min={1}
@@ -96,14 +98,14 @@ export const OptionsCard = React.memo(
 					</Flex>
 					<Flex gap="4">
 						<NumberField
-							label="Threads"
+							label={i18nextSingleton.t("common:ui.threads")}
 							value={params.threads}
 							onChange={(v) => onParamChange("threads", v)}
 							min={0}
 							suffix="0 = auto"
 						/>
 						<NumberField
-							label="Threads (Batch)"
+							label={i18nextSingleton.t("common:ui.threadsBatch")}
 							value={params.threadsBatch}
 							onChange={(v) => onParamChange("threadsBatch", v)}
 							min={0}
@@ -118,10 +120,11 @@ export const OptionsCard = React.memo(
 							letterSpacing="0.05em"
 							mb="1.5"
 						>
-							Chat Template
+
+							{i18nextSingleton.t("common:ui.chatTemplate")}
 						</Text>
 						<Input
-							placeholder="Auto-detect"
+							placeholder={i18nextSingleton.t("common:ui.autoDetect")}
 							size="sm"
 							bg="var(--wc-bg-subtle)"
 							borderColor="var(--wc-border-default)"
@@ -142,7 +145,8 @@ export const OptionsCard = React.memo(
 							letterSpacing="0.05em"
 							mb="1.5"
 						>
-							Custom Flags
+
+							{i18nextSingleton.t("common:ui.customFlags")}
 						</Text>
 						<Input
 							placeholder="--some-flag value"

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Button, Flex, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import type { IModel, IWhisperModel } from "@warpcore/shared";
 import {
@@ -199,7 +200,7 @@ function RowMenu({
 				}}
 			>
 				<ExternalLink size={14} />
-				<Text fontSize="12px">Open on HuggingFace</Text>
+				<Text fontSize="12px">{i18nextSingleton.t("models:actions.openOnHuggingFace")}</Text>
 			</HStack>
 			<HStack
 				gap="2"
@@ -215,7 +216,7 @@ function RowMenu({
 				}}
 			>
 				<FolderIcon size={14} />
-				<Text fontSize="12px">Copy folder path</Text>
+				<Text fontSize="12px">{i18nextSingleton.t("models:actions.copyFolderPath")}</Text>
 			</HStack>
 			{model._modelType === "llama" && (
 				<HStack
@@ -232,13 +233,13 @@ function RowMenu({
 					}}
 				>
 					<RefreshCw size={14} />
-					<Text fontSize="12px">Re-parse Metadata</Text>
+					<Text fontSize="12px">{i18nextSingleton.t("models:actions.reparseMetadata")}</Text>
 				</HStack>
 			)}
 			<Box h="1px" bg="var(--wc-border-subtle)" my="1" />
 			<HStack gap="2" px="3" py="2" cursor="not-allowed" color="var(--wc-text-disabled)">
 				<Trash2 size={14} />
-				<Text fontSize="12px">Delete</Text>
+				<Text fontSize="12px">{i18nextSingleton.t("backends:actions.delete")}</Text>
 			</HStack>
 		</Box>
 	);
@@ -354,7 +355,7 @@ export function ModelsPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Models"
+				title={i18nextSingleton.t("common:navigation.models")}
 				subtitle={`${allModels.length} model${allModels.length !== 1 ? "s" : ""}`}
 				icon={<FolderOpen size={20} />}
 				actions={
@@ -372,7 +373,7 @@ export function ModelsPage() {
 								}}
 							/>
 							<Input
-								placeholder="Search models..."
+								placeholder={i18nextSingleton.t("common:ui.searchModels")}
 								value={search}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 									setSearch(e.target.value)
@@ -410,7 +411,8 @@ export function ModelsPage() {
 						disabled={scanMut.loading}
 					>
 						{scanMut.loading ? <Spinner size="xs" /> : <Search size={15} />}
-						Re-Scan Folders
+
+						{i18nextSingleton.t("models:actions.reScanFolders")}
 					</Button>
 				}
 			/>
@@ -425,20 +427,20 @@ export function ModelsPage() {
 					borderColor="var(--wc-border-subtle)"
 				>
 					<Box w={cols.type}>
-						<SortHeader label="Type" sortKey="type" sort={sort} onSort={handleSort} />
+						<SortHeader label={i18nextSingleton.t("recipes:fields.inputType")} sortKey="type" sort={sort} onSort={handleSort} />
 					</Box>
 					<Box flex={cols.name}>
-						<SortHeader label="Model" sortKey="name" sort={sort} onSort={handleSort} />
+						<SortHeader label={i18nextSingleton.t("common:fields.model")} sortKey="name" sort={sort} onSort={handleSort} />
 					</Box>
 					<Box w={cols.user}>
-						<SortHeader label="User" sortKey="user" sort={sort} onSort={handleSort} />
+						<SortHeader label={i18nextSingleton.t("common:fields.user")} sortKey="user" sort={sort} onSort={handleSort} />
 					</Box>
 					<Box w={cols.quant}>
-						<SortHeader label="Quant" sortKey="quant" sort={sort} onSort={handleSort} />
+						<SortHeader label={i18nextSingleton.t("common:fields.quant")} sortKey="quant" sort={sort} onSort={handleSort} />
 					</Box>
 					<Box w={cols.vision}>
 						<SortHeader
-							label="Vision"
+							label={i18nextSingleton.t("common:fields.vision")}
 							sortKey="vision"
 							sort={sort}
 							onSort={handleSort}
@@ -446,7 +448,7 @@ export function ModelsPage() {
 					</Box>
 					<Box w={cols.params}>
 						<SortHeader
-							label="Params"
+							label={i18nextSingleton.t("common:fields.params")}
 							sortKey="params"
 							sort={sort}
 							onSort={handleSort}
@@ -454,7 +456,7 @@ export function ModelsPage() {
 					</Box>
 					<Box w={cols.size}>
 						<SortHeader
-							label="Size"
+							label={i18nextSingleton.t("checkpoints:sortFields.size")}
 							sortKey="size"
 							sort={sort}
 							onSort={handleSort}
@@ -463,7 +465,7 @@ export function ModelsPage() {
 					</Box>
 					<Box w={cols.context}>
 						<SortHeader
-							label="Context"
+							label={i18nextSingleton.t("common:fields.context")}
 							sortKey="context"
 							sort={sort}
 							onSort={handleSort}
@@ -472,7 +474,7 @@ export function ModelsPage() {
 					</Box>
 					<Box w={cols.files}>
 						<SortHeader
-							label="Files"
+							label={i18nextSingleton.t("common:fields.files")}
 							sortKey="files"
 							sort={sort}
 							onSort={handleSort}
@@ -486,7 +488,8 @@ export function ModelsPage() {
 				{allModels.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models found. Configure a directory in Settings, then scan.
+
+							{i18nextSingleton.t("models:emptyState")}
 						</Text>
 					</Flex>
 				)}
@@ -495,7 +498,8 @@ export function ModelsPage() {
 				{allModels.length > 0 && filtered.length === 0 && (
 					<Flex h="200px" alignItems="center" justifyContent="center">
 						<Text fontSize="13px" color="var(--wc-text-faint)">
-							No models match "{search}"
+
+							{i18nextSingleton.t("common:ui.noModelsMatchQuotePrefix")}{search}"
 						</Text>
 					</Flex>
 				)}

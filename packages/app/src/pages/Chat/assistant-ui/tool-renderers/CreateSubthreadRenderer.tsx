@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { Bot, Loader, PauseCircle } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
@@ -63,14 +64,15 @@ export const CreateSubthreadRenderer = React.memo(
 							cursor={actioning ? "not-allowed" : "pointer"}
 							_hover={{ bg: "var(--wc-bg-hover)" }}
 							onClick={handleBackground}
-							title="Background this task"
+							title={i18nextSingleton.t("common:ui.backgroundThisTask")}
 						>
 							{actioning ? (
 								<Loader size={10} className="animate-spin" />
 							) : (
 								<PauseCircle size={10} />
 							)}
-							Background
+
+							{i18nextSingleton.t("common:ui.background")}
 						</Box>
 					)}
 				</HStack>
@@ -153,14 +155,15 @@ export const CreateSubthreadRendererMeta: IToolCallRenderer = {
 						cursor={actioning ? "not-allowed" : "pointer"}
 						_hover={{ bg: "var(--wc-bg-hover)" }}
 						onClick={handleBackground}
-						title="Background this task"
+						title={i18nextSingleton.t("common:ui.backgroundThisTask")}
 					>
 						{actioning ? (
 							<Loader size={10} className="animate-spin" />
 						) : (
 							<PauseCircle size={10} />
 						)}
-						Background
+
+						{i18nextSingleton.t("common:ui.background")}
 					</Box>
 				)}
 			</HStack>

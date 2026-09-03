@@ -12,16 +12,18 @@ export function AuthProvider({ children }: IAuthProviderProps) {
 	const [isChecking, setIsChecking] = useState(true);
 
 	useEffect(() => {
+		let timer: ReturnType<typeof setTimeout> | null = null;
 		async function check() {
 			const result = await fetchAuthCheck();
 			if (!result.ok) {
-				const timer = setTimeout(check, 1000);
+				timer = setTimeout(check, 1000);
 				return;
 			}
 			setIsAuthenticated(result.ok && !!result.data);
 			setIsChecking(false);
 		}
 		check();
+		return () => { if (timer) clearTimeout(timer); };
 	}, []);
 
 	if (isChecking) {

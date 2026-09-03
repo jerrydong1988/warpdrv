@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Badge,
 	Box,
@@ -106,7 +107,7 @@ export function RecipesPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Recipes"
+				title={i18nextSingleton.t("common:navigation.recipes")}
 				subtitle={`${recipes.length} Pipelines`}
 				icon={<ScrollText size={20} />}
 				actions={
@@ -116,7 +117,7 @@ export function RecipesPage() {
 							w="200px"
 						>
 							<Input
-								placeholder="Search recipes..."
+								placeholder={i18nextSingleton.t("recipes:searchPlaceholder")}
 								size="sm"
 								bg="var(--wc-bg-card)"
 								borderColor="var(--wc-border-default)"
@@ -253,7 +254,8 @@ export function RecipesPage() {
 									<Play size={14} />
 								</Box>
 								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Currently running:{" "}
+
+									{i18nextSingleton.t("common:ui.currentlyRunning")}{" "}
 									<Text
 										as="span"
 										fontWeight="600"
@@ -270,7 +272,8 @@ export function RecipesPage() {
 								_hover={{ bg: "var(--wc-accent-yellow)" }}
 								onClick={() => setRunningRecipe(activeRunRecipe)}
 							>
-								Monitor
+
+								{i18nextSingleton.t("common:ui.monitor")}
 							</Button>
 						</Flex>
 					)}
@@ -291,7 +294,8 @@ export function RecipesPage() {
 									fontWeight="600"
 									color="var(--wc-text-heading)"
 								>
-									All Recipes
+
+									{i18nextSingleton.t("common:ui.allRecipes")}
 								</Text>
 								<Badge
 									size="sm"
@@ -324,14 +328,15 @@ export function RecipesPage() {
 								<Flex h="200px" alignItems="center" justifyContent="center">
 									<VStack gap="3" color="var(--wc-text-placeholder)">
 										<ScrollText size={40} />
-										<Text fontSize="14px">No recipes yet</Text>
+										<Text fontSize="14px">{i18nextSingleton.t("common:ui.noRecipesYet")}</Text>
 										<Text
 											fontSize="12px"
 											color="var(--wc-text-faint)"
 											textAlign="center"
 											mb="4"
 										>
-											Read the{" "}
+
+											{i18nextSingleton.t("checkpoints:guideText")}{" "}
 											<ChakraLink
 												href="https://github.com/mikjee/warpdrv/blob/master/docs/guides/recipes.md"
 												color="var(--wc-accent-blue)"
@@ -345,9 +350,11 @@ export function RecipesPage() {
 											>
 												guide
 											</ChakraLink>{" "}
-											on how to use Recipes.
+
+											{i18nextSingleton.t("common:ui.onHowToUseRecipes")}
 											<br />
-											Or add a{" "}
+
+											{i18nextSingleton.t("common:ui.orAddA")}{" "}
 											<ChakraLink
 												href="https://github.com/mikjee/warpdrv/tree/master/docs/recipes"
 												color="var(--wc-accent-blue)"
@@ -361,7 +368,8 @@ export function RecipesPage() {
 											>
 												sample
 											</ChakraLink>{" "}
-											recipe from the docs.
+
+											{i18nextSingleton.t("common:ui.recipeFromTheDocs")}
 										</Text>
 										<Button
 											size="xs"
@@ -371,7 +379,7 @@ export function RecipesPage() {
 											onClick={() => setShowAddDialog(true)}
 										>
 											<Plus size={13} />
-											<Text ml="1.5">Create your first recipe</Text>
+											<Text ml="1.5">{i18nextSingleton.t("common:ui.createYourFirstRecipe")}</Text>
 										</Button>
 									</VStack>
 								</Flex>
@@ -405,7 +413,7 @@ export function RecipesPage() {
 			)}
 			{deletingId && (
 				<ConfirmDialog
-					title="Delete Recipe?"
+					title={i18nextSingleton.t("common:ui.deleteRecipe")}
 					message={`This will permanently delete "${recipes[deletingId]?.name}".`}
 					isOpen={true}
 					isLoading={deleteMut.loading}
@@ -485,7 +493,7 @@ function RecipeRow({ recipe, onRun, onEdit, onDelete }: IRecipeRowProps) {
 								>
 									<HStack gap="1">
 										<Lock size={9} />
-										<Text>Built-in</Text>
+										<Text>{i18nextSingleton.t("common:ui.builtIn")}</Text>
 									</HStack>
 								</Badge>
 							)}
@@ -500,7 +508,8 @@ function RecipeRow({ recipe, onRun, onEdit, onDelete }: IRecipeRowProps) {
 									fontSize="10px"
 									fontWeight="600"
 								>
-									Running
+
+									{i18nextSingleton.t("chat:toolStatus.running")}
 								</Badge>
 							)}
 						</HStack>

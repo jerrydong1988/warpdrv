@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Box,
 	Button,
@@ -79,7 +80,7 @@ const BackendCombobox = React.memo(
 			>
 				<Combobox.Control>
 					<Combobox.Input
-						placeholder="Search backends..."
+						placeholder={i18nextSingleton.t("backends:searchPlaceholder")}
 						bg="var(--wc-bg-subtle)"
 						borderColor="var(--wc-border-default)"
 						color="var(--wc-text-secondary)"
@@ -112,7 +113,8 @@ const BackendCombobox = React.memo(
 									py="4"
 									textAlign="center"
 								>
-									No matches
+
+									{i18nextSingleton.t("chat:slashCmd.noMatches")}
 								</Text>
 							</Combobox.Empty>
 							{collection.items.map((item) => {
@@ -218,7 +220,7 @@ const GroupCombobox = React.memo(
 			>
 				<Combobox.Control>
 					<Combobox.Input
-						placeholder="Search groups..."
+						placeholder={i18nextSingleton.t("common:ui.searchGroups")}
 						bg="var(--wc-bg-subtle)"
 						borderColor="var(--wc-border-default)"
 						color="var(--wc-text-secondary)"
@@ -251,7 +253,8 @@ const GroupCombobox = React.memo(
 									py="4"
 									textAlign="center"
 								>
-									No matches
+
+									{i18nextSingleton.t("chat:slashCmd.noMatches")}
 								</Text>
 							</Combobox.Empty>
 							{collection.items.map((item) => {
@@ -517,7 +520,8 @@ export const BackendPickerCard = React.memo(
 								}}
 							>
 								<Text fontSize="13px" fontWeight="500">
-									Backend
+
+									{i18nextSingleton.t("common:ui.backend")}
 								</Text>
 							</Button>
 							<Button
@@ -548,7 +552,8 @@ export const BackendPickerCard = React.memo(
 								}}
 							>
 								<Text fontSize="13px" fontWeight="500">
-									Group
+
+									{i18nextSingleton.t("common:ui.group")}
 								</Text>
 							</Button>
 						</HStack>
@@ -556,12 +561,14 @@ export const BackendPickerCard = React.memo(
 
 					{Object.values(backends).length === 0 && (
 						<Text fontSize="12px" color="var(--wc-text-disabled)">
-							No backends registered. Go to Backends page.
+
+							{i18nextSingleton.t("common:ui.noBackendsRegisteredGoToBackendsPage")}
 						</Text>
 					)}
 					{isGroup && Object.values(groups).length === 0 && (
 						<Text fontSize="12px" color="var(--wc-text-disabled)">
-							No backend groups. Create one in Backends page.
+
+							{i18nextSingleton.t("common:ui.noBackendGroupsCreateOneInBackendsPage")}
 						</Text>
 					)}
 					{Object.values(backends).length > 0 &&
@@ -623,7 +630,7 @@ export const BackendPickerCard = React.memo(
 					{deviceOptions.length > 0 && (
 						<VStack align="stretch" gap="4" mt="5">
 							<SelectField
-								label="Device"
+								label={i18nextSingleton.t("common:ui.device")}
 								value={device}
 								options={deviceOptions}
 								onChange={handleDeviceChange}
@@ -639,14 +646,16 @@ export const BackendPickerCard = React.memo(
 										textTransform="uppercase"
 										letterSpacing="0.05em"
 									>
-										Autofit GPU Layers
+
+										{i18nextSingleton.t("common:ui.autofitGpuLayers2")}
 									</Text>
 									<Text fontSize="10px" color="var(--wc-text-muted)">
-										Let llama.cpp auto-distribute layers
+
+										{i18nextSingleton.t("common:ui.letLlamaCppAutoDistributeLayers")}
 									</Text>
 								</VStack>
 								<Switch.Root
-									label="Autofit GPU layers"
+									label={i18nextSingleton.t("common:ui.autofitGpuLayers")}
 									checked={gpuLayersAuto}
 									onCheckedChange={(d) =>
 										handleSelect("gpuLayersAuto", d.checked)
@@ -723,15 +732,17 @@ export const BackendPickerCard = React.memo(
 												textTransform="uppercase"
 												letterSpacing="0.05em"
 											>
-												Multi-GPU Split
+
+												{i18nextSingleton.t("common:ui.multiGpuSplit")}
 											</Text>
 											<Text fontSize="10px" color="var(--wc-text-muted)">
-												Distribute layers across GPUs
+
+												{i18nextSingleton.t("common:ui.distributeLayersAcrossGpus")}
 											</Text>
 										</VStack>
 									</HStack>
 									<Switch.Root
-										label="Enable multi-GPU split"
+										label={i18nextSingleton.t("common:ui.enableMultiGpuSplit")}
 										checked={params.multiGpu ?? false}
 										onCheckedChange={(d) => handleSelect("multiGpu", d.checked)}
 										color={
@@ -866,12 +877,13 @@ export const BackendPickerCard = React.memo(
 													handleSplitChange(values);
 												}}
 											>
-												Equal distribution
+
+												{i18nextSingleton.t("common:ui.equalDistribution")}
 											</Button>
 										</HStack>
 										<HStack gap="3">
 											<SelectField
-												label="Split Mode"
+												label={i18nextSingleton.t("common:ui.splitMode")}
 												value={params.splitMode ?? ESplitMode.LAYER}
 												options={[
 													ESplitMode.LAYER,

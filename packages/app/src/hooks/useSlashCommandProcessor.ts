@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useStore } from "@/store";
 
-export type ISlashCommandApi = {};
+export type ISlashCommandApi = Record<string, never>;
 
 export function useSlashCommandProcessor() {
 	const executeCommands = useCallback(async (extraParams?: Record<string, string>) => {

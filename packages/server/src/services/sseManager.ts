@@ -1,5 +1,8 @@
 import { createSession } from "better-sse";
 import type { Request, Response } from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+const MAX_SESSIONS = 32;
 
 export class SSEManager {
 	private sessions: Array<{ session: any; req: Request; res: Response }> = [];
@@ -66,7 +69,16 @@ export class SSEManager {
 		console.log("[SSE] New connection established");
 
 		try {
-			const session = await createSession(req, res);
+			if (this.sessions.length >= MAX_SESSIONS) {
+				console.error(`[SSE] Refusing connection: ${MAX_SESSIONS}-session cap reached`);
+				res.status(503).end();
+				onDisconnect();
+				return;
+			}
+			const session = await createSession(
+				req as unknown as IncomingMessage,
+				res as unknown as ServerResponse,
+			);
 			const sessionInfo = { session, req, res };
 			this.sessions.push(sessionInfo);
 			console.log(`[SSE] Total connections: ${this.sessions.length}`);
@@ -84,7 +96,7 @@ export class SSEManager {
 				}
 			}
 
-			await new Promise<void>((resolve, reject) => {
+			await new Promise<void>((resolve) => {
 				req.on("close", () => resolve());
 				req.on("error", () => resolve());
 			});
@@ -101,7 +113,9 @@ export class SSEManager {
 					for (const handler of handlers) {
 						try {
 							await handler();
-						} catch {}
+						} catch (error) {
+							console.error(`[SSE] Disconnect handler error for ${channel}:`, error);
+						}
 					}
 				}
 			})();

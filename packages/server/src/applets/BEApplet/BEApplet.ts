@@ -2,7 +2,9 @@ import {
 	EChatRole,
 	EMessagePartType,
 	type IChatMessage,
+	type IChatThread,
 	type IMessagePart,
+	type IToolAttachment,
 	type TOpenAIMessage,
 } from "@warpcore/bridge";
 import type { IAppletFn, TAppletDefinition } from "@warpcore/realmcore";
@@ -12,6 +14,7 @@ import type {
 	IGuardrailError,
 	IGuardrailIssue,
 	IMode,
+	INotification,
 	IServer,
 	IThreadSenderInfo,
 } from "@warpcore/shared";
@@ -286,7 +289,7 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 						}),
 					);
 					for (const entry of fetchedPrompts) {
-						if (entry.length === 2) promptMap.set(entry[0], entry[1]);
+						if (entry.length === 2 && entry[0] && entry[1]) promptMap.set(entry[0], entry[1]);
 					}
 				}
 
@@ -492,10 +495,9 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			const mode = await getMode(threadState.modeId as string);
 			if (!mode) return false;
 
-			const toolNames =
-				mode.allowedTools.length > 0 && typeof mode.allowedTools[0] === "string"
-					? mode.allowedTools
-					: mode.allowedTools.map((t) => t.toolName);
+			const toolNames = (mode.allowedTools as Array<IToolAttachment | string>).map((tool) =>
+				typeof tool === "string" ? tool : tool.toolName,
+			);
 
 			if (toolNames.length === 0 || !toolNames.includes(payload.toolName)) {
 				await api.eventNode.invoke("/warpcore", "bridge.updateMessageState", {
@@ -778,7 +780,11 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			// Only auto-process if inference ended normally (not user abort, error, or pending approval)
 			if (cause !== "completed") return;
 
-			const thread = await api.eventNode.invoke("/warpcore", "bridge.getThread", threadId);
+			const thread = (await api.eventNode.invoke(
+				"/warpcore",
+				"bridge.getThread",
+				threadId,
+			)) as IChatThread | null;
 			if (!thread || !thread.parentId) return;
 
 			// Pre-send checks (before consuming notifications)
@@ -796,11 +802,11 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			if (isRunning) return;
 
 			// Fetch pending notifications, filter to parent thread only
-			const notifications = await api.eventNode.invoke(
+			const notifications = (await api.eventNode.invoke(
 				"/warpcore",
 				"bridge.listNotifications",
 				{ threadId },
-			);
+			)) as INotification[];
 			const parentMessages = notifications.filter(
 				(n) => n.senderType === "thread" && n.senderId === thread.parentId,
 			);
@@ -817,11 +823,11 @@ const fn: IAppletFn<IAppletAPIBE> = async (api) => {
 			if (!combinedMessage) return;
 
 			// Load saved tools + inject subthread tools
-			const savedTools = await api.eventNode.invoke(
+			const savedTools = (await api.eventNode.invoke(
 				"/warpcore",
 				"bridge.getThreadAttachedTools",
 				threadId,
-			);
+			)) as { tools: IToolAttachment[] } | null;
 			const attachedTools = mergeWithInjectedTools(savedTools?.tools ?? []);
 
 			const inferenceUrl = `http://127.0.0.1:${server.port}`;

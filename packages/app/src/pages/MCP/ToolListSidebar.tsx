@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import type {
 	IServerPermission as IMcpServerPermission,
@@ -109,7 +110,8 @@ export function ToolListSidebar({
 				textTransform="uppercase"
 				letterSpacing="0.05em"
 			>
-				Tools
+
+				{i18nextSingleton.t("common:ui.tools")}
 			</Text>
 
 			{serverNames.map((name) => {
@@ -264,7 +266,8 @@ export function ToolListSidebar({
 										px="2"
 										py="1"
 									>
-										No tools available
+
+										{i18nextSingleton.t("chat:toolList.noToolsAvailable")}
 									</Text>
 								)}
 							</VStack>
@@ -275,7 +278,8 @@ export function ToolListSidebar({
 
 			{serverNames.length === 0 && (
 				<Text fontSize="12px" color="var(--wc-text-disabled)" textAlign="center" py="4">
-					No MCP servers configured
+
+					{i18nextSingleton.t("mcp:labels.noServers")}
 				</Text>
 			)}
 		</Box>

@@ -1,27 +1,29 @@
-import { Box, Button, HStack, Input, Separator, Text, Textarea, VStack } from "@chakra-ui/react";
-import type { IChatThread as IBridgeChatThread } from "@warpcore/bridge";
-import type { TModeId } from "@warpcore/shared";
-import { EReasoningEffort, EServerStatus } from "@warpcore/shared";
-import { CheckIcon, ChevronDown, Eye, FolderInput, PencilIcon, XIcon } from "lucide-react";
-import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { IoStarSharp } from "react-icons/io5";
-import { useShallow } from "zustand/react/shallow";
-import { fetchWorkspace, updateFolder, updateFolderTopic, updateWorkspace } from "@/api/services";
-import { ServerDot } from "@/components/ServerPicker";
-import { useDependantState } from "@/hooks/useDependantState";
-import { SelectField } from "@/pages/Servers/LaunchServer/Helpers";
-import { useStore } from "@/store";
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { createPortal } from 'react-dom';
+import { IoStarSharp } from 'react-icons/io5';
+import { useShallow } from 'zustand/react/shallow';
+import { Box, Text, HStack, VStack, Input, Textarea, Button, Separator } from '@chakra-ui/react';
+import { PencilIcon, CheckIcon, XIcon, FolderInput, ChevronDown, Eye } from 'lucide-react';
+import type { IChatThread as IBridgeChatThread } from '@warpcore/bridge';
+import { useStore } from '@/store';
+import { updateFolder, updateWorkspace, fetchWorkspace, updateFolderTopic } from '@/api/services';
+import { useDependantState } from '@/hooks/useDependantState';
+import { EServerStatus, EReasoningEffort } from '@warpcore/shared';
+import type { TModeId } from '@warpcore/shared';
+import { ServerDot } from '@/components/ServerPicker';
+import { SelectField } from '@/pages/Servers/LaunchServer/Helpers';
+import { formatDate } from '@/utils/intl';
 
 interface IChatThread extends IBridgeChatThread {
 	messageCount?: number;
 	totalTokens?: number;
 }
 
-function formatDate(ts: number): string {
-	const d = new Date(ts);
-	return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+// Follows the app locale via utils/intl (dates were previously hardcoded to
+// 'en-US' and rendered English months in the zh-CN UI).
+function formatThreadDate(ts: number): string {
+	return formatDate(new Date(ts), { month: 'short', day: 'numeric' });
 }
 
 function WorkspaceRenameInput({
@@ -76,12 +78,8 @@ interface WorkspaceThreadRowProps {
 	onSetStarred: (id: string, starred: boolean) => void;
 	containerId: string;
 }
-function WorkspaceThreadRow({
-	thread,
-	onSelect,
-	onSetStarred,
-	containerId,
-}: WorkspaceThreadRowProps) {
+function WorkspaceThreadRow({ thread, onSelect, onSetStarred, containerId }: WorkspaceThreadRowProps) {
+	const { t } = useTranslation();
 	const totalTokens = (thread.totalPromptTokens ?? 0) + (thread.totalCompletionTokens ?? 0);
 
 	const metaFields = useMemo(() => {
@@ -129,22 +127,21 @@ function WorkspaceThreadRow({
 						whiteSpace="nowrap"
 						flex="1"
 					>
-						{thread.title || "New Chat"}
+						{thread.title || t('common:ui.newChat')}
 					</Text>
 				</HStack>
 				<HStack gap="2" flexShrink={0}>
 					{totalTokens > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
-							{(totalTokens / 1000).toFixed(1)}k tokens
-						</Text>
+							{(totalTokens / 1000).toFixed(1)}{t('common:ui.kTokens')}</Text>
 					)}
 					{(thread.messageCount ?? 0) > 0 && (
 						<Text fontSize="11px" color="var(--wc-text-faint)">
-							{thread.messageCount} msg
+							{thread.messageCount} {t('chat:threadList.msg')}
 						</Text>
 					)}
 					<Text fontSize="11px" color="var(--wc-text-disabled)">
-						{formatDate(thread.updatedAt)}
+						{formatThreadDate(thread.updatedAt)}
 					</Text>
 				</HStack>
 			</HStack>
@@ -154,17 +151,16 @@ function WorkspaceThreadRow({
 }
 
 export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
-	const folders = useStore((s) => s.folders);
-	const setFolders = useStore((s) => s.setFolders);
-	const folder = folders.find((f) => f.id === folderId);
-	const setWorkspace = useStore((s) => s.setWorkspace);
-	const setWorkspaceState = useStore((s) => s.setWorkspaceState);
-	const workspaceProjectRoot = useStore(
-		(s) => s.workspaceStates[folderId]?.projectRoot as string | undefined,
-	);
-	const serversMap = useStore((s) => s.servers);
-	const chatPresets = useStore((s) => s.chatPresets);
-	const workspaceState = useStore((s) => s.workspaceStates[folderId]);
+	const { t } = useTranslation();
+	const folders = useStore(s => s.folders);
+	const setFolders = useStore(s => s.setFolders);
+	const folder = folders.find(f => f.id === folderId);
+	const setWorkspace = useStore(s => s.setWorkspace);
+	const setWorkspaceState = useStore(s => s.setWorkspaceState);
+	const workspaceProjectRoot = useStore(s => s.workspaceStates[folderId]?.projectRoot as string | undefined);
+	const serversMap = useStore(s => s.servers);
+	const chatPresets = useStore(s => s.chatPresets);
+	const workspaceState = useStore(s => s.workspaceStates[folderId]);
 	const defaultServerId = workspaceState?.defaultServerId as string | undefined;
 	const defaultPresetId = workspaceState?.defaultPresetId as string | undefined;
 	const defaultModeId = workspaceState?.defaultModeId as TModeId | undefined;
@@ -197,7 +193,8 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				if (res.data) {
 					setWorkspace(res.data);
 				}
-				setDescription(res.data?.data?.description ?? "");
+				const value = res.data?.data?.description;
+				setDescription(typeof value === "string" ? value : "");
 			}
 		});
 	}, [folderId, setWorkspace]);
@@ -220,16 +217,16 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 	const handleTopicSave = async () => {
 		const trimmed = topic.trim();
 		if (!trimmed) {
-			setTopicError("Topic cannot be empty");
+			setTopicError(t('chat:workspace.topicEmpty'));
 			return;
 		}
-		if (trimmed === "global") {
-			setTopicError('Topic "global" is reserved');
+		if (trimmed === 'global') {
+			setTopicError(t('chat:workspace.topicReserved'));
 			return;
 		}
 		const res = await updateFolderTopic(folderId, trimmed);
 		if (!res.ok) {
-			setTopicError(res.error ?? "Failed to update topic");
+			setTopicError(res.error ?? t('chat:workspace.topicUpdateFailed'));
 			return;
 		}
 		setTopicError(null);
@@ -441,7 +438,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 					<Textarea
 						value={description}
 						onChange={(e) => handleDescriptionChange(e.target.value)}
-						placeholder="Describe this workspace..."
+						placeholder={t('common:ui.describeThisWorkspace')}
 						rows={3}
 						bg="var(--wc-bg-card)"
 						borderColor="var(--wc-border-default)"
@@ -457,26 +454,10 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 
 				{/* Workspace project root */}
 				<Separator w="full" mt="2" mb="4" borderColor="var(--wc-border-subtle)" />
-				<Text
-					style={{
-						color: "var(--wc-text-secondary)",
-						fontSize: "14px",
-						textTransform: "uppercase",
-					}}
-				>
-					Workspace Defaults
-				</Text>
-				<br />
+				<Text style={{ color: "var(--wc-text-secondary)", fontSize: "14px", textTransform: "uppercase" }}>{t('chat:workspace.workspaceDefaults')}</Text><br/>
 				<Box w="full">
-					<Text
-						fontSize="12px"
-						fontWeight="600"
-						color="var(--wc-text-muted)"
-						textTransform="uppercase"
-						letterSpacing="0.05em"
-						mb="1"
-					>
-						Project Root
+					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
+						{t('chat:workspace.projectRoot')}
 					</Text>
 					<HStack gap="2">
 						<Input
@@ -490,7 +471,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 									setWorkspaceState(folderId, { projectRoot: prValue.trim() });
 								}
 							}}
-							placeholder="No project root set"
+							placeholder={t('chat:workspace.noProjectRootSet')}
 							fontFamily='"Geist Mono", monospace'
 							bg="var(--wc-bg-card)"
 							borderColor="var(--wc-border-default)"
@@ -509,7 +490,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 							minW="8"
 							px="0"
 							onClick={handleBrowseProjectRoot}
-							title="Browse directory"
+							title={t('common:ui.browseDirectory')}
 						>
 							<FolderInput size={14} />
 						</Button>
@@ -519,15 +500,8 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				{/* Default server + preset */}
 				<HStack w="full" gap="2" mt="2" mb="2">
 					<Box flex="1" position="relative">
-						<Text
-							fontSize="12px"
-							fontWeight="600"
-							color="var(--wc-text-muted)"
-							textTransform="uppercase"
-							letterSpacing="0.05em"
-							mb="1"
-						>
-							Server
+						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1">
+							{t('common:ui.server')}
 						</Text>
 						<HStack
 							gap="2"
@@ -560,9 +534,7 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 								</>
 							) : (
 								<>
-									<Text flex="1" color="var(--wc-text-faint)">
-										Select
-									</Text>
+									<Text flex="1" color="var(--wc-text-faint)">{t('common:ui.select')}</Text>
 									<ChevronDown size={12} style={{ opacity: 0.4 }} />
 								</>
 							)}
@@ -618,40 +590,27 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 									</HStack>
 								))}
 								{servers.length === 0 && (
-									<Text
-										px="3"
-										py="2"
-										fontSize="12px"
-										color="var(--wc-text-faint)"
-									>
-										No servers
-									</Text>
+									<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noServers')}</Text>
 								)}
 							</Box>
 						)}
 					</Box>
 					<SelectField
-						label="System Prompt"
-						value={defaultPresetId ?? ""}
-						options={["", ...chatPresets.map((p) => p.id)]}
-						optionLabels={{
-							"": "None",
-							...Object.fromEntries(chatPresets.map((p) => [p.id, p.name])),
-						}}
+						label={t('common:ui.systemPrompt')}
+						value={defaultPresetId ?? ''}
+						options={['', ...chatPresets.map(p => p.id)]}
+						optionLabels={{ '': t('common:ui.none'), ...Object.fromEntries(chatPresets.map(p => [p.id, p.name])) }}
 						onChange={handleDefaultPresetChange}
 					/>
 					<SelectField
-						label="Mode"
-						value={defaultModeId ?? ""}
-						options={["", ...Object.values(modes).map((m) => m.id)]}
-						optionLabels={{
-							"": "None",
-							...Object.fromEntries(Object.values(modes).map((m) => [m.id, m.name])),
-						}}
+						label={t('common:ui.mode')}
+						value={defaultModeId ?? ''}
+						options={['', ...Object.values(modes).map(m => m.id)]}
+						optionLabels={{ '': t('common:ui.none'), ...Object.fromEntries(Object.values(modes).map(m => [m.id, m.name])) }}
 						onChange={handleDefaultModeChange}
 					/>
 					<SelectField
-						label="Reasoning"
+						label={t('common:ui.reasoning')}
 						value={defaultReasoningEffort ?? EReasoningEffort.NONE}
 						options={Object.values(EReasoningEffort)}
 						optionLabels={{ none: "None", low: "Low", medium: "Medium", high: "High" }}
@@ -664,15 +623,8 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 				{/* Thread list */}
 				<Box w="full" mt="2">
 					<HStack justify="space-between" px="3" py="2">
-						<Text
-							fontSize="12px"
-							fontWeight="600"
-							color="var(--wc-text-muted)"
-							textTransform="uppercase"
-							letterSpacing="0.05em"
-						>
-							Threads
-						</Text>
+						<Text fontSize="12px" fontWeight="600" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">
+							{t('common:ui.threads')}</Text>
 						<Text fontSize="11px" color="var(--wc-text-disabled)">
 							{workspaceThreads.length}
 						</Text>
@@ -686,15 +638,8 @@ export const WorkspaceView: React.FC<{ folderId: string }> = ({ folderId }) => {
 						overflowY="auto"
 					>
 						{workspaceThreads.length === 0 && (
-							<Text
-								fontSize="12px"
-								color="var(--wc-text-disabled)"
-								px="3"
-								py="4"
-								textAlign="center"
-							>
-								No threads yet
-							</Text>
+							<Text fontSize="12px" color="var(--wc-text-disabled)" px="3" py="4" textAlign="center">
+								{t('common:ui.noThreadsYet')}</Text>
 						)}
 						<div id="workspace-starred" />
 						<div id="workspace-default" />

@@ -8,6 +8,7 @@ import type {
 import { EServerStatus, genFolderId, genMessageId, genThreadId } from "@warpcore/shared";
 import { createSession } from "better-sse";
 import { Router } from "express";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { broadcaster, orchestrator, persistence } from "../index";
 import { embeddingManager } from "../services/embeddingManager";
 import { abortThread, clearIfSame, registerAbort } from "../services/abortRegistry";
@@ -88,7 +89,7 @@ chatRouter.get("/threads/:threadId/embeddings", async (req, res) => {
 		const threadId = req.params.threadId;
 		const serverId = req.query.serverId as string;
 		if (!serverId) {
-			res.status(400).json({ ok: false, data: null, error: "serverId required" });
+			res.status(400).json({ ok: false, data: null, error: "Server ID is required" });
 			return;
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
@@ -117,7 +118,7 @@ chatRouter.post("/embedding/configure", async (req, res) => {
 	try {
 		const { serverId } = req.body as { serverId: string };
 		if (!serverId) {
-			return res.status(400).json({ ok: false, error: "serverId required" });
+			return res.status(400).json({ ok: false, error: "Server ID is required" });
 		}
 		const server = await store.get<IServer>(`servers:${serverId}`);
 		if (!server) {
@@ -217,7 +218,7 @@ chatRouter.get("/search", async (req, res) => {
 		if (mode === "thread" && !threadId) {
 			return res
 				.status(400)
-				.json({ ok: false, data: null, error: "threadId required for thread mode" });
+				.json({ ok: false, data: null, error: "Thread ID is required for thread mode" });
 		}
 
 		if (mode === "threads") {
@@ -670,7 +671,10 @@ chatRouter.post("/cancel/:threadId", (req, res) => {
 // GET /api/chat/events — global SSE channel for all bridge events
 chatRouter.get("/events", async (req, res) => {
 	console.log("[Chat SSE] New client connection");
-	const session = await createSession(req, res);
+	const session = await createSession(
+		req as unknown as IncomingMessage,
+		res as unknown as ServerResponse,
+	);
 	const channel = (broadcaster as any).getChannel();
 	channel.register(session);
 	console.log("[Chat SSE] Session registered to broadcaster channel");
@@ -785,7 +789,7 @@ chatRouter.post("/tool-calls/:id/resume", async (req, res) => {
 		return;
 	}
 	if (!threadId || !serverId) {
-		res.status(400).json({ ok: false, data: null, error: "Missing threadId or serverId" });
+		res.status(400).json({ ok: false, data: null, error: "Missing thread ID or server ID" });
 		return;
 	}
 

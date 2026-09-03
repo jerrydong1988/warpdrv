@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { Bot, Check, Loader, Minus, Square } from "lucide-react";
 import React, { useCallback } from "react";
@@ -32,7 +33,7 @@ export const SubthreadRow = React.memo(
 				const ids: string[] = [];
 				for (const id of Object.keys(threadNotifs)) {
 					const n = threadNotifs[id];
-					if (n.senderId === childThreadId) {
+					if (n?.senderId === childThreadId) {
 						ids.push(id);
 					}
 				}
@@ -56,7 +57,6 @@ export const SubthreadRow = React.memo(
 					{notificationIds.length > 0 && (
 						<Box
 							as="button"
-							type="button"
 							display="flex"
 							alignItems="center"
 							justifyContent="center"
@@ -106,7 +106,8 @@ export const SubthreadRow = React.memo(
 								</>
 							) : (
 								<Text fontSize="xs" fontWeight="600" color="var(--wc-text-faint)">
-									Loading…
+
+									{i18nextSingleton.t("common:ui.loadingEllipsis")}
 								</Text>
 							)}
 							<Text
@@ -138,9 +139,8 @@ export const SubthreadRow = React.memo(
 								</Text>
 								<Box
 									as="button"
-									type="button"
-									aria-label="Stop subthread"
-									title="Stop subthread"
+									aria-label={i18nextSingleton.t("common:ui.stopSubthread")}
+									title={i18nextSingleton.t("common:ui.stopSubthread")}
 									onClick={handleStop}
 									cursor="pointer"
 									display="flex"

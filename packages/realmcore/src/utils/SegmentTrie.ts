@@ -103,7 +103,10 @@ export class SegmentTrie<T> {
 	// named, star, and starstar edges.
 	private gather(node: ITrieNode<T>, found: Array<ITrieEntry<T>>): void {
 		if (node.terminal) for (const e of node.terminal) found.push(e);
-		for (const key in node.named) this.gather(node.named[key], found);
+		for (const key in node.named) {
+			const child = node.named[key];
+			if (child) this.gather(child, found);
+		}
 		if (node.star) this.gather(node.star, found);
 		if (node.starstar) this.gather(node.starstar, found);
 	}
@@ -118,6 +121,7 @@ export class SegmentTrie<T> {
 	private removeBranchAt(node: ITrieNode<T>, segs: Array<string>, i: number): boolean {
 		if (i >= segs.length) return true;
 		const seg = segs[i];
+		if (!seg) return false;
 		const child = seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 		if (!child) return false;
 		const cut = this.removeBranchAt(child, segs, i + 1);
@@ -157,7 +161,9 @@ export class SegmentTrie<T> {
 			if (node.terminal) for (const e of node.terminal) found.push(e);
 		} else {
 			const seg = segs[i];
-			if (node.named[seg]) this.walk(node.named[seg], segs, i + 1, found);
+			if (!seg) return;
+			const namedChild = node.named[seg];
+			if (namedChild) this.walk(namedChild, segs, i + 1, found);
 			if (node.star) this.walk(node.star, segs, i + 1, found);
 		}
 		// a ** edge absorbs zero or more segments from the current position, then
@@ -182,6 +188,7 @@ export class SegmentTrie<T> {
 			}
 		} else {
 			const seg = segs[i];
+			if (!seg) return this.isEmpty(node);
 			const child =
 				seg === STARSTAR ? node.starstar : seg === STAR ? node.star : node.named[seg];
 			if (child && this.removeAt(child, segs, i + 1, value)) {

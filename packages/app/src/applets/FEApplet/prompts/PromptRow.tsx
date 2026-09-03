@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Button, Flex, Input, Text, Textarea, VStack } from "@chakra-ui/react";
 import type { IChatPrompt } from "@warpcore/shared";
 import { ChevronDown, ChevronRight, FileText, Trash2 } from "lucide-react";
@@ -115,13 +116,14 @@ export const PromptRow = React.memo(({ prompt }: { prompt: IChatPrompt }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Content
+
+								{i18nextSingleton.t("common:ui.content")}
 							</Text>
 							<Textarea
 								size="xs"
 								fontSize="xs"
 								rows={6}
-								placeholder="Prompt content..."
+								placeholder={i18nextSingleton.t("common:ui.promptContentPlaceholder")}
 								value={draftContent}
 								onChange={(e) => setDraftContent(e.target.value)}
 								onBlur={handleContentBlur}
@@ -138,13 +140,14 @@ export const PromptRow = React.memo(({ prompt }: { prompt: IChatPrompt }) => {
 								fontSize="xs"
 								color="var(--wc-accent-red)"
 								bg="var(--wc-accent-red-bg-8)"
-								leftIcon={<Trash2 size={12} />}
 								onClick={(e) => {
 									e.stopPropagation();
 									setDeleteConfirmOpen(true);
 								}}
 							>
-								Delete
+								<Trash2 size={12} />
+
+								{i18nextSingleton.t("backends:actions.delete")}
 							</Button>
 						</Flex>
 					</VStack>
@@ -153,7 +156,7 @@ export const PromptRow = React.memo(({ prompt }: { prompt: IChatPrompt }) => {
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Prompt"
+					title={i18nextSingleton.t("common:ui.deletePrompt")}
 					message={`Are you sure you want to delete "${prompt.name}"?`}
 					isOpen={true}
 					onConfirm={handleDelete}
@@ -172,7 +175,8 @@ export const PromptsPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No prompts
+
+					{i18nextSingleton.t("common:ui.noPrompts")}
 				</Text>
 			</Box>
 		);

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import type { IMode, TModeId } from "@warpcore/shared";
@@ -162,7 +163,7 @@ export const ModeBadge = memo(() => {
 							}}
 						>
 							{!isActive && <Check size={14} color="var(--wc-accent-purple)" />}
-							<span style={{ flex: 1 }}>Default</span>
+							<span style={{ flex: 1 }}>{i18nextSingleton.t("common:ui.default")}</span>
 						</div>
 
 						<div
@@ -181,7 +182,8 @@ export const ModeBadge = memo(() => {
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No modes available
+
+								{i18nextSingleton.t("common:ui.noModesAvailable")}
 							</div>
 						) : (
 							availableModes.map((m: IMode) => {

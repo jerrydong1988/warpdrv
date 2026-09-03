@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Mirrors the (non-exported) ResizeDirection type from @tauri-apps/api/window
+type ResizeDirection = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West';
+
 // ---
 
 export const useTauriWindow = () => {
@@ -14,7 +17,7 @@ export const useTauriWindow = () => {
 
 	// ---
 
-	const installHook = () => {
+	const useInstallHook = () => {
 		useEffect(() => {
 			if (!isTauri) return;
 
@@ -126,7 +129,7 @@ export const useTauriWindow = () => {
 		getCurrentWindow().hide();
 	}, []);
 
-	const handleResizeStart = useCallback(async (direction: string) => {
+	const handleResizeStart = useCallback(async (direction: ResizeDirection) => {
 		if (!isTauri) return;
 		const { getCurrentWindow } = await import("@tauri-apps/api/window");
 		getCurrentWindow()
@@ -141,7 +144,7 @@ export const useTauriWindow = () => {
 		isMaximized,
 		isDragging,
 
-		installHook,
+		useInstallHook,
 
 		handleDoubleClick,
 		handleMinimize,

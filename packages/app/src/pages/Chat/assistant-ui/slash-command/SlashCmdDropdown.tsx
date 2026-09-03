@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -94,7 +95,8 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 			}
 			if (e.key === "Enter" && filtered.length > 0) {
 				e.preventDefault();
-				handleSelect(filtered[highlight]);
+				const selected = filtered[highlight];
+				if (selected) handleSelect(selected);
 				return;
 			}
 			if (e.key === "Escape") {
@@ -226,7 +228,8 @@ export const SlashCmdDropdown: React.FC<SlashCmdDropdownProps> = ({
 									color: "var(--wc-text-faint)",
 								}}
 							>
-								No matches
+
+								{i18nextSingleton.t("chat:slashCmd.noMatches")}
 							</div>
 						)}
 						{filtered.map((item, i) => (

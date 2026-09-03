@@ -8,7 +8,7 @@ export function formatLaunchCommand(cmd: string): string {
 	const tokens = parse(cmd).filter((t): t is string => typeof t === "string");
 	if (tokens.length === 0) return "";
 
-	const lines: string[] = [tokens[0]];
+	const lines: string[] = [tokens[0]!];
 	let i = 1;
 	while (i < tokens.length) {
 		const tok = tokens[i]!;

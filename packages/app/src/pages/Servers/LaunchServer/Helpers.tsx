@@ -1,6 +1,8 @@
-import { Box, Button, Flex, HStack, Input, Portal, Slider, Text } from "@chakra-ui/react";
-import { Check, ChevronDown } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState, useRef } from 'react';
+import {
+	Box, Text, HStack, Flex, Input, Button, Slider, Portal,
+} from '@chakra-ui/react';
+import { ChevronDown, Check } from 'lucide-react';
 
 // ============================================================
 // ToggleChip

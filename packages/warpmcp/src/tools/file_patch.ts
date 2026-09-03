@@ -1,28 +1,19 @@
-import fs from "fs/promises";
-import type { IWarpmcpDeps } from "../types";
-import { assertPathAllowed } from "../util/sandbox";
+import fs from 'fs/promises';
+import { assertPathAllowed, assertFileSafe } from '../util/sandbox';
+import type { IWarpmcpDeps } from '../types';
 
 export const filePatchDefinition = {
-	name: "file_patch",
-	description:
-		"Replace a text segment in a file. oldText must be non-empty and resolve to exactly one location. Whitespace and indentation are matched leniently, but the text content must be unique. Path must be within fsAllowedRoots.",
+	name: 'file_patch',
+	description: 'Replace a text segment in a file. oldText must be non-empty and resolve to exactly one location. Whitespace and indentation are matched leniently, but the text content must be unique. Path must be within fsAllowedRoots.',
 	inputSchema: {
-		type: "object",
+		type: 'object',
 		properties: {
-			path: { type: "string", description: "Absolute path to the file." },
-			oldText: {
-				type: "string",
-				description:
-					"Text to find. Must resolve to exactly one location. Copy it verbatim from the file including indentation; minor whitespace differences are tolerated.",
-			},
-			newText: { type: "string", description: "Replacement text." },
-			encoding: {
-				type: "string",
-				description: "Text encoding (default utf8).",
-				default: "utf8",
-			},
+			path: { type: 'string', description: 'Absolute path to the file.' },
+			oldText: { type: 'string', description: 'Text to find. Must resolve to exactly one location. Copy it verbatim from the file including indentation; minor whitespace differences are tolerated.' },
+			newText: { type: 'string', description: 'Replacement text.' },
+			encoding: { type: 'string', description: 'Text encoding (default utf8).', default: 'utf8' },
 		},
-		required: ["path", "oldText", "newText"],
+		required: ['path', 'oldText', 'newText'],
 	},
 	resultLimit: 40960,
 };
@@ -36,7 +27,7 @@ interface IMatch {
 function getLineStarts(text: string): Array<number> {
 	const out: Array<number> = [0];
 	for (let i = 0; i < text.length; i++) {
-		if (text[i] === "\n") {
+		if (text[i] === '\n') {
 			out.push(i + 1);
 		}
 	}
@@ -64,7 +55,7 @@ function getCommonIndent(lines: Array<string>): string {
 		}
 		indent = indent.slice(0, i);
 	}
-	return indent ?? "";
+	return indent ?? '';
 }
 
 function dedentLines(lines: Array<string>): Array<string> {
@@ -76,34 +67,29 @@ function reindent(text: string, indent: string): string {
 	if (!indent) {
 		return text;
 	}
-	return dedentLines(text.split("\n"))
+	return dedentLines(text.split('\n'))
 		.map((l) => (l.trim() ? indent + l : l))
-		.join("\n");
+		.join('\n');
 }
 
 function normalizeEol(text: string): string {
-	return text.replace(/\r\n/g, "\n");
+	return text.replace(/\r\n/g, '\n');
 }
 
 function collapseWs(text: string): string {
-	return text.replace(/\s+/g, " ").trim();
+	return text.replace(/\s+/g, ' ').trim();
 }
 
-function spanFromLines(
-	lineStarts: Array<number>,
-	contentLines: Array<string>,
-	startLine: number,
-	endLine: number,
-): { start: number; end: number } {
-	const start = lineStarts[startLine];
-	const end = lineStarts[endLine] + contentLines[endLine].length;
+function spanFromLines(lineStarts: Array<number>, contentLines: Array<string>, startLine: number, endLine: number): { start: number; end: number } {
+	const start = lineStarts[startLine] ?? 0;
+	const end = (lineStarts[endLine] ?? 0) + (contentLines[endLine]?.length ?? 0);
 	return { start, end };
 }
 
 function toMatch(content: string, start: number, end: number): IMatch {
-	const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+	const lineStart = content.lastIndexOf('\n', start - 1) + 1;
 	const prefix = content.slice(lineStart, start);
-	const indent = prefix.trim() ? "" : getLeadingWhitespace(content.slice(lineStart));
+	const indent = prefix.trim() ? '' : getLeadingWhitespace(content.slice(lineStart));
 	return { start, end, indent };
 }
 
@@ -118,13 +104,13 @@ function matchExact(content: string, needle: string): Array<IMatch> {
 }
 
 function matchLineTrimmed(content: string, needle: string): Array<IMatch> {
-	const contentLines = content.split("\n");
+	const contentLines = content.split('\n');
 	const lineStarts = getLineStarts(content);
-	const needleLines = needle.split("\n");
-	while (needleLines.length > 0 && !needleLines[needleLines.length - 1].trim()) {
+	const needleLines = needle.split('\n');
+	while (needleLines.length > 0 && !needleLines[needleLines.length - 1]?.trim()) {
 		needleLines.pop();
 	}
-	while (needleLines.length > 0 && !needleLines[0].trim()) {
+	while (needleLines.length > 0 && !needleLines[0]?.trim()) {
 		needleLines.shift();
 	}
 	if (needleLines.length === 0) {
@@ -134,7 +120,7 @@ function matchLineTrimmed(content: string, needle: string): Array<IMatch> {
 	for (let i = 0; i + needleLines.length <= contentLines.length; i++) {
 		let ok = true;
 		for (let j = 0; j < needleLines.length; j++) {
-			if (contentLines[i + j].trim() !== needleLines[j].trim()) {
+			if ((contentLines[i + j] ?? '').trim() !== (needleLines[j] ?? '').trim()) {
 				ok = false;
 				break;
 			}
@@ -149,23 +135,23 @@ function matchLineTrimmed(content: string, needle: string): Array<IMatch> {
 }
 
 function matchWhitespaceInsensitive(content: string, needle: string): Array<IMatch> {
-	const contentLines = content.split("\n");
+	const contentLines = content.split('\n');
 	const lineStarts = getLineStarts(content);
-	const needleLines = needle.split("\n");
-	while (needleLines.length > 0 && !needleLines[needleLines.length - 1].trim()) {
+	const needleLines = needle.split('\n');
+	while (needleLines.length > 0 && !needleLines[needleLines.length - 1]?.trim()) {
 		needleLines.pop();
 	}
-	while (needleLines.length > 0 && !needleLines[0].trim()) {
+	while (needleLines.length > 0 && !needleLines[0]?.trim()) {
 		needleLines.shift();
 	}
 	if (needleLines.length === 0) {
 		return [];
 	}
-	const target = collapseWs(needleLines.join("\n"));
+	const target = collapseWs(needleLines.join('\n'));
 	const out: Array<IMatch> = [];
 	for (let i = 0; i < contentLines.length; i++) {
 		for (let len = 1; len <= needleLines.length + 2 && i + len <= contentLines.length; len++) {
-			const slice = contentLines.slice(i, i + len).join("\n");
+			const slice = contentLines.slice(i, i + len).join('\n');
 			if (collapseWs(slice) !== target) {
 				continue;
 			}
@@ -196,13 +182,13 @@ function levenshtein(a: string, b: string): number {
 		curr[0] = i;
 		for (let j = 1; j <= b.length; j++) {
 			const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-			curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+			curr[j] = Math.min((curr[j - 1] ?? 0) + 1, (prev[j] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
 		}
 		const swap = prev;
 		prev = curr;
 		curr = swap;
 	}
-	return prev[b.length];
+	return prev[b.length] ?? 0;
 }
 
 function lineSimilarity(a: string, b: string): number {
@@ -219,25 +205,25 @@ function lineSimilarity(a: string, b: string): number {
 }
 
 function matchBlockAnchor(content: string, needle: string): Array<IMatch> {
-	const contentLines = content.split("\n");
+	const contentLines = content.split('\n');
 	const lineStarts = getLineStarts(content);
-	const needleLines = needle.split("\n").filter((l) => l.trim());
+	const needleLines = needle.split('\n').filter((l) => l.trim());
 	if (needleLines.length < 3) {
 		return [];
 	}
-	const firstAnchor = needleLines[0].trim();
-	const lastAnchor = needleLines[needleLines.length - 1].trim();
+	const firstAnchor = needleLines[0]?.trim() ?? '';
+	const lastAnchor = needleLines[needleLines.length - 1]?.trim() ?? '';
 	const middle = needleLines.slice(1, -1);
 	const span = needleLines.length;
 	const out: Array<IMatch> = [];
 	for (let i = 0; i < contentLines.length; i++) {
-		if (contentLines[i].trim() !== firstAnchor) {
+		if ((contentLines[i]?.trim() ?? '') !== firstAnchor) {
 			continue;
 		}
 		const lo = Math.max(i + 1, i + span - 4);
 		const hi = Math.min(contentLines.length - 1, i + span + 4);
 		for (let j = lo; j <= hi; j++) {
-			if (contentLines[j].trim() !== lastAnchor) {
+			if ((contentLines[j]?.trim() ?? '') !== lastAnchor) {
 				continue;
 			}
 			const candidateMiddle = contentLines.slice(i + 1, j).filter((l) => l.trim());
@@ -265,46 +251,46 @@ function isMiddleSimilar(expected: Array<string>, actual: Array<string>): boolea
 	}
 	let total = 0;
 	for (let i = 0; i < count; i++) {
-		total += lineSimilarity(expected[i], actual[i]);
+		const e = expected[i];
+		const a = actual[i];
+		if (e === undefined || a === undefined) continue;
+		total += lineSimilarity(e, a);
 	}
 	return total / count >= 0.8;
 }
 
 function findMatch(content: string, oldText: string): IMatch {
 	const strategies: Array<{ name: string; fn: (c: string, n: string) => Array<IMatch> }> = [
-		{ name: "exact", fn: matchExact },
-		{ name: "line-trimmed", fn: matchLineTrimmed },
-		{ name: "whitespace-insensitive", fn: matchWhitespaceInsensitive },
-		{ name: "block-anchor", fn: matchBlockAnchor },
+		{ name: 'exact', fn: matchExact },
+		{ name: 'line-trimmed', fn: matchLineTrimmed },
+		{ name: 'whitespace-insensitive', fn: matchWhitespaceInsensitive },
+		{ name: 'block-anchor', fn: matchBlockAnchor },
 	];
 	for (const strategy of strategies) {
-		const matches = strategy.fn(content, oldText);
-		if (matches.length === 1) {
-			const match = matches[0];
-			const matchedLength = match.end - match.start;
-			if (matchedLength > oldText.length * 1.5 && matchedLength - oldText.length > 80) {
-				throw new Error(
-					"Refusing replacement because the matched span is much larger than oldText. Re-read the file and provide the exact text for the intended replacement.",
-				);
+			const matches = strategy.fn(content, oldText);
+			if (matches.length === 1) {
+				const match = matches[0];
+				if (!match) continue;
+				const matchedLength = match.end - match.start;
+				if (matchedLength > oldText.length * 1.5 && matchedLength - oldText.length > 80) {
+					throw new Error('Refusing replacement because the matched span is much larger than oldText. Re-read the file and provide the exact text for the intended replacement.');
+				}
+				return match;
 			}
-			return match;
-		}
 		if (matches.length > 1) {
-			throw new Error(
-				`Found ${matches.length} matches for oldText (strategy: ${strategy.name}). Provide more surrounding context to make it unique.`,
-			);
+			throw new Error(`Found ${matches.length} matches for oldText (strategy: ${strategy.name}). Provide more surrounding context to make it unique.`);
 		}
 	}
 	throw new Error(buildNotFoundError(content, oldText));
 }
 
 function buildNotFoundError(content: string, oldText: string): string {
-	const contentLines = content.split("\n");
-	const firstLine = oldText.split("\n").find((l) => l.trim()) ?? "";
+	const contentLines = content.split('\n');
+	const firstLine = oldText.split('\n').find((l) => l.trim()) ?? '';
 	const target = firstLine.trim();
 	const near: Array<string> = [];
 	for (let i = 0; i < contentLines.length && near.length < 3; i++) {
-		const line = contentLines[i].trim();
+		const line = contentLines[i]?.trim() ?? '';
 		if (!line || !target) {
 			continue;
 		}
@@ -312,40 +298,41 @@ function buildNotFoundError(content: string, oldText: string): string {
 			near.push(`  line ${i + 1}: ${contentLines[i]}`);
 		}
 	}
-	let msg = "oldText not found in content.";
+	let msg = 'oldText not found in content.';
 	if (near.length > 0) {
-		msg += ` Closest lines in file:\n${near.join("\n")}`;
+		msg += ` Closest lines in file:\n${near.join('\n')}`;
 	}
-	msg += "\nRe-read the file and copy the exact text before retrying.";
+	msg += '\nRe-read the file and copy the exact text before retrying.';
 	return msg;
 }
 
-export async function filePatchHandler(
-	deps: IWarpmcpDeps,
-	args: { path: string; oldText: string; newText: string; encoding?: string },
-): Promise<{ success: boolean; fileSize: number; strategy: string; matchLine: number }> {
+export async function filePatchHandler(deps: IWarpmcpDeps, args: { path: string; oldText: string; newText: string; encoding?: string }): Promise<{ success: boolean; fileSize: number; strategy: string; matchLine: number }> {
 	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
-	const encoding = (args.encoding ?? "utf8") as BufferEncoding;
+	// Same symlink-component guard file_write applies: without it, a symlink
+	// inside an allowed root would let this tool write through to a target
+	// outside the roots.
+	assertFileSafe(deps.getFsAllowedRoots(), safePath);
+	const encoding = (args.encoding ?? 'utf8') as BufferEncoding;
 	if (!args.oldText) {
-		throw new Error("oldText must be non-empty");
+		throw new Error('oldText must be non-empty');
 	}
 	if (args.oldText === args.newText) {
-		throw new Error("oldText and newText are identical, nothing to patch");
+		throw new Error('oldText and newText are identical, nothing to patch');
 	}
 	const raw = await fs.readFile(safePath, { encoding });
-	const crlf = raw.includes("\r\n");
+	const crlf = raw.includes('\r\n');
 	const content = crlf ? normalizeEol(raw) : raw;
 	const oldText = normalizeEol(args.oldText);
 	const newText = normalizeEol(args.newText);
-	const match = findMatch(content, oldText);
-	const matchLine = content.slice(0, match.start).split("\n").length + 1;
-	const replacement = reindent(newText, match.indent);
-	let next = content.substring(0, match.start) + replacement + content.substring(match.end);
-	if (crlf) {
-		next = next.replace(/\n/g, "\r\n");
-	}
-	await fs.writeFile(safePath, next, { encoding });
-	await deps.onFileWritten?.(safePath);
-	const stat = await fs.stat(safePath);
-	return { success: true, fileSize: stat.size, strategy: "matched", matchLine };
+  const match = findMatch(content, oldText);
+  const matchLine = content.slice(0, match.start).split('\n').length + 1;
+  const replacement = reindent(newText, match.indent);
+  let next = content.substring(0, match.start) + replacement + content.substring(match.end);
+  if (crlf) {
+    next = next.replace(/\n/g, '\r\n');
+  }
+  await fs.writeFile(safePath, next, { encoding });
+  await deps.onFileWritten?.(safePath);
+  const stat = await fs.stat(safePath);
+  return { success: true, fileSize: stat.size, strategy: 'matched', matchLine };
 }

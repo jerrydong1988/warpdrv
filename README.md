@@ -11,10 +11,10 @@
 😎 **Built *for* Local AI, Built *by* Local AI** 😎
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Release](https://img.shields.io/github/v/release/mikjee/warpdrv?include_prereleases)](https://github.com/mikjee/warpdrv/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/mikjee/warpdrv/ci.yml?branch=main)](https://github.com/mikjee/warpdrv/actions)
-[![Stars](https://img.shields.io/github/stars/mikjee/warpdrv?style=social)](https://github.com/mikjee/warpdrv/stargazers)
-[![Issues](https://img.shields.io/github/issues/mikjee/warpdrv)](https://github.com/mikjee/warpdrv/issues)
+[![Release](https://img.shields.io/github/v/release/jerrydong1988/warpdrv?include_prereleases)](https://github.com/jerrydong1988/warpdrv/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/jerrydong1988/warpdrv/ci.yml?branch=master)](https://github.com/jerrydong1988/warpdrv/actions)
+[![Stars](https://img.shields.io/github/stars/jerrydong1988/warpdrv?style=social)](https://github.com/jerrydong1988/warpdrv/stargazers)
+[![Issues](https://img.shields.io/github/issues/jerrydong1988/warpdrv)](https://github.com/jerrydong1988/warpdrv/issues)
 [![Platform](https://img.shields.io/badge/platform-linux-success)](#install)
 [![Discord](https://img.shields.io/discord/PLACEHOLDER?label=Discord&logo=discord)](https://discord.gg/ptXTuSgGbu)
 [![Reddit](https://img.shields.io/badge/reddit-r%2Fwarpdrv-orange?logo=reddit)](https://www.reddit.com/r/warpdrv/)
@@ -38,6 +38,11 @@ https://github.com/user-attachments/assets/796ff98a-5536-41e0-b681-5ea9a6f71a8d
 ---
 
 > **Alpha release - expect things to be broken.** This project is in active development.
+
+> This is a continuously synchronized fork of
+> [`mikjee/warpdrv`](https://github.com/mikjee/warpdrv), with zh-CN localization, ModelScope,
+> additional local-security hardening, expanded llama.cpp compatibility, and Windows MSI support.
+> See the [upstream synchronization policy](docs/upstream-sync.md).
 
 ---
 
@@ -135,7 +140,7 @@ https://github.com/user-attachments/assets/57f917a0-faf9-4a39-9a70-0fdc3f3f8658
 
 ### Linux (recommended)
 
-Download the latest `.deb` or `.AppImage` from the [releases page](https://github.com/mikjee/warpdrv/releases).
+Download the latest `.deb` or `.AppImage` from the [releases page](https://github.com/jerrydong1988/warpdrv/releases).
 
 **.deb (Debian, Ubuntu, Mint):**
 
@@ -152,7 +157,7 @@ chmod +x warpdrv-*.AppImage
 
 ### Windows
 
-Download the latest `.msi` installer from the [releases page](https://github.com/mikjee/warpdrv/releases).
+Download the latest `.msi` installer from the [releases page](https://github.com/jerrydong1988/warpdrv/releases).
 > **Note: Recipes feature does not work on natively Windows as it relies on Bash scripts.**
 
 ### macOS
@@ -191,8 +196,8 @@ warpdrv checks for updates on startup and shows a banner if a new version is ava
 - [Recipes](docs/guides/recipes.md) — automating llama.cpp builds and other LLM-related bash tasks
 - [Aliases](docs/guides/aliases.md) — routing addresses for servers behind the OpenAI-compatible proxy
 - [Backend Groups](docs/guides/backend-groups.md) — swapping llama.cpp builds without re-configuring servers
-- [Proxy, Remote Access, and Authentication](docs/guides/proxy-auth.md) — direct vs proxied access, bearer tokens, accessing warpdrv from another machine
-- [KV Cache Checkpoints](docs/guides/kv-checkpoints.md) — saving and restoring slot state to skip prompt prefill
+- [Proxy, Remote Access, and Authentication](docs/guides/proxy.md) — direct vs proxied access, bearer tokens, accessing warpdrv from another machine
+- [KV Cache Checkpoints](docs/guides/checkpoints.md) — saving and restoring slot state to skip prompt prefill
 
 ---
 
@@ -266,7 +271,7 @@ Approx. One week for MVP. One month for initial public release.
 - **Long-term**
   - Richer chat interface.
 
-User feedback and feature requests are very welcome — drop them in [Discord](https://discord.gg/Q9kSKhY5), [Reddit](https://www.reddit.com/r/warpdrv/), or [GitHub Issues](https://github.com/mikjee/warpdrv/issues).
+User feedback and feature requests are very welcome — drop them in [Discord](https://discord.gg/Q9kSKhY5), [Reddit](https://www.reddit.com/r/warpdrv/), or [GitHub Issues](https://github.com/jerrydong1988/warpdrv/issues).
 
 ---
 
@@ -279,7 +284,7 @@ warpdrv is a Tauri desktop app wrapping a Node.js server and a React frontend. T
 ### Tech Stack
 
 - **Desktop shell** — Tauri 2 (Rust)
-- **Frontend** — React 19, Chakra UI v3, Vite, Zustand, assistant-ui
+- **Frontend** — React 19, Chakra UI v3, Vite, Zustand, assistant-ui, i18next (en + zh-CN)
 - **Server** — Node 24, Express 5, better-sqlite3, better-sse
 - **Bundling** — esbuild + `@yao-pkg/pkg` (server binary), Vite (frontend)
 - **Shared types** — TypeScript-only `@warpcore/shared` package
@@ -288,11 +293,13 @@ warpdrv is a Tauri desktop app wrapping a Node.js server and a React frontend. T
 
 ```
 packages/
-  shared/   @warpcore/shared   — Types, enums, utilities. No runtime deps.
-  app/      @warpcore/app      — React frontend.
-  server/   @warpcore/server   — Express + SQLite. Process management, GGUF parsing, recipes.
-  bridge/   @warpcore/bridge   — Composable chat engine (extracted, used internally).
-  desktop/                     — Tauri shell + release scripts.
+  shared/    @warpcore/shared    — Types, enums, utilities. No runtime deps.
+  app/       @warpcore/app       — React frontend.
+  server/    @warpcore/server    — Express + SQLite. Process management, GGUF parsing, recipes.
+  bridge/    @warpcore/bridge    — Composable chat engine (extracted, used internally).
+  realmcore/ @warpcore/realmcore — Event-node / applet framework used by server + app.
+  warpmcp/   @warpcore/warpmcp   — Built-in MCP server (tools exposed via MCP).
+  desktop/                       — Tauri shell + release scripts.
 ```
 
 ### Build From Source
@@ -306,7 +313,7 @@ packages/
 **Steps:**
 
 ```bash
-git clone https://github.com/mikjee/warpdrv.git
+git clone https://github.com/jerrydong1988/warpdrv.git
 cd warpdrv
 npm install
 ```
@@ -329,6 +336,11 @@ npm run dev
 ./release.sh appimage           # AppImage only
 ```
 
+Individual stages are scripted too, so they are reproducible outside `release.sh`:
+
+- `npm run build -w @warpcore/server` — packages the Node sidecar (`packages/server/scripts/build.mjs`: esbuild bundle + `pkg` binary + runtime deps).
+- `npm run build:desktop` — full desktop chain: frontend build, sidecar staging into `packages/desktop/binaries/` and `app-dist/` (`packages/desktop/scripts/prepare.mjs`), then `cargo tauri build`.
+
 Bundle formats supported by Tauri: `deb`, `appimage`, `rpm`, `dmg`, `msi`, `nsis`, `updater`. Pass any combination to `release.sh`.
 
 Artifacts land in `packages/desktop/target/release/bundle/`.
@@ -339,7 +351,7 @@ Artifacts land in `packages/desktop/target/release/bundle/`.
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and PR rules.
 
-- Look for [`good first issue`](https://github.com/mikjee/warpdrv/issues?q=label%3A%22good+first+issue%22) labels
+- Look for [`good first issue`](https://github.com/jerrydong1988/warpdrv/issues?q=label%3A%22good+first+issue%22) labels
 - All commits must be signed off (`git commit -s`) per the [Developer Certificate of Origin](https://developercertificate.org/)
 - Follow the codebase conventions: hard tab indent, `T`/`I`/`E` type prefixes, `Record<>` over `Map`, no `any`
 
@@ -349,8 +361,8 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, con
 
 - **Discord** — [discord.gg/ptXTuSgGbu](https://discord.gg/ptXTuSgGbu) (newly created, help shape it)
 - **Reddit** — [r/warpdrv](https://www.reddit.com/r/warpdrv/)
-- **Issues** — [GitHub Issues](https://github.com/mikjee/warpdrv/issues)
-- **Discussions** — [GitHub Discussions](https://github.com/mikjee/warpdrv/discussions)
+- **Issues** — [GitHub Issues](https://github.com/jerrydong1988/warpdrv/issues)
+- **Discussions** — [GitHub Discussions](https://github.com/jerrydong1988/warpdrv/discussions)
 
 ---
 

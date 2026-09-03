@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Tabs } from "@chakra-ui/react";
 import type { IMode, TModeId } from "@warpcore/shared";
 import { memo, useCallback } from "react";
@@ -66,7 +67,8 @@ export const ModeTabs = memo(() => {
 						size={14}
 						color={!modeId ? "var(--wc-text-primary)" : "var(--wc-text-muted)"}
 					/>
-					Default
+
+					{i18nextSingleton.t("common:ui.default")}
 				</Tabs.Trigger>
 
 				{availableModes.map((m: IMode) => {

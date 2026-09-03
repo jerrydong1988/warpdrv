@@ -1,5 +1,6 @@
-import { Box, Flex, HStack, Portal, Text, VStack } from "@chakra-ui/react";
-import { Check, FolderOpen } from "lucide-react";
+import { Box, Text, VStack, HStack, Flex, Portal } from '@chakra-ui/react';
+import { FolderOpen, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface IDirPickerPopoverProps {
 	roots: string[];
@@ -8,12 +9,8 @@ interface IDirPickerPopoverProps {
 	onClose: () => void;
 }
 
-export function DirPickerPopover({
-	roots,
-	existsInRoot,
-	onSelect,
-	onClose,
-}: IDirPickerPopoverProps) {
+export function DirPickerPopover({ roots, existsInRoot, onSelect, onClose }: IDirPickerPopoverProps) {
+	const { t } = useTranslation('hub');
 	return (
 		<Portal>
 			<>
@@ -34,78 +31,42 @@ export function DirPickerPopover({
 					py="2"
 					minW="320px"
 				>
-					<Text
-						fontSize="11px"
-						color="var(--wc-text-faint)"
-						textTransform="uppercase"
-						letterSpacing="0.05em"
-						px="3"
-						pb="2"
-					>
-						Download to
-					</Text>
-					<VStack align="stretch" gap="0">
-						{roots.map((root: string) => {
-							const hasFiles = root === existsInRoot;
-							return (
-								<HStack
-									key={root}
-									gap="3"
-									px="3"
-									py="2.5"
-									cursor="pointer"
-									_hover={{ bg: "var(--wc-bg-hover)" }}
-									onClick={() => {
-										onSelect(root);
-										onClose();
-									}}
-									transition="all 0.1s ease"
+				<Text fontSize="11px" color="var(--wc-text-faint)" textTransform="uppercase" letterSpacing="0.05em" px="3" pb="2">
+					{t('dirPicker.downloadTo')}
+				</Text>
+				<VStack align="stretch" gap="0">
+					{roots.map((root: string) => {
+						const hasFiles = root === existsInRoot;
+						return (
+							<HStack
+								key={root} gap="3" px="3" py="2.5" cursor="pointer"
+								_hover={{ bg: 'var(--wc-bg-hover)' }}
+								onClick={() => { onSelect(root); onClose(); }}
+								transition="all 0.1s ease"
+							>
+								<Flex
+									w="7" h="7" borderRadius="md" alignItems="center" justifyContent="center"
+									bg={hasFiles ? 'var(--wc-accent-blue-bg-8)' : 'var(--wc-bg-card)'}
+									flexShrink={0}
 								>
-									<Flex
-										w="7"
-										h="7"
-										borderRadius="md"
-										alignItems="center"
-										justifyContent="center"
-										bg={
-											hasFiles
-												? "var(--wc-accent-blue-bg-8)"
-												: "var(--wc-bg-card)"
-										}
-										flexShrink={0}
-									>
-										<FolderOpen
-											size={14}
-											color={
-												hasFiles
-													? "var(--wc-accent-blue)"
-													: "var(--wc-text-tertiary)"
-											}
-										/>
-									</Flex>
-									<Box flex="1" minW="0">
-										<Text
-											fontSize="12px"
-											color="var(--wc-text-primary)"
-											lineClamp={1}
-											fontFamily='"Geist Mono", monospace'
-										>
-											{root}
-										</Text>
-										{hasFiles && (
-											<HStack gap="1" mt="0.5">
-												<Check size={10} color="var(--wc-accent-blue)" />
-												<Text fontSize="10px" color="var(--wc-accent-blue)">
-													Files from this repo already here
-												</Text>
-											</HStack>
-										)}
-									</Box>
-								</HStack>
-							);
-						})}
-					</VStack>
-				</Box>
+									<FolderOpen size={14} color={hasFiles ? 'var(--wc-accent-blue)' : 'var(--wc-text-tertiary)'} />
+								</Flex>
+								<Box flex="1" minW="0">
+									<Text fontSize="12px" color="var(--wc-text-primary)" lineClamp={1} fontFamily='"Geist Mono", monospace'>
+										{root}
+									</Text>
+									{hasFiles && (
+										<HStack gap="1" mt="0.5">
+											<Check size={10} color="var(--wc-accent-blue)" />
+											<Text fontSize="10px" color="var(--wc-accent-blue)">{t('dirPicker.filesAlreadyHere')}</Text>
+										</HStack>
+									)}
+								</Box>
+							</HStack>
+						);
+					})}
+				</VStack>
+			</Box>
 			</>
 		</Portal>
 	);

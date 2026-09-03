@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import React from "react";
@@ -26,7 +27,8 @@ export const AnnotationsBox = React.memo(() => {
 					fontWeight="600"
 					color="var(--wc-text-primary)"
 				>
-					Annotations ({annotations.length})
+
+					{i18nextSingleton.t("common:ui.annotations")}{annotations.length})
 				</Text>
 				<Box
 					as="button"
@@ -42,7 +44,8 @@ export const AnnotationsBox = React.memo(() => {
 					onClick={clearAnnotations}
 				>
 					<X size={12} />
-					Clear all
+
+					{i18nextSingleton.t("common:ui.clearAll")}
 				</Box>
 			</HStack>
 			<VStack gap="2" align="stretch">

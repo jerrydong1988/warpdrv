@@ -47,6 +47,11 @@ import type {
 import { cleanSchema, validateToolArgs } from "../validation";
 
 const MAX_PASSES = 10;
+const STREAM_IDLE_TIMEOUT_MS = 120_000;
+const TOOL_EXEC_TIMEOUT_MS = 5 * 60_000;
+type TStreamReadResult = Awaited<
+	ReturnType<ReadableStreamDefaultReader<Uint8Array>["read"]>
+>;
 
 export interface IOrchestratorConfig {
 	mcpClient: IMcpClient;
@@ -161,6 +166,10 @@ export class Orchestrator {
 				inferenceParams?: Record<string, unknown>;
 			};
 			const { inferenceRequestId, inferenceUrl, messages, inferenceParams } = payload;
+			if (!inferenceRequestId) throw new Error("inferenceRequestId is required");
+			if (this.pureCompletionControllers[inferenceRequestId]) {
+				throw new Error(`Pure completion request ${inferenceRequestId} is already in flight`);
+			}
 			const controller = new AbortController();
 			this.pureCompletionControllers[inferenceRequestId] = controller;
 			try {
@@ -177,7 +186,9 @@ export class Orchestrator {
 					controller.signal,
 				);
 			} finally {
-				delete this.pureCompletionControllers[inferenceRequestId];
+				if (this.pureCompletionControllers[inferenceRequestId] === controller) {
+					delete this.pureCompletionControllers[inferenceRequestId];
+				}
 			}
 		});
 
@@ -220,9 +231,63 @@ export class Orchestrator {
 			const ac = new AbortController();
 			this.handleCompletionV2(inferenceUrl, request, ac.signal).catch(console.error);
 		});
+		}
+
+	private async readWithIdleTimeout(
+		reader: ReadableStreamDefaultReader<Uint8Array>,
+		idleMs: number,
+	): Promise<TStreamReadResult> {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			return await Promise.race([
+				reader.read(),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(
+						() =>
+							reject(
+								new Error(
+									`Inference stream produced no data for ${Math.round(idleMs / 1000)}s`,
+								),
+							),
+						idleMs,
+					);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
 	}
 
-	// Walk parentId chain from a given message ID up to root, return root-to-leaf
+	private async executeToolCallBounded(
+		serverName: string,
+		toolName: string,
+		args: Record<string, unknown>,
+		threadId: TThreadId,
+	): Promise<{ content: unknown; isError: boolean }> {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const pending = this.mcpClient.executeToolCall(serverName, toolName, args, threadId);
+		Promise.resolve(pending).catch(() => {});
+		try {
+			return await Promise.race([
+				pending,
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(
+						() =>
+							reject(
+								new Error(
+									`Tool ${serverName}.${toolName} did not return within ${Math.round(TOOL_EXEC_TIMEOUT_MS / 1000)}s`,
+								),
+							),
+						TOOL_EXEC_TIMEOUT_MS,
+					);
+				}),
+			]);
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	}
+
+		// Walk parentId chain from a given message ID up to root, return root-to-leaf
 	private buildBranchChain(
 		allMessages: IChatMessage[],
 		fromMessageId: TMessageId | null | undefined,
@@ -231,9 +296,12 @@ export class Orchestrator {
 		const msgMap = new Map<TMessageId, IChatMessage>();
 		for (const m of allMessages) msgMap.set(m.id, m);
 
-		const chain: IChatMessage[] = [];
-		let currentId: TMessageId | null | undefined = fromMessageId;
-		while (currentId) {
+			const chain: IChatMessage[] = [];
+			const seen = new Set<TMessageId>();
+			let currentId: TMessageId | null | undefined = fromMessageId;
+			while (currentId) {
+				if (seen.has(currentId)) break;
+				seen.add(currentId);
 			const msg = msgMap.get(currentId);
 			if (!msg) break;
 			chain.push(msg);
@@ -753,11 +821,17 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				const { done, value } = await reader.read();
-				if (done) {
-					break;
-				}
-				buffer += decoder.decode(value, { stream: true });
+					let result: TStreamReadResult;
+					try {
+						result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
+					} catch (err) {
+						streamError = err instanceof Error ? err.message : String(err);
+						break;
+					}
+					if (result.done) {
+						break;
+					}
+					buffer += decoder.decode(result.value, { stream: true });
 				const { chunks, remaining, done: sseDone } = parseSSEBuffer(buffer);
 				if (sseDone) {
 					// [DONE] marker received
@@ -904,8 +978,13 @@ export class Orchestrator {
 					break;
 				}
 			}
-		} finally {
-			await this.flushReasoningPart(turn);
+			} finally {
+				try {
+					await reader.cancel();
+				} catch {
+					// The stream may already be closed.
+				}
+				await this.flushReasoningPart(turn);
 			await this.flushTextPart(turn);
 		}
 
@@ -1124,13 +1203,13 @@ export class Orchestrator {
 				// 	"finalArgs:",
 				// 	JSON.stringify(finalArgs),
 				// );
-				const mcpResult = await this.mcpClient.executeToolCall(
+					const mcpResult = await this.executeToolCallBounded(
 					serverName!,
 					tc.name,
 					finalArgs,
 					request.threadId,
 				);
-				const resultStr = stableStringify(mcpResult.content);
+				const resultStr = stableStringify(mcpResult.content) ?? "";
 				const finalStatus = mcpResult.isError
 					? EToolCallStatus.ERROR
 					: EToolCallStatus.COMPLETED;
@@ -1292,13 +1371,13 @@ export class Orchestrator {
 					tsVars,
 				);
 				//console.log('[orchestrator] resume tool call:', tc.serverName, tc.toolName, 'wsVars:', wsVars, 'tsVars:', tsVars, 'finalArgs:', JSON.stringify(finalArgs));
-				const mcpResult = await this.mcpClient.executeToolCall(
+					const mcpResult = await this.executeToolCallBounded(
 					tc.serverName,
 					tc.toolName,
 					finalArgs,
 					tc.threadId,
 				);
-				const resultStr = stableStringify(mcpResult.content);
+				const resultStr = stableStringify(mcpResult.content) ?? "";
 				const finalStatus = mcpResult.isError
 					? EToolCallStatus.ERROR
 					: EToolCallStatus.COMPLETED;
@@ -1534,8 +1613,11 @@ export class Orchestrator {
 				if (!res.ok || !res.body) throw new Error("Title generation failed");
 				return res.json();
 			})
-			.then((body) => {
-				const title = body?.choices?.[0]?.message?.content ?? "";
+			.then((body: unknown) => {
+				const response = body as {
+					choices?: Array<{ message?: { content?: string } }>;
+				};
+				const title = response.choices?.[0]?.message?.content ?? "";
 				if (!title) throw new Error("Empty title response");
 				return title.replace(/^["']|["']$/g, "").trim();
 			});
@@ -1611,9 +1693,15 @@ export class Orchestrator {
 
 		try {
 			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
+					let result: TStreamReadResult;
+					try {
+						result = await this.readWithIdleTimeout(reader, STREAM_IDLE_TIMEOUT_MS);
+					} catch (err) {
+						streamError = err instanceof Error ? err.message : String(err);
+						break;
+					}
+					if (result.done) break;
+					buffer += decoder.decode(result.value, { stream: true });
 				const { chunks, remaining } = parseSSEBuffer(buffer);
 				buffer = remaining;
 
@@ -1656,8 +1744,13 @@ export class Orchestrator {
 					if (chunk.usage) usage = chunk.usage as Record<string, number>;
 				}
 			}
-		} finally {
-			flushReasoning();
+			} finally {
+				try {
+					await reader.cancel();
+				} catch {
+					// The stream may already be closed.
+				}
+				flushReasoning();
 			flushText();
 		}
 

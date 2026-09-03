@@ -142,15 +142,25 @@ export function useThreadConfig(selectedPresetId: string | null) {
 			return;
 		}
 
-		const res = await fetchThreadConfig(threadId);
-		if (!res.ok || !res.data) {
-			await resolveDefaults();
-			return;
-		}
+		try {
+			const res = await fetchThreadConfig(threadId);
+			if (!res.ok || !res.data) {
+				await resolveDefaults();
+				return;
+			}
 
-		const parsedParams = res.data.params ? JSON.parse(res.data.params) : {};
-		setCurrentSystemPrompt(res.data.systemPrompt ?? "");
-		setCurrentInferenceParams(parsedParams);
+			let parsedParams: Record<string, unknown> = {};
+			try {
+				parsedParams = res.data.params ? JSON.parse(res.data.params) : {};
+			} catch {
+				console.warn('[useThreadConfig] Failed to parse params, using defaults');
+			}
+			setCurrentSystemPrompt(res.data.systemPrompt ?? "");
+			setCurrentInferenceParams(parsedParams);
+		} catch (error) {
+			console.error('[useThreadConfig] loadConfig failed:', error);
+			await resolveDefaults();
+		}
 	}, []);
 
 	useEffect(() => {

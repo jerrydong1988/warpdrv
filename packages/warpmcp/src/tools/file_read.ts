@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import type { IWarpmcpDeps } from "../types";
-import { assertPathAllowed } from "../util/sandbox";
+import { assertFileSafe, assertPathAllowed } from "../util/sandbox";
 export const fileReadDefinition = {
 	name: "file_read",
 	description:
@@ -32,7 +32,9 @@ export async function fileReadHandler(
 	deps: IWarpmcpDeps,
 	args: { path: string; encoding?: string; line_start?: number; line_end?: number },
 ): Promise<{ content: string; encoding: string }> {
-	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
+	const roots = deps.getFsAllowedRoots();
+	const safePath = await assertPathAllowed(roots, args.path);
+	assertFileSafe(roots, safePath);
 	const encoding = (args.encoding ?? "utf8") as BufferEncoding;
 	const content = await fs.readFile(safePath, { encoding });
 	if (encoding !== "base64" && args.line_start !== undefined) {

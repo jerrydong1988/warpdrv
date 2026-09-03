@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	ActionBarPrimitive,
 	AuiIf,
@@ -143,7 +144,6 @@ export const Thread: FC<{
 	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
 
 	const deleteMessageCtx = useMemo<DeleteMessageState>(() => {
-		const resolveFn: (() => void) | null = null;
 		const handleConfirm = async () => {
 			setDeletingLoading(true);
 			try {
@@ -151,7 +151,6 @@ export const Thread: FC<{
 			} finally {
 				setDeletingLoading(false);
 				setDeletingMessageId(null);
-				if (resolveFn) resolveFn();
 			}
 		};
 		return {
@@ -228,7 +227,7 @@ export const Thread: FC<{
 
 					{deletingMessageId && (
 						<ConfirmDialog
-							title="Delete Message"
+							title={i18nextSingleton.t("chat:dialogs.deleteMessageTitle")}
 							message="Are you sure you want to delete this message?"
 							isOpen={true}
 							onConfirm={deleteMessageCtx.confirm}
@@ -304,13 +303,15 @@ const ThreadWelcome: FC = React.memo(() => {
 						className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-semibold text-2xl duration-200"
 						style={{ color: "var(--wc-text-heading)" }}
 					>
-						Hello there!
+
+						{i18nextSingleton.t("chat:threadList.welcomeTitle")}
 					</h1>
 					<p
 						className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-xl delay-75 duration-200"
 						style={{ color: "var(--wc-text-secondary)" }}
 					>
-						How can I help you today?
+
+						{i18nextSingleton.t("chat:threadList.welcomeSubtitle")}
 					</p>
 				</div>
 			</div>
@@ -335,12 +336,11 @@ const ThreadSuggestionItem: FC = () => {
 			<SuggestionPrimitive.Trigger send asChild>
 				<Button
 					variant="ghost"
-					className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-4 py-3 text-left text-sm transition-colors"
+					className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-4 py-3 text-left text-sm transition-colors hover:!bg-[var(--wc-bg-hover)]"
 					style={{
 						backgroundColor: "var(--wc-bg-card)",
 						color: "var(--wc-text-primary)",
 					}}
-					_hover={{ bg: "var(--wc-bg-hover)" }}
 				>
 					<SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 font-medium" />
 					<SuggestionPrimitive.Description
@@ -513,13 +513,13 @@ const Composer: FC = React.memo(() => {
 						boxShadow: "0px 10px 10px 10px rgba(0,0,0,0.15)",
 						"--composer-border-color": modeColor ?? "var(--wc-border-default)",
 						color: "var(--wc-text-primary)",
-					}}
+					} as React.CSSProperties}
 				>
 					<ComposerAttachments />
 					<ComposerUiSpace />
 					<ComposerEditor
 						ref={editorRef}
-						placeholder="Send a message, or type / to use slash-commands..."
+						placeholder={i18nextSingleton.t("common:ui.composerPlaceholder")}
 						className="aui-composer-editor max-h-32 min-h-10 w-full overflow-y-auto bg-transparent px-1.75 py-1 text-sm"
 						onChangeText={handleChangeText}
 						onEnter={handleEnter}
@@ -577,7 +577,8 @@ const ReasoningEffortToggle: FC = React.memo(() => {
 			className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs transition-colors hover:bg-accent`}
 			title={`Reasoning effort: ${label} (click to cycle)`}
 		>
-			Effort {label}
+
+			{i18nextSingleton.t("common:ui.effort")} {label}
 		</IconButton>
 	);
 });
@@ -737,14 +738,15 @@ const ToolsSelector: FC = React.memo(() => {
 								textAlign="center"
 								py="4"
 							>
-								No tools available
+
+								{i18nextSingleton.t("chat:toolList.noToolsAvailable")}
 							</Text>
 						) : (
 							<VStack gap="3" align="stretch">
 								{!isModeActive && (
 									<HStack gap="2">
 										<Switch.Root
-											label="All tools"
+											label={i18nextSingleton.t("chat:toolList.allTools")}
 											checked={attachAllTools}
 											onCheckedChange={(details) =>
 												handleAllToolsChange(details.checked)
@@ -772,7 +774,8 @@ const ToolsSelector: FC = React.memo(() => {
 												}
 												userSelect="none"
 											>
-												All tools
+
+												{i18nextSingleton.t("chat:toolList.allTools")}
 											</Switch.Label>
 										</Switch.Root>
 									</HStack>
@@ -1046,7 +1049,8 @@ const AgentSelector: FC = React.memo(() => {
 								textAlign="center"
 								py="4"
 							>
-								No agents available
+
+								{i18nextSingleton.t("common:ui.noAgentsAvailable")}
 							</Text>
 						) : (
 							<VStack gap="2" align="stretch">
@@ -1080,10 +1084,10 @@ const AgentSelector: FC = React.memo(() => {
 													/>
 												)}
 												{!isSelected && (
-													<Bot
-														size={13}
-														color="var(--wc-text-muted)"
-														flexShrink={0}
+											<Bot
+												size={13}
+												color="var(--wc-text-muted)"
+												style={{ flexShrink: 0 }}
 													/>
 												)}
 												<Text
@@ -1107,7 +1111,7 @@ const AgentSelector: FC = React.memo(() => {
 													flexShrink={0}
 												>
 													<Wrench size={9} />
-													{toolCount} tool{toolCount === 1 ? "" : "s"}
+													{toolCount}  {i18nextSingleton.t("common:ui.toolLowercase")}{toolCount === 1 ? "" : "s"}
 												</Box>
 											</Box>
 											{agent.description && (
@@ -1225,15 +1229,6 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 											backgroundColor: "var(--wc-accent-blue-bg-8)",
 										}
 							}
-							_hover={
-								!isValidServer
-									? undefined
-									: {
-											color: "var(--wc-accent-blue-hover)",
-											borderColor: "var(--wc-accent-blue-border)",
-											backgroundColor: "var(--wc-accent-blue-bg-10)",
-										}
-							}
 						>
 							<SendHorizonal className="aui-composer-send-icon size-4" />
 						</TooltipIconButton>
@@ -1244,10 +1239,11 @@ const ComposerAction: FC<{ onStreamChange?: (stream: MediaStream | null) => void
 								type="button"
 								variant="outline"
 								className="aui-composer-cancel size-9"
-								aria-label="Stop generating"
-								color="var(--wc-text-primary)"
-								borderColor="var(--wc-border-default)"
-								style={{ borderColor: "var(--wc-border-default)" }}
+								aria-label={i18nextSingleton.t("chat:actions.stopGenerating")}
+								style={{
+									color: "var(--wc-text-primary)",
+									borderColor: "var(--wc-border-default)",
+								}}
 							>
 								<SquareIcon className="aui-composer-cancel-icon size-4 fill-current" />
 							</Button>
@@ -1278,9 +1274,7 @@ const MessageError: FC = () => {
 
 const StatsTooltip = React.memo((): React.ReactNode => {
 	const custom = useAuiState((s) => (s.message.metadata as any)?.custom);
-	if (!custom) return null;
-
-	const { promptPerSecond, predictedPerSecond, predictedMs, actualTokens, finishReason } = custom;
+	const { promptPerSecond, predictedPerSecond, predictedMs, actualTokens, finishReason } = custom ?? {};
 
 	const stats = useMemo(() => {
 		const arr: { label: string; value: string }[] = [];
@@ -1296,7 +1290,7 @@ const StatsTooltip = React.memo((): React.ReactNode => {
 		return arr;
 	}, [promptPerSecond, predictedPerSecond, actualTokens, predictedMs, finishReason]);
 
-	if (stats.length === 0) return null;
+	if (!custom || stats.length === 0) return null;
 
 	return (
 		<Tooltip>
@@ -1477,7 +1471,8 @@ const AssistantMessage: FC = React.memo(() => {
 							className="mt-2 text-md italic"
 							style={{ color: "var(--wc-text-tertiary)" }}
 						>
-							calling: {startingTools.join(", ")}...
+
+							{i18nextSingleton.t("common:ui.callingSuffix")} {startingTools.join(", ")}...
 						</div>
 					)}
 					<MessageError />
@@ -1561,7 +1556,8 @@ const DeleteMessageButton: FC<{ messageId: string }> = ({ messageId }) => {
 		<HStack gap="2" onClick={() => ctx?.open(messageId)}>
 			<Trash2 size={14} color="var(--wc-accent-red)" />
 			<Text fontSize="12px" color="var(--wc-accent-red)">
-				Delete
+
+				{i18nextSingleton.t("backends:actions.delete")}
 			</Text>
 		</HStack>
 	);
@@ -1606,7 +1602,7 @@ const AssistantActionBar: FC = React.memo(() => {
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null);
+	const ref = useRef<SVGSVGElement | null>(null);
 	const getAnchorRect = () => ref.current!.getBoundingClientRect();
 
 	return (
@@ -1630,7 +1626,7 @@ const AssistantActionBar: FC = React.memo(() => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">Reload</Text>
+									<Text fontSize="12px">{i18nextSingleton.t("chat:actions.reload")}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1639,7 +1635,7 @@ const AssistantActionBar: FC = React.memo(() => {
 							<Menu.Item value="copy">
 								<HStack gap="2">
 									{isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-									<Text fontSize="12px">Copy</Text>
+									<Text fontSize="12px">{i18nextSingleton.t("chat:actions.copy")}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Copy>
@@ -1647,7 +1643,7 @@ const AssistantActionBar: FC = React.memo(() => {
 							<Menu.Item value="edit">
 								<HStack gap="2">
 									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
+									<Text fontSize="12px">{i18nextSingleton.t("backends:actions.edit")}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Edit>
@@ -1711,7 +1707,7 @@ const ToolActionBar: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const clearAnnotations = useStore((s) => s.clearAnnotations);
 
-	const ref = useRef<HTMLDivElement | null>(null);
+	const ref = useRef<SVGSVGElement | null>(null);
 	const getAnchorRect = () => ref.current!.getBoundingClientRect();
 
 	return (
@@ -1734,7 +1730,7 @@ const ToolActionBar: FC = React.memo(() => {
 							<Menu.Item value="reload" onClick={clearAnnotations}>
 								<HStack gap="2">
 									<RefreshCwIcon size={14} />
-									<Text fontSize="12px">Reload</Text>
+									<Text fontSize="12px">{i18nextSingleton.t("chat:actions.reload")}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Reload>
@@ -1831,7 +1827,7 @@ const UserActionBar: FC = React.memo(() => {
 	const messageId = useAuiState((s) => s.message.id);
 	const kokoroInstalled = useStore((s) => s.kokoroStatus?.installed);
 
-	const ref = useRef<HTMLDivElement | null>(null);
+	const ref = useRef<SVGSVGElement | null>(null);
 	const getAnchorRect = () => ref.current!.getBoundingClientRect();
 
 	return (
@@ -1855,7 +1851,7 @@ const UserActionBar: FC = React.memo(() => {
 							<Menu.Item value="edit">
 								<HStack gap="2">
 									<PencilIcon size={14} />
-									<Text fontSize="12px">Edit</Text>
+									<Text fontSize="12px">{i18nextSingleton.t("backends:actions.edit")}</Text>
 								</HStack>
 							</Menu.Item>
 						</ActionBarPrimitive.Edit>
@@ -1881,11 +1877,12 @@ const EditComposer: FC = () => {
 				<div className="aui-edit-composer-footer mx-3 mb-3 flex items-center gap-2 self-end">
 					<ComposerPrimitive.Cancel asChild>
 						<Button variant="ghost" size="sm">
-							Cancel
+
+							{i18nextSingleton.t("backends:actions.cancel")}
 						</Button>
 					</ComposerPrimitive.Cancel>
 					<ComposerPrimitive.Send asChild>
-						<Button size="sm">Update</Button>
+						<Button size="sm">{i18nextSingleton.t("chat:actions.update")}</Button>
 					</ComposerPrimitive.Send>
 				</div>
 			</ComposerPrimitive.Root>

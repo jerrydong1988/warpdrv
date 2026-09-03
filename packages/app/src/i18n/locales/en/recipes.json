@@ -1,0 +1,92 @@
+{
+  "title": "Recipes",
+  "subtitle": "{{count}} recipes",
+  "subtitle_one": "{{count}} recipe",
+  "subtitle_other": "{{count}} recipes",
+  "searchPlaceholder": "Search recipes...",
+  "actions": {
+    "runRecipe": "Run Recipe",
+    "editRecipe": "Edit Recipe",
+    "deleteRecipe": "Delete Recipe",
+    "createRecipe": "Create Recipe",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "hide": "Hide",
+    "runAgain": "Run Again",
+    "run": "Run",
+    "addStep": "Add Step",
+    "removeStep": "Remove Step",
+    "stop": "Stop",
+    "selectServer": "Select Server",
+    "noServers": "No healthy servers available"
+  },
+  "fields": {
+    "name": "Name",
+    "description": "Description",
+    "steps": "Steps",
+    "inputLabel": "Label",
+    "inputKey": "Key",
+    "inputType": "Type",
+    "inputDefault": "Default",
+    "inputChoices": "Choices"
+  },
+  "labels": {
+    "noRecipes": "No recipes configured",
+    "builtinRecipes": "Built-in recipes",
+    "customRecipes": "Custom recipes",
+    "inputs": "Inputs",
+    "steps": "Steps"
+  },
+  "stepStatus": {
+    "pending": "Pending",
+    "running": "Running",
+    "ok": "OK",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "skipped": "Skipped"
+  },
+  "runStatus": {
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "runDialog": {
+    "recipeInvalid": "Recipe is invalid",
+    "anotherRunning": "Another recipe is currently running"
+  },
+  "stepPanel": {
+    "noOutput": "No output yet..."
+  },
+  "inputForm": {
+    "noInputs": "This recipe has no inputs."
+  },
+  "editor": {
+    "editRecipe": "Edit Recipe",
+    "newRecipe": "New Recipe",
+    "namePlaceholder": "Recipe name",
+    "descriptionPlaceholder": "Description (optional)",
+    "source": "Source",
+    "valid": "Valid",
+    "preview": "Preview",
+    "fixSourceError": "Fix the source error to see preview.",
+    "inputsCount": "Inputs ({{count}})",
+    "inputsCount_one": "Inputs ({{count}})",
+    "inputsCount_other": "Inputs ({{count}})",
+    "stepsCount": "Steps ({{count}})",
+    "stepsCount_one": "Steps ({{count}})",
+    "stepsCount_other": "Steps ({{count}})"
+  },
+  "toast": {
+    "recipeStarted": "Recipe started",
+    "recipeCancelled": "Recipe cancelled",
+    "recipeSaved": "Recipe saved",
+    "recipeDeleted": "Recipe deleted",
+    "saveFailed": "Failed to save recipe"
+  },
+  "dialogs": {
+    "deleteRecipeTitle": "Delete Recipe?",
+    "deleteRecipeMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+  }
+}

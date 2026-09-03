@@ -1,52 +1,26 @@
-import {
-	Box,
-	Button,
-	Combobox,
-	createListCollection,
-	Flex,
-	HStack,
-	Input,
-	NativeSelect,
-	Portal,
-	Slider,
-	Spinner,
-	Switch,
-	Text,
-	VStack,
-} from "@chakra-ui/react";
-import type { ISettings } from "@warpcore/shared";
-import { ETheme } from "@warpcore/shared";
-import {
-	BookOpen,
-	ChevronDown,
-	FolderInput,
-	FolderOpen,
-	Mic,
-	Plus,
-	Save,
-	Settings,
-	Trash2,
-} from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { startProxy, stopProxy, updateSettings } from "../../api/services";
-import { Card } from "../../components/Card";
-import { ConfirmDialog } from "../../components/dialogs/ConfirmDialog";
-import { KeyCapture } from "../../components/KeyCapture";
-import { PageHeader } from "../../components/PageHeader";
-import { useToast } from "../../components/ToastProvider";
-import { useDependantState } from "../../hooks/useDependantState";
-import { useMutation } from "../../hooks/useQuery";
-import { useStore } from "../../store";
+import { Box, Text, HStack, VStack, Flex, Input, Button, Spinner, Switch, Combobox, createListCollection, Portal, NativeSelect, Slider } from '@chakra-ui/react';
+import { Settings, FolderOpen, Plus, Trash2, Save, ChevronDown, FolderInput, BookOpen, Mic } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { setLocale as setI18nLocale } from '../../i18n';
+import { useDependantState } from '../../hooks/useDependantState';
+import { PageHeader } from '../../components/PageHeader';
+import { Card } from '../../components/Card';
+import { useMutation } from '../../hooks/useQuery';
+import { ConfirmDialog } from '../../components/dialogs/ConfirmDialog';
+import { KeyCapture } from '../../components/KeyCapture';
+import { updateSettings, startProxy, stopProxy } from '../../api/services';
+import type { ISettings } from '@warpcore/shared';
+import { ETheme } from '@warpcore/shared';
+import { useToast } from '../../components/ToastProvider';
+import { useStore } from '../../store';
+import { syncAutostart, type IAutostartApi } from '../../utils/autostart';
 
 // Feature detection: try to import Tauri's autostart plugin.
 // Returns the API functions if running in Tauri, null otherwise.
-async function getAutostartApi(): Promise<{
-	isEnabled: () => Promise<boolean>;
-	enable: () => Promise<void>;
-	disable: () => Promise<void>;
-} | null> {
+async function getAutostartApi(): Promise<IAutostartApi | null> {
 	try {
-		const mod = await import("@tauri-apps/plugin-autostart");
+		const mod = await import('@tauri-apps/plugin-autostart');
 		return {
 			isEnabled: mod.isEnabled,
 			enable: mod.enable,
@@ -58,8 +32,10 @@ async function getAutostartApi(): Promise<{
 }
 
 export function SettingsPage() {
+	const { t, i18n } = useTranslation('settings');
 	const { toast } = useToast();
-	const settings = useStore((s) => s.settings);
+	const settings = useStore(s => s.settings);
+	const locale = i18n.resolvedLanguage?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
 	const [portStart, setPortStart] = useDependantState(settings.portRangeStart);
@@ -71,122 +47,115 @@ export function SettingsPage() {
 	const [autoLaunch, setAutoLaunch] = useState<boolean | null>(null);
 	const [startMinimized, setStartMinimized] = useDependantState(settings.startMinimized);
 	const [checkpointsPath, setCheckpointsPath] = useDependantState(settings.checkpointsPath);
-	const [maxCheckpointDiskGB, setMaxCheckpointDiskGB] = useDependantState(
-		settings.maxCheckpointDiskGB,
-	);
+	const [maxCheckpointDiskGB, setMaxCheckpointDiskGB] = useDependantState(settings.maxCheckpointDiskGB);
 	const [disableTitleGen, setDisableTitleGen] = useDependantState(settings.disableTitleGen);
-	const [micDeviceId, setMicDeviceId] = useDependantState(settings.micDeviceId ?? "");
-	const [kokoroVoice, setKokoroVoice] = useDependantState(settings.kokoroVoice ?? "af_heart");
+	const [micDeviceId, setMicDeviceId] = useDependantState(settings.micDeviceId ?? '');
+	const [kokoroVoice, setKokoroVoice] = useDependantState(settings.kokoroVoice ?? 'af_heart');
 	const [kokoroSpeed, setKokoroSpeed] = useDependantState(settings.kokoroSpeed ?? 1);
 	const [builtinMcpPort, setBuiltinMcpPort] = useDependantState(settings.builtinMcpPort ?? 11437);
-	const [builtinMcpExposeExternal, setBuiltinMcpExposeExternal] = useDependantState(
-		settings.builtinMcpExposeExternal ?? false,
-	);
-	const [fsAllowedRoots, setFsAllowedRoots] = useDependantState<string[]>(
-		settings.fsAllowedRoots ?? [],
-	);
-	const [newFsRoot, setNewFsRoot] = useState("");
+	const [builtinMcpExposeExternal, setBuiltinMcpExposeExternal] = useDependantState(settings.builtinMcpExposeExternal ?? false);
+	const [inferenceExposeExternal, setInferenceExposeExternal] = useDependantState(settings.inferenceExposeExternal ?? false);
+	const [fsAllowedRoots, setFsAllowedRoots] = useDependantState<string[]>(settings.fsAllowedRoots ?? []);
+	const [newFsRoot, setNewFsRoot] = useState('');
 	const handleBrowseFsRoot = async () => {
-		if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+		if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
 			try {
-				const mod = await import("@tauri-apps/plugin-dialog");
+				const mod = await import('@tauri-apps/plugin-dialog');
 				const path = await mod.open({ directory: true, multiple: false });
-				if (path && typeof path === "string") setNewFsRoot(path);
+				if (path && typeof path === 'string') setNewFsRoot(path);
 			} catch (err) {
-				console.error("[Settings] Failed to open directory picker:", err);
+				console.error('[Settings] Failed to open directory picker:', err);
 			}
-		} else if (typeof window !== "undefined" && "showDirectoryPicker" in window) {
+		} else if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
 			try {
 				const handle = await (window as any).showDirectoryPicker();
 				if (handle) setNewFsRoot(handle.name);
 			} catch (err: any) {
-				if (err.name !== "AbortError")
-					console.error("[Settings] Failed to open directory picker:", err);
+				if (err.name !== 'AbortError') console.error('[Settings] Failed to open directory picker:', err);
 			}
 		} else {
-			toast(
-				"error",
-				"Directory picker not supported in this browser. Please type the path manually.",
-			);
+			toast('error', t('common:toast.directoryPickerNotSupported'));
 		}
 	};
 	const [micDevices, setMicDevices] = useState<Array<{ id: string; label: string }>>([]);
 	const [micPermissionGranted, setMicPermissionGranted] = useState(false);
-	const [newRoot, setNewRoot] = useState("");
+	const [newRoot, setNewRoot] = useState('');
 	const [saved, setSaved] = useState(false);
 	const [isDirty, setIsDirty] = useState(false);
 	const [localTheme, setLocalTheme] = useDependantState(settings.theme ?? ETheme.DARK);
 	const [appZoomLevel, setAppZoomLevel] = useDependantState(settings.appZoomLevel ?? 1.0);
 	const [chatFontSize, setChatFontSize] = useDependantState(settings.chatFontSize ?? 14);
-	const [chatFontFamily, setChatFontFamily] = useDependantState(settings.chatFontFamily ?? "");
+	const [chatFontFamily, setChatFontFamily] = useDependantState(settings.chatFontFamily ?? '');
 	const [chatFixedWidth, setChatFixedWidth] = useDependantState(settings.chatFixedWidth ?? false);
-	const [dictationPTTKey, setDictationPTTKey] = useDependantState(
-		settings.dictationPTTKey ?? "Insert",
-	);
-	const [dictationPTTModeHold, setDictationPTTModeHold] = useDependantState(
-		settings.dictationPTTModeHold ?? false,
-	);
-	const [globalPTTKey, setGlobalPTTKey] = useDependantState(settings.globalPTTKey ?? "");
-	const [globalPTTModeHold, setGlobalPTTModeHold] = useDependantState(
-		settings.globalPTTModeHold ?? false,
-	);
+	const [dictationPTTKey, setDictationPTTKey] = useDependantState(settings.dictationPTTKey ?? 'Insert');
+	const [dictationPTTModeHold, setDictationPTTModeHold] = useDependantState(settings.dictationPTTModeHold ?? false);
+	const [globalPTTKey, setGlobalPTTKey] = useDependantState(settings.globalPTTKey ?? '');
+	const [globalPTTModeHold, setGlobalPTTModeHold] = useDependantState(settings.globalPTTModeHold ?? false);
 	const themeCollection = createListCollection({
 		items: [
-			{ label: "Amoled", value: ETheme.AMOLED },
-			{ label: "Catppuccin (Latte)", value: ETheme.CATPPUCCIN_LATTE },
-			{ label: "Catppuccin (Mocha)", value: ETheme.CATPPUCCIN_MOCHA },
-			{ label: "Dark", value: ETheme.DARK },
-			{ label: "Dracula", value: ETheme.DRACULA_DARK },
-			{ label: "Dracula Light", value: ETheme.DRACULA_LIGHT },
-			{ label: "Everforest Hard", value: ETheme.EVERFOREST_HARD },
-			{ label: "GitHub Dark", value: ETheme.GITHUB_DARK },
-			{ label: "GitHub Light", value: ETheme.GITHUB_LIGHT },
-			{ label: "Gruvbox", value: ETheme.GRUVBOX },
-			{ label: "Gruvbox Hard", value: ETheme.GRUVBOX_HARD },
-			{ label: "Kanagawa", value: ETheme.KANAGAWA },
-			{ label: "Kimbie Dark", value: ETheme.KIMBIE_DARK },
-			{ label: "Light", value: ETheme.LIGHT },
-			{ label: "Min", value: ETheme.MIN },
-			{ label: "Monokai Pro", value: ETheme.MONOKAI_PRO },
-			{ label: "Nord", value: ETheme.NORD },
-			{ label: "Nord Light", value: ETheme.NORD_LIGHT },
-			{ label: "Obsidian", value: ETheme.OBSIDIAN },
-			{ label: "One Dark", value: ETheme.ONE_DARK },
-			{ label: "One Light", value: ETheme.ONE_LIGHT },
-			{ label: "Palenight", value: ETheme.PALENIGHT },
+			{ label: 'Amoled', value: ETheme.AMOLED },
+			{ label: 'Catppuccin (Latte)', value: ETheme.CATPPUCCIN_LATTE },
+			{ label: 'Catppuccin (Mocha)', value: ETheme.CATPPUCCIN_MOCHA },
+			{ label: 'Dark', value: ETheme.DARK },
+			{ label: 'Dracula', value: ETheme.DRACULA_DARK },
+			{ label: 'Dracula Light', value: ETheme.DRACULA_LIGHT },
+			{ label: 'Everforest Hard', value: ETheme.EVERFOREST_HARD },
+			{ label: 'GitHub Dark', value: ETheme.GITHUB_DARK },
+			{ label: 'GitHub Light', value: ETheme.GITHUB_LIGHT },
+			{ label: 'Gruvbox', value: ETheme.GRUVBOX },
+			{ label: 'Gruvbox Hard', value: ETheme.GRUVBOX_HARD },
+			{ label: 'Kanagawa', value: ETheme.KANAGAWA },
+			{ label: 'Kimbie Dark', value: ETheme.KIMBIE_DARK },
+			{ label: 'Light', value: ETheme.LIGHT },
+			{ label: 'Min', value: ETheme.MIN },
+			{ label: 'Monokai Pro', value: ETheme.MONOKAI_PRO },
+			{ label: 'Nord', value: ETheme.NORD },
+			{ label: 'Nord Light', value: ETheme.NORD_LIGHT },
+			{ label: 'Obsidian', value: ETheme.OBSIDIAN },
+			{ label: 'One Dark', value: ETheme.ONE_DARK },
+			{ label: 'One Light', value: ETheme.ONE_LIGHT },
+			{ label: 'Palenight', value: ETheme.PALENIGHT },
 			{ label: "Rosé Pine", value: ETheme.ROSE_PINE },
-			{ label: "Solarized Dark", value: ETheme.SOLARIZED_DARK },
-			{ label: "Solarized Light", value: ETheme.SOLARIZED_LIGHT },
-			{ label: "Tokyo Night", value: ETheme.TOKYO_NIGHT },
-			{ label: "Tokyo Night Light", value: ETheme.TOKYO_NIGHT_LIGHT },
-			{ label: "Vesper", value: ETheme.VESPER },
-		].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" })),
+			{ label: 'Solarized Dark', value: ETheme.SOLARIZED_DARK },
+			{ label: 'Solarized Light', value: ETheme.SOLARIZED_LIGHT },
+			{ label: 'Tokyo Night', value: ETheme.TOKYO_NIGHT },
+			{ label: 'Tokyo Night Light', value: ETheme.TOKYO_NIGHT_LIGHT },
+			{ label: 'Vesper', value: ETheme.VESPER },
+		].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })),
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
 	});
 	const voiceCollection = createListCollection({
 		items: [
-			{ label: "Heart (Female, US)", value: "af_heart" },
-			{ label: "Bella (Female, US)", value: "af_bella" },
-			{ label: "Nicole (Female, US)", value: "af_nicole" },
-			{ label: "Adam (Male, US)", value: "am_adam" },
-			{ label: "Michael (Male, US)", value: "am_michael" },
-			{ label: "Emma (Female, UK)", value: "bf_emma" },
-			{ label: "George (Male, UK)", value: "bm_george" },
+			{ label: t('voices.heart'), value: 'af_heart' },
+			{ label: t('voices.bella'), value: 'af_bella' },
+			{ label: t('voices.nicole'), value: 'af_nicole' },
+			{ label: t('voices.adam'), value: 'am_adam' },
+			{ label: t('voices.michael'), value: 'am_michael' },
+			{ label: t('voices.emma'), value: 'bf_emma' },
+			{ label: t('voices.george'), value: 'bm_george' },
 		],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
 	});
 	const fontFamilyCollection = createListCollection({
 		items: [
-			{ label: "Inter", value: "Inter Variable, sans-serif" },
-			{ label: "Geist", value: '"Geist", sans-serif' },
-			{ label: "Geist Mono", value: '"Geist Mono", monospace' },
-			{ label: "Arial", value: "Arial, sans-serif" },
-			{ label: "Verdana", value: "Verdana, sans-serif" },
-			{ label: "Georgia", value: "Georgia, serif" },
-			{ label: "Times New Roman", value: '"Times New Roman", serif' },
-			{ label: "Courier New", value: '"Courier New", monospace' },
+			{ label: 'Inter', value: 'Inter Variable, sans-serif' },
+			{ label: 'Geist', value: '"Geist", sans-serif' },
+			{ label: 'Geist Mono', value: '"Geist Mono", monospace' },
+			{ label: 'Arial', value: 'Arial, sans-serif' },
+			{ label: 'Verdana', value: 'Verdana, sans-serif' },
+			{ label: 'Georgia', value: 'Georgia, serif' },
+			{ label: 'Times New Roman', value: '"Times New Roman", serif' },
+			{ label: 'Courier New', value: '"Courier New", monospace' },
+		],
+		itemToString: (item) => item.label,
+		itemToValue: (item) => item.value,
+	});
+	const languageCollection = createListCollection({
+		items: [
+			{ label: 'English', value: 'en' },
+			{ label: '简体中文', value: 'zh-CN' },
 		],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
@@ -198,7 +167,7 @@ export function SettingsPage() {
 	}, []);
 
 	const saveMut = useMutation<Partial<ISettings>, ISettings>(
-		useCallback((data: Partial<ISettings>) => updateSettings(data), []),
+		useCallback((data: Partial<ISettings>) => updateSettings(data), [])
 	);
 
 	// Check actual OS autostart status (desktop app only) - this is the source of truth
@@ -211,7 +180,7 @@ export function SettingsPage() {
 				const result = await api.isEnabled();
 				setAutoLaunch(result);
 			} catch (err) {
-				console.error("[Settings] Failed to check autostart status:", err);
+				console.error('[Settings] Failed to check autostart status:', err);
 			}
 		};
 		checkOsAutoLaunch();
@@ -222,14 +191,12 @@ export function SettingsPage() {
 		const checkMicPermission = async () => {
 			try {
 				// Check permission state
-				const permission = await navigator.permissions.query({
-					name: "microphone" as PermissionName,
-				});
-				setMicPermissionGranted(permission.state === "granted");
+				const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+				setMicPermissionGranted(permission.state === 'granted');
 
-				permission.addEventListener("change", () => {
-					setMicPermissionGranted(permission.state === "granted");
-					if (permission.state === "granted") enumerateMicDevices();
+				permission.addEventListener('change', () => {
+					setMicPermissionGranted(permission.state === 'granted');
+					if (permission.state === 'granted') enumerateMicDevices();
 				});
 			} catch {
 				// permissions.query not supported, try to enumerate
@@ -241,11 +208,8 @@ export function SettingsPage() {
 			try {
 				const devices = await navigator.mediaDevices.enumerateDevices();
 				const audioInputs = devices
-					.filter((d) => d.kind === "audioinput")
-					.map((d) => ({
-						id: d.deviceId,
-						label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`,
-					}));
+					.filter(d => d.kind === 'audioinput')
+					.map(d => ({ id: d.deviceId, label: d.label || t('options.microphoneFallback', { id: d.deviceId.slice(0, 8) }) }));
 				setMicDevices(audioInputs);
 			} catch {
 				setMicDevices([]);
@@ -253,25 +217,22 @@ export function SettingsPage() {
 		};
 
 		checkMicPermission();
-	}, []);
+	}, [t]);
 
 	const handleGrantMicPermission = async () => {
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			stream.getTracks().forEach((t) => t.stop());
+			stream.getTracks().forEach(t => t.stop());
 			setMicPermissionGranted(true);
 			// Re-enumerate now that permission is granted
 			const devices = await navigator.mediaDevices.enumerateDevices();
 			const audioInputs = devices
-				.filter((d) => d.kind === "audioinput")
-				.map((d) => ({
-					id: d.deviceId,
-					label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`,
-				}));
+				.filter(d => d.kind === 'audioinput')
+				.map(d => ({ id: d.deviceId, label: d.label || t('options.microphoneFallback', { id: d.deviceId.slice(0, 8) }) }));
 			setMicDevices(audioInputs);
-			toast("success", "Microphone access granted");
+			toast('success', t('toast.microphoneGranted'));
 		} catch (err) {
-			toast("error", "Microphone access denied");
+			toast('error', t('toast.microphoneDenied'));
 		}
 	};
 
@@ -279,47 +240,41 @@ export function SettingsPage() {
 		const trimmed = newRoot.trim();
 		if (trimmed && !modelRoots.includes(trimmed)) {
 			dirtySetter(setModelRoots, [...modelRoots, trimmed]);
-			dirtySetter(setNewRoot, "");
+			dirtySetter(setNewRoot, '');
 		}
 	};
 
 	const handleBrowseDirectory = async () => {
-		if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+		if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
 			try {
-				const mod = await import("@tauri-apps/plugin-dialog");
+				const mod = await import('@tauri-apps/plugin-dialog');
 				const path = await mod.open({ directory: true, multiple: false });
 				if (path && !modelRoots.includes(path)) {
 					dirtySetter(setNewRoot, path);
 				}
 			} catch (err) {
-				console.error("[Settings] Failed to open directory picker:", err);
+				console.error('[Settings] Failed to open directory picker:', err);
 			}
-		} else if (typeof window !== "undefined" && "showDirectoryPicker" in window) {
+		} else if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
 			try {
 				const handle = await (window as any).showDirectoryPicker();
 				if (handle) {
 					dirtySetter(setNewRoot, handle.name);
 				}
 			} catch (err: any) {
-				if (err.name !== "AbortError") {
-					console.error("[Settings] Failed to open directory picker:", err);
+				if (err.name !== 'AbortError') {
+					console.error('[Settings] Failed to open directory picker:', err);
 				}
 			}
 		} else {
-			toast(
-				"error",
-				"Directory picker not supported in this browser. Please type the path manually.",
-			);
+			toast('error', t('common:toast.directoryPickerNotSupported'));
 		}
 	};
 
 	const [deletingRootIndex, setDeletingRootIndex] = useState<number | null>(null);
 
 	const handleRemoveRoot = (idx: number) => {
-		dirtySetter(
-			setModelRoots,
-			modelRoots.filter((_, i) => i !== idx),
-		);
+		dirtySetter(setModelRoots, modelRoots.filter((_, i) => i !== idx));
 		dirtySetter(setDeletingRootIndex, null);
 	};
 
@@ -327,16 +282,16 @@ export function SettingsPage() {
 		dirtySetter(setDeletingRootIndex, idx);
 	};
 
-	const handleSave = async () => {
+const handleSave = async () => {
 		const pendingRoot = newRoot.trim();
 		if (pendingRoot && !modelRoots.includes(pendingRoot)) {
 			dirtySetter(setModelRoots, [...modelRoots, pendingRoot]);
-			dirtySetter(setNewRoot, "");
+			dirtySetter(setNewRoot, '');
 		}
 		const pendingFsRoot = newFsRoot.trim();
 		if (pendingFsRoot && !fsAllowedRoots.includes(pendingFsRoot)) {
 			dirtySetter(setFsAllowedRoots, [...fsAllowedRoots, pendingFsRoot]);
-			setNewFsRoot("");
+			setNewFsRoot('');
 		}
 
 		const result = await saveMut.mutate({
@@ -347,29 +302,30 @@ export function SettingsPage() {
 			apiPort,
 			proxyEnabled,
 			proxyPort,
-			startMinimized,
+				startMinimized,
 			checkpointsPath,
 			maxCheckpointDiskGB,
 			disableTitleGen,
 			theme: localTheme,
 			micDeviceId,
-			kokoroVoice,
+kokoroVoice,
 			kokoroSpeed,
 			builtinMcpPort,
 			builtinMcpExposeExternal,
+			inferenceExposeExternal,
 			fsAllowedRoots,
 			appZoomLevel,
 			chatFontSize,
 			chatFontFamily,
 			chatFixedWidth,
-			dictationPTTKey,
+dictationPTTKey,
 			dictationPTTModeHold,
 			globalPTTKey,
 			globalPTTModeHold,
 		});
 
 		if (saveMut.error) {
-			toast("error", saveMut.error);
+			toast('error', saveMut.error);
 			return;
 		}
 
@@ -383,54 +339,36 @@ export function SettingsPage() {
 			}
 		}
 
-		// Apply autostart setting via Tauri plugin (desktop only).
-		// Only call enable/disable on an actual state change: the underlying
-		// auto-launch disable() is non-idempotent and throws OS error 2 when the
-		// registry value is already absent (e.g. fresh install, toggle off).
+		// Apply autostart setting via Tauri plugin (desktop only). The Windows
+		// plugin's disable command fails when its registry value is already absent,
+		// so synchronize only when the requested state actually differs.
 		const api = await getAutostartApi();
 		if (api && autoLaunch !== null) {
 			try {
-				const currentlyEnabled = await api.isEnabled();
-				if (autoLaunch && !currentlyEnabled) {
-					await api.enable();
-				} else if (!autoLaunch && currentlyEnabled) {
-					await api.disable();
-				}
-				setAutoLaunch(autoLaunch);
+				const isEnabled = await syncAutostart(api, autoLaunch);
+				setAutoLaunch(isEnabled);
 			} catch (err) {
-				console.error("[Settings] Failed to apply autostart setting:", err);
-				toast("error", `Failed to update autostart: ${String(err)}`);
+				console.error('[Settings] Failed to apply autostart setting:', err);
+				toast('error', t('common:toast.autostartUpdateFailed'));
+				return;
 			}
 		}
 
 		setIsDirty(false);
-		toast("success", "Settings saved");
+		toast('success', t('toast.settingsSaved'));
 	};
 
 	return (
 		<Box pb="80px">
-			<PageHeader
-				title="Settings"
-				subtitle="WarpCore configuration"
-				icon={<Settings size={20} />}
-			/>
-			<Box pt="76px" px="4" pb="4">
-				<VStack align="stretch" gap="6">
+				<PageHeader title={t('title')} subtitle={t('subtitle')} icon={<Settings size={20} />} />
+				<Box pt="76px" px="4" pb="4">
+		<VStack align="stretch" gap="6">
 					{/* Theme */}
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Theme
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									UI appearance theme
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.theme')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.appearance')}</Text>
 							</Box>
 							<Combobox.Root
 								collection={themeCollection}
@@ -452,9 +390,7 @@ export function SettingsPage() {
 											borderRadius="lg"
 											fontWeight="500"
 										>
-											{themeCollection.items.find(
-												(i) => i.value === localTheme,
-											)?.label ?? "Dark"}
+											{themeCollection.items.find(i => i.value === localTheme)?.label ?? t('options.defaultTheme')}
 											<ChevronDown size={14} />
 										</Button>
 									</Combobox.Trigger>
@@ -470,22 +406,64 @@ export function SettingsPage() {
 											p="1"
 										>
 											{themeCollection.items.map((item) => (
-												<Combobox.Item
-													key={item.value}
-													item={item}
-													px="3"
-													py="2"
-													borderRadius="md"
-													cursor="pointer"
-													_hover={{ bg: "var(--wc-bg-hover)" }}
-													_highlighted={{ bg: "var(--wc-bg-active)" }}
-												>
-													<Text
-														fontSize="12px"
-														color="var(--wc-text-primary)"
-													>
-														{item.label}
-													</Text>
+												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
+													<Combobox.ItemIndicator />
+												</Combobox.Item>
+											))}
+										</Combobox.Content>
+									</Combobox.Positioner>
+								</Portal>
+							</Combobox.Root>
+						</VStack>
+					</Card>
+
+					{/* Language */}
+					<Card>
+						<VStack align="stretch" gap="4">
+							<Box>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.language')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.language')}</Text>
+							</Box>
+							<Combobox.Root
+								collection={languageCollection}
+								value={[locale ?? 'en']}
+								onValueChange={(details) => {
+									const val = (details.value?.[0] ?? 'en') as 'en' | 'zh-CN';
+									void setI18nLocale(val);
+								}}
+							>
+								<Combobox.Control>
+									<Combobox.Trigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											justifyContent="space-between"
+											bg="var(--wc-bg-subtle)"
+											borderColor="var(--wc-border-default)"
+											color="var(--wc-text-primary)"
+											fontSize="13px"
+											borderRadius="lg"
+											fontWeight="500"
+										>
+											{languageCollection.items.find(i => i.value === locale)?.label ?? languageCollection.items[0]?.label}
+											<ChevronDown size={14} />
+										</Button>
+									</Combobox.Trigger>
+								</Combobox.Control>
+								<Portal>
+									<Combobox.Positioner>
+										<Combobox.Content
+											bg="var(--wc-bg-elevated)"
+											borderWidth="1px"
+											borderColor="var(--wc-border-default)"
+											borderRadius="lg"
+											shadow="0 8px 32px rgba(0, 0, 0, 0.5)"
+											p="1"
+										>
+											{languageCollection.items.map((item) => (
+												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
 													<Combobox.ItemIndicator />
 												</Combobox.Item>
 											))}
@@ -500,118 +478,48 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Appearance
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									App zoom and chat message styling
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.appearance')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.zoom')}</Text>
 							</Box>
 
 							{/* App Zoom */}
 							<VStack align="stretch" gap="2">
 								<HStack justify="space-between">
-									<Text fontSize="13px" color="var(--wc-text-secondary)">
-										App Zoom
-									</Text>
-									<Text
-										fontSize="12px"
-										color="var(--wc-text-muted)"
-										fontFamily='"Geist Mono", monospace'
-									>
-										{Math.round(appZoomLevel * 100)}%
-									</Text>
+									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.appZoom')}</Text>
+									<Text fontSize="12px" color="var(--wc-text-muted)" fontFamily='"Geist Mono", monospace'>{Math.round(appZoomLevel * 100)}%</Text>
 								</HStack>
-								<Box
-									as="input"
-									type="range"
-									min="0.5"
-									max="3"
-									step="0.05"
-									value={appZoomLevel}
-									onChange={(e) =>
-										dirtySetter(setAppZoomLevel, Number(e.target.value))
-									}
-									style={{ width: "100%", accentColor: "var(--wc-accent-blue)" }}
-								/>
+								<input type="range" min="0.5" max="3" step="0.05" value={appZoomLevel} onChange={(e) => dirtySetter(setAppZoomLevel, Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--wc-accent-blue)' }} />
 								<HStack justify="space-between">
-									<Text fontSize="10px" color="var(--wc-text-faint)">
-										50%
-									</Text>
-									<Text fontSize="10px" color="var(--wc-text-faint)">
-										300%
-									</Text>
+									<Text fontSize="10px" color="var(--wc-text-faint)">50%</Text>
+									<Text fontSize="10px" color="var(--wc-text-faint)">300%</Text>
 								</HStack>
 							</VStack>
 
 							{/* Chat Font Size */}
 							<VStack align="stretch" gap="2">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Chat Font Size
-								</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontSize')}</Text>
 								<HStack gap="2">
-									<Input
-										value={chatFontSize}
-										onChange={(e) =>
-											dirtySetter(
-												setChatFontSize,
-												Math.min(32, Math.max(10, Number(e.target.value))),
-											)
-										}
-										type="number"
-										min={10}
-										max={32}
-										size="sm"
-										w="80px"
-										bg="var(--wc-bg-card)"
-										borderColor="var(--wc-border-default)"
-										color="var(--wc-text-primary)"
-										fontFamily='"Geist Mono", monospace'
-										fontSize="13px"
-										borderRadius="lg"
-										textAlign="center"
-										_focus={{
-											borderColor: "var(--wc-accent-blue-focus)",
-											outline: "none",
-										}}
-									/>
-									<Text fontSize="13px" color="var(--wc-text-muted)">
-										px
-									</Text>
+									<Input value={chatFontSize} onChange={e => dirtySetter(setChatFontSize, Math.min(32, Math.max(10, Number(e.target.value))))} type="number" min={10} max={32} size="sm" w="80px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
+									<Text fontSize="13px" color="var(--wc-text-muted)">{t('units.px')}</Text>
 								</HStack>
 							</VStack>
 
 							{/* Chat Font Family */}
 							<VStack align="stretch" gap="2">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Chat Font Family
-								</Text>
-								<NativeSelect.Root value={chatFontFamily}>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.chatFontFamily')}</Text>
+								<NativeSelect.Root>
 									<NativeSelect.Field
-										size="sm"
+										value={chatFontFamily}
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
 										fontSize="13px"
 										borderRadius="lg"
-										onChange={(e) =>
-											dirtySetter(setChatFontFamily, e.target.value)
-										}
+										onChange={(e) => dirtySetter(setChatFontFamily, e.target.value)}
 									>
-										<option value="">Default (Inter)</option>
-										{fontFamilyCollection.items.map((f) => (
-											<option
-												key={f.value}
-												value={f.value}
-												style={{ fontFamily: f.value }}
-											>
-												{f.label}
-											</option>
+										<option value="">{t('fonts.default')}</option>
+										{fontFamilyCollection.items.map(f => (
+											<option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
 										))}
 									</NativeSelect.Field>
 								</NativeSelect.Root>
@@ -620,31 +528,13 @@ export function SettingsPage() {
 							{/* Fixed Chat Width */}
 							<HStack justify="space-between" alignItems="center">
 								<Box flex="1">
-									<Text fontSize="13px" color="var(--wc-text-secondary)">
-										Fixed Chat Width
-									</Text>
-									<Text fontSize="11px" color="var(--wc-text-muted)">
-										Max-width 960px instead of full-width
-									</Text>
+									<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.fixedChatWidth')}</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('descriptions.fixedChatWidth')}</Text>
 								</Box>
-								<Switch.Root
-									label="Fixed chat width"
-									checked={chatFixedWidth}
-									onCheckedChange={(details) =>
-										dirtySetter(setChatFixedWidth, details.checked)
-									}
-								>
+								<Switch.Root label={t('switches.fixedChatWidth')} checked={chatFixedWidth} onCheckedChange={(details) => dirtySetter(setChatFixedWidth, details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: chatFixedWidth
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: chatFixedWidth ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
 							</HStack>
@@ -655,35 +545,15 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Model Directories
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Folders to scan for GGUF models (user/model structure)
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.modelDirectories')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.modelDirs')}</Text>
 							</Box>
 
 							<VStack align="stretch" gap="2">
 								{modelRoots.map((root, idx) => (
 									<HStack key={idx} gap="2">
-										<Flex
-											w="8"
-											h="8"
-											borderRadius="md"
-											alignItems="center"
-											justifyContent="center"
-											bg="var(--wc-bg-surface)"
-											flexShrink={0}
-										>
-											<FolderOpen
-												size={14}
-												color="var(--wc-text-secondary)"
-											/>
+										<Flex w="8" h="8" borderRadius="md" alignItems="center" justifyContent="center" bg="var(--wc-bg-surface)" flexShrink={0}>
+											<FolderOpen size={14} color="var(--wc-text-secondary)" />
 										</Flex>
 										<Input
 											value={root}
@@ -696,19 +566,7 @@ export function SettingsPage() {
 											fontSize="12px"
 											borderRadius="lg"
 										/>
-										<Button
-											size="sm"
-											variant="ghost"
-											color="var(--wc-text-faint)"
-											_hover={{
-												color: "var(--wc-accent-red-alt)",
-												bg: "var(--wc-accent-red-bg-12)",
-											}}
-											borderRadius="md"
-											minW="8"
-											px="0"
-											onClick={() => confirmDeleteRoot(idx)}
-										>
+										<Button size="sm" variant="ghost" color="var(--wc-text-faint)" _hover={{ color: 'var(--wc-accent-red-alt)', bg: 'var(--wc-accent-red-bg-12)' }} borderRadius="md" minW="8" px="0" onClick={() => confirmDeleteRoot(idx)}>
 											<Trash2 size={14} />
 										</Button>
 									</HStack>
@@ -716,7 +574,7 @@ export function SettingsPage() {
 
 								<HStack gap="2">
 									<Input
-										placeholder="/path/to/models"
+										placeholder={t('placeholders.modelPath')}
 										size="sm"
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
@@ -724,39 +582,20 @@ export function SettingsPage() {
 										fontFamily='"Geist Mono", monospace'
 										fontSize="12px"
 										borderRadius="lg"
-										_placeholder={{ color: "var(--wc-text-placeholder)" }}
-										_focus={{
-											borderColor: "var(--wc-accent-blue-focus)",
-											outline: "none",
-										}}
+										_placeholder={{ color: 'var(--wc-text-placeholder)' }}
+										_focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }}
 										value={newRoot}
-										onChange={(e) => dirtySetter(setNewRoot, e.target.value)}
-										onKeyDown={(e) => e.key === "Enter" && handleAddRoot()}
+										onChange={e => dirtySetter(setNewRoot, e.target.value)}
+										onKeyDown={e => e.key === 'Enter' && handleAddRoot()}
 									/>
-									<Button
-										size="sm"
-										variant="ghost"
-										color="var(--wc-text-secondary)"
-										_hover={{
-											color: "var(--wc-accent-purple)",
-											bg: "var(--wc-accent-purple-hover-bg)",
-										}}
-										borderRadius="lg"
-										minW="8"
-										px="0"
-										onClick={handleBrowseDirectory}
-										title="Browse directory"
-									>
+									<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseDirectory} title={t('actions.browseDirectory')}>
 										<FolderInput size={14} />
 									</Button>
 									<Button
 										size="sm"
 										variant="ghost"
 										color="var(--wc-text-secondary)"
-										_hover={{
-											color: "var(--wc-accent-blue)",
-											bg: "var(--wc-accent-blue-bg-10)",
-										}}
+										_hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-10)' }}
 										borderRadius="lg"
 										onClick={handleAddRoot}
 										disabled={!newRoot.trim()}
@@ -772,62 +611,13 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Port Range
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Auto-assigned port range for llama-server instances
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.portRange')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.portRange')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Input
-									value={portStart}
-									onChange={(e) =>
-										dirtySetter(setPortStart, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
-								<Text fontSize="13px" color="var(--wc-text-faint)">
-									to
-								</Text>
-								<Input
-									value={portEnd}
-									onChange={(e) =>
-										dirtySetter(setPortEnd, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
+								<Input value={portStart} onChange={e => dirtySetter(setPortStart, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
+								<Text fontSize="13px" color="var(--wc-text-faint)">{t('units.to')}</Text>
+								<Input value={portEnd} onChange={e => dirtySetter(setPortEnd, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 						</VStack>
 					</Card>
@@ -836,66 +626,16 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Checkpoints
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									KV cache checkpoint storage. Leave path blank for default.
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.checkpoints')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.checkpoints')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Input
-									value={checkpointsPath}
-									onChange={(e) =>
-										dirtySetter(setCheckpointsPath, e.target.value)
-									}
-									size="sm"
-									flex="1"
-									placeholder="~/.config/warpcore/checkpoints/"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
+								<Input value={checkpointsPath} onChange={e => dirtySetter(setCheckpointsPath, e.target.value)} size="sm" flex="1" placeholder={t('placeholders.checkpointsPath')} bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 							<HStack gap="3">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Max disk usage
-								</Text>
-								<Input
-									value={maxCheckpointDiskGB}
-									onChange={(e) =>
-										dirtySetter(setMaxCheckpointDiskGB, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
-								<Text fontSize="13px" color="var(--wc-text-muted)">
-									GB
-								</Text>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.maxDiskUsage')}</Text>
+								<Input value={maxCheckpointDiskGB} onChange={e => dirtySetter(setMaxCheckpointDiskGB, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
+								<Text fontSize="13px" color="var(--wc-text-muted)">{t('units.gb')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -905,40 +645,18 @@ export function SettingsPage() {
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center" mb="2">
 								<Box flex="1">
-									<Text
-										fontSize="14px"
-										fontWeight="600"
-										color="var(--wc-text-heading)"
-									>
-										Generate conversation titles
-									</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.generateTitles')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										Use the loaded model to generate a concise title for new
-										conversations. When disabled, titles are derived from your
-										first message.
+										{t('descriptions.generateTitles')}
 									</Text>
 								</Box>
-								<Switch.Root
-									label="Generate titles"
-									checked={!disableTitleGen}
-									onCheckedChange={(details) =>
-										dirtySetter(setDisableTitleGen, !details.checked)
-									}
-								>
+								<Switch.Root label={t('switches.generateTitles')} checked={!disableTitleGen} onCheckedChange={(details) => dirtySetter(setDisableTitleGen, !details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: !disableTitleGen
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: !disableTitleGen ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Generate titles
+										{t('switches.generateTitles')}
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
@@ -949,52 +667,37 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Voice Input
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Microphone device for speech-to-text
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.voiceInput')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.voiceInput')}</Text>
 							</Box>
 							{!micPermissionGranted ? (
 								<Button
 									size="sm"
 									bg="var(--wc-accent-blue-bg-15)"
 									color="var(--wc-accent-blue)"
-									_hover={{ bg: "var(--wc-accent-blue-bg-25)" }}
+									_hover={{ bg: 'var(--wc-accent-blue-bg-25)' }}
 									borderRadius="lg"
-									leftIcon={<Mic size={15} />}
 									onClick={handleGrantMicPermission}
 								>
-									Grant Microphone Access
+									<Mic size={15} />
+									{t('actions.grantMicAccess')}
 								</Button>
 							) : micDevices.length === 0 ? (
-								<Text fontSize="12px" color="var(--wc-text-faint)">
-									No microphone devices found
-								</Text>
+								<Text fontSize="12px" color="var(--wc-text-faint)">{t('options.noMicDevices')}</Text>
 							) : (
-								<NativeSelect.Root value={micDeviceId}>
+								<NativeSelect.Root>
 									<NativeSelect.Field
-										size="sm"
+										value={micDeviceId}
 										bg="var(--wc-bg-card)"
 										borderColor="var(--wc-border-default)"
 										color="var(--wc-text-primary)"
 										fontSize="13px"
 										borderRadius="lg"
-										onChange={(e) =>
-											dirtySetter(setMicDeviceId, e.target.value)
-										}
+										onChange={(e) => dirtySetter(setMicDeviceId, e.target.value)}
 									>
-										<option value="">Default Microphone</option>
-										{micDevices.map((d) => (
-											<option key={d.id} value={d.id}>
-												{d.label}
-											</option>
+										<option value="">{t('options.defaultMicrophone')}</option>
+										{micDevices.map(d => (
+											<option key={d.id} value={d.id}>{d.label}</option>
 										))}
 									</NativeSelect.Field>
 								</NativeSelect.Root>
@@ -1006,26 +709,14 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Voice Output
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Kokoro TTS voice for reading assistant messages
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.voiceOutput')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.voiceOutput')}</Text>
 							</Box>
 							<Combobox.Root
 								collection={voiceCollection}
 								value={[kokoroVoice]}
 								onValueChange={(details) => {
-									dirtySetter(
-										setKokoroVoice,
-										(details.value?.[0] as string) || "af_heart",
-									);
+									dirtySetter(setKokoroVoice, details.value?.[0] as string || 'af_heart');
 								}}
 							>
 								<Combobox.Control>
@@ -1041,9 +732,7 @@ export function SettingsPage() {
 											borderRadius="lg"
 											fontWeight="500"
 										>
-											{voiceCollection.items.find(
-												(i) => i.value === kokoroVoice,
-											)?.label ?? "Heart (Female, US)"}
+											{voiceCollection.items.find(i => i.value === kokoroVoice)?.label ?? t('options.defaultVoice')}
 											<ChevronDown size={14} />
 										</Button>
 									</Combobox.Trigger>
@@ -1059,22 +748,8 @@ export function SettingsPage() {
 											p="1"
 										>
 											{voiceCollection.items.map((item) => (
-												<Combobox.Item
-													key={item.value}
-													item={item}
-													px="3"
-													py="2"
-													borderRadius="md"
-													cursor="pointer"
-													_hover={{ bg: "var(--wc-bg-hover)" }}
-													_highlighted={{ bg: "var(--wc-bg-active)" }}
-												>
-													<Text
-														fontSize="12px"
-														color="var(--wc-text-primary)"
-													>
-														{item.label}
-													</Text>
+												<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer" _hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-bg-active)' }}>
+													<Text fontSize="12px" color="var(--wc-text-primary)">{item.label}</Text>
 													<Combobox.ItemIndicator />
 												</Combobox.Item>
 											))}
@@ -1084,12 +759,8 @@ export function SettingsPage() {
 							</Combobox.Root>
 							<VStack align="stretch" gap="2">
 								<HStack justify="space-between">
-									<Text fontSize="11px" color="var(--wc-text-muted)">
-										TTS Speed
-									</Text>
-									<Text fontSize="11px" color="var(--wc-text-tertiary)">
-										{kokoroSpeed.toFixed(1)}x
-									</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)">{t('options.ttsSpeed')}</Text>
+									<Text fontSize="11px" color="var(--wc-text-tertiary)">{kokoroSpeed.toFixed(1)}x</Text>
 								</HStack>
 								<Slider.Root
 									w="full"
@@ -1099,9 +770,7 @@ export function SettingsPage() {
 									min={0.5}
 									max={3}
 									step={0.1}
-									onValueChange={(details) =>
-										dirtySetter(setKokoroSpeed, details.value[0])
-									}
+									onValueChange={(details) => dirtySetter(setKokoroSpeed, details.value[0])}
 								>
 									<Slider.Control>
 										<Slider.Track>
@@ -1118,51 +787,23 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Dictation
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Push-to-talk key for voice dictation.
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.dictation')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.dictation')}</Text>
 							</Box>
 							<KeyCapture
 								value={dictationPTTKey}
 								onChange={(key) => dirtySetter(setDictationPTTKey, key)}
-								onDisable={() => dirtySetter(setDictationPTTKey, "")}
+								onDisable={() => dirtySetter(setDictationPTTKey, '')}
 							/>
 							<HStack gap="3" align="center">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Hold Mode
-								</Text>
-								<Switch.Root
-									checked={dictationPTTModeHold}
-									onCheckedChange={(details) =>
-										dirtySetter(setDictationPTTModeHold, details.checked)
-									}
-								>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.holdMode')}</Text>
+								<Switch.Root checked={dictationPTTModeHold} onCheckedChange={(details) => dirtySetter(setDictationPTTModeHold, details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: dictationPTTModeHold
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: dictationPTTModeHold ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									{dictationPTTModeHold
-										? "Hold to record, release to stop"
-										: "Toggle on/off"}
-								</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{dictationPTTModeHold ? t('switches.pttHold') : t('switches.pttToggle')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -1171,52 +812,24 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Global PTT
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									OS-wide push-to-talk shortcut for dictation anywhere.
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.globalPTT')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.globalPtt')}</Text>
 							</Box>
 							<KeyCapture
 								value={globalPTTKey}
 								onChange={(key) => dirtySetter(setGlobalPTTKey, key)}
-								onDisable={() => dirtySetter(setGlobalPTTKey, "")}
-								label="PTT Key"
+								onDisable={() => dirtySetter(setGlobalPTTKey, '')}
+								label={t('labels.pttKey')}
 							/>
 							<HStack gap="3" align="center">
-								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Hold Mode
-								</Text>
-								<Switch.Root
-									checked={globalPTTModeHold}
-									onCheckedChange={(details) =>
-										dirtySetter(setGlobalPTTModeHold, details.checked)
-									}
-								>
+								<Text fontSize="13px" color="var(--wc-text-secondary)">{t('sections.holdMode')}</Text>
+								<Switch.Root checked={globalPTTModeHold} onCheckedChange={(details) => dirtySetter(setGlobalPTTModeHold, details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: globalPTTModeHold
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: globalPTTModeHold ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									{globalPTTModeHold
-										? "Hold to record, release to stop"
-										: "Toggle on/off"}
-								</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{globalPTTModeHold ? t('switches.pttHold') : t('switches.pttToggle')}</Text>
 							</HStack>
 						</VStack>
 					</Card>
@@ -1225,132 +838,41 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									API Host
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									WarpCore API listen address
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.apiHost')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.apiHost')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Input
-									value={apiHost}
-									onChange={(e) => dirtySetter(setApiHost, e.target.value)}
-									size="sm"
-									w="140px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
-								<Text fontSize="13px" color="var(--wc-text-faint)">
-									:
-								</Text>
-								<Input
-									value={apiPort}
-									onChange={(e) =>
-										dirtySetter(setApiPort, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
+								<Input value={apiHost} onChange={e => dirtySetter(setApiHost, e.target.value)} size="sm" w="140px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
+								<Text fontSize="13px" color="var(--wc-text-faint)">:</Text>
+								<Input value={apiPort} onChange={e => dirtySetter(setApiPort, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 						</VStack>
 					</Card>
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Built-in MCP Server (warpmcp)
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Exposes built-in tools (file_read, file_write, dir_list,
-									shell_exec, fetch) via MCP. Restarts on port or exposure change.
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.builtinMcp')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.builtinMcp')}</Text>
 							</Box>
 							<HStack gap="3">
-								<Text fontSize="13px" color="var(--wc-text-muted)" w="100px">
-									Port
-								</Text>
-								<Input
-									value={builtinMcpPort}
-									onChange={(e) =>
-										dirtySetter(setBuiltinMcpPort, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-								/>
+								<Text fontSize="13px" color="var(--wc-text-muted)" w="100px">{t('sections.port')}</Text>
+								<Input value={builtinMcpPort} onChange={e => dirtySetter(setBuiltinMcpPort, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} />
 							</HStack>
 							<HStack gap="3">
-								<Switch.Root
-									label="Expose to external clients"
-									checked={builtinMcpExposeExternal}
-									onCheckedChange={(details) =>
-										dirtySetter(setBuiltinMcpExposeExternal, details.checked)
-									}
-								>
+								<Switch.Root label={t('switches.exposeExternal')} checked={builtinMcpExposeExternal} onCheckedChange={(details) => dirtySetter(setBuiltinMcpExposeExternal, details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: builtinMcpExposeExternal
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: builtinMcpExposeExternal ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Bind on 0.0.0.0 (off = loopback only)
+										{t('switches.bindAll')}
 									</Switch.Label>
 								</Switch.Root>
 							</HStack>
 							{/* fsAllowedRoots UI — commented out, sandbox check bypassed
 							<Box>
-								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">File-system allowed roots</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">file_read, file_write, dir_list are disabled when empty. Paths checked after symlink resolution.</Text>
+								<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)" mb="1">{t('sections.fsAllowedRoots')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)" mb="2">{t('descriptions.fsAllowedRoots')}</Text>
 								<VStack align="stretch" gap="2">
 									{fsAllowedRoots.map((root, idx) => (
 										<HStack key={idx} gap="2">
@@ -1361,8 +883,8 @@ export function SettingsPage() {
 										</HStack>
 									))}
 									<HStack gap="2">
-										<Input value={newFsRoot} onChange={e => setNewFsRoot(e.target.value)} placeholder="/absolute/path" size="sm" flex="1" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" />
-										<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFsRoot} title="Browse directory">
+										<Input value={newFsRoot} onChange={e => setNewFsRoot(e.target.value)} placeholder={t('placeholders.fsRoot')} size="sm" flex="1" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" />
+										<Button size="sm" variant="ghost" color="var(--wc-text-secondary)" _hover={{ color: 'var(--wc-accent-purple)', bg: 'var(--wc-accent-purple-hover-bg)' }} borderRadius="lg" minW="8" px="0" onClick={handleBrowseFsRoot} title={t('actions.browseDirectory')}>
 											<FolderOpen size={14} />
 										</Button>
 										<Button size="sm" variant="ghost" onClick={() => {
@@ -1380,68 +902,49 @@ export function SettingsPage() {
 						</VStack>
 					</Card>
 
+					{/* Inference server exposure */}
+					<Card>
+						<VStack align="stretch" gap="4">
+							<Box>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.inferenceExpose')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.inferenceExpose')}</Text>
+							</Box>
+							<HStack gap="3">
+								<Switch.Root label={t('switches.exposeInference')} checked={inferenceExposeExternal} onCheckedChange={(details) => dirtySetter(setInferenceExposeExternal, details.checked)}>
+									<Switch.HiddenInput />
+									<Switch.Control css={{ bg: inferenceExposeExternal ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
+									</Switch.Control>
+									<Switch.Label ml="2" fontSize="13px" userSelect="none">
+										{t('switches.bindAll')}
+									</Switch.Label>
+								</Switch.Root>
+							</HStack>
+						</VStack>
+					</Card>
+
 					{/* Proxy */}
 					<Card>
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center" mb="2">
 								<Box flex="1">
-									<Text
-										fontSize="14px"
-										fontWeight="600"
-										color="var(--wc-text-heading)"
-									>
-										Router
-									</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.router')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										OpenAI-compatible proxy for routing requests by server alias
+										{t('descriptions.router')}
 									</Text>
 								</Box>
 							</HStack>
 							<HStack gap="3">
-								<Switch.Root
-									label="Start router on App launch"
-									checked={proxyEnabled}
-									onCheckedChange={(details) =>
-										dirtySetter(setProxyEnabled, details.checked)
-									}
-								>
+								<Switch.Root label={t('switches.startRouterOnLaunch')} checked={proxyEnabled} onCheckedChange={(details) => dirtySetter(setProxyEnabled, details.checked)}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: proxyEnabled
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: proxyEnabled ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 									<Switch.Label ml="2" fontSize="13px" userSelect="none">
-										Start router on App launch
+										{t('switches.startRouterOnLaunch')}
 									</Switch.Label>
 								</Switch.Root>
-								<Input
-									value={proxyPort}
-									onChange={(e) =>
-										dirtySetter(setProxyPort, Number(e.target.value))
-									}
-									type="number"
-									size="sm"
-									w="100px"
-									bg="var(--wc-bg-card)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-primary)"
-									fontFamily='"Geist Mono", monospace'
-									fontSize="13px"
-									borderRadius="lg"
-									textAlign="center"
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-									disabled={!proxyEnabled}
-								/>
+								<Input value={proxyPort} onChange={e => dirtySetter(setProxyPort, Number(e.target.value))} type="number" size="sm" w="100px" bg="var(--wc-bg-card)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)" fontFamily='"Geist Mono", monospace' fontSize="13px" borderRadius="lg" textAlign="center" _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} disabled={!proxyEnabled} />
 							</HStack>
 						</VStack>
 					</Card>
@@ -1451,44 +954,20 @@ export function SettingsPage() {
 						<VStack align="stretch" gap="4">
 							<HStack justify="space-between" alignItems="center">
 								<Box flex="1">
-									<Text
-										fontSize="14px"
-										fontWeight="600"
-										color="var(--wc-text-heading)"
-									>
-										Launch on Startup
-									</Text>
+									<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{t('sections.launchOnStartup')}</Text>
 									<Text fontSize="12px" color="var(--wc-text-muted)">
-										Start WarpCore automatically when you log in
+										{t('descriptions.launchOnStartup')}
 									</Text>
 									{autoLaunch === null && (
-										<Text
-											fontSize="11px"
-											color="var(--wc-accent-red-alt)"
-											mt="1"
-										>
-											Desktop API not available - toggle disabled
+										<Text fontSize="11px" color="var(--wc-accent-red-alt)" mt="1">
+											{t('options.desktopApiUnavailable')}
 										</Text>
 									)}
 								</Box>
-								<Switch.Root
-									checked={autoLaunch ?? false}
-									onCheckedChange={(details) =>
-										dirtySetter(setAutoLaunch, details.checked)
-									}
-									disabled={autoLaunch === null}
-								>
+								<Switch.Root checked={autoLaunch ?? false} onCheckedChange={(details) => dirtySetter(setAutoLaunch, details.checked)} disabled={autoLaunch === null}>
 									<Switch.HiddenInput />
-									<Switch.Control
-										css={{
-											bg: autoLaunch
-												? "var(--wc-switch-active)"
-												: "var(--wc-bg-active)",
-										}}
-									>
-										<Switch.Thumb
-											css={{ bg: "var(--wc-special-switch-thumb)" }}
-										/>
+									<Switch.Control css={{ bg: autoLaunch ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+										<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 									</Switch.Control>
 								</Switch.Root>
 							</HStack>
@@ -1496,36 +975,15 @@ export function SettingsPage() {
 							<Box pt="2" borderTop="1px solid var(--wc-border-default)">
 								<HStack justify="space-between" alignItems="center">
 									<Box flex="1">
-										<Text
-											fontSize="13px"
-											fontWeight="500"
-											color="var(--wc-text-heading)"
-										>
-											Start Minimized
-										</Text>
+										<Text fontSize="13px" fontWeight="500" color="var(--wc-text-heading)">{t('sections.startMinimized')}</Text>
 										<Text fontSize="11px" color="var(--wc-text-muted)">
-											Start to tray without showing window (requires Launch on
-											Startup)
+											{t('descriptions.startMinimized')}
 										</Text>
 									</Box>
-									<Switch.Root
-										checked={startMinimized}
-										onCheckedChange={(details) =>
-											dirtySetter(setStartMinimized, details.checked)
-										}
-										disabled={!autoLaunch || autoLaunch === null}
-									>
+									<Switch.Root checked={startMinimized} onCheckedChange={(details) => dirtySetter(setStartMinimized, details.checked)} disabled={!autoLaunch || autoLaunch === null}>
 										<Switch.HiddenInput />
-										<Switch.Control
-											css={{
-												bg: startMinimized
-													? "var(--wc-switch-active)"
-													: "var(--wc-bg-active)",
-											}}
-										>
-											<Switch.Thumb
-												css={{ bg: "var(--wc-special-switch-thumb)" }}
-											/>
+										<Switch.Control css={{ bg: startMinimized ? 'var(--wc-switch-active)' : 'var(--wc-bg-active)' }}>
+											<Switch.Thumb css={{ bg: 'var(--wc-special-switch-thumb)' }} />
 										</Switch.Control>
 									</Switch.Root>
 								</HStack>
@@ -1537,31 +995,19 @@ export function SettingsPage() {
 					<Card>
 						<VStack align="stretch" gap="4">
 							<Box>
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="1"
-								>
-									Onboarding
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									Re-run the setup guide
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="1">{t('sections.onboarding')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{t('descriptions.onboarding')}</Text>
 							</Box>
 							<Button
 								size="sm"
 								variant="ghost"
 								color="var(--wc-text-secondary)"
-								_hover={{
-									color: "var(--wc-accent-blue)",
-									bg: "var(--wc-accent-blue-bg-10)",
-								}}
+								_hover={{ color: 'var(--wc-accent-blue)', bg: 'var(--wc-accent-blue-bg-10)' }}
 								borderRadius="lg"
-								leftIcon={<BookOpen size={15} />}
 								onClick={() => updateSettings({ isOnboardingComplete: false })}
 							>
-								Re-run Onboarding
+								<BookOpen size={15} />
+								{t('actions.rerunOnboarding')}
 							</Button>
 						</VStack>
 					</Card>
@@ -1587,7 +1033,7 @@ export function SettingsPage() {
 							color="var(--wc-accent-green-icon)"
 							borderWidth="1px"
 							borderColor="var(--wc-accent-green-border)"
-							_hover={{ bg: "var(--wc-accent-green-hover)" }}
+							_hover={{ bg: 'var(--wc-accent-green-hover)' }}
 							borderRadius="lg"
 							fontSize="13px"
 							fontWeight="500"
@@ -1595,7 +1041,7 @@ export function SettingsPage() {
 							disabled={saveMut.loading}
 						>
 							{saveMut.loading ? <Spinner size="xs" /> : <Save size={15} />}
-							{"Save Changes"}
+							{t('actions.saveChanges')}
 						</Button>
 					</HStack>
 				</Box>
@@ -1603,8 +1049,8 @@ export function SettingsPage() {
 
 			{deletingRootIndex !== null && (
 				<ConfirmDialog
-					title="Remove Model Directory?"
-					message={`This will remove "${modelRoots[deletingRootIndex]}" from your configured model directories.`}
+					title={t('dialog.removeModelDirTitle')}
+					message={t('dialog.removeModelDirMessage', { path: modelRoots[deletingRootIndex] })}
 					isOpen={true}
 					onCancel={() => setDeletingRootIndex(null)}
 					onConfirm={() => handleRemoveRoot(deletingRootIndex)}

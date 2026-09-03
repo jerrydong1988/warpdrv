@@ -1,8 +1,9 @@
-import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
-import { ArrowDown, Download, Terminal, Trash2, X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { clearServerLogs as clearLogsApi } from "@/api/services";
-import { useStore } from "@/store";
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Box, Text, HStack, Flex, Button } from '@chakra-ui/react';
+import { X, Terminal, Trash2, Download, ArrowDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useStore } from '@/store';
+import { clearServerLogs as clearLogsApi } from '@/api/services';
 
 interface IServerLogsProps {
 	serverId: string;
@@ -12,6 +13,7 @@ interface IServerLogsProps {
 
 const emptyLogs: Array<string> = [];
 export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServerLogsProps) => {
+	const { t } = useTranslation('servers');
 	const logsEndRef = useRef<HTMLDivElement>(null);
 	const [autoScroll, setAutoScroll] = useState(true);
 
@@ -66,9 +68,7 @@ export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServer
 			>
 				<HStack gap="2">
 					<Terminal size={14} color="var(--wc-text-muted)" />
-					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)">
-						Logs — {serverName}
-					</Text>
+					<Text fontSize="12px" fontWeight="600" color="var(--wc-text-secondary)">{t('labels.logsTitle', { serverName })}</Text>
 				</HStack>
 				<HStack gap="1">
 					<Button
@@ -125,7 +125,7 @@ export const ServerLogs = React.memo(({ serverId, serverName, onClose }: IServer
 			>
 				{serverLogs.length === 0 ? (
 					<Flex h="100%" alignItems="center" justifyContent="center">
-						<Text color="var(--wc-text-disabled)">No logs yet...</Text>
+						<Text color="var(--wc-text-disabled)">{t('labels.noLogs')}</Text>
 					</Flex>
 				) : (
 					serverLogs.map((line: string, i: number) => (

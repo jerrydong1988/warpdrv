@@ -36,10 +36,10 @@ export async function embeddingSearchHandler(
 	);
 	if (!deps.embeddingSearch) {
 		console.log("[warpmcp] no function");
-		throw "[warpmcp] embedding function not found";
+		throw new Error("[warpmcp] embedding function not found");
 	}
 	if (!args.topic) {
-		throw "[warpmcp] topic is required";
+		throw new Error("[warpmcp] topic is required");
 	}
 	//console.log('[warpmcp] embeddingSearchHandler calling search with:', args.query, args.topK ?? 5, args.topic);
 	const results = await deps.embeddingSearch(args.query, args.topK ?? 5, args.topic);

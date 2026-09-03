@@ -111,13 +111,15 @@ export async function parseWhisperBinMetadata(
 		const nVocab = buf.readInt32LE(4);
 		const nAudioCtx = buf.readInt32LE(8);
 		const nAudioState = buf.readInt32LE(12);
-		const nAudioHead = buf.readInt32LE(16);
+		// Read-but-unused fields below document the GGML header layout; keep the
+		// offsets visible so future parsers don't have to re-derive them.
+		buf.readInt32LE(16); // nAudioHead
 		const nAudioLayer = buf.readInt32LE(20);
 		const nTextCtx = buf.readInt32LE(24);
 		const nTextState = buf.readInt32LE(28);
-		const nTextHead = buf.readInt32LE(32);
+		buf.readInt32LE(32); // nTextHead
 		const nTextLayer = buf.readInt32LE(36);
-		const nMels = buf.readInt32LE(40);
+		buf.readInt32LE(40); // nMels
 		const ftype = buf.readInt32LE(44);
 
 		const modelSize = resolveModelSize(nAudioLayer, nTextLayer);

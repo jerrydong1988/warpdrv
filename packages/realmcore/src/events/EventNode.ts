@@ -193,7 +193,9 @@ export class EventNode implements IExternalNode {
 	// without scanning the trees. subs install relay listeners keyed by a shared
 	// id, and unsub removes them through this.
 	public mapCallbackToListener: Record<TCallbackId, { source: TSourceAddr; name: TEventName }>;
-	// relay listener ids grouped by the subscriber they forward to, keyed by	// concrete subscriber addr in a trie so all relays under a detaching branch	// (the subscriber and every nested descendant) can be gathered in one walk.	public mapSubscriberToIds: SegmentTrie<Record<TCallbackId, true>>;
+	// Relay listener ids grouped by the subscriber they forward to. The trie
+	// lets detach collect the subscriber and every nested descendant in one walk.
+	public mapSubscriberToIds: SegmentTrie<Record<TCallbackId, true>>;
 
 	constructor(
 		public readonly nodeId: TNodeId,
@@ -240,7 +242,7 @@ export class EventNode implements IExternalNode {
 	public async addParent(parent: IExternalNode): Promise<void> {
 		this.parent = parent;
 		this.nodeAddr = parent.nodeAddr + SEP + this.nodeId;
-		for (const id in this.children) await this.children[id].addParent(this);
+		for (const id in this.children) await this.children[id]?.addParent(this);
 		setTimeout(() => this.onReady?.(), 0);
 	}
 
@@ -252,7 +254,7 @@ export class EventNode implements IExternalNode {
 		this.callbacks = {};
 		this.mapCallbackToListener = {};
 		this.mapSubscriberToIds = new SegmentTrie<Record<TCallbackId, true>>(SEP);
-		for (const id in this.children) await this.children[id].removeParent();
+		for (const id in this.children) await this.children[id]?.removeParent();
 		this.parent = null;
 		this.nodeAddr = "";
 		this.setupInternalEvents();
@@ -289,7 +291,8 @@ export class EventNode implements IExternalNode {
 		this.mapCallbackToListener[cbId] = { source: sourceAddr, name };
 		const existing = this.listeners.retrieve(sourceAddr);
 		let nameTree: SegmentTrie<TCallbackId>;
-		if (existing.length > 0) nameTree = existing[0];
+		const existingNameTree = existing[0];
+		if (existingNameTree) nameTree = existingNameTree;
 		else {
 			nameTree = new SegmentTrie<TCallbackId>(".");
 			this.listeners.insert(sourceAddr, nameTree);
@@ -304,7 +307,7 @@ export class EventNode implements IExternalNode {
 		const loc = this.mapCallbackToListener[cbId];
 		if (!loc) return;
 		const trees = this.listeners.retrieve(loc.source);
-		if (trees.length > 0) trees[0].remove(loc.name, cbId);
+		trees[0]?.remove(loc.name, cbId);
 		delete this.mapCallbackToListener[cbId];
 		this.removeCallback(cbId);
 	}
@@ -372,9 +375,10 @@ export class EventNode implements IExternalNode {
 
 	public purgeSubscriber(subscriber: TSubscriberAddr): void {
 		const buckets = this.mapSubscriberToIds.retrieve(subscriber);
-		if (buckets.length === 0) return;
-		for (const id in buckets[0]) this.removeListener(id);
-		this.mapSubscriberToIds.remove(subscriber, buckets[0]);
+		const ids = buckets[0];
+		if (!ids) return;
+		for (const id in ids) this.removeListener(id);
+		this.mapSubscriberToIds.remove(subscriber, ids);
 	}
 
 	// emit wrappers over pub. broadcast fans out in parallel and ignores returns;
@@ -499,7 +503,8 @@ export class EventNode implements IExternalNode {
 			p.id,
 		);
 		const existingSubs = this.mapSubscriberToIds.retrieve(subscriber);
-		if (existingSubs.length > 0) existingSubs[0][p.id] = true;
+		const existingIds = existingSubs[0];
+		if (existingIds) existingIds[p.id] = true;
 		else {
 			const ids: Record<TCallbackId, true> = {};
 			ids[p.id] = true;
@@ -576,6 +581,7 @@ export class EventNode implements IExternalNode {
 			const onPath = here.length < target.length && here.every((seg, i) => seg === target[i]);
 			if (onPath) {
 				const childId = target[here.length];
+				if (!childId) throw new Error("route target is missing a child segment");
 				const child = this.children[childId];
 				if (!child) throw new Error("route missing child: " + childId);
 				return child.route(ev, { ...r, returnPath: prependSeg(UP, r.returnPath) });
@@ -600,6 +606,7 @@ export class EventNode implements IExternalNode {
 			return this.consume(ev, r);
 		} else {
 			const seg = segs[r.cursor];
+			if (!seg) return this.consume(ev, r);
 			if (seg === UP) {
 				if (!this.parent) throw new Error("relative route walks above root");
 				return this.parent.route(ev, {
@@ -631,24 +638,29 @@ export class EventNode implements IExternalNode {
 		const childReturn = prependSeg(UP, r.returnPath);
 		if (!ev.expectResponse) {
 			if (matched) this.consume(ev, r);
-			for (const id in this.children)
-				this.children[id].route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+			for (const id in this.children) {
+				const child = this.children[id];
+				if (child) child.route(ev, { ...r, cursor: nextCursor, returnPath: childReturn });
+			}
 			return;
 		}
 
 		if (ev.isParallel) {
 			const pending: Array<Promise<unknown>> = [];
 			if (matched) pending.push(Promise.resolve(this.consume(ev, r)));
-			for (const id in this.children)
-				pending.push(
-					Promise.resolve(
-						this.children[id].route(ev, {
-							...r,
-							cursor: nextCursor,
-							returnPath: childReturn,
-						}),
-					),
-				);
+			for (const id in this.children) {
+				const child = this.children[id];
+				if (child)
+					pending.push(
+						Promise.resolve(
+							child.route(ev, {
+								...r,
+								cursor: nextCursor,
+								returnPath: childReturn,
+							}),
+						),
+					);
+			}
 			const settled = await Promise.all(pending);
 			const out: Array<unknown> = [];
 			for (const part of settled) {
@@ -659,12 +671,15 @@ export class EventNode implements IExternalNode {
 		}
 
 		if (matched) ev.result = await this.consume(ev, r);
-		for (const id in this.children)
-			ev.result = await this.children[id].route(ev, {
-				...r,
-				cursor: nextCursor,
-				returnPath: childReturn,
-			});
+		for (const id in this.children) {
+			const child = this.children[id];
+			if (child)
+				ev.result = await child.route(ev, {
+					...r,
+					cursor: nextCursor,
+					returnPath: childReturn,
+				});
+		}
 		return ev.result;
 	}
 
@@ -714,6 +729,7 @@ export class EventNode implements IExternalNode {
 			if (i >= ids.length) return result;
 			const cbId = ids[i];
 			i += 1;
+			if (!cbId) return runNext();
 			const cb = this.callbacks[cbId];
 			if (!cb) return runNext();
 			let calledNext = false;

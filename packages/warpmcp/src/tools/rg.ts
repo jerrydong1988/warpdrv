@@ -8,7 +8,7 @@ declare const __filename: string | undefined;
 function resolveRgPath(): string {
 	const binName = process.platform === "win32" ? "rg.exe" : "rg";
 	const arch = process.arch;
-	if ((process as any).pkg) {
+	if ((process as { pkg?: unknown }).pkg) {
 		const base = process.env.WARPCORE_RESOURCE_DIR
 			? path.join(process.env.WARPCORE_RESOURCE_DIR, "binaries", "node_modules")
 			: path.join(path.dirname(process.execPath), "binaries", "node_modules");
@@ -140,14 +140,14 @@ function parseRgJson(output: string, maxResults: number): IRgMatch[] {
 			const event = JSON.parse(line);
 			if (event.type === "match") {
 				const data = event.data;
-				currentFile = data.path.text;
+				currentFile = data.path.text ?? '';
 				for (const submatch of data.submatches) {
 					const lineNum = data.line_number;
 					const lineText = data.lines?.text ?? "";
 					const matchStart = submatch.match?.start ?? 0;
 					const matchEnd = submatch.match?.end ?? 0;
 					matches.push({
-						file: currentFile,
+						file: currentFile ?? '',
 						line: lineNum,
 						text: lineText,
 					});

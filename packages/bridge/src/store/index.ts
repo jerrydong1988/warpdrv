@@ -83,6 +83,9 @@ export interface IChatStoreState {
 
 	// Current chat state (for active thread context)
 	currentThreadId: TThreadId | null;
+	// Present on the WarpCore application store. Optional here because the
+	// bridge slice is also usable as a standalone store.
+	activeWorkspaceId?: TFolderId | null;
 	currentSystemPrompt: string;
 	currentInferenceParams: Record<string, unknown>;
 	tempThreadServerId: string | null;

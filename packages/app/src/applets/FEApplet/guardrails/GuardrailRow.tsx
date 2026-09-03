@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Box,
 	Button,
@@ -156,7 +157,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							letterSpacing="0.04em"
 							mb="1"
 						>
-							Server
+
+							{i18nextSingleton.t("common:ui.server")}
 						</Text>
 						<ServerPicker
 							value={guardrail.serverId}
@@ -173,7 +175,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							letterSpacing="0.04em"
 							mb="1"
 						>
-							Trigger only on tool calls
+
+							{i18nextSingleton.t("common:ui.triggerOnlyOnToolCalls")}
 						</Text>
 						<GuardrailToolPicker
 							value={guardrail.triggerOnTools || []}
@@ -207,7 +210,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							</Switch.Control>
 						</Switch.Root>
 						<Text fontSize="xs" color="var(--wc-text-primary)">
-							Enable thinking
+
+							{i18nextSingleton.t("common:ui.enableThinking")}
 						</Text>
 					</Flex>
 
@@ -221,7 +225,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Reasoning effort
+
+								{i18nextSingleton.t("common:ui.reasoningEffort")}
 							</Text>
 							<SegmentGroup.Root
 								value={
@@ -264,7 +269,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							</Switch.Control>
 						</Switch.Root>
 						<Text fontSize="xs" color="var(--wc-text-primary)">
-							Include root message
+
+							{i18nextSingleton.t("common:ui.includeRootMessage")}
 						</Text>
 					</Flex>
 
@@ -277,7 +283,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							letterSpacing="0.04em"
 							mb="1"
 						>
-							Include previous n messages
+
+							{i18nextSingleton.t("common:ui.includePreviousNMessages")}
 						</Text>
 						<Input
 							size="xs"
@@ -299,7 +306,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							letterSpacing="0.04em"
 							mb="1"
 						>
-							Saved Prompt
+
+							{i18nextSingleton.t("common:ui.savedPrompt")}
 						</Text>
 						<PromptPicker
 							value={guardrail.promptId || ""}
@@ -318,7 +326,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							letterSpacing="0.04em"
 							mb="1"
 						>
-							Custom Prompt
+
+							{i18nextSingleton.t("common:ui.customPrompt")}
 						</Text>
 						<Textarea
 							size="xs"
@@ -328,7 +337,7 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							onBlur={handlePromptBlur}
 							rows={3}
 							resize="vertical"
-							placeholder="Custom rules..."
+							placeholder={i18nextSingleton.t("common:ui.customRules")}
 						/>
 					</Box>
 
@@ -347,7 +356,8 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 							onClick={() => setDeleteConfirmOpen(true)}
 						>
 							<Trash2 size={10} style={{ marginRight: "4px" }} />
-							Delete
+
+							{i18nextSingleton.t("backends:actions.delete")}
 						</Button>
 					</Flex>
 				</VStack>
@@ -355,7 +365,7 @@ export const GuardrailRow = React.memo(({ guardrail }: { guardrail: IGuardrailDe
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Guardrail"
+					title={i18nextSingleton.t("common:ui.deleteGuardrail")}
 					message={`Are you sure you want to delete "${draftName}"?`}
 					isOpen={true}
 					onConfirm={handleDelete}

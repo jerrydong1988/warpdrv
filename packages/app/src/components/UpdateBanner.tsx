@@ -1,7 +1,8 @@
-import { Button, Flex, HStack, Text } from "@chakra-ui/react";
-import { ArrowUpCircle, ExternalLink, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { openExternal } from "../utils/openExternal";
+import { useState, useEffect } from 'react';
+import { Text, HStack, Flex, Button } from '@chakra-ui/react';
+import { ArrowUpCircle, X, ExternalLink } from 'lucide-react';
+import { openExternal } from '../utils/openExternal';
+import { useTranslation } from 'react-i18next';
 
 interface IUpdateInfo {
 	currentVersion: string;
@@ -12,6 +13,7 @@ interface IUpdateInfo {
 }
 
 export function UpdateBanner() {
+	const { t } = useTranslation('common');
 	const [update, setUpdate] = useState<IUpdateInfo | null>(null);
 	const [dismissed, setDismissed] = useState(false);
 	const collapsed = true; // useStore(s => s.settings.sidebarCollapsed);
@@ -54,11 +56,7 @@ export function UpdateBanner() {
 			<HStack gap="3">
 				<ArrowUpCircle size={16} color="#3381ff" />
 				<Text fontSize="12px" color="rgba(255, 255, 255, 0.6)">
-					WarpCore{" "}
-					<Text as="span" fontWeight="600" color="#3381ff">
-						v{update.latestVersion}
-					</Text>{" "}
-					is available
+					{t('update.available', { version: update.latestVersion })}
 					{update.notes && (
 						<Text as="span" color="rgba(255, 255, 255, 0.35)">
 							{" "}
@@ -81,7 +79,7 @@ export function UpdateBanner() {
 					_hover={{ bg: "rgba(51, 129, 255, 0.2)" }}
 					onClick={() => openExternal(update.downloadUrl)}
 				>
-					<ExternalLink size={11} /> Download
+					<ExternalLink size={11} /> {t('update.download')}
 				</Button>
 				<Button
 					size="xs"

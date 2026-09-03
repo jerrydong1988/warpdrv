@@ -1,15 +1,11 @@
-import { Box, HStack, Text, Textarea, VStack } from "@chakra-ui/react";
-import type { IMcpConfigFile } from "@warpcore/shared";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
+import { Box, VStack, Text, Textarea, HStack } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
+import type { IMcpConfigFile } from '@warpcore/shared';
 
-export function JsonEditorView({
-	config,
-	onSave,
-}: {
-	config: IMcpConfigFile;
-	onSave: (config: IMcpConfigFile) => void;
-}) {
-	const [text, setText] = useState(JSON.stringify(config, null, "\t"));
+export function JsonEditorView({ config, onSave }: { config: IMcpConfigFile; onSave: (config: IMcpConfigFile) => void }) {
+	const { t } = useTranslation('mcp');
+	const [text, setText] = useState(JSON.stringify(config, null, '\t'));
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -20,13 +16,13 @@ export function JsonEditorView({
 		try {
 			const parsed = JSON.parse(text);
 			if (!parsed.mcpServers) {
-				setError('Missing "mcpServers" key');
+				setError(t('jsonEditor.missingMcpServers'));
 				return;
 			}
 			setError(null);
 			onSave(parsed);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Invalid JSON");
+			setError(err instanceof Error ? err.message : t('jsonEditor.invalidJson'));
 		}
 	}
 
@@ -64,7 +60,7 @@ export function JsonEditorView({
 					_hover={{ bg: "var(--wc-bg-active)" }}
 					onClick={handleSave}
 				>
-					Save & Reload
+					{t('jsonEditor.saveAndReload')}
 				</Box>
 			</HStack>
 		</VStack>

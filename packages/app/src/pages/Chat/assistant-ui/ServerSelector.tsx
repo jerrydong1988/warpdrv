@@ -1,9 +1,10 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
-import { EServerStatus } from "@warpcore/shared";
-import { ChevronDown, Eye } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { updateThread } from "@/api/services";
-import { useStore } from "@/store";
+import { Box, Text, HStack } from '@chakra-ui/react';
+import { ChevronDown, Eye } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useStore } from '@/store';
+import { EServerStatus, } from '@warpcore/shared';
+import { updateThread } from '@/api/services';
 
 function ServerDot({ status }: { status: EServerStatus }) {
 	if (status === EServerStatus.RUNNING)
@@ -40,7 +41,12 @@ export function parseThreadMeta(meta: string): { serverId: string | null } {
 	}
 }
 
-export const ThreadServerSelector = React.memo(({ threadId }: { threadId: string | null }) => {
+export const ThreadServerSelector = React.memo(({
+	threadId,
+}: {
+	threadId: string | null;
+}) => {
+	const { t } = useTranslation('chat');
 	const [open, setOpen] = useState(false);
 	const [shake, setShake] = useState(false);
 
@@ -157,7 +163,7 @@ export const ThreadServerSelector = React.memo(({ threadId }: { threadId: string
 				) : (
 					<>
 						<Text flex="1" color="var(--wc-text-faint)" fontSize="12px">
-							Select
+							{t('serverSelector.selectServer')}
 						</Text>
 						<ChevronDown size={12} style={{ opacity: 0.4 }} />
 					</>
@@ -226,9 +232,7 @@ export const ThreadServerSelector = React.memo(({ threadId }: { threadId: string
 						</HStack>
 					))}
 					{servers.length === 0 && (
-						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">
-							No servers
-						</Text>
+						<Text px="3" py="2" fontSize="12px" color="var(--wc-text-faint)">{t('common:ui.noServers')}</Text>
 					)}
 				</Box>
 			)}

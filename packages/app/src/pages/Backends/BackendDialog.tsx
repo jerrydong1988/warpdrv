@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Badge,
 	Box,
@@ -36,7 +37,7 @@ const FLAG_VALUE_PAIRS: Record<string, RegExp> = {
 
 export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 	const { toast } = useToast();
-	const backend = editBackendId ? useStore((s) => s.backends[editBackendId]) : undefined;
+	const backend = useStore((s) => editBackendId ? s.backends[editBackendId] : undefined);
 	const isEdit = !!backend;
 
 	// Group related args for display (e.g., ["-ngl", "999"] -> [["-ngl", "999"]])
@@ -117,7 +118,7 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 		} else {
 			toast(
 				"error",
-				"File picker not supported in this browser. Please type the path manually.",
+				i18nextSingleton.t("backends:toast.filePickerNotSupported"),
 			);
 		}
 	};
@@ -206,7 +207,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 								{isEdit ? "Edit Backend" : "Add Backend"}
 							</Text>
 							<Text fontSize="12px" color="var(--wc-text-muted)">
-								Register a llama.cpp build
+
+								{i18nextSingleton.t("backends:dialog.registerLlamacpp")}
 							</Text>
 						</Box>
 					</HStack>
@@ -235,7 +237,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 								letterSpacing="0.05em"
 								mb="1.5"
 							>
-								Name
+
+								{i18nextSingleton.t("backends:sortFields.name")}
 							</Text>
 							<Input
 								placeholder="e.g. ROCm 7.2 — Strix Halo"
@@ -263,7 +266,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 								letterSpacing="0.05em"
 								mb="1.5"
 							>
-								Binary Path
+
+								{i18nextSingleton.t("backends:dialog.binaryPath")}
 							</Text>
 							<HStack gap="2">
 								<Input
@@ -296,13 +300,14 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 									minW="8"
 									px="0"
 									onClick={handleBrowseFile}
-									title="Browse file"
+									title={i18nextSingleton.t("common:ui.browseFile")}
 								>
 									<FileInput size={14} />
 								</Button>
 							</HStack>
 							<Text fontSize="10px" color="var(--wc-text-disabled)" mt="1">
-								Binary is validated and devices are discovered when saved
+
+								{i18nextSingleton.t("backends:dialog.binaryValidationHint")}
 							</Text>
 						</Box>
 
@@ -314,10 +319,11 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 								letterSpacing="0.05em"
 								mb="1.5"
 							>
-								Description (optional)
+
+								{i18nextSingleton.t("backends:dialog.descriptionOptional")}
 							</Text>
 							<Textarea
-								placeholder="Notes about this backend..."
+								placeholder={i18nextSingleton.t("backends:dialog.backendDescPlaceholder")}
 								size="sm"
 								bg="var(--wc-bg-subtle)"
 								borderColor="var(--wc-border-default)"
@@ -344,7 +350,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 								letterSpacing="0.05em"
 								mb="2"
 							>
-								Default Arguments
+
+								{i18nextSingleton.t("backends:dialog.defaultArgs")}
 							</Text>
 							<HStack gap="1.5" mb="3" flexWrap="wrap">
 								{ALL_COMMON_FLAGS.map(({ flag, label }) => {
@@ -489,7 +496,8 @@ export function BackendDialog({ onClose, editBackendId }: IBackendDialogProps) {
 						fontSize="13px"
 						onClick={onClose}
 					>
-						Cancel
+
+						{i18nextSingleton.t("backends:actions.cancel")}
 					</Button>
 					<Button
 						size="sm"

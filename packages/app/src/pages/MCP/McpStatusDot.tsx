@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
-import { EMcpServerStatus } from "@warpcore/bridge";
+
+import { Box } from '@chakra-ui/react';
+import { EMcpServerStatus } from '@warpcore/bridge';
 
 export function McpStatusDot({ status }: { status: EMcpServerStatus }) {
 	const colors: Record<EMcpServerStatus, string> = {

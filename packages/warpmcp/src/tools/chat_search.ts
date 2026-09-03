@@ -33,5 +33,5 @@ export async function chatSearchHandler(
 	}
 	const limit = Math.min(args.limit ?? 10, 200);
 	const page = args.page ?? 1;
-	return deps.chatSearch(args.query, args.threadId, limit, page);
+	return deps.chatSearch(args.query, args.threadId ?? "", limit, page);
 }

@@ -32,13 +32,13 @@ export async function codeGraphSymbolHandler(
 
 	if (args.symbol_id) {
 		const result = await deps.codeGraphGetSymbol!(args.project_root, args.symbol_id);
-		if (!result) return { result: null };
+		if (!result) return { result: null as unknown as ICodeGraphNode };
 		return { result };
 	}
 
 	if (args.symbol) {
 		const results = await deps.codeGraphSearch!(args.project_root, args.symbol, { limit: 50 });
-		if (results.length === 1) return { result: results[0] };
+		if (results.length === 1 && results[0]) return { result: results[0] };
 		return { result: results };
 	}
 

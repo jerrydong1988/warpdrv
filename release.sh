@@ -13,7 +13,13 @@ esac
 # Default bundle formats per platform (set after platform detection below).
 # Pass bundle formats as arguments to override: ./release.sh deb appimage
 # AppImage is excluded by default on Linux because it takes a long time to build.
-BUNDLE_FORMATS_ARGS=("$@")
+#
+# Non-interactive versioning (for CI):
+#   RELEASE_VERSION=0.4.22 ./release.sh deb appimage
+#   ./release.sh deb appimage v0.4.22        # version-like CLI arg
+#   RELEASE_NOTES="..." ./release.sh deb appimage
+# When stdin is not a TTY and no version is given, the current version is kept.
+BUNDLE_FORMATS_ARGS=()
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd -W 2>/dev/null || pwd)"
 RELEASE_JSON="$REPO_ROOT/release.json"
@@ -29,20 +35,14 @@ echo "Target: $TARGET_TRIPLE"
 case "$TARGET_TRIPLE" in
 	*-windows-*)
 		PLATFORM="windows"
-		PKG_TARGET="node22-win-x64"
 		SIDECAR_EXT=".exe"
 		;;
 	*-linux-*)
 		PLATFORM="linux"
-		PKG_TARGET="node24-linux-x64"
 		SIDECAR_EXT=""
 		;;
 	*-darwin-*)
 		PLATFORM="macos"
-		case "$TARGET_TRIPLE" in
-			aarch64*) PKG_TARGET="node24-macos-arm64" ;;
-			x86_64*)  PKG_TARGET="node24-macos-x64" ;;
-		esac
 		SIDECAR_EXT=""
 		;;
 	*)
@@ -51,7 +51,7 @@ case "$TARGET_TRIPLE" in
 		;;
 esac
 
-echo "Platform: $PLATFORM ($PKG_TARGET)"
+echo "Platform: $PLATFORM"
 
 # Resolve bundle formats now that platform is known
 case "$PLATFORM" in
@@ -59,10 +59,16 @@ case "$PLATFORM" in
 	macos)   DEFAULT_FORMATS=("dmg") ;;
 	linux)   DEFAULT_FORMATS=("deb") ;;
 esac
-if [ ${#BUNDLE_FORMATS_ARGS[@]} -eq 0 ]; then
+# Bundle formats = non-version-like args; a leading "v" is allowed on versions
+BUNDLE_FORMATS=()
+for arg in "$@"; do
+	case "$arg" in
+		v[0-9]*|[0-9]*\.[0-9]*) ;; # version-like — handled below
+		*) BUNDLE_FORMATS+=("$arg") ;;
+	esac
+done
+if [ ${#BUNDLE_FORMATS[@]} -eq 0 ]; then
 	BUNDLE_FORMATS=("${DEFAULT_FORMATS[@]}")
-else
-	BUNDLE_FORMATS=("${BUNDLE_FORMATS_ARGS[@]}")
 fi
 echo "Bundle formats: ${BUNDLE_FORMATS[*]}"
 
@@ -70,13 +76,27 @@ echo "Bundle formats: ${BUNDLE_FORMATS[*]}"
 CURRENT_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$RELEASE_JSON','utf8')).version)")
 echo "Current version: $CURRENT_VERSION"
 
-# Ask for new version
-read -p "New version (Enter to keep $CURRENT_VERSION): " NEW_VERSION
+# Resolve new version: RELEASE_VERSION env > version-like CLI arg > TTY prompt > keep current
+NEW_VERSION="${RELEASE_VERSION:-}"
+for arg in "$@"; do
+	case "$arg" in
+		v[0-9]*|[0-9]*\.[0-9]*)
+			if [ -z "$NEW_VERSION" ]; then NEW_VERSION="${arg#v}"; fi
+			;;
+	esac
+done
+if [ -z "$NEW_VERSION" ] && [ -t 0 ]; then
+	read -p "New version (Enter to keep $CURRENT_VERSION): " NEW_VERSION
+fi
 if [ -z "$NEW_VERSION" ]; then
 	NEW_VERSION="$CURRENT_VERSION"
 fi
 
-read -p "Release notes: " NOTES
+# Release notes: RELEASE_NOTES env, else TTY prompt, else empty
+NOTES="${RELEASE_NOTES:-}"
+if [ -z "$NOTES" ] && [ -t 0 ]; then
+	read -p "Release notes: " NOTES
+fi
 
 # Bump versions everywhere
 node -e "
@@ -85,6 +105,7 @@ const files = [
 	['$RELEASE_JSON', (r) => { r.version = '$NEW_VERSION'; r.notes = '$NOTES'; return r; }],
 	['$DESKTOP_DIR/tauri.conf.json', (r) => { r.version = '$NEW_VERSION'; return r; }],
 	['$REPO_ROOT/package.json', (r) => { r.version = '$NEW_VERSION'; return r; }],
+	['$REPO_ROOT/package-lock.json', (r) => { r.version = '$NEW_VERSION'; if (r.packages && r.packages['']) r.packages[''].version = '$NEW_VERSION'; return r; }],
 ];
 for (const [path, transform] of files) {
 	if (fs.existsSync(path)) {
@@ -98,7 +119,7 @@ for (const [path, transform] of files) {
 echo ""
 echo "=== Installing dependencies ==="
 cd "$REPO_ROOT"
-npm install
+npm ci
 echo "Dependencies installed"
 
 echo ""
@@ -111,153 +132,21 @@ echo ""
 echo "=== Step 2/4: Building server binary ==="
 cd "$SERVER_DIR"
 
-# Bundle with esbuild
-npx esbuild src/index.ts \
-	--bundle \
-	--outfile=dist/server.cjs \
-	--format=cjs \
-	--platform=node \
-	--target=node22 \
-	--minify=false \
-	--external:kokoro-js \
-	--external:@huggingface/transformers \
-	--external:onnxruntime-node \
-	--external:tree-sitter \
-	--external:tree-sitter-typescript \
-	--external:tree-sitter-javascript \
-	--external:tree-sitter-python \
-	--external:tree-sitter-rust \
-	--external:tree-sitter-go \
-	--external:tree-sitter-cpp \
-	--external:tree-sitter-java \
-	--external:tree-sitter-php \
-	--external:@node-rs/xxhash \
-	--external:ignore
-# Compile to standalone binary with pkg
-cp "$REPO_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node" "$SERVER_DIR/dist/better_sqlite3.node"
-npx @yao-pkg/pkg dist/server.cjs \
-	--target "$PKG_TARGET" \
-	--output "dist/warpcore-server${SIDECAR_EXT}" \
-	--compress GZip
-mkdir -p "$SERVER_DIR/dist/node_modules"
-node -e "
-const fs = require('fs');
-const path = require('path');
-const ROOT = '$REPO_ROOT/node_modules';
-const OUT = '$SERVER_DIR/dist/node_modules';
-const visited = new Set();
-function resolvePkgDir(name, fromDir) {
-	let dir = fromDir;
-	while (true) {
-		const candidate = path.join(dir, 'node_modules', name);
-		if (fs.existsSync(path.join(candidate, 'package.json'))) return candidate;
-		const parent = path.dirname(dir);
-		if (parent === dir) return null;
-		dir = parent;
-	}
-}
-function copyDir(src, dest) {
-	fs.mkdirSync(dest, { recursive: true });
-	for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-		if (entry.name === 'node_modules') continue;
-		const s = path.join(src, entry.name);
-		const d = path.join(dest, entry.name);
-		if (entry.isDirectory()) copyDir(s, d);
-		else if (entry.isSymbolicLink()) {
-			try { fs.symlinkSync(fs.readlinkSync(s), d); } catch (e) {}
-		}
-		else fs.copyFileSync(s, d);
-	}
-}
-function walk(pkgDir, relName) {
-	if (visited.has(relName)) return;
-	visited.add(relName);
-	if (!fs.existsSync(path.join(pkgDir, 'package.json'))) {
-		console.error('Skip (no package.json):', relName);
-		return;
-	}
-	const dest = path.join(OUT, relName);
-	copyDir(pkgDir, dest);
-	const pj = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'));
-	const deps = { ...(pj.dependencies || {}), ...(pj.optionalDependencies || {}), ...(pj.peerDependencies || {}) };
-	for (const depName of Object.keys(deps)) {
-		if (visited.has(depName)) continue;
-		const resolved = resolvePkgDir(depName, pkgDir);
-		if (!resolved) {
-			console.error('Cannot resolve dep:', depName, 'from', relName);
-			continue;
-		}
-		walk(resolved, depName);
-	}
-}
-for (const top of ['kokoro-js', '@huggingface/transformers', 'onnxruntime-node', 'sharp']) {
-	const dir = path.join(ROOT, top);
-	if (!fs.existsSync(dir)) { console.error('Missing top dep:', top); process.exit(1); }
-	walk(dir, top);
-}
-console.log('Runtime deps copied. Total packages:', visited.size);
-"
-
-# Copy tree-sitter grammar packages (prebuilt .node in prebuilds/)
-for pkg in tree-sitter-typescript tree-sitter-javascript \
-  tree-sitter-python tree-sitter-rust tree-sitter-go \
-  tree-sitter-cpp tree-sitter-java tree-sitter-php \
-  node-gyp-build ignore; do
-  src="$REPO_ROOT/node_modules/$pkg"
-  dst="$SERVER_DIR/dist/node_modules/$pkg"
-  if [ -d "$src" ]; then
-    mkdir -p "$dst"
-    cp -r "$src"/. "$dst/"
-  fi
-done
-
-# tree-sitter core is installed nested under packages/server, not repo root
-ts_core_src="$SERVER_DIR/node_modules/tree-sitter"
-ts_core_dst="$SERVER_DIR/dist/node_modules/tree-sitter"
-if [ -d "$ts_core_src" ]; then
-  mkdir -p "$ts_core_dst"
-  cp -r "$ts_core_src"/. "$ts_core_dst/"
-fi
-
-# Copy all @node-rs packages (loader + platform-specific .node)
-for src in "$REPO_ROOT"/node_modules/@node-rs/*; do
-  [ -d "$src" ] || continue
-  dst="$SERVER_DIR/dist/node_modules/@node-rs/$(basename "$src")"
-  mkdir -p "$dst"
-  cp -r "$src"/. "$dst/"
-done
-
-# Copy all @vscode packages (ripgrep loader + platform-specific binary)
-for src in "$REPO_ROOT"/node_modules/@vscode/*; do
-  [ -d "$src" ] || continue
-  dst="$SERVER_DIR/dist/node_modules/@vscode/$(basename "$src")"
-  mkdir -p "$dst"
-  cp -r "$src"/. "$dst/"
-done
-
+# Server build is consolidated in packages/server/scripts/build.mjs:
+# esbuild bundle -> @yao-pkg/pkg node24 binary -> runtime deps copy.
 case "$PLATFORM" in
-	windows) ORT_OS="win32"; ORT_ARCH="x64" ;;
-	linux)   ORT_OS="linux"; ORT_ARCH="x64" ;;
-	macos)
-		ORT_OS="darwin"
-		case "$TARGET_TRIPLE" in
-			aarch64*) ORT_ARCH="arm64" ;;
-			x86_64*)  ORT_ARCH="x64" ;;
-		esac
-		;;
+	windows) SERVER_PLATFORM="win32" ;;
+	linux)   SERVER_PLATFORM="linux" ;;
+	macos)   SERVER_PLATFORM="darwin" ;;
 esac
-ORT_BIN_DIR="$SERVER_DIR/dist/node_modules/onnxruntime-node/bin/napi-v3"
-for d in "$ORT_BIN_DIR"/*/; do
-	os_name=$(basename "$d")
-	if [ "$os_name" != "$ORT_OS" ]; then rm -r "$d"; fi
-done
-for d in "$ORT_BIN_DIR/$ORT_OS"/*/; do
-	arch_name=$(basename "$d")
-	if [ "$arch_name" != "$ORT_ARCH" ]; then rm -r "$d"; fi
-done
+case "$TARGET_TRIPLE" in
+	aarch64*) SERVER_ARCH="arm64" ;;
+	*)        SERVER_ARCH="x64" ;;
+esac
+node scripts/build.mjs "$SERVER_PLATFORM" "$SERVER_ARCH"
 
 echo "Server binary: $SERVER_DIR/dist/warpcore-server"
-ls -lh "$SERVER_DIR/dist/warpcore-server"
+ls -lh "$SERVER_DIR/dist/warpcore-server${SIDECAR_EXT}"
 
 echo ""
 echo "=== Step 3/4: Preparing Tauri sidecar ==="

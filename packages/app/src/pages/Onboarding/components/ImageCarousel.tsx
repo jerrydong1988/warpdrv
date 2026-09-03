@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -95,7 +96,7 @@ export function ImageCarousel({ slides }: IImageCarouselProps) {
 						}}
 					>
 						<ImageIcon size={32} />
-						<div style={{ fontSize: "12px" }}>Screenshot placeholder</div>
+						<div style={{ fontSize: "12px" }}>{i18nextSingleton.t("common:ui.screenshotPlaceholder")}</div>
 					</div>
 				)}
 			</div>

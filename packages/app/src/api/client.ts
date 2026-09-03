@@ -1,4 +1,5 @@
 import type { IApiListResponse, IApiResponse } from "@warpcore/shared";
+import { translateServerError } from "./translateError";
 
 const API_BASE = "/api";
 
@@ -11,7 +12,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<IApiResp
 		});
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
-			throw new Error(`HTTP ${res.status}: ${json.error ?? res.statusText}`);
+			throw new Error(
+				`HTTP ${res.status}: ${translateServerError(json.error ?? res.statusText)}`,
+			);
 		}
 		const json = await res.json();
 		return json as IApiResponse<T>;
@@ -29,7 +32,9 @@ async function requestList<T>(path: string, options?: RequestInit): Promise<IApi
 		});
 		if (!res.ok) {
 			const json = await res.json().catch(() => ({}));
-			throw new Error(`HTTP ${res.status}: ${json.error ?? res.statusText}`);
+			throw new Error(
+				`HTTP ${res.status}: ${translateServerError(json.error ?? res.statusText)}`,
+			);
 		}
 		const json = await res.json();
 		return json as IApiListResponse<T>;
@@ -77,14 +82,12 @@ export async function logout(): Promise<IApiResponse<null>> {
 }
 
 export async function fetchAuthCheck(): Promise<IApiResponse<unknown>> {
-	try {
-		return await api.get<unknown>("/auth/check");
-	} catch (err) {
-		if (String(err).includes("HTTP 401")) {
-			return { ok: true, data: null, error: null };
-		}
-		return { ok: false, data: null, error: String(err) };
+	const result = await api.get<unknown>("/auth/check");
+	if (result.ok) return result;
+	if (String(result.error).includes("HTTP 401")) {
+		return { ok: true, data: null, error: null };
 	}
+	return result;
 }
 
 export async function fetchAuthMe(): Promise<IApiResponse<unknown>> {

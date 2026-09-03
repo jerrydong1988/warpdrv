@@ -268,9 +268,9 @@ mcpRouter.post("/elicitation/:id/respond", async (req, res) => {
 	const response = req.body as IElicitationResponse;
 	const ok = mcpClient.elicitationRegistry.resolve(id, response);
 	if (!ok) {
-		res.status(404).json({ error: "Elicitation not found or already resolved" });
+		res.status(404).json({ ok: false, data: null, error: "Elicitation not found or already resolved" });
 		return;
 	}
 	broadcaster.emit({ type: "elicitation_resolved", id });
-	res.json({ ok: true });
+	res.json({ ok: true, data: null, error: null });
 });

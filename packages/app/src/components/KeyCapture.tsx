@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Button, HStack, Text } from "@chakra-ui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -80,7 +81,8 @@ export function KeyCapture({ value, onChange, onDisable, label = "PTT Key" }: IK
 					minW="140px"
 					cursor="default"
 				>
-					Press keys…
+
+					{i18nextSingleton.t("common:ui.pressKeys")}
 				</Button>
 			) : (
 				<Button
@@ -111,7 +113,8 @@ export function KeyCapture({ value, onChange, onDisable, label = "PTT Key" }: IK
 					onDisable();
 				}}
 			>
-				Disable
+
+				{i18nextSingleton.t("common:ui.disable")}
 			</Button>
 		</HStack>
 	);

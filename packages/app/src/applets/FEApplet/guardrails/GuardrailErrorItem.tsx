@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Flex, HStack, Text } from "@chakra-ui/react";
 import type { IGuardrailError, IGuardrailIssue } from "@warpcore/shared";
 import { XCircle } from "lucide-react";
@@ -34,7 +35,8 @@ export const GuardrailErrorItem = React.memo(
 							{guardrailName}
 						</Badge>
 						<Text fontSize="md" color="var(--wc-accent-red)">
-							Parse Error
+
+							{i18nextSingleton.t("common:ui.parseError")}
 						</Text>
 					</HStack>
 				</Flex>
@@ -51,7 +53,8 @@ export const GuardrailErrorItem = React.memo(
 						textOverflow="ellipsis"
 						whiteSpace="nowrap"
 					>
-						Raw: {error.rawResponse.substring(0, 200)}
+
+						{i18nextSingleton.t("common:ui.rawLabel")} {error.rawResponse.substring(0, 200)}
 						{error.rawResponse.length > 200 ? "..." : ""}
 					</Text>
 				)}

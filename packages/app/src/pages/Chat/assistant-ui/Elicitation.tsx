@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Checkbox, HStack, Input, NativeSelect, Text, VStack } from "@chakra-ui/react";
 import { ExternalLink } from "lucide-react";
 import React, { useCallback, useState } from "react";
@@ -90,7 +91,8 @@ export const Elicitation = React.memo(() => {
 			{isUrlMode && (
 				<VStack gap="2" align="stretch" mb="3">
 					<Text fontSize="11px" color="var(--wc-text-muted)">
-						You will be sent to:
+
+						{i18nextSingleton.t("common:ui.youWillBeSentTo")}
 					</Text>
 					<Text
 						fontSize="12px"
@@ -108,7 +110,7 @@ export const Elicitation = React.memo(() => {
 						borderRadius="sm"
 						bg="var(--wc-accent-blue-bg-15)"
 						color="var(--wc-accent-blue)"
-						disabled={submitting}
+						aria-disabled={submitting}
 						onClick={() => {
 							if (elicitation.url) window.open(elicitation.url, "_blank");
 						}}
@@ -188,10 +190,11 @@ export const Elicitation = React.memo(() => {
 					borderRadius="sm"
 					bg="var(--wc-overlay-dim)"
 					color="var(--wc-text-muted)"
-					disabled={submitting}
+					aria-disabled={submitting}
 					onClick={() => handleAction("cancel")}
 				>
-					Cancel
+
+					{i18nextSingleton.t("backends:actions.cancel")}
 				</Box>
 				<Box
 					as="button"
@@ -201,10 +204,11 @@ export const Elicitation = React.memo(() => {
 					borderRadius="sm"
 					bg="var(--wc-accent-red-bg-12)"
 					color="var(--wc-accent-red-alt)"
-					disabled={submitting}
+					aria-disabled={submitting}
 					onClick={() => handleAction("decline")}
 				>
-					Decline
+
+					{i18nextSingleton.t("common:ui.decline")}
 				</Box>
 				<Box
 					as="button"
@@ -214,7 +218,7 @@ export const Elicitation = React.memo(() => {
 					borderRadius="sm"
 					bg="var(--wc-accent-green-bg-15)"
 					color="var(--wc-accent-green)"
-					disabled={submitting}
+					aria-disabled={submitting}
 					onClick={() => handleAction("accept")}
 				>
 					{isUrlMode ? "Done" : "Submit"}

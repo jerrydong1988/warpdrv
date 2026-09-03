@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Button, Dialog, HStack, Portal, Text, VStack } from "@chakra-ui/react";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
@@ -89,7 +90,8 @@ export function ConfirmDialog({
 										onClick={onCancel}
 										disabled={isLoading}
 									>
-										Cancel
+
+										{i18nextSingleton.t("backends:actions.cancel")}
 									</Button>
 									<Button
 										flex="1"

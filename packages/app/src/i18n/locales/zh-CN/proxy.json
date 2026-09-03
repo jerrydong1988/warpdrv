@@ -1,0 +1,112 @@
+{
+  "title": "路由器",
+  "subtitle_running": "{{count}} 条粘性路由",
+  "subtitle_running_one": "{{count}} 条粘性路由",
+  "subtitle_running_other": "{{count}} 条粘性路由",
+  "subtitle_stopped": "已停止",
+  "subtitle_error": "错误",
+  "status": {
+    "stopped": "已停止",
+    "running": "运行在端口 {{port}}",
+    "error": "错误：{{error}}"
+  },
+  "actions": {
+    "startRouter": "启动路由器",
+    "stopRouter": "停止路由器",
+    "clearAll": "全部清除",
+    "clear": "清除"
+  },
+  "statPills": {
+    "port": "端口",
+    "routes": "路由"
+  },
+  "auth": {
+    "sectionTitle": "认证",
+    "proxyAuth": "路由器认证",
+    "proxyAuthDesc": "对 /v1/* 端点要求 Bearer 令牌",
+    "controlApiAuth": "控制 API 认证",
+    "controlApiAuthDesc": "对 /api/* 端点要求认证",
+    "requireLocalhost": "本地请求也需要认证",
+    "requireLocalhostDesc": "对本地请求也强制认证（测试用）"
+  },
+  "stickyRoutes": {
+    "title": "粘性路由",
+    "empty": "暂无粘性路由",
+    "emptyDesc": "当请求通过路由器时，会自动创建粘性路由",
+    "unknown": "未知"
+  },
+  "dialog": {
+    "clearAllTitle": "清除所有粘性路由？",
+    "clearAllMessage": "这将移除所有粘性路由映射。下次请求时将创建新路由。",
+    "restartTitle": "需要重启路由器",
+    "restartMessage": "启用路由器认证需要重启路由器。这将终止所有现有连接。新连接将需要认证。",
+    "restartConfirmLabel": "重启"
+  },
+  "serverAlias": "服务器别名",
+  "accessTokens": {
+    "title": "访问令牌",
+    "empty": "尚未创建访问令牌",
+    "emptyDesc": "启用远程访问认证时需要令牌",
+    "columns": {
+      "name": "名称",
+      "token": "令牌",
+      "role": "角色",
+      "scope": "范围",
+      "created": "创建时间"
+    },
+    "roles": {
+      "admin": "管理员",
+      "inference": "推理",
+      "mcpLabelled": "MCP (L)",
+      "mcpInline": "MCP (I)",
+      "unrestricted": "无限制",
+      "all": "全部"
+    },
+    "actions": {
+      "createToken": "创建令牌",
+      "editToken": "编辑令牌",
+      "deleteToken": "删除令牌"
+    },
+    "dialog": {
+      "revokeTitle": "吊销令牌",
+      "revokeMessage": "吊销 \"{{name}}\"？使用此令牌的任何客户端将立即失去访问权限。此操作不可撤销。",
+      "revokeConfirm": "吊销"
+    }
+  },
+  "tokenDialog": {
+    "titleCreate": "创建访问令牌",
+    "titleEdit": "编辑令牌",
+    "titleCreated": "令牌已创建",
+    "nameField": "名称",
+    "namePlaceholder": "例如：移动应用、CI 流水线、朋友访问",
+    "accessLevel": "访问级别",
+    "adminRole": "管理员",
+    "adminDesc": "完整的控制 API、推理和 MCP 访问权限",
+    "inferenceRole": "推理",
+    "inferenceDesc": "通过路由器查询模型",
+    "serverAccess": "服务器访问",
+    "allServers": "所有服务器",
+    "allTools": "所有工具",
+    "specific": "指定",
+    "serverPillPlaceholder": "输入别名或服务器 ID，按回车键",
+    "toolPillPlaceholder": "输入工具名称，按回车键",
+    "mcpLabelled": "MCP 工具（标签式）",
+    "mcpLabelledDesc": "允许调用 mcp.json 中的 MCP 工具",
+    "mcpInline": "MCP 工具（内联式）",
+    "mcpInlineDesc": "允许调用临时 MCP 工具",
+    "toolAccessLabelled": "工具访问（标签式）",
+    "toolAccessInline": "工具访问（内联式）",
+    "copyWarning": "请立即复制此令牌——不会再显示",
+    "copyToken": "复制令牌",
+    "useTokenHint": "在 Authorization 头中使用此令牌：Bearer {{prefix}}...",
+    "done": "完成",
+    "cancel": "取消",
+    "saving": "保存中...",
+    "create": "创建令牌",
+    "update": "更新令牌"
+  },
+  "toast": {
+    "tokenNameRequired": "令牌名称不能为空",
+    "tokenUpdated": "令牌已更新"
+  }
+}

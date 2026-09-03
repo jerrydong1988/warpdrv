@@ -39,7 +39,9 @@ export class ChatSearchToolService {
 		});
 		const filtered = allResults.filter((r) => r.type === "message" && r.threadId !== threadId);
 		return {
-			results: filtered.map((r) => ({ messageId: r.messageId, snippet: r.snippet })),
+			results: filtered
+				.filter((r) => r.messageId !== undefined && r.snippet !== undefined)
+				.map((r) => ({ messageId: r.messageId!, snippet: r.snippet! })),
 			page,
 			limit,
 			hasMore: allResults.length === limit,

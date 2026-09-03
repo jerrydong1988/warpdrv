@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Flex, Input, Text, VStack } from "@chakra-ui/react";
 import type { ITodoItem } from "@warpcore/shared";
 import { Check, Edit2, Trash2, XCircle } from "lucide-react";
@@ -46,7 +47,7 @@ export const TodoPanel = React.memo(() => {
 
 	const toggleDone = useCallback(
 		(index: number) => {
-			const updated = todos.map((t, j) =>
+			const updated: ITodoItem[] = todos.map((t, j) =>
 				j === index ? { ...t, status: t.status === "done" ? "pending" : "done" } : t,
 			);
 			setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
@@ -90,7 +91,7 @@ export const TodoPanel = React.memo(() => {
 	const addTodo = useCallback(() => {
 		const trimmed = addText.trim();
 		if (!trimmed) return;
-		const newTodos = [...todos, { text: trimmed, status: "pending" }];
+		const newTodos: ITodoItem[] = [...todos, { text: trimmed, status: "pending" }];
 		setThreadState(threadId, { todos: newTodos, todoEtag: nanoid(6) });
 		setAddText("");
 		addTodoAnnotation(newTodos);
@@ -120,6 +121,7 @@ export const TodoPanel = React.memo(() => {
 			const toIndex = dragOverIndex !== null ? dragOverIndex : todos.length;
 			const updated = [...todos];
 			const [item] = updated.splice(fromIndex, 1);
+			if (!item) return;
 			updated.splice(toIndex, 0, item);
 			setThreadState(threadId, { todos: updated, todoEtag: nanoid(6) });
 			setDraggingIndex(null);
@@ -138,7 +140,8 @@ export const TodoPanel = React.memo(() => {
 		return (
 			<Box p="3">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center" mb="2">
-					No todos yet
+
+					{i18nextSingleton.t("common:ui.noTodosYet")}
 				</Text>
 				<Input
 					size="xs"
@@ -148,7 +151,7 @@ export const TodoPanel = React.memo(() => {
 					onKeyDown={(e) => {
 						if (e.key === "Enter") addTodo();
 					}}
-					placeholder="Add todo..."
+					placeholder={i18nextSingleton.t("common:ui.addTodo")}
 				/>
 			</Box>
 		);
@@ -298,12 +301,12 @@ export const TodoPanel = React.memo(() => {
 				onKeyDown={(e) => {
 					if (e.key === "Enter") addTodo();
 				}}
-				placeholder="Add todo..."
+				placeholder={i18nextSingleton.t("common:ui.addTodo")}
 			/>
 
 			{deleteConfirm !== null && (
 				<ConfirmDialog
-					title="Delete Todo"
+					title={i18nextSingleton.t("common:ui.deleteTodo")}
 					message={`Are you sure you want to delete "${todos[deleteConfirm]?.text}"?`}
 					isOpen={true}
 					onConfirm={() => deleteTodo(deleteConfirm)}

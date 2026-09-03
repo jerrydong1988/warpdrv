@@ -3,7 +3,7 @@ import { api } from "./client";
 
 export async function listGuardrails(): Promise<Record<string, IGuardrailDefinition>> {
 	const res = await api.get<Record<string, IGuardrailDefinition>>("/guardrails");
-	if (!res.ok) throw new Error(res.error);
+	if (!res.ok) throw new Error(res.error ?? "Unable to list guardrails");
 	return res.data!;
 }
 
@@ -11,7 +11,7 @@ export async function createGuardrail(
 	payload: IGuardrailCreatePayload,
 ): Promise<IGuardrailDefinition> {
 	const res = await api.post<IGuardrailDefinition>("/guardrails", payload);
-	if (!res.ok) throw new Error(res.error);
+	if (!res.ok) throw new Error(res.error ?? "Unable to create guardrail");
 	return res.data!;
 }
 
@@ -23,11 +23,11 @@ export async function updateGuardrail(
 		`/guardrails/${encodeURIComponent(id)}`,
 		payload,
 	);
-	if (!res.ok) throw new Error(res.error);
+	if (!res.ok) throw new Error(res.error ?? "Unable to update guardrail");
 	return res.data!;
 }
 
 export async function deleteGuardrail(id: string): Promise<void> {
 	const res = await api.del<null>(`/guardrails/${encodeURIComponent(id)}`);
-	if (!res.ok) throw new Error(res.error);
+	if (!res.ok) throw new Error(res.error ?? "Unable to delete guardrail");
 }

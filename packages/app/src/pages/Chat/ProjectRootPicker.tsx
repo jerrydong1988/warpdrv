@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Button, HStack, Input, Text } from "@chakra-ui/react";
 import { FolderInput } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
@@ -12,9 +13,10 @@ export const ProjectRootPicker = () => {
 			? s.threadStates[currentThreadId]?.projectRoot
 			: s.tempThreadState?.projectRoot,
 	);
-	const workspaceProjectRoot = useStore((s) =>
-		activeWorkspaceId ? s.workspaceStates[activeWorkspaceId]?.projectRoot : undefined,
-	);
+	const workspaceProjectRoot = useStore((s) => {
+		const value = activeWorkspaceId ? s.workspaceStates[activeWorkspaceId]?.projectRoot : undefined;
+		return typeof value === "string" ? value : undefined;
+	});
 	const setThreadState = useStore((s) => s.setThreadState);
 
 	const [value, setValue] = useDependantState((projectRoot as string) || "");
@@ -38,7 +40,8 @@ export const ProjectRootPicker = () => {
 		<>
 			{workspaceProjectRoot && (
 				<Text fontSize="10px" color="var(--wc-text-faint)" mb="1" fontFamily="monospace">
-					Workspace root: {workspaceProjectRoot}
+
+					{i18nextSingleton.t("chat:workspace.workspaceRoot")} {workspaceProjectRoot}
 				</Text>
 			)}
 			<HStack gap="2">
@@ -53,7 +56,7 @@ export const ProjectRootPicker = () => {
 						timerRef.current = setTimeout(flush, 400);
 					}}
 					onBlur={flush}
-					placeholder="No project root set"
+					placeholder={i18nextSingleton.t("chat:workspace.noProjectRootSet")}
 					fontFamily='"Geist Mono", monospace'
 					bg="var(--wc-bg-card)"
 					borderColor="var(--wc-border-default)"
@@ -98,7 +101,7 @@ const BrowseButton = () => {
 					setThreadState(currentThreadId, { projectRoot: path });
 				}
 			}}
-			title="Browse directory"
+			title={i18nextSingleton.t("common:ui.browseDirectory")}
 		>
 			<FolderInput size={14} />
 		</Button>

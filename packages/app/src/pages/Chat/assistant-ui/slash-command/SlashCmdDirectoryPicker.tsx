@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { FolderInput } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ToastProvider";
@@ -40,7 +41,7 @@ export const SlashCmdDirectoryPicker: React.FC<SlashCmdDirectoryPickerProps> = (
 		} else {
 			toast(
 				"error",
-				"Directory picker not supported in this browser. Type the path manually.",
+				i18nextSingleton.t("chat:slashCmd.directoryPickerUnsupported"),
 			);
 		}
 	};

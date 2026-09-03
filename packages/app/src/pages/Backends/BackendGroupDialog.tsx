@@ -1,16 +1,13 @@
-import { Box, Button, Flex, HStack, Input, Portal, Spinner, Text, VStack } from "@chakra-ui/react";
-import type {
-	IBackendGroupCreatePayload,
-	IBackendGroupUpdatePayload,
-	TBackendGroupId,
-} from "@warpcore/shared";
-import { EServerStatus } from "@warpcore/shared";
-import { CheckCircle, Layers, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { createBackendGroup, updateBackendGroup } from "../../api/services";
-import { useToast } from "../../components/ToastProvider";
-import { useStore } from "../../store";
-import { ActivateBackendDialog } from "./ActivateBackendDialog";
+import { useState, useMemo, useCallback } from 'react';
+import { Box, Text, HStack, VStack, Flex, Input, Button, Spinner, Portal } from '@chakra-ui/react';
+import { Layers, CheckCircle, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { createBackendGroup, updateBackendGroup } from '../../api/services';
+import { ActivateBackendDialog } from './ActivateBackendDialog';
+import { useStore } from '../../store';
+import type { IBackendGroupCreatePayload, IBackendGroupUpdatePayload, TBackendGroupId } from '@warpcore/shared';
+import { EServerStatus } from '@warpcore/shared';
+import { useToast } from '../../components/ToastProvider';
 
 interface IBackendGroupDialogProps {
 	onClose: () => void;
@@ -25,8 +22,9 @@ interface IPendingSave {
 }
 
 export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialogProps) {
+	const { t } = useTranslation('backends');
 	const { toast } = useToast();
-	const group = editGroupId ? useStore((s) => s.backendGroups[editGroupId]) : undefined;
+	const group = useStore((s) => editGroupId ? s.backendGroups[editGroupId] : undefined);
 	const backends = useStore((s) => s.backends);
 	const servers = useStore((s) => s.servers);
 
@@ -110,17 +108,11 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 
 		setSaving(false);
 		if (result.ok) {
-			toast(
-				"success",
-				isEdit ? `Group "${saveData.name}" updated` : `Group "${saveData.name}" created`,
-			);
+			toast('success', isEdit ? t('toast.groupUpdated', { name: saveData.name }) : t('toast.groupCreated', { name: saveData.name }));
 			if (!skipClose) onClose();
 			return true;
 		} else {
-			toast(
-				"error",
-				result.error ?? (isEdit ? "Failed to update group" : "Failed to create group"),
-			);
+			toast('error', result.error ?? (isEdit ? t('toast.updateGroupFailed') : t('toast.createGroupFailed')));
 			return false;
 		}
 	};
@@ -186,18 +178,8 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 								<Layers size={18} color="var(--wc-accent-purple)" />
 							</Flex>
 							<Box>
-								<Text
-									fontSize="16px"
-									fontWeight="700"
-									color="var(--wc-text-primary)"
-								>
-									{isEdit ? "Edit Backend Group" : "Create Backend Group"}
-								</Text>
-								<Text fontSize="12px" color="var(--wc-text-muted)">
-									{isEdit
-										? "Modify group settings and members"
-										: "Group multiple backends for easy switching"}
-								</Text>
+								<Text fontSize="16px" fontWeight="700" color="var(--wc-text-primary)">{isEdit ? t('dialog.editGroup') : t('actions.addGroup')}</Text>
+								<Text fontSize="12px" color="var(--wc-text-muted)">{isEdit ? t('dialog.editGroupDesc') : t('dialog.createGroupDesc')}</Text>
 							</Box>
 						</HStack>
 						<Button
@@ -218,73 +200,17 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 					<Box flex="1" overflowY="auto" p="6">
 						<VStack align="stretch" gap="5">
 							<Box>
-								<Text
-									fontSize="11px"
-									color="var(--wc-text-muted)"
-									textTransform="uppercase"
-									letterSpacing="0.05em"
-									mb="1.5"
-								>
-									Group Name
-								</Text>
-								<Input
-									placeholder="e.g. ROCm Backends"
-									size="sm"
-									bg="var(--wc-bg-subtle)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-secondary)"
-									fontSize="13px"
-									borderRadius="lg"
-									_placeholder={{ color: "var(--wc-text-placeholder)" }}
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									disabled={saving || showActivateDialog}
-								/>
+								<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('dialog.groupName')}</Text>
+								<Input placeholder={t('dialog.groupNamePlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontSize="13px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={name} onChange={e => setName(e.target.value)} disabled={saving || showActivateDialog} />
 							</Box>
 
 							<Box>
-								<Text
-									fontSize="11px"
-									color="var(--wc-text-muted)"
-									textTransform="uppercase"
-									letterSpacing="0.05em"
-									mb="1.5"
-								>
-									Description (optional)
-								</Text>
-								<Input
-									placeholder="Notes about this group..."
-									size="sm"
-									bg="var(--wc-bg-subtle)"
-									borderColor="var(--wc-border-default)"
-									color="var(--wc-text-secondary)"
-									fontSize="12px"
-									borderRadius="lg"
-									_placeholder={{ color: "var(--wc-text-placeholder)" }}
-									_focus={{
-										borderColor: "var(--wc-accent-blue-focus)",
-										outline: "none",
-									}}
-									value={description}
-									onChange={(e) => setDescription(e.target.value)}
-									disabled={saving || showActivateDialog}
-								/>
+								<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">{t('dialog.descriptionOptional')}</Text>
+								<Input placeholder={t('dialog.groupDescPlaceholder')} size="sm" bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-secondary)" fontSize="12px" borderRadius="lg" _placeholder={{ color: 'var(--wc-text-placeholder)' }} _focus={{ borderColor: 'var(--wc-accent-blue-focus)', outline: 'none' }} value={description} onChange={e => setDescription(e.target.value)} disabled={saving || showActivateDialog} />
 							</Box>
 
 							<Box>
-								<Text
-									fontSize="11px"
-									color="var(--wc-text-muted)"
-									textTransform="uppercase"
-									letterSpacing="0.05em"
-									mb="2"
-								>
-									Select Backends
-								</Text>
+								<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('dialog.selectBackends')}</Text>
 								<VStack align="stretch" gap="2" maxH="200px" overflowY="auto">
 									{backendList.map((backend) => {
 										const isSelected = selectedBackendIds.includes(backend.id);
@@ -341,13 +267,7 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 													{backend.name}
 												</Text>
 												{isCurrentActive && (
-													<Text
-														fontSize="10px"
-														color="var(--wc-accent-purple)"
-														fontWeight="500"
-													>
-														CURRENT ACTIVE
-													</Text>
+													<Text fontSize="10px" color="var(--wc-accent-purple)" fontWeight="500">{t('labels.currentActive')}</Text>
 												)}
 											</HStack>
 										);
@@ -357,15 +277,7 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 
 							{selectedBackendIds.length > 0 && (
 								<Box>
-									<Text
-										fontSize="11px"
-										color="var(--wc-text-muted)"
-										textTransform="uppercase"
-										letterSpacing="0.05em"
-										mb="2"
-									>
-										Select Active Backend
-									</Text>
+									<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('dialog.selectActiveBackend')}</Text>
 									<VStack align="stretch" gap="2">
 										{selectedBackendIds.map((backendId) => {
 											const backend = backends[backendId];
@@ -424,22 +336,10 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 														{backend.name}
 													</Text>
 													{isCurrentActive && !isSelected && (
-														<Text
-															fontSize="10px"
-															color="var(--wc-accent-purple)"
-															fontWeight="500"
-														>
-															CURRENT
-														</Text>
+														<Text fontSize="10px" color="var(--wc-accent-purple)" fontWeight="500">{t('labels.current')}</Text>
 													)}
 													{isSelected && hasActiveChange && (
-														<Text
-															fontSize="10px"
-															color="var(--wc-accent-green)"
-															fontWeight="500"
-														>
-															NEW ACTIVE
-														</Text>
+														<Text fontSize="10px" color="var(--wc-accent-green)" fontWeight="500">{t('labels.newActive')}</Text>
 													)}
 												</HStack>
 											);
@@ -450,44 +350,11 @@ export function BackendGroupDialog({ onClose, editGroupId }: IBackendGroupDialog
 						</VStack>
 					</Box>
 
-					<Flex
-						px="6"
-						py="4"
-						justify="flex-end"
-						gap="2"
-						borderTopWidth="1px"
-						borderColor="var(--wc-border-subtle)"
-						bg="var(--wc-bg-surface)"
-					>
-						<Button
-							size="sm"
-							variant="ghost"
-							color="var(--wc-text-muted)"
-							_hover={{ color: "var(--wc-text-primary)", bg: "var(--wc-bg-hover)" }}
-							borderRadius="lg"
-							fontSize="13px"
-							onClick={() => !saving && !showActivateDialog && onClose()}
-							disabled={saving || showActivateDialog}
-						>
-							Cancel
-						</Button>
-						<Button
-							size="sm"
-							disabled={!canSave}
-							bg="var(--wc-accent-purple-bg-15)"
-							color="var(--wc-accent-purple)"
-							borderWidth="1px"
-							borderColor="var(--wc-accent-purple-border)"
-							_hover={{ bg: "var(--wc-accent-purple-hover-bg)" }}
-							_disabled={{ opacity: 0.3, cursor: "not-allowed" }}
-							borderRadius="lg"
-							fontSize="13px"
-							fontWeight="600"
-							px="5"
-							onClick={handleSave}
-						>
+					<Flex px="6" py="4" justify="flex-end" gap="2" borderTopWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-surface)">
+						<Button size="sm" variant="ghost" color="var(--wc-text-muted)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} borderRadius="lg" fontSize="13px" onClick={() => !saving && !showActivateDialog && onClose()} disabled={saving || showActivateDialog}>{t('actions.cancel')}</Button>
+						<Button size="sm" disabled={!canSave} bg="var(--wc-accent-purple-bg-15)" color="var(--wc-accent-purple)" borderWidth="1px" borderColor="var(--wc-accent-purple-border)" _hover={{ bg: 'var(--wc-accent-purple-hover-bg)' }} _disabled={{ opacity: 0.3, cursor: 'not-allowed' }} borderRadius="lg" fontSize="13px" fontWeight="600" px="5" onClick={handleSave}>
 							{saving ? <Spinner size="xs" /> : <Layers size={14} />}
-							{isEdit ? "Save Changes" : "Create Group"}
+							{isEdit ? t('actions.saveChanges') : t('actions.createGroup')}
 						</Button>
 					</Flex>
 				</Box>

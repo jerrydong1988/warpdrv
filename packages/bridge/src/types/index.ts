@@ -363,7 +363,7 @@ export interface IMcpServerState {
 // Inference — completion request sent to orchestrator
 // ============================================================
 export interface ICompletionUserMessage {
-	parentId: TMessageId | null;
+	parentId?: TMessageId | null;
 	content: string;
 }
 
@@ -462,6 +462,7 @@ export type IBridgeEvent =
 	| { type: "elicitation_request"; threadId: string; request: IElicitationRequest }
 	| { type: "elicitation_resolved"; id: string }
 	| { type: "embedding.error"; error: string }
+	| { type: "embedding.configured"; serverId: string }
 	| {
 			type: "embedding.embedded";
 			messageId: TMessageId;
@@ -510,6 +511,8 @@ export interface ISSEChunk {
 	error?: string;
 	[key: string]: unknown;
 }
+
+export type { IPersistence } from "./interfaces";
 
 // Message conversion utilities
 export { convertMessagesToOpenAIFormat, type TOpenAIMessage } from "../messageConverter";

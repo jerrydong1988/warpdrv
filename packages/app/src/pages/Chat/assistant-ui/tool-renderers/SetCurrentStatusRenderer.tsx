@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { Activity } from "lucide-react";
 import React, { useMemo } from "react";
@@ -15,7 +16,8 @@ export const SetCurrentStatusRenderer = React.memo(({ status }: { status?: strin
 			<HStack gap="2" align="center">
 				<Activity size={12} color="var(--wc-text-secondary)" />
 				<Text fontWeight="600" color="var(--wc-text-tertiary)">
-					Status
+
+					{i18nextSingleton.t("servers:labels.status")}
 				</Text>
 				<Text color="var(--wc-text-primary)" wordBreak="break-word">
 					{status}
@@ -40,7 +42,8 @@ export const SetCurrentStatusRendererMeta: IToolCallRenderer = {
 		return (
 			<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
 				<Text as="span" color="var(--wc-text-primary)">
-					Status
+
+					{i18nextSingleton.t("servers:labels.status")}
 				</Text>
 				<Text as="span" color="var(--wc-text-tertiary)">
 					{" "}

@@ -1,19 +1,10 @@
-import {
-	Box,
-	Button,
-	Flex,
-	HStack,
-	Input,
-	Spinner,
-	Text,
-	Textarea,
-	VStack,
-} from "@chakra-ui/react";
-import { type IRecipe, type IRecipeParsed, parseRecipe } from "@warpcore/shared";
-import { AlertCircle, CheckCircle, Save, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { createRecipe, updateRecipe } from "../../api/services";
-import { InputFormGenerator } from "./InputFormGenerator";
+import { useState, useEffect, useMemo } from 'react';
+import { Box, Text, VStack, HStack, Flex, Button, Input, Textarea, Spinner } from '@chakra-ui/react';
+import { X, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { parseRecipe, type IRecipe, type IRecipeParsed } from '@warpcore/shared';
+import { createRecipe, updateRecipe } from '../../api/services';
+import { InputFormGenerator } from './InputFormGenerator';
 
 interface IRecipeEditorDialogProps {
 	editData?: IRecipe;
@@ -34,8 +25,9 @@ cmake --build build -j
 `;
 
 export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogProps) {
-	const [name, setName] = useState(editData?.name ?? "");
-	const [description, setDescription] = useState(editData?.description ?? "");
+	const { t } = useTranslation('recipes');
+	const [name, setName] = useState(editData?.name ?? '');
+	const [description, setDescription] = useState(editData?.description ?? '');
 	const [source, setSource] = useState(editData?.source ?? STARTER_SOURCE);
 	const [saving, setSaving] = useState(false);
 	const [serverError, setServerError] = useState<string | null>(null);
@@ -99,25 +91,9 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 				onClick={(e) => e.stopPropagation()}
 			>
 				{/* Header */}
-				<Flex
-					px="5"
-					py="3"
-					justify="space-between"
-					align="center"
-					borderBottomWidth="1px"
-					borderColor="var(--wc-border-subtle)"
-					flexShrink={0}
-				>
-					<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">
-						{editData ? "Edit Recipe" : "New Recipe"}
-					</Text>
-					<Button
-						size="xs"
-						variant="ghost"
-						color="var(--wc-text-tertiary)"
-						_hover={{ color: "var(--wc-text-primary)", bg: "var(--wc-bg-hover)" }}
-						onClick={onClose}
-					>
+				<Flex px="5" py="3" justify="space-between" align="center" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)" flexShrink={0}>
+					<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)">{editData ? t('editor.editRecipe') : t('editor.newRecipe')}</Text>
+					<Button size="xs" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} onClick={onClose}>
 						<X size={14} />
 					</Button>
 				</Flex>
@@ -134,7 +110,7 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 				>
 					<Input
 						size="sm"
-						placeholder="Recipe name"
+						placeholder={t('editor.namePlaceholder')}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 						bg="var(--wc-bg-surface)"
@@ -146,7 +122,7 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 					/>
 					<Input
 						size="sm"
-						placeholder="Description (optional)"
+						placeholder={t('editor.descriptionPlaceholder')}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 						bg="var(--wc-bg-surface)"
@@ -160,31 +136,9 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 
 				{/* Split: editor + preview */}
 				<Flex flex="1" overflow="hidden">
-					<Box
-						flex="1"
-						display="flex"
-						flexDirection="column"
-						borderRightWidth="1px"
-						borderColor="var(--wc-border-subtle)"
-					>
-						<Flex
-							px="4"
-							py="2"
-							align="center"
-							justify="space-between"
-							borderBottomWidth="1px"
-							borderColor="var(--wc-border-subtle)"
-							bg="var(--wc-bg-subtle)"
-						>
-							<Text
-								fontSize="11px"
-								fontWeight="600"
-								color="var(--wc-text-tertiary)"
-								textTransform="uppercase"
-								letterSpacing="0.05em"
-							>
-								Source
-							</Text>
+					<Box flex="1" display="flex" flexDirection="column" borderRightWidth="1px" borderColor="var(--wc-border-subtle)">
+				<Flex px="4" py="2" align="center" justify="space-between" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-subtle)">
+						<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('editor.source')}</Text>
 							{parseResult.error ? (
 								<HStack gap="1.5" color="var(--wc-accent-red)">
 									<AlertCircle size={12} />
@@ -193,10 +147,10 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 									</Text>
 								</HStack>
 							) : (
-								<HStack gap="1.5" color="var(--wc-accent-green)">
-									<CheckCircle size={12} />
-									<Text fontSize="11px">Valid</Text>
-								</HStack>
+<HStack gap="1.5" color="var(--wc-accent-green)">
+								<CheckCircle size={12} />
+								<Text fontSize="11px">{t('editor.valid')}</Text>
+							</HStack>
 							)}
 						</Flex>
 						<Textarea
@@ -219,43 +173,16 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 					</Box>
 
 					<Box w="380px" display="flex" flexDirection="column" overflow="hidden">
-						<Flex
-							px="4"
-							py="2"
-							align="center"
-							justify="space-between"
-							borderBottomWidth="1px"
-							borderColor="var(--wc-border-subtle)"
-							bg="var(--wc-bg-surface)"
-						>
-							<Text
-								fontSize="11px"
-								fontWeight="600"
-								color="var(--wc-text-tertiary)"
-								textTransform="uppercase"
-								letterSpacing="0.05em"
-							>
-								Preview
-							</Text>
+			<Flex px="4" py="2" align="center" justify="space-between" borderBottomWidth="1px" borderColor="var(--wc-border-subtle)" bg="var(--wc-bg-surface)">
+							<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em">{t('editor.preview')}</Text>
 						</Flex>
 						<Box flex="1" overflowY="auto" px="4" py="3">
 							{parseResult.parsed === null ? (
-								<Text fontSize="12px" color="var(--wc-text-faint)">
-									Fix the source error to see preview.
-								</Text>
+								<Text fontSize="12px" color="var(--wc-text-faint)">{t('editor.fixSourceError')}</Text>
 							) : (
 								<VStack align="stretch" gap="4">
 									<Box>
-										<Text
-											fontSize="11px"
-											fontWeight="600"
-											color="var(--wc-text-tertiary)"
-											textTransform="uppercase"
-											letterSpacing="0.05em"
-											mb="2"
-										>
-											Inputs ({parseResult.parsed.inputs.length})
-										</Text>
+										<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('editor.inputsCount', { count: parseResult.parsed.inputs.length })}</Text>
 										<InputFormGenerator
 											inputs={parseResult.parsed.inputs}
 											values={{}}
@@ -264,16 +191,7 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 										/>
 									</Box>
 									<Box>
-										<Text
-											fontSize="11px"
-											fontWeight="600"
-											color="var(--wc-text-tertiary)"
-											textTransform="uppercase"
-											letterSpacing="0.05em"
-											mb="2"
-										>
-											Steps ({parseResult.parsed.steps.length})
-										</Text>
+										<Text fontSize="11px" fontWeight="600" color="var(--wc-text-tertiary)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('editor.stepsCount', { count: parseResult.parsed.steps.length })}</Text>
 										<VStack align="stretch" gap="1.5">
 											{parseResult.parsed.steps.map((step, i) => (
 												<HStack
@@ -339,28 +257,10 @@ export function RecipeEditorDialog({ editData, onClose }: IRecipeEditorDialogPro
 						<Box />
 					)}
 					<HStack gap="2">
-						<Button
-							size="sm"
-							variant="ghost"
-							color="var(--wc-text-tertiary)"
-							_hover={{ color: "var(--wc-text-primary)", bg: "var(--wc-bg-hover)" }}
-							onClick={onClose}
-							disabled={saving}
-						>
-							Cancel
-						</Button>
-						<Button
-							size="sm"
-							bg={
-								canSave ? "var(--wc-accent-blue-bg-12)" : "var(--wc-bg-interactive)"
-							}
-							color={canSave ? "var(--wc-accent-blue-hover)" : "var(--wc-text-faint)"}
-							_hover={canSave ? { bg: "var(--wc-accent-blue-hover-bg)" } : undefined}
-							onClick={handleSave}
-							disabled={!canSave}
-						>
+						<Button size="sm" variant="ghost" color="var(--wc-text-tertiary)" _hover={{ color: 'var(--wc-text-primary)', bg: 'var(--wc-bg-hover)' }} onClick={onClose} disabled={saving}>{t('actions.cancel')}</Button>
+						<Button size="sm" bg={canSave ? 'var(--wc-accent-blue-bg-12)' : 'var(--wc-bg-interactive)'} color={canSave ? 'var(--wc-accent-blue-hover)' : 'var(--wc-text-faint)'} _hover={canSave ? { bg: 'var(--wc-accent-blue-hover-bg)' } : undefined} onClick={handleSave} disabled={!canSave}>
 							{saving ? <Spinner size="xs" /> : <Save size={13} />}
-							<Text ml="1.5">Save</Text>
+							<Text ml="1.5">{t('actions.save')}</Text>
 						</Button>
 					</HStack>
 				</Flex>

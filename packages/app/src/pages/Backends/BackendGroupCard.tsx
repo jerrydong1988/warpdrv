@@ -1,8 +1,9 @@
-import { Box, Button, Flex, HStack, Text, VStack } from "@chakra-ui/react";
-import type { IBackend, TBackendGroupId, TBackendId } from "@warpcore/shared";
-import { Blocks, Edit, Trash2 } from "lucide-react";
-import { useMemo } from "react";
-import { useStore } from "../../store";
+import { Box, Text, HStack, VStack, Flex, Button } from '@chakra-ui/react';
+import { Blocks, Edit, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useStore } from '../../store';
+import type { IBackend, TBackendId, TBackendGroupId } from '@warpcore/shared';
 
 interface IBackendGroupCardProps {
 	groupId: TBackendGroupId;
@@ -11,12 +12,8 @@ interface IBackendGroupCardProps {
 	onActivateBackend?: (groupId: TBackendGroupId, backendId: TBackendId) => void;
 }
 
-export function BackendGroupCard({
-	groupId,
-	onEdit,
-	onDelete,
-	onActivateBackend,
-}: IBackendGroupCardProps) {
+export function BackendGroupCard({ groupId, onEdit, onDelete, onActivateBackend }: IBackendGroupCardProps) {
+	const { t } = useTranslation('backends');
 	const group = useStore((s) => s.backendGroups[groupId]);
 	const backends = useStore((s) => s.backends);
 
@@ -57,13 +54,7 @@ export function BackendGroupCard({
 						</HStack>
 						<HStack gap="2">
 							<HStack gap="1">
-								<Text
-									fontSize="12px"
-									fontWeight="500"
-									color="var(--wc-accent-purple)"
-								>
-									{activeBackend?.name || "Unknown"}
-								</Text>
+								<Text fontSize="12px" fontWeight="500" color="var(--wc-accent-purple)">{activeBackend?.name || t('labels.unknown')}</Text>
 							</HStack>
 						</HStack>
 					</Box>
@@ -98,15 +89,7 @@ export function BackendGroupCard({
 				</Flex>
 
 				<Box>
-					<Text
-						fontSize="11px"
-						color="var(--wc-text-muted)"
-						textTransform="uppercase"
-						letterSpacing="0.05em"
-						mb="2"
-					>
-						Members ({memberBackends.length})
-					</Text>
+					<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('labels.members', { count: memberBackends.length })}</Text>
 					<VStack align="stretch" gap="2">
 						{memberBackends.map((backend) => {
 							const isActive = group.activeBackendId === backend.id;
@@ -174,13 +157,7 @@ export function BackendGroupCard({
 											</Text>
 											{isActive && (
 												<HStack gap="1">
-													<Text
-														fontSize="10px"
-														color="var(--wc-accent-purple)"
-														fontWeight="500"
-													>
-														ACTIVE
-													</Text>
+													<Text fontSize="10px" color="var(--wc-accent-purple)" fontWeight="500">{t('labels.active')}</Text>
 												</HStack>
 											)}
 										</HStack>

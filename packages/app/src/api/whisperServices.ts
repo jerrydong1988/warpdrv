@@ -31,8 +31,8 @@ export async function updateWhisperBackend(
 	return res.data ?? null;
 }
 
-export async function removeWhisperBackend(id: string): Promise<void> {
-	await api.delete(`/whisper-backends/${id}`);
+export async function removeWhisperBackend(id: string) {
+	return api.del<null>(`/whisper-backends/${id}`);
 }
 
 export async function validateWhisperBackend(id: string): Promise<IWhisperBackend | null> {
@@ -64,8 +64,8 @@ export async function updateWhisperServer(
 	return res.data ?? null;
 }
 
-export async function removeWhisperServer(id: string): Promise<void> {
-	await api.delete(`/whisper-servers/${id}`);
+export async function removeWhisperServer(id: string) {
+	return api.del<null>(`/whisper-servers/${id}`);
 }
 
 export async function stopWhisperServer(id: string): Promise<void> {
@@ -85,8 +85,8 @@ export async function getWhisperServerLogs(id: string): Promise<string[]> {
 	return res.data ?? [];
 }
 
-export async function clearWhisperServerLogs(id: string): Promise<void> {
-	await api.delete(`/whisper-servers/${id}/logs`);
+export async function clearWhisperServerLogs(id: string) {
+	return api.del<null>(`/whisper-servers/${id}/logs`);
 }
 
 // ============================================================

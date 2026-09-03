@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text } from "@chakra-ui/react";
 import type { IMessagePartToolCall, IToolCall, TMessageId } from "@warpcore/bridge";
 import { EChatRole, EMessagePartType, EToolApprovalMode, EToolCallStatus } from "@warpcore/bridge";
@@ -51,7 +52,7 @@ export const PendingToolCallsBox = React.memo(() => {
 	const threadState = useStore((s) => s.getCurrentThreadState(s));
 	const mcpServers = useStore((s) => s.mcpServers);
 	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
-	const toast = useToast();
+	const { toast } = useToast();
 	const [deciding, setDeciding] = useState(false);
 
 	const modeId = threadState?.modeId as string | undefined;
@@ -70,7 +71,7 @@ export const PendingToolCallsBox = React.memo(() => {
 		const msgs = messagesByThread[currentThreadId] ?? {};
 		let cursor: TMessageId | null = headMessageId;
 		while (cursor) {
-			const msg = msgs[cursor];
+			const msg = msgs[cursor] as (typeof msgs)[string] | undefined;
 			if (!msg) return null;
 			if (msg.role !== EChatRole.TOOL) {
 				return msg.role === EChatRole.ASSISTANT ? cursor : null;
@@ -195,11 +196,7 @@ export const PendingToolCallsBox = React.memo(() => {
 				tools.attachedTools,
 				tools.skipToolsSave,
 			);
-			toast({
-				title: `"${toolName}" will always be approved for this thread`,
-				status: "success",
-				duration: 3000,
-			});
+			toast("success", `"${toolName}" will always be approved for this thread`);
 		} finally {
 			setDeciding(false);
 		}
@@ -272,6 +269,7 @@ export const PendingToolCallsBox = React.memo(() => {
 		pendingCalls.length === 0 ||
 		!currentThreadId ||
 		!anchorMessageId ||
+		!currentCall ||
 		isDismissed
 	)
 		return null;
@@ -301,7 +299,8 @@ export const PendingToolCallsBox = React.memo(() => {
 					fontWeight="600"
 					color="var(--wc-text-primary)"
 				>
-					Tool Calls ({pendingCalls.length} Pending)
+
+					{i18nextSingleton.t("common:ui.toolCallsPrefix")}{pendingCalls.length}  {i18nextSingleton.t("common:ui.pendingSuffix")}
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -315,7 +314,7 @@ export const PendingToolCallsBox = React.memo(() => {
 					color="var(--wc-text-muted)"
 					_hover={{ bg: "var(--wc-bg-hover)", color: "var(--wc-accent-red)" }}
 					onClick={() => setDismissedAnchorKey(null)}
-					title="Dismiss"
+					title={i18nextSingleton.t("common:ui.dismiss")}
 				>
 					<X size={12} />
 				</Box>
@@ -386,7 +385,7 @@ export const PendingToolCallsBox = React.memo(() => {
 			>
 				<Box
 					as="button"
-					disabled={deciding}
+					aria-disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
 					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
@@ -400,12 +399,12 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<Check size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Allow Once</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{i18nextSingleton.t("common:ui.allowOnce")}</Text>
 					</HStack>
 				</Box>
 				<Box
 					as="button"
-					disabled={deciding}
+					aria-disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
 					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
@@ -419,12 +418,12 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<Lock size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Allow Always</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{i18nextSingleton.t("common:ui.allowAlways")}</Text>
 					</HStack>
 				</Box>
 				<Box
 					as="button"
-					disabled={deciding}
+					aria-disabled={deciding}
 					opacity={deciding ? 0.5 : 1}
 					cursor={deciding ? "not-allowed" : "pointer"}
 					px="3"
@@ -438,7 +437,7 @@ export const PendingToolCallsBox = React.memo(() => {
 				>
 					<HStack gap="1">
 						<X size={12} />
-						<Text fontSize="calc(var(--chat-font-size) - 2px)">Deny</Text>
+						<Text fontSize="calc(var(--chat-font-size) - 2px)">{i18nextSingleton.t("common:ui.deny")}</Text>
 					</HStack>
 				</Box>
 			</HStack>

@@ -1,11 +1,14 @@
-import type { IMessagePartAttachment } from "@warpcore/bridge";
-import { EMessagePartType } from "@warpcore/bridge";
-import { genPartId } from "@warpcore/shared";
-import * as pdfjsLib from "pdfjs-dist";
-import { useCallback } from "react";
+import { useCallback } from 'react';
+import type { IMessagePartAttachment } from '@warpcore/bridge';
+import { EMessagePartType } from '@warpcore/bridge';
+import { genPartId } from '@warpcore/shared';
+import * as pdfjsLib from 'pdfjs-dist';
+// Bundle the pdf.js worker locally so it always matches the library version
+// (a mismatched CDN worker version silently breaks text extraction) and the
+// app never depends on a remote CDN at runtime.
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-	"//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -14,91 +17,22 @@ const ALLOWED_MIME_TYPES = [
 	/^application\/pdf$/,
 	/^text\/.*/,
 	/^application\/json$/,
-	/^application\/.*/,
+	/^application\/.*/
 ];
 
 const BLOCKED_EXTENSIONS = [
-	".exe",
-	".bat",
-	".cmd",
-	".sh",
-	".ps1",
-	".py",
-	".js",
-	".pl",
-	".rb",
-	".com",
-	".app",
-	".msi",
-	".dmg",
-	".pkg",
-	".deb",
-	".rpm",
-	".bin",
-	".iso",
-	".img",
-	".vhd",
-	".vhdx",
-	".ova",
-	".ovf",
-	".tar",
-	".gz",
-	".zip",
-	".rar",
-	".7z",
-	".bz2",
-	".xz",
-	".apk",
-	".elf",
-	".so",
-	".dll",
+	'.exe', '.bat', '.cmd', '.sh', '.ps1', '.py', '.js', '.pl', '.rb',
+	'.com', '.app', '.msi', '.dmg', '.pkg', '.deb', '.rpm', '.bin',
+	'.iso', '.img', '.vhd', '.vhdx', '.ova', '.ovf', '.tar', '.gz',
+	'.zip', '.rar', '.7z', '.bz2', '.xz', '.apk', '.elf', '.so', '.dll'
 ];
 
 const CODE_EXTENSIONS = [
-	".js",
-	".ts",
-	".jsx",
-	".tsx",
-	".c",
-	".cpp",
-	".cc",
-	".cxx",
-	".h",
-	".hpp",
-	".php",
-	".py",
-	".rb",
-	".go",
-	".rs",
-	".java",
-	".cs",
-	".swift",
-	".kt",
-	".sh",
-	".bash",
-	".zsh",
-	".fish",
-	".ps1",
-	".bat",
-	".cmd",
-	".sql",
-	".json",
-	".yaml",
-	".yml",
-	".xml",
-	".html",
-	".css",
-	".scss",
-	".sass",
-	".less",
-	".md",
-	".txt",
-	".csv",
-	".log",
-	".ini",
-	".conf",
-	".cfg",
-	".env",
+	'.js', '.ts', '.jsx', '.tsx', '.c', '.cpp', '.cc', '.cxx', '.h', '.hpp',
+	'.php', '.py', '.rb', '.go', '.rs', '.java', '.cs', '.swift', '.kt',
+	'.sh', '.bash', '.zsh', '.fish', '.ps1', '.bat', '.cmd',
+	'.sql', '.json', '.yaml', '.yml', '.xml', '.html', '.css', '.scss', '.sass', '.less',
+	'.md', '.txt', '.csv', '.log', '.ini', '.conf', '.cfg', '.env'
 ];
 
 function isAllowedFileType(fileName: string, mimeType: string): boolean {
@@ -108,7 +42,7 @@ function isAllowedFileType(fileName: string, mimeType: string): boolean {
 		if (lowerName.endsWith(ext)) return false;
 	}
 
-	if (CODE_EXTENSIONS.some((ext) => lowerName.endsWith(ext))) {
+	if (CODE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
 		return true;
 	}
 
@@ -120,23 +54,21 @@ function isAllowedFileType(fileName: string, mimeType: string): boolean {
 }
 
 export async function extractTextFromFile(file: File): Promise<string> {
-	if (file.type === "text/plain" || file.type === "text/markdown") {
+	if (file.type === 'text/plain' || file.type === 'text/markdown') {
 		return await file.text();
 	}
 	const lowerName = file.name.toLowerCase();
-	if (CODE_EXTENSIONS.some((ext) => lowerName.endsWith(ext))) {
+	if (CODE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
 		return await file.text();
 	}
-	if (file.type === "application/pdf") {
+	if (file.type === 'application/pdf') {
 		const arrayBuffer = await file.arrayBuffer();
-		const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-		let text = "";
+		const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+		let text = '';
 		for (let i = 1; i <= pdf.numPages; i++) {
 			const page = await pdf.getPage(i);
 			const textContent = await page.getTextContent();
-			text +=
-				textContent.items.map((item: any) => ("str" in item ? item.str : "")).join(" ") +
-				"\n\n";
+			text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '\n\n';
 		}
 		return text;
 	}
@@ -145,11 +77,11 @@ export async function extractTextFromFile(file: File): Promise<string> {
 export function useFileReader() {
 	const readFile = useCallback(async (file: File): Promise<IMessagePartAttachment> => {
 		if (file.size > MAX_FILE_SIZE) {
-			throw new Error("File too large (max 10MB)");
+			throw new Error('File too large (max 10MB)');
 		}
 
 		if (!isAllowedFileType(file.name, file.type)) {
-			throw new Error("File type not allowed");
+			throw new Error('File type not allowed');
 		}
 
 		return new Promise((resolve, reject) => {
@@ -162,39 +94,36 @@ export function useFileReader() {
 					type: EMessagePartType.ATTACHMENT,
 					orderIndex: 0,
 					data: base64,
-					mimeType: file.type || "application/octet-stream",
+					mimeType: file.type || 'application/octet-stream',
 					fileName: file.name,
 					fileSize: file.size,
 				});
 			};
 
-			reader.onerror = () => reject(new Error("Failed to read file"));
+			reader.onerror = () => reject(new Error('Failed to read file'));
 			reader.readAsDataURL(file);
 		});
 	}, []);
 
 	const extractTextFromFile = useCallback(async (file: File): Promise<string> => {
-		if (file.type === "text/plain" || file.type === "text/markdown") {
+		if (file.type === 'text/plain' || file.type === 'text/markdown') {
 			return await file.text();
 		}
 
 		const lowerName = file.name.toLowerCase();
-		if (CODE_EXTENSIONS.some((ext) => lowerName.endsWith(ext))) {
+		if (CODE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
 			return await file.text();
 		}
 
-		if (file.type === "application/pdf") {
+		if (file.type === 'application/pdf') {
 			const arrayBuffer = await file.arrayBuffer();
-			const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-			let text = "";
+			const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+			let text = '';
 
 			for (let i = 1; i <= pdf.numPages; i++) {
 				const page = await pdf.getPage(i);
 				const textContent = await page.getTextContent();
-				text +=
-					textContent.items
-						.map((item: any) => ("str" in item ? item.str : ""))
-						.join(" ") + "\n\n";
+				text += textContent.items.map((item: any) => 'str' in item ? item.str : '').join(' ') + '\n\n';
 			}
 
 			return text;

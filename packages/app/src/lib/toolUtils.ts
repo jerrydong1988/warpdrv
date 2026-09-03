@@ -3,8 +3,8 @@ import type { IMode, IToolAttachment } from "@warpcore/shared";
 export function computeModeUnionTools(
 	modes: Record<string, IMode>,
 	isModeActive: boolean,
-): IToolAttachment[] | null {
-	if (!isModeActive) return null;
+): IToolAttachment[] {
+	if (!isModeActive) return [];
 	const result: IToolAttachment[] = [];
 	const seen = new Set<string>();
 	for (const m of Object.values(modes)) {

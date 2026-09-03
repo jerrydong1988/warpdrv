@@ -1,33 +1,14 @@
-import {
-	Badge,
-	Box,
-	Button,
-	Collapsible,
-	Flex,
-	HStack,
-	SimpleGrid,
-	Spinner,
-	Text,
-	VStack,
-} from "@chakra-ui/react";
-import type { IBackend, TBackendId } from "@warpcore/shared";
-import { EServerStatus, EValidationStatus } from "@warpcore/shared";
-import {
-	AlertCircle,
-	Blocks,
-	CheckCircle,
-	ChevronDown,
-	ChevronRight,
-	Edit,
-	RefreshCw,
-	Trash2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
-import { validateBackend } from "../../api/services";
-import { useMutation } from "../../hooks/useQuery";
-import { useStore } from "../../store";
-import { STATUS_COLORS } from "./backendsUtils";
-import { DeviceCard } from "./DeviceCard";
+import { Box, Text, HStack, VStack, Flex, Badge, Button, Spinner, Collapsible, SimpleGrid } from '@chakra-ui/react';
+import { Blocks, CheckCircle, Trash2, Edit, RefreshCw, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useStore } from '../../store';
+import { DeviceCard } from './DeviceCard';
+import { STATUS_COLORS } from './backendsUtils';
+import { validateBackend } from '../../api/services';
+import { useMutation } from '../../hooks/useQuery';
+import type { IBackend, TBackendId } from '@warpcore/shared';
+import { EValidationStatus, EServerStatus } from '@warpcore/shared';
 
 interface IBackendRowProps {
 	backendId: TBackendId;
@@ -36,6 +17,7 @@ interface IBackendRowProps {
 }
 
 export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
+	const { t } = useTranslation('backends');
 	const backend = useStore((s) => s.backends[backendId]);
 	const devices = useStore((s) => s.devices);
 	const servers = useStore((s) => s.servers);
@@ -151,47 +133,13 @@ export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
 										)}
 									</HStack>
 									{deviceCount > 0 && (
-										<Badge
-											size="sm"
-											px="1.5"
-											py="0.5"
-											borderRadius="full"
-											bg="var(--wc-accent-blue-bg-15)"
-											color="var(--wc-accent-blue-hover)"
-											fontSize="10px"
-											fontWeight="600"
-										>
-											{deviceCount} Device(s)
-										</Badge>
+										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-blue-bg-15)" color="var(--wc-accent-blue-hover)" fontSize="10px" fontWeight="600">{t('labels.devices', { count: deviceCount })}</Badge>
 									)}
 									{totalServerCount > 0 && (
-										<Badge
-											size="sm"
-											px="1.5"
-											py="0.5"
-											borderRadius="full"
-											bg="var(--wc-accent-purple-bg-15)"
-											color="var(--wc-accent-purple)"
-											fontSize="10px"
-											fontWeight="600"
-										>
-											{totalServerCount} Server(s)
-										</Badge>
+										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-purple-bg-15)" color="var(--wc-accent-purple)" fontSize="10px" fontWeight="600">{totalServerCount} {t('common:ui.serverS')}</Badge>
 									)}
 									{runningServerCount > 0 && (
-										<Badge
-											size="sm"
-											px="1.5"
-											py="0.5"
-											borderRadius="full"
-											bg="var(--wc-accent-green-bg-15)"
-											color="var(--wc-accent-green)"
-											border="1px solid var(--wc-accent-green)"
-											fontSize="10px"
-											fontWeight="600"
-										>
-											{runningServerCount} Running
-										</Badge>
+										<Badge size="sm" px="1.5" py="0.5" borderRadius="full" bg="var(--wc-accent-green-bg-15)" color="var(--wc-accent-green)" border="1px solid var(--wc-accent-green)" fontSize="10px" fontWeight="600">{runningServerCount} {t('common:ui.running')}</Badge>
 									)}
 								</HStack>
 								<Text
@@ -284,9 +232,7 @@ export function BackendRow({ backendId, onEdit, onDelete }: IBackendRowProps) {
 				>
 					{deviceCount === 0 ? (
 						<Flex h="60px" alignItems="center" justifyContent="center">
-							<Text fontSize="13px" color="var(--wc-text-faint)">
-								No devices detected for this backend
-							</Text>
+							<Text fontSize="13px" color="var(--wc-text-faint)">{t('labels.validationFailed')}</Text>
 						</Flex>
 					) : (
 						<SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="3" mt="2">

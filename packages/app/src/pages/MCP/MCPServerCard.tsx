@@ -1,9 +1,11 @@
-import { Badge, Box, HStack, Text } from "@chakra-ui/react";
-import type { IMcpServerState } from "@warpcore/bridge";
-import { EMcpServerStatus } from "@warpcore/bridge";
-import type { IMcpServerEntry } from "@warpcore/shared";
-import { RefreshCw, RotateCcw, Trash2 } from "lucide-react";
-import { McpStatusDot } from "./McpStatusDot";
+
+import { Box, Text, Badge, HStack } from '@chakra-ui/react';
+import { RotateCcw, RefreshCw, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { McpStatusDot } from './McpStatusDot';
+import type { IMcpServerEntry } from '@warpcore/shared';
+import type { IMcpServerState } from '@warpcore/bridge';
+import { EMcpServerStatus } from '@warpcore/bridge';
 
 export function MCPServerCard({
 	name,
@@ -20,6 +22,7 @@ export function MCPServerCard({
 	onRefresh: () => void;
 	onRemove: () => void;
 }) {
+	const { t } = useTranslation('mcp');
 	const status = state?.status ?? EMcpServerStatus.DISCONNECTED;
 	const transportType = entry.url ? "HTTP" : "STDIO";
 	const connectionDetail = entry.url ?? `${entry.command} ${(entry.args ?? []).join(" ")}`;
@@ -55,7 +58,7 @@ export function MCPServerCard({
 						bg="var(--wc-bg-hover)"
 						color="var(--wc-text-muted)"
 					>
-						{state.tools.length} tools
+						{t('labels.toolsAvailable', { count: state.tools.length })}
 					</Badge>
 				)}
 			</HStack>
@@ -77,7 +80,7 @@ export function MCPServerCard({
 					borderRadius="sm"
 					_hover={{ bg: "var(--wc-bg-hover)" }}
 					onClick={onRefresh}
-					title="Refresh tools"
+					title={t('card.refreshTools')}
 				>
 					<RefreshCw size={13} color="var(--wc-text-tertiary)" />
 				</Box>
@@ -87,7 +90,7 @@ export function MCPServerCard({
 					borderRadius="sm"
 					_hover={{ bg: "var(--wc-bg-hover)" }}
 					onClick={onRestart}
-					title="Restart server"
+					title={t('card.restartServer')}
 				>
 					<RotateCcw size={13} color="var(--wc-text-tertiary)" />
 				</Box>
@@ -97,7 +100,7 @@ export function MCPServerCard({
 					borderRadius="sm"
 					_hover={{ bg: "var(--wc-accent-red-alt-bg)" }}
 					onClick={onRemove}
-					title="Remove server"
+					title={t('card.removeServer')}
 				>
 					<Trash2 size={13} color="var(--wc-accent-red-alt)" />
 				</Box>

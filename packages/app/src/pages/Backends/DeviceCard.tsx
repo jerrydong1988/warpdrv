@@ -1,12 +1,14 @@
-import { Badge, Box, Flex, HStack, Text, VStack } from "@chakra-ui/react";
-import type { IDevice } from "@warpcore/shared";
-import { MonitorSpeaker } from "lucide-react";
-import { Card } from "../../components/Card";
-import { VramBar } from "../../components/VramBar";
-import { BACKEND_COLORS } from "../../lib/deviceColors";
+import { Box, Flex, Text, HStack, Badge, VStack } from '@chakra-ui/react';
+import { MonitorSpeaker } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Card } from '../../components/Card';
+import { VramBar } from '../../components/VramBar';
+import type { IDevice } from '@warpcore/shared';
+import { BACKEND_COLORS } from '../../lib/deviceColors';
 
 export function DeviceCard({ device }: { device: IDevice }) {
-	const color = BACKEND_COLORS[device.backendType] ?? "#3381ff";
+	const { t } = useTranslation('backends');
+	const color = BACKEND_COLORS[device.backendType] ?? '#3381ff';
 
 	return (
 		<Card w="350px" variant="accent" accentColor={color}>
@@ -65,36 +67,14 @@ export function DeviceCard({ device }: { device: IDevice }) {
 				<HStack gap="6">
 					{device.computeCapability && (
 						<Box>
-							<Text
-								fontSize="11px"
-								color="var(--wc-text-muted)"
-								textTransform="uppercase"
-								letterSpacing="0.05em"
-							>
-								Compute
-							</Text>
-							<Text
-								fontSize="12px"
-								color="var(--wc-special-mono-gray)"
-								fontFamily='"Geist Mono", monospace'
-							>
-								{device.computeCapability}
-							</Text>
+<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">{t('device.compute')}</Text>
+						<Text fontSize="12px" color="var(--wc-special-mono-gray)" fontFamily='"Geist Mono", monospace'>{device.computeCapability}</Text>
 						</Box>
 					)}
 					{device.connection && (
 						<Box>
-							<Text
-								fontSize="11px"
-								color="var(--wc-text-muted)"
-								textTransform="uppercase"
-								letterSpacing="0.05em"
-							>
-								Connection
-							</Text>
-							<Text fontSize="12px" color="var(--wc-text-primary)">
-								{device.connection}
-							</Text>
+<Text fontSize="11px" color="var(--wc-text-muted)" textTransform="uppercase" letterSpacing="0.05em">{t('device.connection')}</Text>
+						<Text fontSize="12px" color="var(--wc-text-primary)">{device.connection}</Text>
 						</Box>
 					)}
 				</HStack>

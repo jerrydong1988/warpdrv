@@ -1,5 +1,5 @@
 import type React from "react";
-import type { IToolCallRenderer } from "@/store/types";
+import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
 import type { EToolCallStatus } from "@warpcore/bridge";
 
 export interface IResolvedRenderer {
@@ -41,7 +41,7 @@ function findMatchingRenderer(
 	toolName: string,
 	args: Record<string, unknown>,
 	registry: Record<string, IToolCallRenderer>,
-): { entry: IToolCallRenderer; props: TCanRenderResult } | null {
+): { entry: IToolCallRenderer; props: Exclude<TCanRenderResult, false> } | null {
 	// Priority 1: keyword exactly equals toolName
 	for (const [, entry] of Object.entries(registry)) {
 		if (entry.keywords.includes(toolName)) {
@@ -53,6 +53,7 @@ function findMatchingRenderer(
 	const candidates = findCandidates(toolName, registry);
 	for (const name of candidates) {
 		const entry = registry[name];
+		if (!entry) continue;
 		const result = entry.canRender(args);
 		if (result !== false) return { entry, props: result };
 	}

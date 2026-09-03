@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Button, Dialog, HStack, Portal, Spinner, Text, VStack } from "@chakra-ui/react";
 import type {
 	ICheckpoint,
@@ -187,7 +188,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 				toast("success", `Loaded ${res.data.restoredSlotCount} slot(s)`);
 				onClose();
 			} else if (res.data?.fingerprintMismatches.length) {
-				toast("error", "Checkpoint incompatible with target server");
+				toast("error", i18nextSingleton.t("common:toast.checkpointIncompatible"));
 			} else {
 				toast("error", res.error ?? "Load failed");
 			}
@@ -242,7 +243,8 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 							color="var(--wc-text-primary)"
 							fontFamily='"Geist Mono", monospace'
 						>
-							Slot {cp.slotIndex}
+
+							{i18nextSingleton.t("checkpoints:sortFields.slot")} {cp.slotIndex}
 						</Text>
 						<Text
 							fontSize="11px"
@@ -328,7 +330,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 						color="var(--wc-text-tertiary)"
 						fontFamily='"Geist Mono", monospace'
 					>
-						{items.length} slots · {formatBytes(totalSize)} ·{" "}
+						{items.length}  {i18nextSingleton.t("common:ui.slots")} {formatBytes(totalSize)} ·{" "}
 						{formatAge(first.createdAt)}
 					</Text>
 				</VStack>
@@ -386,7 +388,8 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 												fontWeight="700"
 												color="var(--wc-text-primary)"
 											>
-												Load Checkpoint
+
+												{i18nextSingleton.t("common:ui.loadCheckpoint")}
 											</Dialog.Title>
 										</HStack>
 
@@ -395,13 +398,15 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 												{...filterButtonStyle(filter === "THIS_SERVER")}
 												onClick={() => setFilter("THIS_SERVER")}
 											>
-												This server
+
+												{i18nextSingleton.t("common:ui.thisServer")}
 											</Button>
 											<Button
 												{...filterButtonStyle(filter === "ALL_COMPATIBLE")}
 												onClick={() => setFilter("ALL_COMPATIBLE")}
 											>
-												All compatible
+
+												{i18nextSingleton.t("common:ui.allCompatible")}
 											</Button>
 										</HStack>
 
@@ -424,7 +429,8 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 														textAlign="center"
 														py="4"
 													>
-														No checkpoints available
+
+														{i18nextSingleton.t("common:ui.noCheckpointsAvailable")}
 													</Text>
 												)}
 											{bundles.bundleGroups.map(({ bundleId, items }) => (
@@ -477,7 +483,8 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 												onClick={onClose}
 												disabled={isLoading}
 											>
-												Cancel
+
+												{i18nextSingleton.t("backends:actions.cancel")}
 											</Button>
 											<Button
 												flex="1"
@@ -531,7 +538,7 @@ export function LoadCheckpointDialog({ server, isOpen, onClose }: ILoadCheckpoin
 			{confirmOpen && (
 				<ConfirmDialog
 					isOpen={confirmOpen}
-					title="Overwrite target slots?"
+					title={i18nextSingleton.t("common:ui.overwriteTargetSlots")}
 					message="Loading will replace the current KV cache in the selected target slots."
 					confirmLabel="Load"
 					loadingLabel="Loading..."

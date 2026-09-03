@@ -197,7 +197,7 @@ export interface AppState extends IChatStoreState {
 		{
 			partId: string;
 			chunk: string;
-			lastUpdate: Date;
+			lastUpdate: number;
 		}
 	>;
 	messagesByThread: Record<TThreadId, Record<TMessageId, IChatMessage>>;
@@ -360,6 +360,8 @@ export interface AppState extends IChatStoreState {
 		location: EUISpaceLoc;
 		component: TUISpaceComponent;
 		props?: Record<string, unknown>;
+		icon?: React.ComponentType<any>;
+		align?: "start" | "end";
 	}) => TUISpaceComponentId;
 	unregisterUiSpaceComponent: (appletName: string, componentId?: TUISpaceComponentId) => void;
 	setUiSpaceComponentProps: (

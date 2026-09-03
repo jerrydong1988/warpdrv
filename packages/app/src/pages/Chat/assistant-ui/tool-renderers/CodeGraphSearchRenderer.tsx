@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import React, { useMemo, useState } from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
@@ -35,7 +36,7 @@ export const CodeGraphSearchRenderer = React.memo(
 			try {
 				const d = JSON.parse(text);
 				nodes = Array.isArray(d?.results) ? d.results : null;
-			} catch {}
+			} catch { /* fall back to the raw tool arguments */ }
 		}
 		const [expanded, setExpanded] = useState(false);
 
@@ -127,12 +128,13 @@ export const CodeGraphSearchRendererMeta: IToolCallRenderer = {
 				const parsed = JSON.parse(text);
 				const c = parsed?.results?.length;
 				if (typeof c === "number" && c > 0) return ` — ${c} result${c === 1 ? "" : "s"}`;
-			} catch {}
+			} catch { /* fall back to the raw tool result */ }
 			return "";
 		}, [result]);
 		return (
 			<Text whiteSpace="nowrap">
-				Code Search "{truncated}"
+
+				{i18nextSingleton.t("chat:tool.codeSearch")}{truncated}"
 				{countLabel && (
 					<Text as="span" color="var(--wc-text-faint)">
 						{countLabel}

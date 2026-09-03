@@ -1,6 +1,7 @@
+import i18nextSingleton from "i18next";
 import { ThreadListPrimitive } from "@assistant-ui/react";
 import { Box, HStack, Input, Menu, Portal, Text, VStack } from "@chakra-ui/react";
-import type { IChatThread as IBridgeChatThread } from "@warpcore/bridge";
+import type { IChatThread as IBridgeChatThread, IFolder as IBridgeFolder } from "@warpcore/bridge";
 import { genThreadId } from "@warpcore/shared";
 import {
 	CheckIcon,
@@ -146,7 +147,8 @@ function ConfirmDialog({
 						_hover={{ bg: "var(--wc-bg-active)" }}
 						onClick={onCancel}
 					>
-						Cancel
+
+						{i18nextSingleton.t("backends:actions.cancel")}
 					</Box>
 					<Box
 						as="button"
@@ -159,7 +161,8 @@ function ConfirmDialog({
 						_hover={{ bg: "var(--wc-accent-red)" }}
 						onClick={onConfirm}
 					>
-						Delete
+
+						{i18nextSingleton.t("backends:actions.delete")}
 					</Box>
 				</HStack>
 			</Box>
@@ -189,14 +192,17 @@ const TreeNode = ({ node }: { node: TreeEntry }) => {
 };
 
 const ThreadNode = ({ node }: { node: TreeEntry }) => {
-	const thread = useStore((s) => s.threads[node.id]);
+	const thread = useStore((s) => s.threads[node.id]) as IChatThread | undefined;
 	if (!thread) return null;
+	return <ThreadNodeContent node={node} thread={thread} />;
+};
 
+const ThreadNodeContent = ({ node, thread }: { node: TreeEntry; thread: IChatThread }) => {
 	const [expanded, setExpanded] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(
-		() => triggerRef.current?.getBoundingClientRect(),
+		() => triggerRef.current?.getBoundingClientRect() ?? null,
 		[triggerRef],
 	);
 	const currentThreadId = useStore((s) => s.currentThreadId);
@@ -354,7 +360,6 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 										opacity={0}
 										className="group-hover:!opacity-50"
 										_hover={{ bg: "var(--wc-bg-hover)" }}
-										type="button"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<MoreHorizontalIcon
@@ -363,7 +368,8 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 										/>
 									</Box>
 								</Menu.Trigger>
-								<Menu.Positioner portal>
+								<Portal>
+									<Menu.Positioner>
 									<Menu.Content
 										bg="var(--wc-bg-elevated)"
 										borderWidth="1px"
@@ -383,7 +389,7 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 										>
 											<HStack gap="2">
 												<PencilIcon size={12} />
-												<Text>Rename</Text>
+												<Text>{i18nextSingleton.t("chat:threadList.rename")}</Text>
 											</HStack>
 										</Menu.Item>
 										<Menu.Item
@@ -419,11 +425,12 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 										>
 											<HStack gap="2">
 												<TrashIcon size={12} />
-												<Text>Delete</Text>
+												<Text>{i18nextSingleton.t("backends:actions.delete")}</Text>
 											</HStack>
 										</Menu.Item>
 									</Menu.Content>
-								</Menu.Positioner>
+									</Menu.Positioner>
+								</Portal>
 							</Menu.Root>
 						</Box>
 					</>
@@ -464,13 +471,18 @@ const ThreadNode = ({ node }: { node: TreeEntry }) => {
 const FolderNode = ({ node }: { node: TreeEntry }) => {
 	const folder = useStore((s) => s.folders.find((f) => f.id === node.id));
 	if (!folder) return null;
+	return <FolderNodeContent node={node} folder={folder} />;
+};
+
+const FolderNodeContent = ({ node, folder }: { node: TreeEntry; folder: IBridgeFolder }) => {
+	const folderId = folder.id;
 
 	const [expanded, setExpanded] = useState(false);
 	const [renaming, setRenaming] = useState(false);
 	const [dragOver, setDragOver] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const getAnchorRect = useCallback(
-		() => triggerRef.current?.getBoundingClientRect(),
+		() => triggerRef.current?.getBoundingClientRect() ?? null,
 		[triggerRef],
 	);
 	const actions = React.useContext(ThreadActionsContext);
@@ -483,18 +495,18 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 	}, [expanded, setExpanded]);
 
 	const handleOpenFolder = useCallback(() => {
-		fetchWorkspace(folder.id).then((res) => {
+		fetchWorkspace(folderId).then((res) => {
 			if (res.ok && res.data) setWorkspace(res.data);
 		});
-		setActiveWorkspaceId(folder.id);
+		setActiveWorkspaceId(folderId);
 		setCurrentThreadId(genThreadId());
 		setExpanded(true);
-	}, [folder.id, setWorkspace, setActiveWorkspaceId, setCurrentThreadId]);
+	}, [folderId, setWorkspace, setActiveWorkspaceId, setCurrentThreadId]);
 
 	const threadCount = useMemo(() => {
 		const allThreads = Object.values(useStore.getState().threads) as IChatThread[];
-		return allThreads.filter((t) => t.folderId === folder.id).length;
-	}, [folder.id]);
+		return allThreads.filter((t) => t.folderId === folderId).length;
+	}, [folderId]);
 
 	// Thread drop target on folder container
 	function handleThreadDragOver(e: DragEvent) {
@@ -511,12 +523,12 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 		e.preventDefault();
 		setDragOver(false);
 		const threadId = e.dataTransfer.getData("threadId");
-		if (threadId) actions?.onDropThread(threadId, folder.id);
+		if (threadId) actions?.onDropThread(threadId, folderId);
 	}
 
 	// Folder reordering via drag-and-drop on folder header
 	function handleFolderDragStart(e: DragEvent) {
-		e.dataTransfer.setData("folderId", folder.id);
+		e.dataTransfer.setData("folderId", folderId);
 		e.dataTransfer.effectAllowed = "move";
 	}
 	function handleFolderDragOver(e: DragEvent) {
@@ -526,8 +538,8 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 	function handleFolderDrop(e: DragEvent) {
 		e.preventDefault();
 		const fromFolderId = e.dataTransfer.getData("folderId");
-		if (fromFolderId && fromFolderId !== folder.id) {
-			actions?.onReorderFolder(fromFolderId, folder.id);
+		if (fromFolderId && fromFolderId !== folderId) {
+			actions?.onReorderFolder(fromFolderId, folderId);
 		}
 	}
 
@@ -624,13 +636,13 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 							className="group-hover:!opacity-100"
 							_hover={{ opacity: 1, bg: "var(--wc-bg-hover)" }}
 							borderRadius="sm"
-							type="button"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<MoreHorizontalIcon size={12} />
 						</Box>
 					</Menu.Trigger>
-					<Menu.Positioner portal>
+					<Portal>
+						<Menu.Positioner>
 						<Menu.Content
 							bg="var(--wc-bg-elevated)"
 							borderWidth="1px"
@@ -647,7 +659,7 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 							>
 								<HStack gap="2">
 									<PencilIcon size={12} />
-									<Text>Rename</Text>
+									<Text>{i18nextSingleton.t("chat:threadList.rename")}</Text>
 								</HStack>
 							</Menu.Item>
 							<Menu.Item
@@ -657,11 +669,12 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 							>
 								<HStack gap="2">
 									<TrashIcon size={12} />
-									<Text>Delete</Text>
+									<Text>{i18nextSingleton.t("backends:actions.delete")}</Text>
 								</HStack>
 							</Menu.Item>
 						</Menu.Content>
-					</Menu.Positioner>
+						</Menu.Positioner>
+					</Portal>
 				</Menu.Root>
 			</HStack>
 
@@ -680,14 +693,15 @@ const FolderNode = ({ node }: { node: TreeEntry }) => {
 					}}
 				>
 					<div id={`${node.id}-starred`} style={{ width: "100%" }} />
-					{node.children
+					{(node.children ?? [])
 						.filter((c) => c.type === "thread")
 						.map((child) => (
 							<TreeNode key={child.id} node={child} />
 						))}
 					{(node.children ?? []).filter((c) => c.type === "thread").length === 0 && (
 						<Text fontSize="11px" color="var(--wc-text-disabled)" px="2" py="1">
-							Drop threads here
+
+							{i18nextSingleton.t("chat:threadList.dropThreadsHere")}
 						</Text>
 					)}
 				</Box>
@@ -973,7 +987,7 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 							onClick={onOpenSearch}
 						>
 							<SearchIcon size={15} />
-							<Text>Search</Text>
+							<Text>{i18nextSingleton.t("chat:threadList.search")}</Text>
 						</Box>
 					</Box>
 				)}
@@ -997,7 +1011,7 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 							bg="var(--wc-bg-subtle)"
 							_hover={{ bg: "var(--wc-bg-hover)" }}
 							onClick={cycleSortField}
-							title="Click to change sort field"
+							title={i18nextSingleton.t("chat:threadList.sortFieldTooltip")}
 						>
 							{sortLabels[sortField]}
 						</Box>
@@ -1025,7 +1039,7 @@ export const ThreadList = React.memo(({ onOpenSearch }: { onOpenSearch?: () => v
 							color="var(--wc-text-faint)"
 							_hover={{ color: "var(--wc-text-secondary)" }}
 							onClick={handleCreateFolder}
-							title="New folder"
+							title={i18nextSingleton.t("chat:threadList.newFolderTooltip")}
 							mt="1"
 						>
 							<FolderPlusIcon size={16} />

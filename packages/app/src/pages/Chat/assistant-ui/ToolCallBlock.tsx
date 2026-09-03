@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 // ============================================================
 // FILE: packages/app/src/pages/Chat/assistant-ui/ToolCallBlock.tsx
 // Fallback body content for a tool call: collapsible args + result.
@@ -36,7 +37,8 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 				>
 					{argsExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
 					<Text fontSize="calc(var(--chat-font-size) - 3px)" color="var(--wc-text-muted)">
-						Arguments
+
+						{i18nextSingleton.t("common:ui.arguments")}
 					</Text>
 				</HStack>
 				{argsExpanded && (
@@ -72,7 +74,8 @@ export const ToolCallBlock = React.memo(({ args, result }: IToolCallBlockProps) 
 							fontSize="calc(var(--chat-font-size) - 3px)"
 							color="var(--wc-text-muted)"
 						>
-							Result
+
+							{i18nextSingleton.t("common:ui.result")}
 						</Text>
 					</HStack>
 					{resultExpanded && (

@@ -19,7 +19,7 @@ export const CodeGraphIngestRenderer = React.memo(
 		if (text) {
 			try {
 				stats = JSON.parse(text);
-			} catch {}
+			} catch { /* fall back to the raw tool arguments */ }
 		}
 
 		const statEntries = stats

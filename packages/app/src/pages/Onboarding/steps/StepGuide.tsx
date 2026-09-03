@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text } from "@chakra-ui/react";
 import { ImageCarousel } from "../components/ImageCarousel";
 import { OnboardingFooter } from "../components/OnboardingFooter";
@@ -29,13 +30,14 @@ export function StepGuide({ goNext, goPrev, finishOnboarding }: IStepProps) {
 	return (
 		<Box display="flex" flexDirection="column" h="100%">
 			<Box px="4" pt="8">
-				<OnboardingHeader title="Getting Started Guide" step={2} totalSteps={4} />
+				<OnboardingHeader title={i18nextSingleton.t("onboarding:steps.guide.headerTitle")} step={2} totalSteps={4} />
 			</Box>
 
 			<Box flex="1" display="flex" alignItems="center" px="4" py="4" overflow="auto">
 				<Box w="100%" h="100%">
 					<Text fontSize="14px" color="var(--wc-text-muted)" textAlign="center" mb="6">
-						A quick walkthrough of the key features
+
+						{i18nextSingleton.t("common:ui.aQuickWalkthroughOfTheKeyFeatures")}
 					</Text>
 					<ImageCarousel slides={GUIDE_SLIDES} />
 				</Box>

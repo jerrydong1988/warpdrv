@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Button, Flex, Input, NativeSelect, Text, Textarea, VStack } from "@chakra-ui/react";
 import { EReasoningEffort, type IAgent } from "@warpcore/shared";
 import { Bot, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
@@ -125,7 +126,8 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Server
+
+								{i18nextSingleton.t("common:ui.server")}
 							</Text>
 							<ServerPicker
 								value={agent.serverId}
@@ -142,7 +144,8 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Reasoning
+
+								{i18nextSingleton.t("common:ui.reasoning")}
 							</Text>
 							<NativeSelect.Root size="xs">
 								<NativeSelect.Field
@@ -162,11 +165,11 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 									color="var(--wc-text-primary)"
 									_focus={{ borderColor: "var(--wc-border-active)" }}
 								>
-									<option value="">Default</option>
-									<option value={EReasoningEffort.NONE}>None</option>
-									<option value={EReasoningEffort.LOW}>Low</option>
-									<option value={EReasoningEffort.MEDIUM}>Medium</option>
-									<option value={EReasoningEffort.HIGH}>High</option>
+									<option value="">{i18nextSingleton.t("common:ui.default")}</option>
+									<option value={EReasoningEffort.NONE}>{i18nextSingleton.t("chat:reasoning.none")}</option>
+									<option value={EReasoningEffort.LOW}>{i18nextSingleton.t("chat:reasoning.low")}</option>
+									<option value={EReasoningEffort.MEDIUM}>{i18nextSingleton.t("chat:reasoning.medium")}</option>
+									<option value={EReasoningEffort.HIGH}>{i18nextSingleton.t("chat:reasoning.high")}</option>
 								</NativeSelect.Field>
 							</NativeSelect.Root>
 						</Box>
@@ -180,7 +183,8 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Saved Prompt
+
+								{i18nextSingleton.t("common:ui.savedPrompt")}
 							</Text>
 							<PromptPicker
 								value={agent.promptId || ""}
@@ -199,7 +203,8 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Tools
+
+								{i18nextSingleton.t("common:ui.tools")}
 							</Text>
 							<GuardrailToolPicker
 								value={draftTools}
@@ -220,10 +225,12 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Pre-approved tools
+
+								{i18nextSingleton.t("common:ui.preApprovedTools")}
 							</Text>
 							<Text fontSize="xs" color="var(--wc-text-faint)">
-								All tools are pre-approved
+
+								{i18nextSingleton.t("common:ui.allToolsPreApproved")}
 							</Text>
 						</Box>
 
@@ -260,7 +267,8 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Active guardrails
+
+								{i18nextSingleton.t("common:ui.activeGuardrails")}
 							</Text>
 							<GuardrailPicker
 								value={agent.guardrails || []}
@@ -278,13 +286,14 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Description
+
+								{i18nextSingleton.t("recipes:fields.description")}
 							</Text>
 							<Textarea
 								size="xs"
 								fontSize="xs"
 								rows={3}
-								placeholder="Agent description..."
+								placeholder={i18nextSingleton.t("common:ui.agentDescriptionPlaceholder")}
 								value={draftDescription}
 								onChange={(e) => setDraftDescription(e.target.value)}
 								onBlur={handleDescBlur}
@@ -301,13 +310,14 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 								fontSize="xs"
 								color="var(--wc-accent-red)"
 								bg="var(--wc-accent-red-bg-8)"
-								leftIcon={<Trash2 size={12} />}
 								onClick={(e) => {
 									e.stopPropagation();
 									setDeleteConfirmOpen(true);
 								}}
 							>
-								Delete
+								<Trash2 size={12} />
+
+								{i18nextSingleton.t("backends:actions.delete")}
 							</Button>
 						</Flex>
 					</VStack>
@@ -316,7 +326,7 @@ export const AgentRow = React.memo(({ agent }: { agent: IAgent }) => {
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Agent"
+					title={i18nextSingleton.t("common:ui.deleteAgent")}
 					message={`Are you sure you want delete "${agent.name}"?`}
 					isOpen={true}
 					onConfirm={handleDelete}
@@ -342,7 +352,8 @@ export const AgentsPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No agents
+
+					{i18nextSingleton.t("common:ui.noAgents")}
 				</Text>
 			</Box>
 		);

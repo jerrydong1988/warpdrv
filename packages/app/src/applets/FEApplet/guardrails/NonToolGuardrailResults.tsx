@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { useStore } from "@/store";
 
 import { GuardrailAccordion } from "./GuardrailAccordion";
+import type { TGuardrailIssueEntry } from "./GuardrailErrorItem";
 import { EMPTY_ARRAY } from "../constants";
 
 export const NonToolGuardrailResults = React.memo(

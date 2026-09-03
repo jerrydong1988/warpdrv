@@ -84,7 +84,7 @@ export const UiSpacePanel = React.memo(({ location }: { location: EUISpaceLoc })
 										size={14}
 										color="var(--wc-text-muted)"
 										className="chevron"
-										css={{ transition: "transform 0.15s ease" }}
+					style={{ transition: "transform 0.15s ease" }}
 									/>
 								</HStack>
 							</AccordionItemTrigger>

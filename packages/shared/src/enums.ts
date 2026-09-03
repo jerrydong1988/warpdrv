@@ -39,15 +39,35 @@ export enum ESplitMode {
 	TENSOR = "tensor",
 }
 
+// llama.cpp v0.3 launch modes. These remain enums so stored configurations,
+// capability probes, and argument builders share one canonical value set.
+export enum ELlamaLoadMode {
+	AUTO = "auto",
+	NONE = "none",
+	MMAP = "mmap",
+	MLOCK = "mlock",
+	MMAP_MLOCK = "mmap+mlock",
+	DIO = "dio",
+}
+
+export enum ELlamaFlashAttentionMode {
+	AUTO = "auto",
+	ON = "on",
+	OFF = "off",
+}
+
 // Speculative decoding types for llama.cpp
 export enum ESpecType {
 	NONE = "none",
+	DRAFT_SIMPLE = "draft-simple",
+	DRAFT_EAGLE3 = "draft-eagle3",
+	DRAFT_DSPARK = "draft-dspark",
 	NGRAM_SIMPLE = "ngram-simple",
 	NGRAM_CACHE = "ngram-cache",
 	NGRAM_MAP_K = "ngram-map-k",
 	NGRAM_MAP_K4V = "ngram-map-k4v",
 	NGRAM_MOD = "ngram-mod",
-	MTP = "mtp",
+	MTP = "draft-mtp",
 	DFLASH = "draft-dflash",
 }
 

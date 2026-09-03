@@ -1,14 +1,15 @@
+import { useTranslation } from 'react-i18next';
+import { useImperativeHandle, forwardRef, useRef } from "react";
+import { useEditor, EditorContent, Extension, type Editor } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
-import HardBreak from "@tiptap/extension-hard-break";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
-import { type Editor, EditorContent, Extension, useEditor } from "@tiptap/react";
-import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useStore } from "@/store";
+import HardBreak from "@tiptap/extension-hard-break";
 import { ComposerPlaceholder } from "./ComposerPlaceholder";
-import { clearActiveComposerEditor, setActiveComposerEditor } from "./composerEditorRegistry";
-import { docToString, extractCommands } from "./docToString";
 import { SlashCommandNode } from "./slash-command/SlashCmdNode";
+import { docToString, extractCommands } from "./docToString";
+import { setActiveComposerEditor, clearActiveComposerEditor } from "./composerEditorRegistry";
+import { useStore } from "@/store";
 
 export interface IWarpComposerEditorRef {
 	insertText: (text: string) => void;
@@ -35,11 +36,11 @@ const makeKeymap = (getOnEnter: () => () => void, getCanSend: () => (() => boole
 					const canSend = getCanSend();
 					if (canSend && !canSend()) return false;
 					const json = this.editor.getJSON();
-					const text = docToString(json).trim();
-					const commands = extractCommands(json);
-					if (!text && commands.length === 0) return false;
-					getOnEnter()();
-					return true;
+const text = docToString(json).trim();
+				const commands = extractCommands(json);
+				if (!text && commands.length === 0) return false;
+				getOnEnter()();
+				return true;
 				},
 				"Shift-Enter": () => this.editor.commands.setHardBreak(),
 			};
@@ -47,12 +48,13 @@ const makeKeymap = (getOnEnter: () => () => void, getCanSend: () => (() => boole
 	});
 
 export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props, ref) => {
-	const setPendingSlashCommands = useStore((s) => s.setPendingSlashCommands);
-	const slashCommands = useStore((s) => s.slashCommands);
+	const { t } = useTranslation('chat');
+	const setPendingSlashCommands = useStore(s => s.setPendingSlashCommands);
+	const slashCommands = useStore(s => s.slashCommands);
 	const slashCommandsRef = useRef(slashCommands);
 	slashCommandsRef.current = slashCommands;
-	const chatFontSize = useStore((s) => s.settings.chatFontSize ?? 14);
-	const chatFontFamily = useStore((s) => s.settings.chatFontFamily ?? "");
+	const chatFontSize = useStore(s => s.settings.chatFontSize ?? 14);
+	const chatFontFamily = useStore(s => s.settings.chatFontFamily ?? '');
 	const onEnterRef = useRef(props.onEnter);
 	onEnterRef.current = props.onEnter;
 	const canSendRef = useRef(props.canSend);
@@ -63,17 +65,14 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 			Paragraph,
 			Text,
 			HardBreak,
-			makeKeymap(
-				() => onEnterRef.current,
-				() => canSendRef.current,
-			),
+			makeKeymap(() => onEnterRef.current, () => canSendRef.current),
 			SlashCommandNode,
 			ComposerPlaceholder.configure({
-				placeholder: "Send a message, or type / to use slash-commands...",
+				placeholder: props.placeholder ?? t('composer.sendMessagePlaceholder'),
 				resolveCommandPlaceholder: (name: string) => {
-					const cmd = slashCommandsRef.current[name];
-					if (!cmd || !cmd.consumesInput) return null;
-					return cmd.inputPlaceholder ?? null;
+					const command = slashCommandsRef.current[name];
+					if (!command?.consumesInput) return null;
+					return command.inputPlaceholder ?? null;
 				},
 			}),
 		],
@@ -81,7 +80,7 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 			attributes: {
 				class: "aui-composer-input",
 				"aria-label": "Message input",
-				style: `outline: none; min-height: 50px; font-size: ${chatFontSize}px;${chatFontFamily ? ` font-family: ${chatFontFamily};` : ""}`,
+				style: `outline: none; min-height: 50px; font-size: ${chatFontSize}px;${chatFontFamily ? ` font-family: ${chatFontFamily};` : ''}`,
 			},
 		},
 		onUpdate: ({ editor }) => {
@@ -98,20 +97,16 @@ export const ComposerEditor = forwardRef<IWarpComposerEditorRef, IProps>((props,
 		},
 	});
 
-	useImperativeHandle(
-		ref,
-		() => ({
-			insertText: (text: string) => {
-				editor?.chain().focus().insertContent(text).run();
-			},
-			focus: () => editor?.commands.focus(),
-			clear: () => editor?.commands.clearContent(true),
-			getEditor: () => editor,
-		}),
-		[editor],
-	);
+	useImperativeHandle(ref, () => ({
+		insertText: (text: string) => {
+			editor?.chain().focus().insertContent(text).run();
+		},
+		focus: () => editor?.commands.focus(),
+		clear: () => editor?.commands.clearContent(true),
+		getEditor: () => editor,
+	}), [editor]);
 
-	return <EditorContent editor={editor} className={props.className} />;
+	return <EditorContent editor={editor} className={props.className}/>;
 });
 
 ComposerEditor.displayName = "ComposerEditor";

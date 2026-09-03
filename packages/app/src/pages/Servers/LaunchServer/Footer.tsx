@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Button, Flex, HStack, Spinner, Switch } from "@chakra-ui/react";
 import { Play, RefreshCw } from "lucide-react";
 import React from "react";
@@ -42,7 +43,7 @@ export const Footer = React.memo(
 			>
 				<HStack gap="4">
 					<Switch.Root
-						label="Auto-launch at startup"
+						label={i18nextSingleton.t("common:ui.autoLaunchAtStartup")}
 						checked={autoLaunch}
 						onCheckedChange={(d) => onAutoLaunchChange(d.checked)}
 						color={autoLaunch ? "var(--wc-accent-blue)" : "var(--wc-text-tertiary)"}
@@ -59,11 +60,12 @@ export const Footer = React.memo(
 							color={autoLaunch ? "var(--wc-accent-blue)" : "var(--wc-text-tertiary)"}
 							userSelect="none"
 						>
-							Auto-launch at startup
+
+							{i18nextSingleton.t("common:ui.autoLaunchAtStartup")}
 						</Switch.Label>
 					</Switch.Root>
 					<Switch.Root
-						label="Auto-load latest checkpoint on start"
+						label={i18nextSingleton.t("common:ui.autoLoadLatestCheckpointOnStart")}
 						checked={autoLoadCheckpoint}
 						onCheckedChange={(d) => onAutoLoadCheckpointChange(d.checked)}
 						color={
@@ -90,11 +92,12 @@ export const Footer = React.memo(
 							}
 							userSelect="none"
 						>
-							Auto-load latest checkpoint on start
+
+							{i18nextSingleton.t("common:ui.autoLoadLatestCheckpointOnStart")}
 						</Switch.Label>
 					</Switch.Root>
 					<Switch.Root
-						label="Auto-save checkpoint on stop"
+						label={i18nextSingleton.t("common:ui.autoSaveCheckpointOnStop")}
 						checked={autoSaveCheckpoint}
 						onCheckedChange={(d) => onAutoSaveCheckpointChange(d.checked)}
 						color={
@@ -121,7 +124,8 @@ export const Footer = React.memo(
 							}
 							userSelect="none"
 						>
-							Auto-save all slots on stop
+
+							{i18nextSingleton.t("servers:launch.autoSaveCheckpoint")}
 						</Switch.Label>
 					</Switch.Root>
 				</HStack>
@@ -135,7 +139,8 @@ export const Footer = React.memo(
 						fontSize="13px"
 						onClick={onCancel}
 					>
-						Cancel
+
+						{i18nextSingleton.t("backends:actions.cancel")}
 					</Button>
 					{isEdit ? (
 						<>
@@ -157,7 +162,8 @@ export const Footer = React.memo(
 								px="5"
 								onClick={onSave}
 							>
-								Save
+
+								{i18nextSingleton.t("common:actions.save")}
 							</Button>
 							<Button
 								size="sm"
@@ -181,7 +187,8 @@ export const Footer = React.memo(
 								onClick={onLaunch}
 							>
 								{launching ? <Spinner size="xs" /> : <RefreshCw size={14} />}
-								Relaunch with Changes
+
+								{i18nextSingleton.t("servers:launch.relaunchWithChanges")}
 							</Button>
 						</>
 					) : (
@@ -205,7 +212,8 @@ export const Footer = React.memo(
 							onClick={onLaunch}
 						>
 							{launching ? <Spinner size="xs" /> : <Play size={14} />}
-							Launch
+
+							{i18nextSingleton.t("servers:launch.launch")}
 						</Button>
 					)}
 				</HStack>

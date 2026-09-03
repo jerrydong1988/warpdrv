@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Flex, Link, Text, VStack } from "@chakra-ui/react";
 import { Github } from "lucide-react";
 import { Card } from "../../components/Card";
@@ -28,15 +29,18 @@ export function AboutPage() {
 					<Card>
 						<VStack gap="3" align="center">
 							<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">
-								warpdrv.ai
+
+								{i18nextSingleton.t("about:website")}
 							</Text>
 							<VStack gap="1.5" alignItems="center">
 								<Text fontSize="13px" color="var(--wc-text-secondary)">
-									Built with{" "}
+
+									{i18nextSingleton.t("about:builtWith")}{" "}
 									<Text as="span" color="var(--wc-accent-red)">
 										❤
 									</Text>{" "}
-									by&nbsp;
+
+									{i18nextSingleton.t("common:ui.byNbsp")}
 									<Link
 										href="https://www.github.com/mikjee"
 										color="var(--wc-accent-blue)"
@@ -70,7 +74,8 @@ export function AboutPage() {
 										}}
 									>
 										<Text fontSize="13px" fontWeight="500">
-											Visit Website
+
+											{i18nextSingleton.t("about:visitWebsite")}
 										</Text>
 									</Link>
 								</Text>
@@ -82,10 +87,12 @@ export function AboutPage() {
 					<Card>
 						<VStack gap="3" align="center">
 							<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">
-								Copyright
+
+								{i18nextSingleton.t("about:copyright")}
 							</Text>
 							<Text fontSize="12px" color="var(--wc-text-tertiary)">
-								Copyright © 2026 mikjee. All rights reserved.
+
+								{i18nextSingleton.t("about:copyrightText")}
 							</Text>
 						</VStack>
 					</Card>
@@ -94,7 +101,8 @@ export function AboutPage() {
 					<Card>
 						<VStack gap="3" align="center">
 							<Text fontSize="14px" fontWeight="600" color="var(--wc-text-primary)">
-								Legal
+
+								{i18nextSingleton.t("about:legal")}
 							</Text>
 							<Flex gap="4" flexWrap="wrap" justifyContent="center">
 								<Link
@@ -112,7 +120,8 @@ export function AboutPage() {
 										);
 									}}
 								>
-									License Agreement - AGPL 3.0
+
+									{i18nextSingleton.t("about:licenseAgreement")}
 								</Link>
 							</Flex>
 						</VStack>
@@ -120,7 +129,8 @@ export function AboutPage() {
 
 					{/* Footer */}
 					<Text fontSize="11px" color="var(--wc-text-muted)" textAlign="center" mt="2">
-						Become a Sponsor
+
+						{i18nextSingleton.t("about:becomeSponsor")}
 					</Text>
 				</VStack>
 			</Box>

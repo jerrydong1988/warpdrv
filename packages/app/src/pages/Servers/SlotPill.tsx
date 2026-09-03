@@ -1,7 +1,8 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
-import type { ISlotLiveMetadata, ISlotLiveState } from "@warpcore/shared";
-import React from "react";
-import { useStore } from "@/store";
+import { useStore } from '@/store';
+import { HStack, Text, Box } from '@chakra-ui/react';
+import type { ISlotLiveState, ISlotLiveMetadata } from '@warpcore/shared';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const ServerSlots = React.memo(({ serverId }: { serverId: string }) => {
 	const serverSlots = useStore((s) => s.serverSlots[serverId]);
@@ -26,6 +27,7 @@ interface ISlotPillProps {
 }
 
 function SlotPill({ slot, metadata }: ISlotPillProps) {
+	const { t } = useTranslation('servers');
 	const isPrompt = slot?.isProcessing && slot?.prefillProgress !== null;
 	const isGen = slot?.isProcessing && slot?.prefillProgress === null;
 
@@ -67,9 +69,7 @@ function SlotPill({ slot, metadata }: ISlotPillProps) {
 				<Text fontWeight="600">S{slot?.slotId}</Text>
 				<Text>{label}</Text>
 				{msgCount !== null && (
-					<Text color="var(--wc-text-muted)" ml="auto">
-						{msgCount} msg
-					</Text>
+					<Text color="var(--wc-text-muted)" ml="auto">{msgCount} {t('actions.msg')}</Text>
 				)}
 			</HStack>
 			<Box

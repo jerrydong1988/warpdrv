@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	AccordionItem as AccordionItemComp,
 	AccordionItemContent,
@@ -106,7 +107,7 @@ export const GuardrailAccordion = React.memo(
 											py="0.5"
 											fontSize="11px"
 										>
-											{totalViolations + totalErrors} Issue
+											{totalViolations + totalErrors}  {i18nextSingleton.t("common:ui.issue")}
 											{totalViolations + totalErrors !== 1 ? "s" : ""}
 										</Badge>
 									)}
@@ -118,7 +119,7 @@ export const GuardrailAccordion = React.memo(
 											py="0.5"
 											fontSize="11px"
 										>
-											{totalWarnings} Warnings
+											{totalWarnings}  {i18nextSingleton.t("common:ui.warnings")}
 										</Badge>
 									)}
 								</HStack>
@@ -127,7 +128,7 @@ export const GuardrailAccordion = React.memo(
 										size={16}
 										color="var(--wc-text-muted)"
 										className="chevron"
-										css={{ transition: "transform 0.15s ease" }}
+										style={{ transition: "transform 0.15s ease" }}
 									/>
 								</HStack>
 							</AccordionItemTrigger>
@@ -135,7 +136,8 @@ export const GuardrailAccordion = React.memo(
 								<Box p="2.5">
 									{allClear ? (
 										<Text fontSize="sm" color="var(--wc-accent-green)">
-											All clear
+
+											{i18nextSingleton.t("common:ui.allClear")}
 										</Text>
 									) : (
 										<VStack gap="2" align="stretch">
@@ -146,7 +148,8 @@ export const GuardrailAccordion = React.memo(
 														fontSize="sm"
 														color="var(--wc-text-muted)"
 													>
-														Processing {name}...
+
+														{i18nextSingleton.t("common:ui.processing")} {name}...
 													</Text>
 												</HStack>
 											))}

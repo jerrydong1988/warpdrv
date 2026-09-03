@@ -1,4 +1,5 @@
 export * from "./checkpoint-types";
+export * from "./chat-types";
 export * from "./codegraph-types";
 export * from "./enums";
 export { EReasoningEffort, EReasoningFormat, EResponseFormat } from "./enums";

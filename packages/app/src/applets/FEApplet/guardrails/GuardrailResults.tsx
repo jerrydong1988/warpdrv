@@ -6,6 +6,7 @@ import { useStore } from "@/store";
 import type { TUiSpaceComponentDef } from "@/store/slices/uiSpaces";
 
 import { GuardrailAccordion } from "./GuardrailAccordion";
+import type { TGuardrailIssueEntry } from "./GuardrailErrorItem";
 import { EMPTY_ARRAY } from "../constants";
 
 export const GuardrailResults = React.memo(

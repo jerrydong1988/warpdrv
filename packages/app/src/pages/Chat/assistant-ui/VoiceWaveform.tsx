@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 interface IVoiceWaveformProps {
 	stream: MediaStream | null;
@@ -13,7 +13,7 @@ export function VoiceWaveform({
 	stream,
 	width: _width,
 	height = 36,
-	barColor = "#10b981",
+	barColor = '#10b981',
 	barWidth = 2,
 	gap = 1,
 }: IVoiceWaveformProps) {
@@ -25,7 +25,7 @@ export function VoiceWaveform({
 		if (!stream) return;
 		const canvas = canvasRef.current;
 		if (!canvas) return;
-		const ctx = canvas.getContext("2d");
+		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 
 		const dpr = window.devicePixelRatio || 1;
@@ -70,7 +70,7 @@ export function VoiceWaveform({
 
 			for (let i = 0; i < halfBarCount; i++) {
 				const binIndex = binStart + Math.floor((i / halfBarCount) * usableBins);
-				const v = data[binIndex] / 255;
+				const v = (data[binIndex] ?? 0) / 255;
 				const barHeight = Math.max(2, v * height);
 				const y = (height - barHeight) / 2;
 
@@ -94,5 +94,5 @@ export function VoiceWaveform({
 
 	if (!stream) return null;
 
-	return <canvas ref={canvasRef} style={{ width: "100%", height }} />;
+	return <canvas ref={canvasRef} style={{ width: '100%', height }} />;
 }

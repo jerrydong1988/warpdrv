@@ -2,8 +2,8 @@
 // Model Inference Parser - Extract recommended params from README
 // ============================================================
 
-import { INFER_PARAM_TO_TYPE } from "@warpcore/bridge/inferParamNames";
-import type { IChatInferenceParams } from "@warpcore/shared";
+import { INFER_PARAM_TO_TYPE } from '@warpcore/bridge/inferParamNames';
+import type { IChatInferenceParams } from '@warpcore/shared';
 
 // Regex patterns for parsing inference params from README
 const PATTERNS = {
@@ -30,65 +30,65 @@ const PATTERNS = {
 // Map common param name variations to our internal names
 const PARAM_NAME_MAP: Record<string, string> = {
 	// Temperature
-	temp: "temperature",
-	temperature: "temperature",
+	temp: 'temperature',
+	temperature: 'temperature',
 
 	// Top P
-	top_p: "topP",
-	topp: "topP",
-	"top p": "topP",
+	top_p: 'topP',
+	topp: 'topP',
+	'top p': 'topP',
 
 	// Top K
-	top_k: "topK",
-	topk: "topK",
-	"top k": "topK",
+	top_k: 'topK',
+	topk: 'topK',
+	'top k': 'topK',
 
 	// Min P
-	min_p: "minP",
-	minp: "minP",
-	"min p": "minP",
+	min_p: 'minP',
+	minp: 'minP',
+	'min p': 'minP',
 
 	// Repeat penalty
-	repeat_penalty: "repeatPenalty",
-	repeatpenalty: "repeatPenalty",
-	"repeat penalty": "repeatPenalty",
+	repeat_penalty: 'repeatPenalty',
+	repeatpenalty: 'repeatPenalty',
+	'repeat penalty': 'repeatPenalty',
 
 	// Frequency penalty
-	frequency_penalty: "frequencyPenalty",
-	frequencypenalty: "frequencyPenalty",
-	"frequency penalty": "frequencyPenalty",
+	frequency_penalty: 'frequencyPenalty',
+	frequencypenalty: 'frequencyPenalty',
+	'frequency penalty': 'frequencyPenalty',
 
 	// Presence penalty
-	presence_penalty: "presencePenalty",
-	presencepenalty: "presencePenalty",
-	"presence penalty": "presencePenalty",
+	presence_penalty: 'presencePenalty',
+	presencepenalty: 'presencePenalty',
+	'presence penalty': 'presencePenalty',
 
 	// Max tokens
-	max_tokens: "maxTokens",
-	maxtokens: "maxTokens",
-	"max tokens": "maxTokens",
-	max_length: "maxTokens",
-	maxlength: "maxTokens",
+	max_tokens: 'maxTokens',
+	maxtokens: 'maxTokens',
+	'max tokens': 'maxTokens',
+	max_length: 'maxTokens',
+	maxlength: 'maxTokens',
 
 	// Typical P
-	typical_p: "typicalP",
-	typicalp: "typicalP",
-	"typical p": "typicalP",
+	typical_p: 'typicalP',
+	typicalp: 'typicalP',
+	'typical p': 'typicalP',
 
 	// Mirostat
-	mirostat: "mirostatMode",
-	mirostat_tau: "mirostatTau",
-	mirostat_eta: "mirostatEta",
+	mirostat: 'mirostatMode',
+	mirostat_tau: 'mirostatTau',
+	mirostat_eta: 'mirostatEta',
 
 	// Dry
-	dry_multiplier: "dryMultiplier",
-	drybase: "dryBase",
-	dry_allowed_length: "dryAllowedLength",
-	dry_penalty_last_n: "dryPenaltyLastN",
+	dry_multiplier: 'dryMultiplier',
+	drybase: 'dryBase',
+	dry_allowed_length: 'dryAllowedLength',
+	dry_penalty_last_n: 'dryPenaltyLastN',
 
 	// Repeat last N
-	repeat_last_n: "repeatLastN",
-	repeatlastn: "repeatLastN",
+	repeat_last_n: 'repeatLastN',
+	repeatlastn: 'repeatLastN',
 };
 
 /**
@@ -121,11 +121,11 @@ function normalizeParamName(name: string): string | null {
  */
 function parseValue(value: string): number | string | boolean {
 	// Trim quotes
-	value = value.replace(/^["']|["']$/g, "");
+	value = value.replace(/^["']|["']$/g, '');
 
 	// Boolean
-	if (value.toLowerCase() === "true") return true;
-	if (value.toLowerCase() === "false") return false;
+	if (value.toLowerCase() === 'true') return true;
+	if (value.toLowerCase() === 'false') return false;
 
 	// Number
 	const num = parseFloat(value);
@@ -143,8 +143,8 @@ function parseYamlBlock(content: string): Partial<IChatInferenceParams> {
 
 	let match;
 	while ((match = PATTERNS.yamlKeyValue.exec(content)) !== null) {
-		const rawName = match[1] ?? "";
-		const value = match[2] ?? "";
+		const rawName = match[1] ?? '';
+		const value = match[2] ?? '';
 
 		const paramName = normalizeParamName(rawName);
 		if (paramName) {
@@ -163,12 +163,11 @@ function parseMarkdownTable(content: string): Partial<IChatInferenceParams> {
 
 	let match;
 	while ((match = PATTERNS.markdownTable.exec(content)) !== null) {
-		const paramName = (match[1] ?? "").trim();
-		const value = (match[2] ?? "").trim();
+		const paramName = (match[1] ?? '').trim();
+		const value = (match[2] ?? '').trim();
 
 		// Skip header rows
-		if (paramName.toLowerCase() === "parameter" || paramName.toLowerCase() === "value")
-			continue;
+		if (paramName.toLowerCase() === 'parameter' || paramName.toLowerCase() === 'value') continue;
 
 		const normalized = normalizeParamName(paramName);
 		if (normalized) {
@@ -187,8 +186,8 @@ function parseBulletList(content: string): Partial<IChatInferenceParams> {
 
 	let match;
 	while ((match = PATTERNS.bulletList.exec(content)) !== null) {
-		const paramName = (match[1] ?? "").trim();
-		const value = (match[2] ?? "").trim();
+		const paramName = (match[1] ?? '').trim();
+		const value = (match[2] ?? '').trim();
 
 		const normalized = normalizeParamName(paramName);
 		if (normalized) {
@@ -207,8 +206,8 @@ function parseKeyValue(content: string): Partial<IChatInferenceParams> {
 
 	let match;
 	while ((match = PATTERNS.keyValue.exec(content)) !== null) {
-		const paramName = (match[1] ?? "").trim();
-		const value = (match[2] ?? "").trim();
+		const paramName = (match[1] ?? '').trim();
+		const value = (match[2] ?? '').trim();
 
 		const normalized = normalizeParamName(paramName);
 		if (normalized) {
@@ -230,10 +229,10 @@ export function parseRecommendedParamsFromReadme(readme: string): Partial<IChatI
 	// Strategy 1: YAML code block (most reliable)
 	const yamlMatch = readme.match(PATTERNS.yamlBlock) || readme.match(PATTERNS.yamlBlockAlt);
 	if (yamlMatch) {
-		const yamlParams = parseYamlBlock(yamlMatch[1] ?? "");
+		const yamlParams = parseYamlBlock(yamlMatch[1] ?? '');
 		if (Object.keys(yamlParams).length > 0) {
 			Object.assign(params, yamlParams);
-			source = "yaml_block";
+			source = 'yaml_block';
 		}
 	}
 
@@ -242,7 +241,7 @@ export function parseRecommendedParamsFromReadme(readme: string): Partial<IChatI
 		const tableParams = parseMarkdownTable(readme);
 		if (Object.keys(tableParams).length > 0) {
 			Object.assign(params, tableParams);
-			source = "markdown_table";
+			source = 'markdown_table';
 		}
 	}
 
@@ -251,7 +250,7 @@ export function parseRecommendedParamsFromReadme(readme: string): Partial<IChatI
 		const bulletParams = parseBulletList(readme);
 		if (Object.keys(bulletParams).length > 0) {
 			Object.assign(params, bulletParams);
-			source = "bullet_list";
+			source = 'bullet_list';
 		}
 	}
 
@@ -260,13 +259,13 @@ export function parseRecommendedParamsFromReadme(readme: string): Partial<IChatI
 		const kvParams = parseKeyValue(readme);
 		if (Object.keys(kvParams).length > 0) {
 			Object.assign(params, kvParams);
-			source = "key_value";
+			source = 'key_value';
 		}
 	}
 
 	// Log for debugging
 	if (Object.keys(params).length > 0) {
-		console.log("[ModelInferenceParser] Parsed params:", {
+		console.log('[ModelInferenceParser] Parsed params:', {
 			params,
 			source,
 		});
@@ -278,29 +277,27 @@ export function parseRecommendedParamsFromReadme(readme: string): Partial<IChatI
 /**
  * Fetch README from HuggingFace and parse recommended params
  */
-export async function fetchAndParseModelRecommendations(
-	hfUrl: string,
-): Promise<Partial<IChatInferenceParams> | null> {
+export async function fetchAndParseModelRecommendations(hfUrl: string): Promise<Partial<IChatInferenceParams> | null> {
 	try {
 		// Extract author and model name from URL
 		// Expected format: https://huggingface.co/author/model-name or author/model-name
 		let author: string;
 		let modelName: string;
 
-		if (hfUrl.includes("huggingface.co")) {
+		if (hfUrl.includes('huggingface.co')) {
 			const url = new URL(hfUrl);
-			const parts = url.pathname.split("/").filter((p) => p.trim());
-			author = parts[0] || "";
-			modelName = parts[1] || "";
+			const parts = url.pathname.split('/').filter(p => p.trim());
+			author = parts[0] || '';
+			modelName = parts[1] || '';
 		} else {
 			// Assume format: author/model-name
-			const parts = hfUrl.split("/");
-			author = parts[0] || "";
-			modelName = parts[1] || "";
+			const parts = hfUrl.split('/');
+			author = parts[0] || '';
+			modelName = parts[1] || '';
 		}
 
 		if (!author || !modelName) {
-			console.warn("[ModelInferenceParser] Invalid HF URL:", hfUrl);
+			console.warn('[ModelInferenceParser] Invalid HF URL:', hfUrl);
 			return null;
 		}
 
@@ -309,22 +306,18 @@ export async function fetchAndParseModelRecommendations(
 		const response = await fetch(readmeUrl);
 
 		if (!response.ok) {
-			console.log(
-				"[ModelInferenceParser] Failed to fetch README:",
-				readmeUrl,
-				response.status,
-			);
+			console.log('[ModelInferenceParser] Failed to fetch README:', readmeUrl, response.status);
 			return null;
 		}
 
 		const readme = await response.text();
 		const params = parseRecommendedParamsFromReadme(readme);
 
-		console.log("[ModelInferenceParser] Fetched and parsed params for", hfUrl, ":", params);
+		console.log('[ModelInferenceParser] Fetched and parsed params for', hfUrl, ':', params);
 
 		return Object.keys(params).length > 0 ? params : null;
 	} catch (err) {
-		console.warn("[ModelInferenceParser] Error fetching/parsing:", err);
+		console.warn('[ModelInferenceParser] Error fetching/parsing:', err);
 		return null;
 	}
 }

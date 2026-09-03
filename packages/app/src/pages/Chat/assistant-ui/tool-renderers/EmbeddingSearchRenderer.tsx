@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import React, { useMemo, useState } from "react";
 import type { IToolCallRenderer, TCanRenderResult } from "@/store/types";
@@ -18,7 +19,7 @@ export const EmbeddingSearchRenderer = React.memo(
 			try {
 				const d = JSON.parse(text);
 				results = Array.isArray(d?.results) ? d.results : null;
-			} catch {}
+			} catch { /* fall back to the raw tool arguments */ }
 		}
 		const [expanded, setExpanded] = useState(false);
 
@@ -115,12 +116,13 @@ export const EmbeddingSearchRendererMeta: IToolCallRenderer = {
 				const parsed = JSON.parse(text);
 				const c = parsed?.results?.length;
 				if (typeof c === "number" && c > 0) return ` — ${c} result${c === 1 ? "" : "s"}`;
-			} catch {}
+			} catch { /* fall back to the raw tool result */ }
 			return "";
 		}, [result]);
 		return (
 			<Text whiteSpace="nowrap">
-				Embed "{truncated}"
+
+				{i18nextSingleton.t("chat:tool.embed")}{truncated}"
 				{countLabel && (
 					<Text as="span" color="var(--wc-text-faint)">
 						{countLabel}

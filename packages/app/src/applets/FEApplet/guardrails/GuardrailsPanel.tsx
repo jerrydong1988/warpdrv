@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text, VStack } from "@chakra-ui/react";
 import React from "react";
 import { WithErrorBoundary } from "@/components/WithErrorBoundary";
@@ -14,7 +15,8 @@ export const GuardrailsPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No guardrails
+
+					{i18nextSingleton.t("common:ui.noGuardrails")}
 				</Text>
 			</Box>
 		);

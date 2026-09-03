@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text, VStack } from "@chakra-ui/react";
 import React, { useMemo } from "react";
 import ReactDiffViewer from "react-diff-viewer-continued";
@@ -221,7 +222,9 @@ export const DiffRendererMeta: IToolCallRenderer = {
 			const ts = s.getCurrentThreadState(s);
 			return (
 				(ts?.projectRoot as string) ||
-				(s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string)
+				(s.activeWorkspaceId
+					? (s.workspaceStates[s.activeWorkspaceId]?.projectRoot as string)
+					: "")
 			);
 		});
 		const path = args.path ?? args.file_path ?? args.filepath ?? args.filename ?? args.file;
@@ -229,7 +232,8 @@ export const DiffRendererMeta: IToolCallRenderer = {
 		const { dir, file } = splitPath(relativePath(path, projectRoot));
 		return (
 			<Text whiteSpace="nowrap">
-				Edit <PathDisplay dir={dir} file={file} />
+
+				{i18nextSingleton.t("backends:actions.edit")} <PathDisplay dir={dir} file={file} />
 			</Text>
 		);
 	}),

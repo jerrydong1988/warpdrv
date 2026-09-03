@@ -41,6 +41,9 @@ import { toggleActiveGuardrail } from "./guardrails/toggleActiveGuardrail";
 import { AgentsPanel } from "./agents/AgentRow";
 import { EMPTY_TODOS } from "./constants";
 
+const asText = (value: string | number | undefined): string =>
+	value === undefined ? "" : String(value);
+
 const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 	console.log("[FEApplet] Started!");
 
@@ -87,11 +90,11 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			inputPlaceholder: "Guardrail prompt...",
 			execute: async (_api, params, extraParams) => {
 				const created = await createGuardrailApi({
-					name: params.name!,
-					serverId: params.server || "",
-					promptId: params.prompt || undefined,
+					name: asText(params.name),
+					serverId: asText(params.server),
+					promptId: params.prompt === undefined ? undefined : asText(params.prompt),
 					prompt: extraParams?.prompt,
-					triggerOnTools: parseToolValue(params.tools || ""),
+					triggerOnTools: parseToolValue(asText(params.tools)),
 				});
 				toggleActiveGuardrail(created.id, true);
 			},
@@ -122,7 +125,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				},
 			},
 			execute: async (_api, params) => {
-				toggleActiveGuardrail(params.name!, params.action === "on");
+				toggleActiveGuardrail(asText(params.name), params.action === "on");
 			},
 		});
 
@@ -160,7 +163,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				const state = api.useStore.getState();
 				const threadId = state.currentThreadId;
 				if (!threadId) return;
-				state.setThreadState(threadId, { projectRoot: params.path });
+				state.setThreadState(threadId, { projectRoot: asText(params.path) });
 			},
 		});
 
@@ -186,15 +189,14 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			inputPlaceholder: "More instructions.",
 			execute: async (_api, params, extraParams) => {
 				await createModeApi({
-					id: nanoid(6),
-					name: params.name!,
+					name: asText(params.name),
 					scope: "global",
-					color: params.color || "#a78bfa",
-					promptId: params.prompt || undefined,
+					color: asText(params.color) || "#a78bfa",
+					promptId: params.prompt === undefined ? undefined : asText(params.prompt),
 					prompt: extraParams?.prompt || undefined,
-					allowedTools: parseToolValue(params.tools || ""),
-					allowedAgents: parseAgentValue(params.agents || ""),
-					activeGuardrails: parseGuardrailValue(params.guardrails || ""),
+					allowedTools: parseToolValue(asText(params.tools)),
+					allowedAgents: parseAgentValue(asText(params.agents)),
+					activeGuardrails: parseGuardrailValue(asText(params.guardrails)),
 				});
 			},
 		});
@@ -229,7 +231,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 				if (params.action === "clear") {
 					state.setThreadState(threadId, { modeId: null });
 				} else {
-					state.setThreadState(threadId, { modeId: params.name });
+				state.setThreadState(threadId, { modeId: asText(params.name) });
 				}
 			},
 		});
@@ -276,7 +278,7 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			execute: async (_api, params, extraParams) => {
 				const content = extraParams?.prompt;
 				if (!content) return;
-				await api.useStore.getState().addChatPrompt({ name: params.name!, content });
+				await api.useStore.getState().addChatPrompt({ name: asText(params.name), content });
 			},
 		});
 
@@ -316,15 +318,15 @@ const fn: IAppletFn<IAppletAPIFE> = async (api) => {
 			inputPlaceholder: "Agent description...",
 			execute: async (_api, params, extraParams) => {
 				await createAgentApi({
-					name: params.name!,
-					serverId: params.server || "",
-					promptId: params.prompt || undefined,
-					tools: parseToolValue(params.tools || ""),
+					name: asText(params.name),
+					serverId: asText(params.server),
+					promptId: params.prompt === undefined ? undefined : asText(params.prompt),
+					tools: parseToolValue(asText(params.tools)),
 					// autoApproveTools: parseToolValue(params.autoApprove || ""),
-					autoApproveTools: parseToolValue(params.tools || ""),
+					autoApproveTools: parseToolValue(asText(params.tools)),
 					description: extraParams?.prompt || "",
-					reasoningEffort: params.reasoningLevel,
-					guardrails: parseGuardrailValue(params.guardrails || ""),
+					reasoningEffort: params.reasoningLevel as EReasoningEffort | undefined,
+					guardrails: parseGuardrailValue(asText(params.guardrails)),
 				});
 			},
 		});

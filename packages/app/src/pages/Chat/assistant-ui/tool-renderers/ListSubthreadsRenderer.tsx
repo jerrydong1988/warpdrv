@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { Circle } from "lucide-react";
 import React, { useMemo } from "react";
@@ -66,7 +67,7 @@ const SubthreadRow = React.memo(({ entry }: { entry: ISubthreadEntry }) => {
 					px="1.5"
 					whiteSpace="nowrap"
 				>
-					{entry.pendingMessages} pending
+					{entry.pendingMessages}  {i18nextSingleton.t("common:ui.pendingLowercase")}
 				</Box>
 			)}
 		</HStack>
@@ -78,14 +79,14 @@ export const ListSubthreadsRenderer = React.memo(({ result }: { result?: unknown
 	if (!entries || entries.length === 0) {
 		return (
 			<Box px="3" py="2">
-				<Text color="var(--wc-text-faint)">No subthreads</Text>
+				<Text color="var(--wc-text-faint)">{i18nextSingleton.t("common:ui.noSubthreads")}</Text>
 			</Box>
 		);
 	}
 	return (
 		<Box px="3" py="2">
 			<Text fontWeight="600" color="var(--wc-text-secondary)" mb="1">
-				{entries.length} subthread{entries.length !== 1 ? "s" : ""}
+				{entries.length}  {i18nextSingleton.t("common:ui.subthreadLowercase")}{entries.length !== 1 ? "s" : ""}
 			</Text>
 			<VStack gap="0" align="stretch">
 				{entries.map((e) => (
@@ -105,7 +106,8 @@ export const ListSubthreadsRendererMeta: IToolCallRenderer = {
 		const count = entries?.length ?? 0;
 		return (
 			<Text whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
-				List{" "}
+
+				{i18nextSingleton.t("chat:tool.list")}{" "}
 				<Text as="span" color="var(--wc-text-muted)">
 					{count > 0 ? `${count} subthread${count !== 1 ? "s" : ""}` : "subthreads"}
 				</Text>

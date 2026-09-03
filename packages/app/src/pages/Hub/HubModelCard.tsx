@@ -2,6 +2,7 @@ import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import type { IHubModel } from "@warpcore/shared";
 import { Clock, Download, Heart } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 function formatCount(n: number): string {
 	if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
@@ -9,21 +10,24 @@ function formatCount(n: number): string {
 	return String(n);
 }
 
-function formatDate(dateStr: string): string {
-	if (!dateStr) return "";
-	const d = new Date(dateStr);
-	const now = new Date();
-	const diffMs = now.getTime() - d.getTime();
-	const diffMinutes = Math.floor(diffMs / 60000);
-	const diffHours = Math.floor(diffMs / 3600000);
-	const diffDays = Math.floor(diffMs / 86400000);
-	if (diffMinutes === 0) return "Just now";
-	if (diffMinutes < 60) return `${diffMinutes}min ago`;
-	if (diffHours < 24) return `${diffHours}h ago`;
-	if (diffDays === 1) return "yesterday";
-	if (diffDays < 30) return `${diffDays}d ago`;
-	if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-	return `${Math.floor(diffDays / 365)}y ago`;
+function useFormatDate() {
+	const { t } = useTranslation('hub');
+	return (dateStr: string): string => {
+		if (!dateStr) return "";
+		const d = new Date(dateStr);
+		const now = new Date();
+		const diffMs = now.getTime() - d.getTime();
+		const diffMinutes = Math.floor(diffMs / 60000);
+		const diffHours = Math.floor(diffMs / 3600000);
+		const diffDays = Math.floor(diffMs / 86400000);
+		if (diffMinutes === 0) return t('date.justNow');
+		if (diffMinutes < 60) return t('date.minAgo', { n: diffMinutes });
+		if (diffHours < 24) return t('date.hoursAgo', { n: diffHours });
+		if (diffDays === 1) return t('date.yesterday');
+		if (diffDays < 30) return t('date.daysAgo', { n: diffDays });
+		if (diffDays < 365) return t('date.monthsAgo', { n: Math.floor(diffDays / 30) });
+		return t('date.yearsAgo', { n: Math.floor(diffDays / 365) });
+	};
 }
 
 interface IHubModelCardProps {
@@ -33,6 +37,7 @@ interface IHubModelCardProps {
 }
 
 export const HubModelCard = React.memo(({ model, selected, onClick }: IHubModelCardProps) => {
+	const formatDate = useFormatDate();
 	const topTags = model.tags
 		.filter((t) => !t.startsWith("license:") && !t.startsWith("region:") && t !== "gguf")
 		.slice(0, 3);

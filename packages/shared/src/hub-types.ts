@@ -16,6 +16,12 @@ export enum EDownloadType {
 	HF_MODEL = "HF_MODEL",
 	GENERIC = "GENERIC",
 }
+
+// Which model hub a hub entry comes from
+export enum EHubSource {
+	HUGGINGFACE = 'huggingface',
+	MODELSCOPE = 'modelscope',
+}
 export enum EPostActionType {
 	EXTRACT_ARCHIVE = "EXTRACT_ARCHIVE",
 	LOCATE_BINARY = "LOCATE_BINARY",
@@ -37,7 +43,7 @@ export interface IDownloadPostAction {
 	error: string | null;
 }
 
-// Model from HF search results
+// Model from a hub search result
 export interface IHubModel {
 	id: string; // "author/name"
 	author: string;
@@ -48,6 +54,8 @@ export interface IHubModel {
 	createdAt: string;
 	tags: string[];
 	pipelineTag: string;
+	source: EHubSource;
+	params?: number; // Total parameter count reported by the hub (ModelScope provides this)
 }
 
 // File within a HF model repo
@@ -78,6 +86,8 @@ export interface IHubModelDetail {
 	pipelineTag: string;
 	files: IHubFile[];
 	readme: string;
+	source: EHubSource;
+	params?: number;
 }
 
 // Resume state from node-downloader-helper
@@ -92,6 +102,7 @@ export interface IResumeState {
 export interface IDownload {
 	id: TDownloadId;
 	downloadType?: EDownloadType;
+	source?: EHubSource; // Which hub the URL comes from (resume needs it)
 	sourceUrl?: string;
 	postActions?: IDownloadPostAction[];
 	groupKey?: string;
@@ -116,6 +127,7 @@ export interface IDownload {
 
 // Download request payload - supports single or multiple files (for split models)
 export interface IDownloadRequestPayload {
+	source?: EHubSource; // Defaults to huggingface when absent
 	author: string;
 	modelName: string;
 	filename: string; // Primary file (first shard or single file)

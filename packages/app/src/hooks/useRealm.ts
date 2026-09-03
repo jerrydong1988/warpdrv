@@ -85,10 +85,10 @@ export function useRealm(currentThreadId: string | null) {
 		};
 	}, [isParentAttached]);
 
-	// useEffect(() => {
-	// 	if (!isParentAttached) return;
-	// 	realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
-	// }, [currentThreadId, isParentAttached]);
+	useEffect(() => {
+		if (!isParentAttached) return;
+		realmRef.current?.appletMgr.updateScopeValue(currentThreadId ?? undefined);
+	}, [currentThreadId, isParentAttached]);
 
 	useEffect(() => {
 		const socket = realmRef.current?.socket;
@@ -96,6 +96,7 @@ export function useRealm(currentThreadId: string | null) {
 
 		return () => {
 			socket?.disconnect();
+			realmRef.current = null;
 		};
 	}, []);
 

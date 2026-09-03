@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Button, Flex, HStack, Spinner, Text, VStack } from "@chakra-ui/react";
 import {
 	ERecipeRunStatus,
@@ -199,7 +200,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 							color="var(--wc-accent-red)"
 						>
 							<AlertCircle size={32} />
-							<Text fontSize="13px">Recipe is invalid</Text>
+							<Text fontSize="13px">{i18nextSingleton.t("recipes:runDialog.recipeInvalid")}</Text>
 							<Text
 								fontSize="11px"
 								fontFamily='"Geist Mono", monospace'
@@ -221,7 +222,8 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 										letterSpacing="0.05em"
 										mb="3"
 									>
-										Inputs
+
+										{i18nextSingleton.t("recipes:labels.inputs")}
 									</Text>
 									<InputFormGenerator
 										inputs={parseResult.parsed!.inputs}
@@ -242,7 +244,8 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 									letterSpacing="0.05em"
 									mb="3"
 								>
-									Steps
+
+									{i18nextSingleton.t("recipes:fields.steps")}
 								</Text>
 								{isThisRecipeActive ? (
 									<VStack align="stretch" gap="2">
@@ -319,7 +322,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 					) : isOtherRunActive ? (
 						<HStack gap="1.5" color="var(--wc-accent-yellow)">
 							<AlertCircle size={12} />
-							<Text fontSize="11px">Another recipe is currently running</Text>
+							<Text fontSize="11px">{i18nextSingleton.t("recipes:runDialog.anotherRunning")}</Text>
 						</HStack>
 					) : (
 						<Box />
@@ -344,7 +347,7 @@ export function RunRecipeDialog({ recipe, onClose }: IRunRecipeDialogProps) {
 								disabled={cancelling}
 							>
 								{cancelling ? <Spinner size="xs" /> : <Square size={13} />}
-								<Text ml="1.5">Cancel</Text>
+								<Text ml="1.5">{i18nextSingleton.t("backends:actions.cancel")}</Text>
 							</Button>
 						) : (
 							<Button

@@ -1,12 +1,12 @@
-import type { IGgufFile, IModel } from "@warpcore/shared";
-import crypto from "crypto";
-import type { Dirent } from "fs";
-import fs from "fs/promises";
-import path from "path";
-import { store } from "../util/store";
-import { parseGgufMetadata } from "./ggufParser";
+import fs from 'node:fs/promises';
+import path from 'path';
+import crypto from 'crypto';
+import type { IModel, IGgufFile } from '@warpcore/shared';
+import { parseGgufMetadata, estimateParamCountFromSize } from './ggufParser';
+import { store } from '../util/store';
+import type { Dirent } from 'node:fs';
 
-const MODELS_CACHE_KEY = "models:cache";
+const MODELS_CACHE_KEY = 'models:cache';
 
 // Shard pattern: -00001-of-00003.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
@@ -14,7 +14,7 @@ const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
 const MMPROJ_REGEX = /mmproj/i;
 
 function makeModelId(dirPath: string, parentModel: string): string {
-	return crypto.createHash("md5").update(`${dirPath}:${parentModel}`).digest("hex").slice(0, 12);
+	return crypto.createHash('md5').update(`${dirPath}:${parentModel}`).digest('hex').slice(0, 12);
 }
 
 // Build IGgufFile for a single .gguf entry, reusing cached metadata where possible
@@ -30,7 +30,7 @@ async function buildGgufFile(
 	const shardMatch = fileName.match(SHARD_REGEX);
 	const shardIndex = shardMatch ? parseInt(shardMatch[1]!, 10) : null;
 	const shardTotal = shardMatch ? parseInt(shardMatch[2]!, 10) : null;
-	const parentModel = shardMatch ? fileName.replace(SHARD_REGEX, "") : null;
+	const parentModel = shardMatch ? fileName.replace(SHARD_REGEX, '') : null;
 
 	const isMmproj = MMPROJ_REGEX.test(fileName);
 
@@ -60,6 +60,7 @@ async function scanDirRecursive(
 	ancestorMmproj: IGgufFile | null,
 	userSegment: string | null,
 	cachedModels: IModel[],
+	visitedPaths: Set<string>,
 ): Promise<IModel[]> {
 	let entries: Dirent[];
 	try {
@@ -69,13 +70,13 @@ async function scanDirRecursive(
 		return [];
 	}
 
-	const ggufEntries = entries.filter((e) => e.isFile() && e.name.endsWith(".gguf"));
-	const subDirs = entries.filter((e) => e.isDirectory());
+	const ggufEntries = entries.filter(e => e.isFile() && e.name.endsWith('.gguf'));
+	const subDirs = entries.filter(e => e.isDirectory());
 
 	const results: IModel[] = [];
 
 	// Build IGgufFile for every gguf in this dir (if any)
-	const cachedDirModels = cachedModels.filter((m) => m.dirPath === dirPath);
+	const cachedDirModels = cachedModels.filter(m => m.dirPath === dirPath);
 	const cachedFilesByPath = new Map<string, IGgufFile>();
 	for (const m of cachedDirModels) {
 		for (const f of m.files) cachedFilesByPath.set(f.filePath, f);
@@ -83,20 +84,27 @@ async function scanDirRecursive(
 
 	const dirFiles: IGgufFile[] = [];
 	for (const entry of ggufEntries) {
-		const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath);
-		// if (ggufFile.metadata?.architecture === 'whisper') continue;
-		dirFiles.push(ggufFile);
+		// A single unreadable/corrupt file must not abort the whole scan
+		// (previously one bad file killed the root scan and overwrote the
+		// model cache with a partial result).
+		try {
+			const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath);
+			// if (ggufFile.metadata?.architecture === 'whisper') continue;
+			dirFiles.push(ggufFile);
+		} catch (err) {
+			console.error(`[modelScanner] Skipping unreadable GGUF ${path.join(dirPath, entry.name)}:`, err instanceof Error ? err.message : err);
+		}
 	}
 
 	// Resolve mmproj for this dir: same-dir wins over ancestor
-	const sameDirMmproj = dirFiles.find((f) => f.isMmproj) ?? null;
+	const sameDirMmproj = dirFiles.find(f => f.isMmproj) ?? null;
 	const effectiveMmproj = sameDirMmproj ?? ancestorMmproj;
 
 	// Group non-mmproj files in this dir by parentModel and emit IModels
 	const modelGroups = new Map<string, IGgufFile[]>();
 	for (const file of dirFiles) {
 		if (file.isMmproj) continue;
-		const key = file.parentModel || file.fileName.replace(/\.gguf$/i, "");
+		const key = file.parentModel || file.fileName.replace(/\.gguf$/i, '');
 		if (!modelGroups.has(key)) modelGroups.set(key, []);
 		modelGroups.get(key)!.push(file);
 	}
@@ -105,29 +113,35 @@ async function scanDirRecursive(
 		const allGroupFiles = effectiveMmproj ? [...groupFiles, effectiveMmproj] : groupFiles;
 
 		const modelFiles = groupFiles;
-		const nonShardFiles = modelFiles.filter((f) => f.shardIndex === null);
-		const firstShards = modelFiles.filter((f) => f.shardIndex === 1);
+		const nonShardFiles = modelFiles.filter(f => f.shardIndex === null);
+		const firstShards = modelFiles.filter(f => f.shardIndex === 1);
 
 		let primaryFile: IGgufFile | null = null;
-		if (nonShardFiles.length > 0)
-			primaryFile = nonShardFiles.sort((a, b) => b.sizeMb - a.sizeMb)[0] ?? null;
+		if (nonShardFiles.length > 0) primaryFile = nonShardFiles.sort((a, b) => b.sizeMb - a.sizeMb)[0] ?? null;
 		else if (firstShards.length > 0) primaryFile = firstShards[0] ?? null;
 
 		let totalSizeMb = 0;
 		if (primaryFile && primaryFile.shardTotal) {
-			totalSizeMb = modelFiles
-				.filter((f) => f.shardIndex !== null)
-				.reduce((sum, f) => sum + f.sizeMb, 0);
+			totalSizeMb = modelFiles.filter(f => f.shardIndex !== null).reduce((sum, f) => sum + f.sizeMb, 0);
 		} else if (primaryFile) {
 			totalSizeMb = primaryFile.sizeMb;
 		}
 
+		// When the name carries no size token, fall back to a size-based
+		// estimate (total bytes / bits-per-weight of the quant type). The
+		// group total is used so multi-shard models estimate from the full
+		// size; the "≈" prefix marks the value as approximate.
+		if (primaryFile?.metadata && primaryFile.metadata.paramCount === 'unknown' && totalSizeMb > 0) {
+			const estimated = estimateParamCountFromSize(totalSizeMb * 1024 * 1024, primaryFile.metadata.quantType);
+			if (estimated !== 'unknown') primaryFile.metadata.paramCount = estimated;
+		}
+
 		const id = makeModelId(dirPath, parentModel);
-		const cachedSameId = cachedModels.find((m) => m.id === id);
+		const cachedSameId = cachedModels.find(m => m.id === id);
 
 		const model: IModel = {
 			id,
-			user: userSegment ?? "unknown",
+			user: userSegment ?? 'unknown',
 			name: parentModel,
 			dirPath,
 			files: allGroupFiles,
@@ -140,19 +154,16 @@ async function scanDirRecursive(
 		results.push(model);
 	}
 
-	// Recurse into subdirs
-	// Pass deeper mmproj down: prefer same-dir mmproj, else propagate ancestor
+	// Recurse into subdirs (with symlink cycle detection)
 	const childMmproj = sameDirMmproj ?? ancestorMmproj;
 
 	for (const subDir of subDirs) {
 		const childPath = path.join(dirPath, subDir.name);
+		const resolvedChildPath = await fs.realpath(childPath).catch(() => childPath);
+		if (visitedPaths.has(resolvedChildPath)) continue; // Skip symlink cycle / already-visited dir
+		visitedPaths.add(resolvedChildPath);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(
-			childPath,
-			childMmproj,
-			childUserSegment,
-			cachedModels,
-		);
+		const childModels = await scanDirRecursive(childPath, childMmproj, childUserSegment, cachedModels, visitedPaths);
 		results.push(...childModels);
 	}
 
@@ -163,31 +174,32 @@ async function scanDirRecursive(
 export async function scanAllModelRoots(roots: string[]): Promise<IModel[]> {
 	let cachedModels: IModel[] = [];
 	try {
-		cachedModels = (await store.get<IModel[]>(MODELS_CACHE_KEY)) ?? [];
+		cachedModels = await store.get<IModel[]>(MODELS_CACHE_KEY) ?? [];
 	} catch (err) {
-		console.warn("[modelScanner] Failed to load cache:", err);
+		console.warn('[modelScanner] Failed to load cache:', err);
 	}
 
 	const beforeCount = cachedModels.length;
 
 	const scanned: IModel[] = [];
 	for (const root of roots) {
-		const models = await scanDirRecursive(root, null, null, cachedModels);
+		const visited = new Set<string>();
+		try { visited.add(await fs.realpath(root)); } catch { visited.add(path.resolve(root)); }
+		const models = await scanDirRecursive(root, null, null, cachedModels, visited);
 		scanned.push(...models);
 	}
 
-	const scannedIds = new Set(scanned.map((m) => m.id));
-	const removed = cachedModels.filter((m) => !scannedIds.has(m.id)).length;
+	const scannedIds = new Set(scanned.map(m => m.id));
+	const removed = cachedModels.filter(m => !scannedIds.has(m.id)).length;
 
 	try {
 		await store.put(MODELS_CACHE_KEY, scanned);
 		const msg = `[modelScanner] Saved cache: ${scanned.length} models`;
 		if (removed > 0) console.log(`${msg} (removed ${removed} from removed directories)`);
-		else if (scanned.length !== beforeCount)
-			console.log(`${msg} (${scanned.length - beforeCount} changed)`);
+		else if (scanned.length !== beforeCount) console.log(`${msg} (${scanned.length - beforeCount} changed)`);
 		else console.log(msg);
 	} catch (err) {
-		console.warn("[modelScanner] Failed to save cache:", err);
+		console.warn('[modelScanner] Failed to save cache:', err);
 	}
 
 	return scanned;

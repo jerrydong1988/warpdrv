@@ -1,5 +1,6 @@
 "use client";
 
+import i18nextSingleton from "i18next";
 import {
 	AttachmentPrimitive,
 	ComposerPrimitive,
@@ -60,7 +61,7 @@ const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src }) => {
 	return (
 		<img
 			src={src}
-			alt="Image Preview"
+			alt={i18nextSingleton.t("common:ui.imagePreview")}
 			className={cn(
 				"block h-auto max-h-[80vh] w-auto max-w-full object-contain",
 				isLoaded
@@ -86,7 +87,7 @@ const AttachmentPreviewDialog: FC<PropsWithChildren> = ({ children }) => {
 				{children}
 			</DialogTrigger>
 			<DialogContent className="aui-attachment-preview-dialog-content p-2 sm:max-w-3xl [&>button]:rounded-full [&>button]:bg-foreground/60 [&>button]:p-1 [&>button]:opacity-100 [&>button]:ring-0! [&_svg]:text-background [&>button]:hover:[&_svg]:text-destructive">
-				<DialogTitle className="aui-sr-only sr-only">Image Attachment Preview</DialogTitle>
+				<DialogTitle className="aui-sr-only sr-only">{i18nextSingleton.t("common:ui.imageAttachmentPreview")}</DialogTitle>
 				<div className="aui-attachment-preview relative mx-auto flex max-h-[80dvh] w-full items-center justify-center overflow-hidden bg-background">
 					<AttachmentPreview src={src} />
 				</div>
@@ -105,7 +106,7 @@ const AttachmentThumb: FC = () => {
 		<Avatar className="aui-attachment-tile-avatar h-full w-full rounded-none after:rounded-none">
 			<AvatarImage
 				src={src}
-				alt="Attachment preview"
+				alt={i18nextSingleton.t("common:ui.attachmentPreview")}
 				className="aui-attachment-tile-image object-cover rounded-none"
 			/>
 			<AvatarFallback delayMs={isImage ? 200 : 0}>
@@ -204,7 +205,7 @@ export const ComposerAddAttachment: FC<{ disabled?: boolean; tooltip?: string }>
 				variant="ghost"
 				disabled={disabled}
 				className="aui-composer-add-attachment size-9 p-1 font-semibold text-xs hover:bg-muted-foreground/15 dark:border-muted-foreground/15 dark:hover:bg-muted-foreground/30"
-				aria-label="Add Attachment"
+				aria-label={i18nextSingleton.t("common:ui.addAttachment")}
 			>
 				<ImAttachment
 					className="aui-attachment-add-icon size-4"

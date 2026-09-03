@@ -1,0 +1,46 @@
+name: Upstream Drift
+
+on:
+  schedule:
+    - cron: '17 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout fork history
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compare with mikjee/warpdrv
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/mikjee/warpdrv.git
+          git fetch --no-tags upstream master
+
+          behind=$(git rev-list --count HEAD..upstream/master)
+          ahead=$(git rev-list --count upstream/master..HEAD)
+          base=$(git merge-base HEAD upstream/master)
+
+          {
+            echo "## Upstream drift"
+            echo
+            echo "- Fork-only commits: $ahead"
+            echo "- Upstream commits not yet integrated: $behind"
+            echo "- Merge base: \`$base\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$behind" -gt 0 ]; then
+            echo "::error::$behind upstream commit(s) require an upstream sync PR."
+            exit 1
+          fi
+
+          echo "Fork contains the current upstream master."

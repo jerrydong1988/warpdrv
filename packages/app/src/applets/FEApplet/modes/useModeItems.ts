@@ -13,5 +13,5 @@ export function useModeItems(): TDropdownItem[] {
 		return Object.values(modes)
 			.filter((m: IMode) => m.scope === "global" || m.scope === scope)
 			.map((m: IMode) => ({ label: m.name, value: m.id }));
-	}, [modes, scope]);
+	}, [modes, folderId]);
 }

@@ -4,7 +4,7 @@ import ignore from "ignore";
 import { minimatch } from "minimatch";
 import path from "path";
 import type { IWarpmcpDeps } from "../types";
-import { assertPathAllowed } from "../util/sandbox";
+import { assertFileSafe, assertPathAllowed } from "../util/sandbox";
 
 export interface IDirEntry {
 	name: string;
@@ -102,7 +102,9 @@ async function walk(
 			try {
 				const stat = await fs.stat(subPath);
 				size = stat.size;
-			} catch {}
+			} catch {
+				// File size is optional; keep the directory entry if stat races with removal.
+			}
 		}
 
 		if (type === "dir" && currentDepth < maxDepth) {
@@ -143,6 +145,7 @@ export async function dirListHandler(
 	if (!rootPath) {
 		throw new Error("No path provided. Pass path explicitly or set thread projectRoot.");
 	}
+	assertFileSafe(deps.getFsAllowedRoots(), rootPath);
 
 	const depth = args.depth ?? 0;
 	const pattern = args.pattern ?? null;

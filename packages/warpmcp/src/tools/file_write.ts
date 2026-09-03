@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import type { IWarpmcpDeps } from "../types";
-import { assertPathAllowed } from "../util/sandbox";
+import { assertFileSafe, assertPathAllowed } from "../util/sandbox";
 export const fileWriteDefinition = {
 	name: "file_write",
 	description:
@@ -25,7 +25,9 @@ export async function fileWriteHandler(
 	deps: IWarpmcpDeps,
 	args: { path: string; content: string; encoding?: string },
 ): Promise<{ bytesWritten: number }> {
-	const safePath = await assertPathAllowed(deps.getFsAllowedRoots(), args.path);
+	const roots = deps.getFsAllowedRoots();
+	const safePath = await assertPathAllowed(roots, args.path);
+	assertFileSafe(roots, safePath);
 	const encoding = (args.encoding ?? "utf8") as BufferEncoding;
 	await fs.mkdir(path.dirname(safePath), { recursive: true });
 	await fs.writeFile(safePath, args.content, { encoding });

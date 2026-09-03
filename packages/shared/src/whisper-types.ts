@@ -2,7 +2,7 @@
 // Whisper Types - separate layer from llama
 // ============================================================
 
-import type { EValidationStatus } from "./enums";
+import type { EValidationStatus } from './enums';
 
 // ============================================================
 // Identifiers
@@ -43,19 +43,21 @@ export interface IWhisperBackendUpdatePayload {
 // Whisper Launch Params
 // ============================================================
 export interface IWhisperLaunchParams {
-	port: number; // --port (0 = auto-assign)
-	threads: number; // -t, 0 = auto
-	processors: number; // -p, 0 = auto
-	noGpu: boolean; // --no-gpu (force CPU)
-	flashAttn: boolean; // --flash-attn
-	language: string; // -l, empty = auto-detect
-	translate: boolean; // --translate (output English)
-	beamSize: number; // -bs, 0 = default
-	temperature: number; // -tp, 0 = default
-	prompt: string; // --prompt, initial prompt tokens
-	convert: boolean; // --convert, auto-convert audio formats
-	inferencePath: string; // --inference-path, OpenAI endpoint path
-	extraArgs: string; // free-form additional flags
+	port: number;             // --port (0 = auto-assign)
+	threads: number;          // -t, 0 = auto
+	processors: number;       // -p, 0 = auto
+	noGpu: boolean;           // --no-gpu (force CPU)
+	flashAttn: boolean;       // --flash-attn
+	language: string;         // -l, empty = auto-detect
+	translate: boolean;       // --translate (output English)
+	beamSize: number;         // -bs, 0 = default
+	temperature: number;      // -tp, 0 = default
+	prompt: string;           // --prompt, initial prompt tokens
+	convert: boolean;         // --convert, auto-convert audio formats
+	inferencePath: string;    // --inference-path, OpenAI endpoint path
+	extraArgs: string;        // free-form additional flags
+	/** Listen on every interface; default loopback unless settings.inferenceExposeExternal. */
+	inferenceExposeExternal?: boolean;
 }
 
 export const DEFAULT_WHISPER_LAUNCH_PARAMS: IWhisperLaunchParams = {
@@ -64,24 +66,25 @@ export const DEFAULT_WHISPER_LAUNCH_PARAMS: IWhisperLaunchParams = {
 	processors: 0,
 	noGpu: false,
 	flashAttn: false,
-	language: "",
+	language: '',
 	translate: false,
 	beamSize: 0,
 	temperature: 0,
-	prompt: "",
+	prompt: '',
 	convert: true,
-	inferencePath: "/v1/audio/transcriptions",
-	extraArgs: "",
+	inferencePath: '/v1/audio/transcriptions',
+	extraArgs: '',
+	inferenceExposeExternal: false,
 };
 
 // ============================================================
 // Whisper Server Status
 // ============================================================
 export enum EWhisperServerStatus {
-	STOPPED = "STOPPED",
-	LOADING = "LOADING",
-	RUNNING = "RUNNING",
-	ERROR = "ERROR",
+	STOPPED = 'STOPPED',
+	LOADING = 'LOADING',
+	RUNNING = 'RUNNING',
+	ERROR = 'ERROR',
 }
 
 // ============================================================
@@ -115,16 +118,9 @@ export interface IWhisperServerCreatePayload {
 // ============================================================
 // Whisper Model Metadata
 // ============================================================
-export type TWhisperModelSize =
-	| "tiny"
-	| "base"
-	| "small"
-	| "medium"
-	| "large"
-	| "large-v3-turbo"
-	| "unknown";
+export type TWhisperModelSize = 'tiny' | 'base' | 'small' | 'medium' | 'large' | 'large-v3-turbo' | 'unknown';
 
-export type TWhisperFtype = "f32" | "f16" | "q4_0" | "q4_1" | "q5_0" | "q5_1" | "q8_0" | "unknown";
+export type TWhisperFtype = 'f32' | 'f16' | 'q4_0' | 'q4_1' | 'q5_0' | 'q5_1' | 'q8_0' | 'unknown';
 
 export interface IWhisperModelMetadata {
 	architecture: string;
@@ -148,7 +144,7 @@ export interface IWhisperModelFile {
 	fileName: string;
 	filePath: string;
 	sizeMb: number;
-	format: "gguf" | "bin";
+	format: 'gguf' | 'bin';
 	metadata: IWhisperModelMetadata | null;
 }
 

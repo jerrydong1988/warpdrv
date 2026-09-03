@@ -295,7 +295,7 @@ export interface IPersistence {
 		id: string;
 		name: string;
 		content: string;
-		meta?: Record<string, unknown>;
+		meta?: Record<string, unknown> | null;
 		createdAt: number;
 		updatedAt: number;
 	}): Promise<void>;
@@ -375,6 +375,13 @@ export interface IMcpClient {
 		threadId?: string,
 	): Promise<{ content: unknown; isError: boolean }>;
 	findToolServer(toolName: string): string | null;
+	prepareToolArgs(
+		serverName: string,
+		toolName: string,
+		args: Record<string, unknown>,
+		wsVars: Record<string, unknown> | null,
+		tsVars?: Record<string, unknown> | null,
+	): Record<string, unknown>;
 }
 
 // ============================================================

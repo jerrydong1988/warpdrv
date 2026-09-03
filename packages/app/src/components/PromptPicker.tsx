@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { HStack, Text } from "@chakra-ui/react";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { ChevronDown } from "lucide-react";
@@ -91,7 +92,8 @@ export const PromptPicker = React.memo(
 					) : (
 						<>
 							<Text flex="1" color="var(--wc-text-faint)" fontSize="12px">
-								Select
+
+								{i18nextSingleton.t("common:ui.select")}
 							</Text>
 							<ChevronDown size={12} style={{ opacity: 0.4 }} />
 						</>
@@ -123,7 +125,8 @@ export const PromptPicker = React.memo(
 										color: "var(--wc-text-faint)",
 									}}
 								>
-									No prompts
+
+									{i18nextSingleton.t("common:ui.noPrompts")}
 								</div>
 							)}
 							{prompts.map((p) => (

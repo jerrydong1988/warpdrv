@@ -30,6 +30,7 @@ import cors from "cors";
 import express from "express";
 import path from "path";
 import { authMiddleware } from "./middleware/auth";
+import { rateLimiter } from "./middleware/rateLimiter";
 import { serveStaticApp } from "./middleware/serveStatic";
 import { authRouter } from "./routes/auth";
 import { agentsRouter } from "./routes/agents";
@@ -38,7 +39,7 @@ import { backendsRouter } from "./routes/backends";
 import { chatRouter } from "./routes/chat";
 import { notificationsRouter } from "./routes/notifications";
 import { checkpointsRouter } from "./routes/checkpoints";
-import { clientLogsRouter } from "./routes/clientLogs";
+import { clientLogsBodyParser, clientLogsRouter } from "./routes/clientLogs";
 import { guardrailsRouter } from "./routes/guardrails";
 import { hardwareRouter } from "./routes/hardware";
 import { hubRouter } from "./routes/hub";
@@ -55,7 +56,7 @@ import { serversRouter } from "./routes/servers";
 import { settingsRouter } from "./routes/settings";
 import { summaryRouter } from "./routes/summary";
 import { tokensRouter } from "./routes/tokens";
-import { updateRouter } from "./routes/update";
+import { getLocalVersion, updateRouter } from "./routes/update";
 import { whisperBackendsRouter } from "./routes/whisperBackends";
 import {
 	getCachedWhisperModels,
@@ -82,8 +83,12 @@ import { getServerStats } from "./services/statsPoller";
 import { TodoManager } from "./services/todoManager";
 import { SubthreadService } from "./services/subthreadService";
 import { ThreadStatusLineManager } from "./services/threadStatusLineManager";
+import { stopAllInferenceServers } from "./services/shutdown";
+import { isLoopbackHost } from "./util/access";
 import { listChatPresets } from "./util/chatPresets";
+import { isLocalOrShellOrigin } from "./util/localOrigin";
 import { getDataDir } from "./util/mcpConfig";
+import { resolveListenPort } from "./util/port";
 import { store } from "./util/store";
 import { bootWarpmcp } from "./warpmcpRunner";
 
@@ -103,7 +108,7 @@ export let subthreadService: SubthreadService;
 export let threadStatusLineManager: ThreadStatusLineManager;
 
 import { execSync } from "child_process";
-import { createServer } from "http";
+import { createServer } from "node:http";
 import { launchAutoStartServers, reconcileServers } from "./services/processManager";
 import {
 	launchAutoStartWhisperServers,
@@ -220,9 +225,30 @@ async function main() {
 		next();
 	});
 
-	app.use(cors());
-	app.use(express.json({ limit: "50mb" }));
+	app.use(
+		cors({
+			origin(origin, callback) {
+				if (!origin) return callback(null, true);
+				return callback(null, isLocalOrShellOrigin(origin) ? origin : false);
+			},
+		}),
+	);
+
+	// Reject browser-driven cross-origin mutations against the localhost control plane.
+	// Non-browser clients do not send Origin and remain supported.
+	app.use("/api", (req, res, next) => {
+		const method = req.method.toUpperCase();
+		if (method === "GET" || method === "HEAD" || method === "OPTIONS") return next();
+		const origin = req.headers.origin;
+		if (!origin || isLocalOrShellOrigin(origin)) return next();
+		res.status(403).json({ ok: false, data: null, error: "Cross-origin request blocked" });
+	});
+
+	// Keep the unauthenticated client-log surface on a much smaller parser budget.
+	app.use("/api/client-log", clientLogsBodyParser);
+	app.use(express.json({ limit: "32mb" }));
 	app.use(cookieParser());
+	app.use("/api", rateLimiter({ windowMs: 60_000, max: 300 }));
 	// Auth routes (no middleware - public endpoints)
 	app.use("/api/auth", authRouter);
 	// Client log route (no auth — server may not be up when errors occur)
@@ -265,7 +291,6 @@ async function main() {
 
 	// Stats endpoint — returns live stats for a running server (protected by auth)
 	app.get("/api/servers/:id/stats", authMiddleware, (req, res) => {
-		const { getServerStats } = require("./services/statsPoller");
 		const stats = getServerStats(req.params.id);
 		res.json({ ok: true, data: stats, error: null });
 	});
@@ -275,21 +300,42 @@ async function main() {
 
 	// Health check
 	app.get("/api/health", (_req, res) => {
-		res.json({ ok: true, version: "0.1.0" });
+		res.json({ ok: true, version: getLocalVersion() });
 	});
 
 	const currentSettings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 
 	// Port: env var overrides settings, defaults to 4400
 	const envPort = process.env.CONTROL_API_PORT;
-	const port = envPort
-		? parseInt(envPort, 10)
-		: (currentSettings.apiPort ?? DEFAULT_SETTINGS.apiPort);
-	if (isNaN(port) || port < 1 || port > 65535) {
-		console.error(`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using default 4400.`);
+	const resolvedPort = resolveListenPort(
+		envPort,
+		currentSettings.apiPort,
+		DEFAULT_SETTINGS.apiPort,
+	);
+	if (envPort && !resolvedPort.usedEnv) {
+		console.error(
+			`[WarpCore] Invalid CONTROL_API_PORT: ${envPort}. Using ${resolvedPort.port} instead.`,
+		);
 	}
+	const port = resolvedPort.port;
 
 	const host = currentSettings.apiHost ?? DEFAULT_SETTINGS.apiHost;
+	if (!isLoopbackHost(host)) {
+		if (!currentSettings.apiAuthEnabled) {
+			console.warn(
+				`[WarpCore] WARNING: API bound to '${host}' with control-plane auth DISABLED. Enable API auth or bind apiHost to 127.0.0.1.`,
+			);
+		} else {
+			console.log(
+				`[WarpCore] API bound to '${host}' (non-loopback): every request must present a token.`,
+			);
+		}
+	}
+	if (currentSettings.authRequireForLocalhost && !currentSettings.apiAuthEnabled) {
+		console.warn(
+			"[WarpCore] WARNING: authRequireForLocalhost is set but apiAuthEnabled is false.",
+		);
+	}
 
 	// Register SSE channels
 	function registerSSEChannels(): void {
@@ -548,6 +594,49 @@ async function main() {
 	process.on("exit", () => {
 		mcpClient.disconnectAll();
 	});
+
+	let shuttingDown = false;
+	async function shutdown(signal: NodeJS.Signals): Promise<void> {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		console.log(`[WarpCore] ${signal} received — stopping inference servers…`);
+		const forceTimer = setTimeout(() => {
+			console.error("[WarpCore] Shutdown did not finish within 15s; forcing exit.");
+			process.exit(1);
+		}, 15_000);
+		forceTimer.unref?.();
+		try {
+			const stopped = await stopAllInferenceServers();
+			console.log(
+				`[WarpCore] Stopped ${stopped.llama} llama / ${stopped.whisper} whisper server(s).`,
+			);
+		} catch (err) {
+			console.error(
+				"[WarpCore] Failed to stop inference servers:",
+				err instanceof Error ? err.message : String(err),
+			);
+		}
+		try {
+			await mcpClient.disconnectAll();
+		} catch {
+			// Best effort during shutdown.
+		}
+		try {
+			await embeddingManager.destroy();
+		} catch {
+			// Best effort during shutdown.
+		}
+		try {
+			persistence.close();
+		} catch {
+			// Best effort during shutdown.
+		}
+		clearTimeout(forceTimer);
+		httpServer.closeAllConnections?.();
+		httpServer.close(() => process.exit(0));
+	}
+	process.on("SIGINT", (signal) => void shutdown(signal));
+	process.on("SIGTERM", (signal) => void shutdown(signal));
 
 	// Start model proxy if enabled in settings
 	if (currentSettings.proxyEnabled) {

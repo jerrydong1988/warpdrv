@@ -27,7 +27,8 @@ export const SlashCmdColorPicker: React.FC<SlashCmdColorPickerProps> = ({
 				onChange(details.value.toString("hex"));
 			}}
 			onOpenChange={(details) => {
-				details.open ? onFocus() : onBlur({} as React.FocusEvent);
+				if (details.open) onFocus();
+				else onBlur({} as React.FocusEvent);
 			}}
 		>
 			<ColorPicker.HiddenInput />

@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { useAuiState } from "@assistant-ui/react";
 import { Box, Text } from "@chakra-ui/react";
 import { Ban } from "lucide-react";
@@ -32,7 +33,8 @@ export const ModeToolViolationIndicator = React.memo(
 				>
 					<Ban size={14} color="var(--wc-accent-red)" />
 					<Text fontSize="xs" color="var(--wc-accent-red)" fontWeight="500">
-						Tool call to &quot;{blockedToolName}&quot; was blocked by mode restrictions
+
+						{i18nextSingleton.t("common:ui.toolCallToPrefix")}{blockedToolName}{i18nextSingleton.t("common:ui.toolCallBlockedSuffix")}
 					</Text>
 				</Box>
 			</>

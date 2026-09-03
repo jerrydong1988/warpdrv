@@ -1,6 +1,6 @@
-import { Router } from "express";
-import fs from "fs";
-import path from "path";
+import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 
 export const updateRouter = Router();
 
@@ -11,38 +11,54 @@ interface IReleaseInfo {
 	notes: string;
 }
 
+function getDevReleaseCandidates(): string[] {
+	// npm workspace scripts run with the package directory as their CWD, while
+	// Tauri development starts from packages/desktop. Walk up a bounded number
+	// of levels so both modes resolve the repository-level release.json.
+	const candidates: string[] = [];
+	let directory = process.cwd();
+	for (let depth = 0; depth < 4; depth++) {
+		candidates.push(path.join(directory, 'release.json'));
+		const parent = path.dirname(directory);
+		if (parent === directory) break;
+		directory = parent;
+	}
+	return candidates;
+}
+
 function getLocalRelease(): IReleaseInfo {
-	// Walk up from server/src/routes to repo root
 	const candidates = [
-		...(process.env.WARPCORE_RESOURCE_DIR
-			? [
-					path.join(process.env.WARPCORE_RESOURCE_DIR, "release.json"),
-					path.join(process.env.WARPCORE_RESOURCE_DIR, "_up_", "_up_", "release.json"),
-				]
-			: []),
+		...(process.env.WARPCORE_RESOURCE_DIR ? [
+			path.join(process.env.WARPCORE_RESOURCE_DIR, 'release.json'),
+			path.join(process.env.WARPCORE_RESOURCE_DIR, '_up_', '_up_', 'release.json'),
+		] : []),
+		...getDevReleaseCandidates(),
 	];
 	for (const p of candidates) {
 		if (fs.existsSync(p)) {
-			return JSON.parse(fs.readFileSync(p, "utf8"));
+			return JSON.parse(fs.readFileSync(p, 'utf8'));
 		}
 	}
-	return { version: "0.0.0", updateCheckUrl: "", downloadUrl: "", notes: "" };
+	return { version: '0.0.0', updateCheckUrl: '', downloadUrl: '', notes: '' };
+}
+
+// Shared version accessor — used by /api/update/check and /api/health.
+export function getLocalVersion(): string {
+	try {
+		return getLocalRelease().version || '0.0.0';
+	} catch {
+		return '0.0.0';
+	}
 }
 
 // GET /api/update/check
-updateRouter.get("/check", async (_req, res) => {
+updateRouter.get('/check', async (_req, res) => {
 	const local = getLocalRelease();
 
 	if (!local.updateCheckUrl) {
 		res.json({
 			ok: true,
-			data: {
-				currentVersion: local.version,
-				latestVersion: local.version,
-				updateAvailable: false,
-				downloadUrl: "",
-				notes: "",
-			},
+			data: { currentVersion: local.version, latestVersion: local.version, updateAvailable: false, downloadUrl: '', notes: '' },
 			error: null,
 		});
 		return;
@@ -53,19 +69,13 @@ updateRouter.get("/check", async (_req, res) => {
 		if (!response.ok) {
 			res.json({
 				ok: true,
-				data: {
-					currentVersion: local.version,
-					latestVersion: local.version,
-					updateAvailable: false,
-					downloadUrl: "",
-					notes: "",
-				},
-				error: "Failed to check for updates",
+				data: { currentVersion: local.version, latestVersion: local.version, updateAvailable: false, downloadUrl: '', notes: '' },
+				error: 'Failed to check for updates',
 			});
 			return;
 		}
 
-		const remote = (await response.json()) as IReleaseInfo;
+		const remote = await response.json() as IReleaseInfo;
 		const updateAvailable = compareVersions(remote.version, local.version) > 0;
 
 		res.json({
@@ -83,28 +93,22 @@ updateRouter.get("/check", async (_req, res) => {
 		// Silently fail — update check is non-critical
 		res.json({
 			ok: true,
-			data: {
-				currentVersion: local.version,
-				latestVersion: local.version,
-				updateAvailable: false,
-				downloadUrl: "",
-				notes: "",
-			},
+			data: { currentVersion: local.version, latestVersion: local.version, updateAvailable: false, downloadUrl: '', notes: '' },
 			error: null,
 		});
 	}
 });
 
 // GET /api/update/version
-updateRouter.get("/version", (_req, res) => {
+updateRouter.get('/version', (_req, res) => {
 	const local = getLocalRelease();
 	res.json({ ok: true, data: { version: local.version }, error: null });
 });
 
 // Simple semver comparison: returns >0 if a > b, 0 if equal, <0 if a < b
 function compareVersions(a: string, b: string): number {
-	const pa = a.replace(/^v/, "").split(".").map(Number);
-	const pb = b.replace(/^v/, "").split(".").map(Number);
+	const pa = a.replace(/^v/, '').split('.').map(Number);
+	const pb = b.replace(/^v/, '').split('.').map(Number);
 	for (let i = 0; i < 3; i++) {
 		const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
 		if (diff !== 0) return diff;

@@ -1,21 +1,14 @@
-import { Badge, Box, Checkbox, Flex, Spinner, Text } from "@chakra-ui/react";
-import type { IBackendAsset, IHardwareInfo } from "@warpcore/shared";
-import { useEffect, useState } from "react";
-import {
-	fetchHardware,
-	fetchLlamaReleases,
-	fetchWhisperReleases,
-	installBackend,
-	installKokoro,
-	installWhisperBackend,
-} from "@/api/services";
-import { useStore } from "@/store";
-import { OnboardingFooter } from "../components/OnboardingFooter";
-import { OnboardingHeader } from "../components/OnboardingHeader";
-import type { IStepProps } from "../OnboardingPage";
-
+import { useEffect, useState } from 'react';
+import { Box, Text, Flex, Checkbox, Spinner, Badge } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
+import { OnboardingHeader } from '../components/OnboardingHeader';
+import { OnboardingFooter } from '../components/OnboardingFooter';
+import type { IStepProps } from '../OnboardingPage';
+import { fetchHardware, fetchLlamaReleases, fetchWhisperReleases, installBackend, installWhisperBackend, installKokoro } from '@/api/services';
+import { useStore } from '@/store';
+import type { IBackendAsset, IHardwareInfo, } from '@warpcore/shared';
 function formatSize(bytes: number): string {
-	if (bytes === 0) return "";
+	if (bytes === 0) return '';
 	const mb = bytes / (1024 * 1024);
 	if (mb < 1024) return `${mb.toFixed(0)} MB`;
 	return `${(mb / 1024).toFixed(1)} GB`;
@@ -24,11 +17,12 @@ function assetLabel(asset: IBackendAsset): string {
 	const parts = [asset.backend.toUpperCase()];
 	if (asset.backendVersion) parts.push(asset.backendVersion);
 	if (asset.gpuArch) parts.push(asset.gpuArch);
-	if (asset.source === "lemonade") parts.push("(lemonade)");
+	if (asset.source === 'lemonade') parts.push('(lemonade)');
 	parts.push(`(${asset.llamaBuild})`);
-	return parts.join(" ");
+	return parts.join(' ');
 }
 export function StepBackends({ goNext, goPrev }: IStepProps) {
+	const { t } = useTranslation('onboarding');
 	const [loading, setLoading] = useState<boolean>(true);
 	const [hardware, setHardware] = useState<IHardwareInfo | null>(null);
 	const [llamaAssets, setLlamaAssets] = useState<IBackendAsset[]>([]);
@@ -37,7 +31,7 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 	const [selectedWhisper, setSelectedWhisper] = useState<Record<string, boolean>>({});
 	const [installKokoroSelected, setInstallKokoroSelected] = useState<boolean>(false);
 	const [installing, setInstalling] = useState<boolean>(false);
-	const kokoroStatus = useStore((s) => s.kokoroStatus);
+	const kokoroStatus = useStore(s => s.kokoroStatus);
 	useEffect(() => {
 		const load = async () => {
 			setLoading(true);
@@ -48,13 +42,11 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 			]);
 			if (hw.ok && hw.data) {
 				setHardware(hw.data);
-				const llamaForOs = (llama.ok ? llama.data : []).filter((a) => a.os === hw.data!.os);
-				const whisperForOs = (whisper.ok ? whisper.data : []).filter(
-					(a) => a.os === hw.data!.os,
-				);
+				const llamaForOs = (llama.ok ? llama.data : []).filter(a => a.os === hw.data!.os);
+				const whisperForOs = (whisper.ok ? whisper.data : []).filter(a => a.os === hw.data!.os);
 				setLlamaAssets(llamaForOs);
 				setWhisperAssets(whisperForOs);
-				const cpu = llamaForOs.find((a) => a.backend === "cpu");
+				const cpu = llamaForOs.find(a => a.backend === 'cpu');
 				if (cpu) setSelectedLlama({ [cpu.key]: true });
 			}
 			setLoading(false);
@@ -75,18 +67,15 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 			}
 			goNext();
 		} catch (err) {
-			console.error("[StepBackends] Install error:", err);
+			console.error('[StepBackends] Install error:', err);
 			setInstalling(false);
 		}
 	};
-	const anySelected =
-		Object.values(selectedLlama).some((v) => v) ||
-		Object.values(selectedWhisper).some((v) => v) ||
-		installKokoroSelected;
+	const anySelected = Object.values(selectedLlama).some(v => v) || Object.values(selectedWhisper).some(v => v) || installKokoroSelected;
 	return (
 		<Box display="flex" flexDirection="column" h="100%">
 			<Box px="4" pt="8">
-				<OnboardingHeader title="Backends" step={1} totalSteps={5} />
+				<OnboardingHeader title={t('steps.backends.headerTitle')} step={1} totalSteps={5} />
 			</Box>
 			<Box flex="1" overflowY="auto" px="4" py="6">
 				<Box maxW="560px" mx="auto">
@@ -98,20 +87,14 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 					{!loading && hardware && (
 						<>
 							<Box mb="6">
-								<Text fontSize="13px" color="var(--wc-text-muted)" mb="2">
-									Detected hardware
-								</Text>
+								<Text fontSize="13px" color="var(--wc-text-muted)" mb="2">{t('steps.backends.detectedHardware')}</Text>
 								<Text fontSize="14px" color="var(--wc-text-primary)">
 									{hardware.os} · {hardware.arch}
 								</Text>
 								{hardware.gpus.length > 0 && (
 									<Box mt="2">
 										{hardware.gpus.map((gpu, i) => (
-											<Text
-												key={i}
-												fontSize="13px"
-												color="var(--wc-text-secondary)"
-											>
+											<Text key={i} fontSize="13px" color="var(--wc-text-secondary)">
 												{gpu.vendor} — {gpu.name}
 											</Text>
 										))}
@@ -119,39 +102,18 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 								)}
 							</Box>
 							<Box mb="6">
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="3"
-								>
-									llama.cpp backends
-								</Text>
-								{llamaAssets.length === 0 && (
-									<Text fontSize="13px" color="var(--wc-text-muted)">
-										No releases available for this OS.
-									</Text>
-								)}
-								{llamaAssets.map((asset) => (
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="3">{t('steps.backends.llamaBackends')}</Text>
+								{llamaAssets.length === 0 && <Text fontSize="13px" color="var(--wc-text-muted)">{t('steps.backends.noReleases')}</Text>}
+								{llamaAssets.map(asset => (
 									<Flex key={asset.key} align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={!!selectedLlama[asset.key]}
-											onCheckedChange={(e) =>
-												setSelectedLlama((prev) => ({
-													...prev,
-													[asset.key]: e.checked,
-												}))
-											}
+											onCheckedChange={(e) => setSelectedLlama(prev => ({ ...prev, [asset.key]: e.checked === true }))}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />
 											<Checkbox.Label>
-												<Text
-													fontSize="14px"
-													color="var(--wc-text-primary)"
-												>
-													{assetLabel(asset)}
-												</Text>
+												<Text fontSize="14px" color="var(--wc-text-primary)">{assetLabel(asset)}</Text>
 											</Checkbox.Label>
 										</Checkbox.Root>
 										<Badge fontSize="11px">{formatSize(asset.size)}</Badge>
@@ -159,39 +121,18 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 								))}
 							</Box>
 							<Box mb="6">
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="3"
-								>
-									whisper.cpp backends
-								</Text>
-								{whisperAssets.length === 0 && (
-									<Text fontSize="13px" color="var(--wc-text-muted)">
-										No releases available for this OS.
-									</Text>
-								)}
-								{whisperAssets.map((asset) => (
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="3">{t('steps.backends.whisperBackends')}</Text>
+								{whisperAssets.length === 0 && <Text fontSize="13px" color="var(--wc-text-muted)">{t('steps.backends.noReleases')}</Text>}
+								{whisperAssets.map(asset => (
 									<Flex key={asset.key} align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={!!selectedWhisper[asset.key]}
-											onCheckedChange={(e) =>
-												setSelectedWhisper((prev) => ({
-													...prev,
-													[asset.key]: e.checked,
-												}))
-											}
+											onCheckedChange={(e) => setSelectedWhisper(prev => ({ ...prev, [asset.key]: e.checked === true }))}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />
 											<Checkbox.Label>
-												<Text
-													fontSize="14px"
-													color="var(--wc-text-primary)"
-												>
-													{assetLabel(asset)}
-												</Text>
+												<Text fontSize="14px" color="var(--wc-text-primary)">{assetLabel(asset)}</Text>
 											</Checkbox.Label>
 										</Checkbox.Root>
 										<Badge fontSize="11px">{formatSize(asset.size)}</Badge>
@@ -199,35 +140,19 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 								))}
 							</Box>
 							<Box mb="6">
-								<Text
-									fontSize="14px"
-									fontWeight="600"
-									color="var(--wc-text-heading)"
-									mb="3"
-								>
-									Voice (optional)
-								</Text>
+								<Text fontSize="14px" fontWeight="600" color="var(--wc-text-heading)" mb="3">{t('steps.backends.voiceOptional')}</Text>
 								{kokoroStatus?.installed ? (
-									<Text fontSize="13px" color="var(--wc-text-muted)">
-										Kokoro TTS already installed.
-									</Text>
+									<Text fontSize="13px" color="var(--wc-text-muted)">{t('steps.backends.kokoroInstalled')}</Text>
 								) : (
 									<Flex align="center" py="2" gap="3">
 										<Checkbox.Root
 											checked={installKokoroSelected}
-											onCheckedChange={(e) =>
-												setInstallKokoroSelected(e.checked)
-											}
+											onCheckedChange={(e) => setInstallKokoroSelected(e.checked === true)}
 										>
 											<Checkbox.HiddenInput />
 											<Checkbox.Control />
 											<Checkbox.Label>
-												<Text
-													fontSize="14px"
-													color="var(--wc-text-primary)"
-												>
-													Kokoro TTS
-												</Text>
+												<Text fontSize="14px" color="var(--wc-text-primary)">Kokoro TTS</Text>
 											</Checkbox.Label>
 										</Checkbox.Root>
 										<Badge fontSize="11px">~90 MB</Badge>
@@ -241,9 +166,7 @@ export function StepBackends({ goNext, goPrev }: IStepProps) {
 			<OnboardingFooter
 				onBack={goPrev}
 				onNext={handleNext}
-				nextLabel={
-					installing ? "Starting installs…" : anySelected ? "Install & continue" : "Skip"
-				}
+				nextLabel={installing ? t('steps.backends.startingInstalls') : (anySelected ? t('steps.backends.installAndContinue') : t('steps.backends.skip'))}
 			/>
 		</Box>
 	);

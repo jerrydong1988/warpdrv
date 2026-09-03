@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, Button, Flex, HStack, Switch, Text, VStack } from "@chakra-ui/react";
 import type { ISettings } from "@warpcore/shared";
 import { ArrowRight, Globe, Play, Server, Shield, Square, Trash2 } from "lucide-react";
@@ -71,7 +72,8 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 					color="var(--wc-accent-red)"
 					letterSpacing="0.02em"
 				>
-					Error: {status.error}
+
+					{i18nextSingleton.t("common:ui.errorLabel")} {status.error}
 				</Text>
 			</HStack>
 		);
@@ -95,7 +97,8 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 					color="var(--wc-text-muted)"
 					letterSpacing="0.02em"
 				>
-					Stopped
+
+					{i18nextSingleton.t("home:tiles.proxy.subtitle_stopped")}
 				</Text>
 			</HStack>
 		);
@@ -124,7 +127,8 @@ function ProxyStatusBadge({ status }: { status: IProxyStatus }) {
 				color="var(--wc-accent-green)"
 				letterSpacing="0.02em"
 			>
-				Running on port {status.port}
+
+				{i18nextSingleton.t("common:ui.runningOnPort")} {status.port}
 			</Text>
 		</HStack>
 	);
@@ -227,7 +231,7 @@ export function ProxyPage() {
 	return (
 		<Box>
 			<PageHeader
-				title="Router"
+				title={i18nextSingleton.t("common:navigation.router")}
 				subtitle={proxyStatus ? getStatusSubtitle(proxyStatus, proxyRoutes.length) : "-"}
 				icon={<BsRouter size={20} />}
 				actions={
@@ -246,7 +250,8 @@ export function ProxyPage() {
 							onClick={() => setClearingAll(true)}
 						>
 							<Trash2 size={15} />
-							Clear All
+
+							{i18nextSingleton.t("proxy:actions.clearAll")}
 						</Button>
 					) : null
 				}
@@ -306,7 +311,8 @@ export function ProxyPage() {
 											fontWeight="600"
 											color="var(--wc-text-primary)"
 										>
-											Server Alias
+
+											{i18nextSingleton.t("proxy:serverAlias")}
 										</Text>
 										<HStack gap="3" mt="0.5">
 											<ProxyStatusBadge
@@ -339,7 +345,8 @@ export function ProxyPage() {
 										disabled={startMut.loading}
 									>
 										<Play size={14} />
-										Start Router
+
+										{i18nextSingleton.t("proxy:actions.startRouter")}
 									</Button>
 								) : (
 									<Button
@@ -357,7 +364,8 @@ export function ProxyPage() {
 										disabled={stopMut.loading}
 									>
 										<Square size={14} />
-										Stop Router
+
+										{i18nextSingleton.t("proxy:actions.stopRouter")}
 									</Button>
 								)}
 							</Flex>
@@ -371,7 +379,7 @@ export function ProxyPage() {
 								/>
 								<StatPill
 									icon={<Globe size={12} />}
-									label="Routes"
+									label={i18nextSingleton.t("proxy:statPills.routes")}
 									value={`${proxyRoutes.length}`}
 								/>
 							</HStack>
@@ -388,7 +396,8 @@ export function ProxyPage() {
 									fontWeight="600"
 									color="var(--wc-text-primary)"
 								>
-									Authentication
+
+									{i18nextSingleton.t("proxy:auth.sectionTitle")}
 								</Text>
 							</HStack>
 							<VStack gap="2" align="stretch">
@@ -406,10 +415,12 @@ export function ProxyPage() {
 											fontWeight="500"
 											color="var(--wc-text-secondary)"
 										>
-											Proxy Auth
+
+											{i18nextSingleton.t("proxy:auth.proxyAuth")}
 										</Text>
 										<Text fontSize="10px" color="var(--wc-text-faint)">
-											Require Bearer token for /v1/* endpoints
+
+											{i18nextSingleton.t("proxy:auth.proxyAuthDesc")}
 										</Text>
 									</Box>
 									<Switch.Root
@@ -444,10 +455,12 @@ export function ProxyPage() {
 											fontWeight="500"
 											color="var(--wc-text-secondary)"
 										>
-											Control API Auth
+
+											{i18nextSingleton.t("proxy:auth.controlApiAuth")}
 										</Text>
 										<Text fontSize="10px" color="var(--wc-text-faint)">
-											Require auth for /api/* endpoints
+
+											{i18nextSingleton.t("proxy:auth.controlApiAuthDesc")}
 										</Text>
 									</Box>
 									<Switch.Root
@@ -482,10 +495,12 @@ export function ProxyPage() {
 											fontWeight="500"
 											color="var(--wc-text-secondary)"
 										>
-											Require Auth for Localhost
+
+											{i18nextSingleton.t("proxy:auth.requireLocalhost")}
 										</Text>
 										<Text fontSize="10px" color="var(--wc-text-faint)">
-											Enforce auth even for localhost requests (testing)
+
+											{i18nextSingleton.t("proxy:auth.requireLocalhostDesc")}
 										</Text>
 									</Box>
 									<Switch.Root
@@ -523,7 +538,8 @@ export function ProxyPage() {
 								textTransform="uppercase"
 								letterSpacing="0.05em"
 							>
-								Sticky Routes
+
+								{i18nextSingleton.t("proxy:stickyRoutes.title")}
 							</Text>
 
 							{!proxyRoutes || proxyRoutes.length === 0 ? (
@@ -537,10 +553,10 @@ export function ProxyPage() {
 									borderStyle="dashed"
 								>
 									<VStack gap="2" color="var(--wc-text-faint)">
-										<Text fontSize="13px">No sticky routes yet</Text>
+										<Text fontSize="13px">{i18nextSingleton.t("proxy:stickyRoutes.empty")}</Text>
 										<Text fontSize="11px" color="var(--wc-text-muted)">
-											Sticky routes are created when requests go through the
-											router
+
+											{i18nextSingleton.t("proxy:stickyRoutes.emptyDesc")}
 										</Text>
 									</VStack>
 								</Flex>
@@ -595,7 +611,8 @@ export function ProxyPage() {
 												fontSize="11px"
 												onClick={() => handleClearOne(route.alias)}
 											>
-												Clear
+
+												{i18nextSingleton.t("proxy:actions.clear")}
 											</Button>
 										</Flex>
 									))}
@@ -608,7 +625,7 @@ export function ProxyPage() {
 
 			{clearingAll && (
 				<ConfirmDialog
-					title="Clear All Sticky Routes?"
+					title={i18nextSingleton.t("proxy:dialog.clearAllTitle")}
 					message="This will remove all sticky route mappings. New routes will be created on the next request."
 					isOpen={true}
 					isLoading={clearAllMut.loading}
@@ -619,7 +636,7 @@ export function ProxyPage() {
 
 			{restartConfirm && (
 				<ConfirmDialog
-					title="Restart Proxy Required"
+					title={i18nextSingleton.t("proxy:dialog.restartTitle")}
 					message="Enabling proxy authentication requires restarting the proxy. This will terminate all existing connections. New connections will require authentication."
 					isOpen={true}
 					isLoading={stopMut.loading || startMut.loading || saveSettingsMut.loading}

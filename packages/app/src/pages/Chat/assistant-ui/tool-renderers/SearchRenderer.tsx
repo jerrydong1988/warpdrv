@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Link, Text, VStack } from "@chakra-ui/react";
 import { ExternalLink } from "lucide-react";
 import React from "react";
@@ -127,6 +128,6 @@ export const SearchRendererMeta: IToolCallRenderer = {
 		const query = args.query ?? args.q ?? args.pattern ?? args.search ?? args.term;
 		if (typeof query !== "string") return "";
 		const truncated = query.length > 60 ? query.slice(0, 57) + "..." : query;
-		return <Text whiteSpace="nowrap">Search "{truncated}"</Text>;
+		return <Text whiteSpace="nowrap">{i18nextSingleton.t("common:ui.searchQuotePrefix")}{truncated}"</Text>;
 	}),
 };

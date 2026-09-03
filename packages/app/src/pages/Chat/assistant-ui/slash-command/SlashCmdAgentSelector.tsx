@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { Bot, Check, ChevronDown, Wrench } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -136,7 +137,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 
 	const displayLabel = useMemo(
 		() =>
-			selectedNames.size === 0
+			selectedIds.size === 0
 				? "Agents"
 				: `${selectedIds.size} agent${selectedIds.size === 1 ? "" : "s"}`,
 		[selectedIds.size],
@@ -223,7 +224,8 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 									textAlign: "center",
 								}}
 							>
-								No agents available
+
+								{i18nextSingleton.t("common:ui.noAgentsAvailable")}
 							</div>
 						)}
 						{availableAgents.map((agent) => {
@@ -293,7 +295,7 @@ export const SlashCmdAgentSelector: React.FC<SlashCmdAgentSelectorProps> = ({
 											}}
 										>
 											<Wrench size={9} />
-											{toolCount} tool{toolCount === 1 ? "" : "s"}
+											{toolCount}  {i18nextSingleton.t("common:ui.toolLowercase")}{toolCount === 1 ? "" : "s"}
 										</span>
 									</div>
 									{agent.description && (

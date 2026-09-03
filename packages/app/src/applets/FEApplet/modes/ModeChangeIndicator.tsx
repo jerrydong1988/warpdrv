@@ -19,6 +19,7 @@ export const ModeChangeIndicator = React.memo(
 
 		const prevUserMsgId = useMemo(() => {
 			if (!currentModeMarker) return null;
+			if (!currentThreadId) return null;
 			const st = useStore.getState();
 			const threadMsgs = st.messagesByThread?.[currentThreadId];
 			if (!threadMsgs) return null;

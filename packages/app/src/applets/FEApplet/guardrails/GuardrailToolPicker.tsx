@@ -142,9 +142,8 @@ export const GuardrailToolPicker = React.memo(
 											e.stopPropagation();
 											setExpandedServers((prev) => {
 												const n = new Set(prev);
-												isExpanded
-													? n.delete(serverName)
-													: n.add(serverName);
+												if (isExpanded) n.delete(serverName);
+												else n.add(serverName);
 												return n;
 											});
 										}}
@@ -164,9 +163,7 @@ export const GuardrailToolPicker = React.memo(
 											{serverName}
 										</span>
 										<span
-											fontSize="8px"
-											fontWeight={400}
-											color="var(--wc-text-faint)"
+											style={{ fontSize: "8px", fontWeight: 400, color: "var(--wc-text-faint)" }}
 										>
 											{state.tools.length}
 											{activeCount ? ` (${activeCount})` : ""}
@@ -209,11 +206,9 @@ export const GuardrailToolPicker = React.memo(
 																color="var(--wc-accent-blue)"
 															/>
 														)}
-														<span
-															overflow="hidden"
-															textOverflow="ellipsis"
-															whiteSpace="nowrap"
-														>
+												<span
+													style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+												>
 															{tool.name}
 														</span>
 													</Box>

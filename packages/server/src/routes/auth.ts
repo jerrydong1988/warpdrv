@@ -2,6 +2,7 @@ import type { IAccessToken, IAccessTokenInfo, ISettings } from "@warpcore/shared
 import { DEFAULT_SETTINGS } from "@warpcore/shared";
 import { Router } from "express";
 import { isRemote } from "../middleware/auth";
+import { rateLimiter } from "../middleware/rateLimiter";
 import { store } from "../util/store";
 import { validateBearerToken } from "./tokens";
 
@@ -29,8 +30,8 @@ function toInfo(token: IAccessToken): IAccessTokenInfo {
 	};
 }
 
-// POST /api/auth/login - validate token, set cookie
-authRouter.post("/login", async (req, res) => {
+// Every attempt runs a password-hash comparison, so throttle this public endpoint.
+authRouter.post("/login", rateLimiter({ windowMs: 60_000, max: 10 }), async (req, res) => {
 	const authHeader = req.headers.authorization;
 	const token = await validateBearerToken(authHeader);
 
@@ -45,6 +46,7 @@ authRouter.post("/login", async (req, res) => {
 		httpOnly: true,
 		secure: isSecure,
 		sameSite: "strict" as const,
+		path: "/",
 		maxAge: undefined, // no expiry
 	});
 
@@ -70,7 +72,7 @@ authRouter.get("/check", async (req, res) => {
 	const tokenId = req.cookies?.[COOKIE_NAME];
 
 	if (!tokenId) {
-		res.status(401).json({ ok: true, data: null, error: null });
+		res.status(401).json({ ok: false, data: null, error: "Not authenticated" });
 		return;
 	}
 
@@ -80,8 +82,8 @@ authRouter.get("/check", async (req, res) => {
 
 	if (!token) {
 		// Cookie exists but token doesn't, clear it
-		res.clearCookie(COOKIE_NAME);
-		res.status(401).json({ ok: true, data: null, error: null });
+		res.clearCookie(COOKIE_NAME, { path: "/" });
+		res.status(401).json({ ok: false, data: null, error: "Token not found" });
 		return;
 	}
 
@@ -106,7 +108,7 @@ authRouter.get("/me", async (req, res) => {
 	const token = tokens.find((t) => t.id === tokenId);
 
 	if (!token) {
-		res.clearCookie(COOKIE_NAME);
+		res.clearCookie(COOKIE_NAME, { path: "/" });
 		res.status(401).json({ ok: false, data: null, error: "Token not found" });
 		return;
 	}
@@ -120,6 +122,6 @@ authRouter.get("/me", async (req, res) => {
 
 // POST /api/auth/logout - clear cookie
 authRouter.post("/logout", (_req, res) => {
-	res.clearCookie(COOKIE_NAME);
+	res.clearCookie(COOKIE_NAME, { path: "/" });
 	res.json({ ok: true, data: null, error: null });
 });

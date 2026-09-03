@@ -4,13 +4,13 @@
 // Universal — works in Node and browser.
 // ============================================================
 
-import type { ISSEChunk } from "../types";
+import type { ISSEChunk } from '../types';
 
 // Parse a single SSE line into a chunk object, or null if not a data line.
 export function parseSSELine(line: string): ISSEChunk | null {
-	if (!line.startsWith("data: ")) return null;
+	if (!line.startsWith('data: ')) return null;
 	const data = line.slice(6).trim();
-	if (data === "[DONE]") return null;
+	if (data === '[DONE]') return null;
 	if (!data) return null;
 	try {
 		return JSON.parse(data) as ISSEChunk;
@@ -20,17 +20,18 @@ export function parseSSELine(line: string): ISSEChunk | null {
 }
 
 // Parse a buffer of SSE text, returning parsed chunks and the remaining buffer.
-export function parseSSEBuffer(buffer: string): {
-	chunks: ISSEChunk[];
-	remaining: string;
-	done: boolean;
-} {
-	const lines = buffer.split("\n");
-	const remaining = lines.pop() ?? "";
+// With isFinal=true the whole buffer is treated as complete lines (used to
+// flush the final unterminated line when the stream ends — otherwise the last
+// chunk, e.g. usage or an error, is silently dropped). 'done' reports whether
+// a data: [DONE] line was seen.
+export function parseSSEBuffer(buffer: string, isFinal = false): { chunks: ISSEChunk[]; remaining: string; done: boolean } {
+	const lines = buffer.split('\n');
+	let remaining = '';
+	if (!isFinal) remaining = lines.pop() ?? '';
 	const chunks: ISSEChunk[] = [];
 	let done = false;
 	for (const line of lines) {
-		if (line.trim() === "data: [DONE]") {
+		if (line.trim() === 'data: [DONE]') {
 			done = true;
 			continue;
 		}
@@ -42,7 +43,7 @@ export function parseSSEBuffer(buffer: string): {
 
 // Check if a line indicates the stream is done.
 export function isStreamDone(line: string): boolean {
-	return line.trim() === "data: [DONE]";
+	return line.trim() === 'data: [DONE]';
 }
 
 // Accumulate tool call deltas from streaming chunks.
@@ -59,7 +60,7 @@ export function accumulateToolCallDelta(
 ): void {
 	const idx = delta.index;
 	if (!accumulators[idx]) {
-		accumulators[idx] = { id: "", name: "", arguments: "" };
+		accumulators[idx] = { id: '', name: '', arguments: '' };
 	}
 	const acc = accumulators[idx];
 	if (delta.id) acc.id = delta.id;
@@ -71,5 +72,5 @@ export function accumulateToolCallDelta(
 export function finalizeToolCalls(
 	accumulators: Record<number, IToolCallAccumulator>,
 ): Array<{ id: string; name: string; arguments: string }> {
-	return Object.values(accumulators).filter((a) => a.id && a.name);
+	return Object.values(accumulators).filter(a => a.id && a.name);
 }

@@ -1,5 +1,7 @@
 import {
 	type EDeviceBackendType,
+	type ELlamaFlashAttentionMode,
+	type ELlamaLoadMode,
 	EKvQuantType,
 	type EReasoningEffort,
 	type EReasoningFormat,
@@ -7,6 +9,7 @@ import {
 	type EServerStatus,
 	type ESpecType,
 	type ESplitMode,
+	type EThreadHierarchyType,
 	ETheme,
 	type EValidationStatus,
 } from "./enums";
@@ -34,6 +37,17 @@ export interface IDevice {
 // ============================================================
 // Backends
 // ============================================================
+export interface ILlamaBackendCapabilities {
+	schemaVersion: 1;
+	probedAt: number;
+	supportedFlags: string[];
+	deprecatedFlags: string[];
+	removedFlags: string[];
+	flashAttentionModes: ELlamaFlashAttentionMode[];
+	loadModes: ELlamaLoadMode[];
+	specTypes: string[];
+}
+
 export interface IBackend {
 	id: TBackendId;
 	name: string;
@@ -44,6 +58,7 @@ export interface IBackend {
 	version: string; // compiled GPU backends (e.g. 'CUDA, Vulkan')
 	buildNumber: string; // llama.cpp build number (e.g. '9293')
 	gitCommit: string; // git commit hash of this build (e.g. '1acee6bf8')
+	capabilities?: ILlamaBackendCapabilities;
 	detectedDevices: IDevice[];
 	createdAt: number;
 	updatedAt: number;
@@ -151,6 +166,26 @@ export interface ISpecDecodeParams {
 	ngramSizeN?: number; // lookup n-gram length
 	ngramSizeM?: number; // draft m-gram length
 	ngramMinHits?: number; // min occurrences before drafting (ngram-map-k* only)
+	// Draft-model KV cache quantization (--cache-type-k-draft / --cache-type-v-draft)
+	draftKvQuantK?: EKvQuantType;
+	draftKvQuantV?: EKvQuantType;
+	// Draft-model execution controls (--spec-draft-* family)
+	draftThreads?: number;
+	draftThreadsBatch?: number;
+	draftPoll?: boolean;
+	draftPollBatch?: boolean;
+	draftPrio?: number;
+	draftPrioBatch?: number;
+	draftCpuMoe?: boolean;
+	draftNCpuMoe?: number;
+	draftCpuMask?: string;
+	draftCpuMaskBatch?: string;
+	draftCpuStrict?: boolean;
+	draftCpuStrictBatch?: boolean;
+	draftCpuRange?: string;
+	// Lookup decoding caches (--lookup-cache-static / --lookup-cache-dynamic)
+	lookupCacheStatic?: string;
+	lookupCacheDynamic?: string;
 }
 export const DEFAULT_SPEC_DECODE_PARAMS: ISpecDecodeParams = {
 	enabled: false,
@@ -174,6 +209,8 @@ export interface ILaunchParams {
 	threads: number; // 0 = auto
 	threadsBatch: number; // 0 = auto
 	flashAttn: boolean;
+	flashAttnMode?: ELlamaFlashAttentionMode;
+	loadMode?: ELlamaLoadMode;
 	mlock: boolean;
 	mmap: boolean;
 	directIo: boolean;
@@ -200,6 +237,16 @@ export interface ILaunchParams {
 	cacheRam?: number; // MiB: -1=unlimited, 0=disabled, undefined=auto (llama-server default)
 	ctxCheckpoints?: number; // per-slot checkpoint cap, undefined=auto
 	slotPromptSimilarity?: number; // 0-1 float: 0=disabled, undefined=auto
+	inferenceExposeExternal?: boolean;
+	backendSampling?: boolean;
+	reasoningPreserve?: boolean;
+	loraAdapters?: string;
+	loraScaled?: string;
+	loraInitWithoutApply?: boolean;
+	mmprojUrl?: string;
+	mmprojAuto?: boolean;
+	mmprojDevice?: string;
+	mmprojOffload?: boolean;
 }
 // Default launch params
 export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
@@ -314,6 +361,7 @@ export interface ISettings {
 	portRangeEnd: number;
 	apiHost: string;
 	apiPort: number;
+	proxyHost?: string;
 	proxyPort: number;
 	proxyEnabled: boolean;
 	proxyAuthEnabled: boolean;
@@ -342,6 +390,8 @@ export interface ISettings {
 	kokoroSpeed?: number; // kokoro TTS speed multiplier
 	builtinMcpPort?: number;
 	builtinMcpExposeExternal?: boolean;
+	/** If true, launched inference servers bind to every interface instead of loopback. */
+	inferenceExposeExternal?: boolean;
 	fsAllowedRoots?: string[];
 	appZoomLevel?: number;
 	chatFontSize?: number;
@@ -356,8 +406,9 @@ export const DEFAULT_SETTINGS: ISettings = {
 	modelRoots: [],
 	portRangeStart: 8010,
 	portRangeEnd: 8099,
-	apiHost: "0.0.0.0",
+	apiHost: "127.0.0.1",
 	apiPort: 4400,
+	proxyHost: "127.0.0.1",
 	proxyPort: 1234,
 	proxyEnabled: true,
 	proxyAuthEnabled: false,
@@ -384,6 +435,7 @@ export const DEFAULT_SETTINGS: ISettings = {
 	kokoroSpeed: 1.0,
 	builtinMcpPort: 11437,
 	builtinMcpExposeExternal: false,
+	inferenceExposeExternal: false,
 	fsAllowedRoots: [],
 	appZoomLevel: 1.0,
 	chatFontSize: 14,
@@ -493,6 +545,8 @@ export interface IChatInferenceParams {
 	reasoningFormat: EReasoningFormat;
 	enableThinking: boolean;
 	reasoningEffort: EReasoningEffort;
+	reasoningBudgetTokens: number;
+	reasoningBudgetMessage: string;
 	mirostatMode: number;
 	mirostatTau: number;
 	mirostatEta: number;

@@ -28,18 +28,16 @@ fn is_server_running(port: u16) -> bool {
 fn find_server_binary() -> Option<(String, Vec<String>)> {
     if let Ok(exe_path) = env::current_exe() {
         let exe_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
-        for entry in std::fs::read_dir(exe_dir).ok()? {
-            if let Ok(entry) = entry {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with("warpcore-server") && !name.ends_with(".sig") {
-                    let path_str = entry.path().to_string_lossy().to_string();
-                    // Strip Windows \\?\ UNC prefix that crashes Node.js realpathSync
-                    let cleaned = path_str
-                        .strip_prefix(r"\\?\")
-                        .unwrap_or(&path_str)
-                        .to_string();
-                    return Some((cleaned, vec![]));
-                }
+        for entry in std::fs::read_dir(exe_dir).ok()?.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("warpcore-server") && !name.ends_with(".sig") {
+                let path_str = entry.path().to_string_lossy().to_string();
+                // Strip Windows \\?\ UNC prefix that crashes Node.js realpathSync
+                let cleaned = path_str
+                    .strip_prefix(r"\\?\")
+                    .unwrap_or(&path_str)
+                    .to_string();
+                return Some((cleaned, vec![]));
             }
         }
     }
@@ -71,13 +69,13 @@ fn get_server_port() -> u16 {
     // Check env var first (for dev/override), then read from settings, default to 4400
     if let Ok(env_port) = std::env::var("CONTROL_API_PORT") {
         if let Ok(port) = env_port.parse::<u16>() {
-            if port >= 1 && port <= 65535 {
+            if port != 0 {
                 return port;
             }
         }
     }
 
-    // Try to read from settings file
+    // Try to read from the settings file (warpcore-data.json) via serde_json.
     let config_dir = match std::env::var("XDG_CONFIG_HOME") {
         Ok(path) if !path.is_empty() => PathBuf::from(path),
         _ => std::env::var_os("HOME")
@@ -92,24 +90,20 @@ fn get_server_port() -> u16 {
     }
 
     if let Ok(content) = std::fs::read_to_string(&data_path) {
-        // Simple JSON parsing - look for "apiPort":NUMBER pattern
-        if let Some(api_port_str) = content
-            .split("\"apiPort\"")
-            .nth(1)
-            .and_then(|s| s.split(':').next())
-        {
-            let trimmed = api_port_str
-                .trim()
-                .split(',')
-                .next()
-                .unwrap_or("")
-                .split('}')
-                .next()
-                .unwrap_or("")
-                .trim();
-            if let Ok(port) = trimmed.parse::<u16>() {
-                if port >= 1 && port <= 65535 {
-                    return port;
+        // The store persists values as JSON-encoded strings, so the settings
+        // live at "settings:general" -> "<json string>".
+        if let Ok(root) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(settings_json) = root.get("settings:general").and_then(|v| v.as_str()) {
+                if let Ok(settings) = serde_json::from_str::<serde_json::Value>(settings_json) {
+                    if let Some(port) = settings
+                        .get("apiPort")
+                        .and_then(|v| v.as_u64())
+                        .and_then(|p| u16::try_from(p).ok())
+                    {
+                        if port != 0 {
+                            return port;
+                        }
+                    }
                 }
             }
         }
@@ -426,8 +420,8 @@ fn save_window_size(width: u32, height: u32) -> bool {
     }
 }
 
-fn rdev_key_to_dom_code(k: rdev::Key) -> String {
-    match k {
+fn rdev_key_to_dom_code(key: rdev::Key) -> String {
+    match key {
         rdev::Key::Alt => "AltLeft".into(),
         rdev::Key::AltGr => "AltRight".into(),
         rdev::Key::Return => "Enter".into(),
@@ -467,8 +461,129 @@ fn rdev_key_to_dom_code(k: rdev::Key) -> String {
         rdev::Key::Dot => "Period".into(),
         rdev::Key::LeftBracket => "BracketLeft".into(),
         rdev::Key::RightBracket => "BracketRight".into(),
-        rdev::Key::Unknown(c) => format!("Unknown{}", c),
-        _ => format!("{:?}", k),
+        rdev::Key::Unknown(code) => format!("Unknown{}", code),
+        _ => format!("{:?}", key),
+    }
+}
+
+// Read push-to-talk settings from warpcore-data.json (settings:general is a
+// stringified JSON object, so this does a two-level serde_json parse like
+// read_window_size_settings).
+// Returns (dictation_ptt_key, global_ptt_enabled, global_ptt_key):
+// - dictation_ptt_key: Some(key) when dictationPTTModeHold is true and
+//   dictationPTTKey is non-empty, else None.
+// - global_ptt_enabled: the raw globalPTTModeHold flag.
+// - global_ptt_key: Some(key) when globalPTTModeHold is true and globalPTTKey
+//   is non-empty, else None.
+fn read_ptt_settings() -> (Option<String>, bool, Option<String>) {
+    let config_dir = match std::env::var("XDG_CONFIG_HOME") {
+        Ok(path) if !path.is_empty() => PathBuf::from(path),
+        _ => std::env::var_os("HOME")
+            .map(|h| PathBuf::from(h).join(".config"))
+            .filter(|p| p.exists())
+            .unwrap_or_else(|| std::env::current_dir().ok().unwrap()),
+    };
+
+    let data_path = config_dir.join("warpcore").join("warpcore-data.json");
+
+    if !data_path.exists() {
+        return (None, false, None);
+    }
+
+    let settings = match std::fs::read_to_string(&data_path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+        .and_then(|json| {
+            json.get("settings:general")
+                .and_then(|v| v.as_str())
+                .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+        }) {
+        Some(settings) => settings,
+        None => return (None, false, None),
+    };
+
+    let dictation_mode_hold = settings
+        .get("dictationPTTModeHold")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let dictation_key = settings
+        .get("dictationPTTKey")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|k| !k.is_empty());
+
+    let global_mode_hold = settings
+        .get("globalPTTModeHold")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let global_key = settings
+        .get("globalPTTKey")
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|k| !k.is_empty());
+
+    let ptt_key = match (dictation_mode_hold, dictation_key) {
+        (true, Some(key)) => Some(key.to_string()),
+        _ => None,
+    };
+    let global_key = match (global_mode_hold, global_key) {
+        (true, Some(key)) => Some(key.to_string()),
+        _ => None,
+    };
+
+    (ptt_key, global_mode_hold, global_key)
+}
+
+// Case-insensitive containment match between the rdev debug key name
+// (e.g. "KeyK") and a user-configured PTT key. Configured keys are stored as
+// pipe-separated KeyboardEvent.code-style names (e.g. "k", "KeyK", "Insert",
+// or "ControlLeft|KeyK"), so each pipe part is tested on its own.
+fn ptt_key_matches(code: &str, configured: &str) -> bool {
+    let code_lower = code.to_lowercase();
+    configured.split('|').any(|part| {
+        let part = part.trim();
+        !part.is_empty() && code_lower.contains(&part.to_lowercase())
+    })
+}
+
+// Inject text via enigo into the currently focused window.
+// Guarded so it only runs while the main window is focused; otherwise the
+// keystrokes would land in whichever other application the user is using.
+#[tauri::command]
+fn type_text(app: tauri::AppHandle, text: String) {
+    // Reject excessively long input and control characters to prevent injection abuse
+    if text.is_empty() || text.len() > 10_000 {
+        eprintln!(
+            "[WarpCore] type_text: input rejected (length={})",
+            text.len()
+        );
+        return;
+    }
+    for ch in text.chars() {
+        // Allow printable ASCII, common Unicode, and whitespace — reject control characters except tab/newline
+        if ch.is_control() && ch != '\t' && ch != '\n' && ch != '\r' {
+            eprintln!(
+                "[WarpCore] type_text: rejected control character U+{:04X}",
+                ch as u32
+            );
+            return;
+        }
+    }
+    if !app
+        .get_webview_window("main")
+        .is_some_and(|w| w.is_focused().unwrap_or(false))
+    {
+        eprintln!("[WarpCore] type_text: rejected, main window is not focused");
+        return;
+    }
+    use enigo::{Enigo, Keyboard, Settings};
+    match Enigo::new(&Settings::default()) {
+        Ok(mut enigo) => {
+            if let Err(e) = enigo.text(&text) {
+                eprintln!("[WarpCore] type_text failed: {:?}", e);
+            }
+        }
+        Err(e) => eprintln!("[WarpCore] enigo init failed: {:?}", e),
     }
 }
 
@@ -481,19 +596,6 @@ fn main() {
 
     // Check if launched with --hidden flag (from autostart)
     let launched_hidden = std::env::args().any(|arg| arg == "--hidden");
-
-    #[tauri::command]
-    fn type_text(text: String) {
-        use enigo::{Enigo, Keyboard, Settings};
-        match Enigo::new(&Settings::default()) {
-            Ok(mut enigo) => {
-                if let Err(e) = enigo.text(&text) {
-                    eprintln!("[WarpCore] type_text failed: {:?}", e);
-                }
-            }
-            Err(e) => eprintln!("[WarpCore] enigo init failed: {:?}", e),
-        }
-    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -546,11 +648,25 @@ fn main() {
 
                 #[cfg(target_os = "linux")]
                 {
+                    use webkit2gtk::glib::prelude::*;
                     use webkit2gtk::PermissionRequestExt;
+                    use webkit2gtk::UserMediaPermissionRequest;
                     use webkit2gtk::WebViewExt;
                     let _ = window.with_webview(|webview| {
                         webview.inner().connect_permission_request(|_, request| {
-                            request.allow();
+                            // Default-deny. Only allow WebKitUserMediaPermissionRequest
+                            // (getUserMedia audio/video capture — the microphone path
+                            // used by dictation); deny everything else (geolocation,
+                            // notifications, pointer lock, ...).
+                            if request
+                                .clone()
+                                .downcast::<UserMediaPermissionRequest>()
+                                .is_ok()
+                            {
+                                request.allow();
+                            } else {
+                                request.deny();
+                            }
                             true
                         });
                     });
@@ -563,7 +679,13 @@ fn main() {
             }
 
             // Global hotkey listener (rdev) -> emit "hotkey://key" { code, down }
+            // Forward an event to the webview only when:
+            // (a) the main window is focused, or
+            // (b) the key matches a user-configured push-to-talk key
+            //     (dictation PTT or global PTT). Settings are read once at
+            //     startup; missing/invalid settings degrade to (a) only.
             let hk_handle = app.handle().clone();
+            let (ptt_key, global_ptt_enabled, global_ptt_key) = read_ptt_settings();
             thread::spawn(move || {
                 let _ = rdev::listen(move |event| {
                     let (code, down) = match event.event_type {
@@ -571,6 +693,23 @@ fn main() {
                         rdev::EventType::KeyRelease(k) => (rdev_key_to_dom_code(k), false),
                         _ => return,
                     };
+
+                    let window_focused = hk_handle
+                        .get_webview_window("main")
+                        .map(|w| w.is_focused().unwrap_or(false))
+                        .unwrap_or(false);
+                    let dictation_ptt_match = ptt_key
+                        .as_deref()
+                        .is_some_and(|configured| ptt_key_matches(&code, configured));
+                    let global_ptt_match = global_ptt_enabled
+                        && global_ptt_key
+                            .as_deref()
+                            .is_some_and(|configured| ptt_key_matches(&code, configured));
+
+                    if !window_focused && !dictation_ptt_match && !global_ptt_match {
+                        return;
+                    }
+
                     let _ = hk_handle.emit(
                         "hotkey://key",
                         serde_json::json!({ "code": code, "down": down }),
@@ -631,10 +770,12 @@ fn main() {
             let open_item = MenuItemBuilder::with_id("open", "Show warpdrv").build(app)?;
             let hide_item = MenuItemBuilder::with_id("hide", "Hide warpdrv").build(app)?;
             let restart_item = MenuItemBuilder::with_id("restart", "Restart Server").build(app)?;
+            #[cfg(debug_assertions)]
             let devtools_item =
                 MenuItemBuilder::with_id("devtools", "Toggle DevTools").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
+            #[cfg(debug_assertions)]
             let menu = MenuBuilder::new(app)
                 .item(&open_item)
                 .item(&hide_item)
@@ -642,6 +783,16 @@ fn main() {
                 .item(&restart_item)
                 .separator()
                 .item(&devtools_item)
+                .separator()
+                .item(&quit_item)
+                .build()?;
+
+            #[cfg(not(debug_assertions))]
+            let menu = MenuBuilder::new(app)
+                .item(&open_item)
+                .item(&hide_item)
+                .separator()
+                .item(&restart_item)
                 .separator()
                 .item(&quit_item)
                 .build()?;
@@ -662,6 +813,7 @@ fn main() {
                             let _ = window.hide();
                         }
                     }
+                    #[cfg(debug_assertions)]
                     "devtools" => {
                         if let Some(window) = app.get_webview_window("main") {
                             if window.is_devtools_open() {
@@ -751,9 +903,6 @@ fn main() {
 
             // Close to tray (save window size before hiding)
             if let Some(window) = app.get_webview_window("main") {
-                #[cfg(debug_assertions)]
-                app.get_webview_window("main").unwrap().open_devtools();
-
                 let w = window.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {

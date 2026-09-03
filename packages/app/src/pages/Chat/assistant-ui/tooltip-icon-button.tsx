@@ -1,4 +1,4 @@
-"use client";
+
 
 import { Slot } from "radix-ui";
 import { type ComponentPropsWithRef, forwardRef } from "react";

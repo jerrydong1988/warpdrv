@@ -11,11 +11,12 @@ export interface ICodeGraphNode {
 	signature?: string;
 	isExported: boolean;
 	resolved?: boolean;
+	projectId?: string;
 }
 
 export interface ICodeGraphEdge {
 	id: string;
-	projectId: string;
+	projectId?: string;
 	sourceId: string;
 	filePath: string;
 	targetSymbol: string;

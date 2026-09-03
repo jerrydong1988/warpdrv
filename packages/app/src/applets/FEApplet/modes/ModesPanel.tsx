@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, Text, VStack } from "@chakra-ui/react";
 import React, { useMemo } from "react";
 import { useStore } from "@/store";
@@ -20,7 +21,8 @@ export const ModesPanel = React.memo(() => {
 		return (
 			<Box p="4">
 				<Text fontSize="xs" color="var(--wc-text-muted)" textAlign="center">
-					No modes
+
+					{i18nextSingleton.t("common:ui.noModes")}
 				</Text>
 			</Box>
 		);

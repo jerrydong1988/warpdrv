@@ -7,7 +7,7 @@ function findLastSentenceEnd(text: string): number {
 	for (let i = text.length - 1; i >= 0; i--) {
 		const c = text[i];
 		if (c === "." || c === "!" || c === "?") {
-			if (i + 1 >= text.length || /\s/.test(text[i + 1])) {
+			if (i + 1 >= text.length || /\s/.test(text[i + 1] ?? "")) {
 				return i;
 			}
 		}
@@ -113,7 +113,7 @@ export function useChatEventsStream() {
 						if (msg) {
 							const part = msg.content.find((p: any) => p.id === event.partId);
 							const buffered = state.chunksByMessageId[event.messageId]?.chunk || "";
-							const fullText = (part?.text || "") + buffered;
+							const fullText = (part && "text" in part ? part.text : "") + buffered;
 							const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
 							const remaining = fullText.slice(spoken);
 							const lastEnd = findLastSentenceEnd(remaining);

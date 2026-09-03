@@ -44,10 +44,12 @@ export function App() {
 		return () => document.removeEventListener("wheel", handler);
 	}, []);
 
-	// Expose store to window for debugging
+	// Expose store to window for debugging (dev only)
 	useEffect(() => {
-		(window as any).useStore = useStore;
-		(window as any).getStoreState = () => useStore.getState();
+		if (import.meta.env.DEV) {
+			(window as any).useStore = useStore;
+			(window as any).getStoreState = () => useStore.getState();
+		}
 	}, []);
 
 	// disable rightclick

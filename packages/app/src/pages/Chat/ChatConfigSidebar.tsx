@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Input, SegmentGroup, Text, Textarea, VStack } from "@chakra-ui/react";
 import type { IChatInferenceParams, IChatPreset, ISettings } from "@warpcore/shared";
 import { EReasoningEffort, EReasoningFormat, EResponseFormat } from "@warpcore/shared";
@@ -27,6 +28,8 @@ export const DEFAULT_INFERENCE_PARAMS: IChatInferenceParams = {
 	responseFormat: EResponseFormat.TEXT,
 	reasoningFormat: EReasoningFormat.NONE,
 	enableThinking: false,
+	reasoningBudgetTokens: -1,
+	reasoningBudgetMessage: "",
 	mirostatMode: 0,
 	mirostatTau: 5.0,
 	mirostatEta: 0.1,
@@ -352,7 +355,7 @@ export function ChatConfigContentPanel({
 		<VStack gap="3" p="3" align="stretch">
 			{/* Preset selector */}
 			<Box>
-				<SectionHeader title="Preset" />
+				<SectionHeader title={i18nextSingleton.t("common:ui.preset")} />
 				<HStack gap="1">
 					<select
 						value={selectedPresetId ?? ""}
@@ -369,7 +372,8 @@ export function ChatConfigContentPanel({
 						}}
 					>
 						<option value="" style={{ background: "var(--wc-bg-elevated)" }}>
-							None (custom)
+
+							{i18nextSingleton.t("common:ui.noneCustom")}
 						</option>
 						{presets.map((p) => (
 							<option
@@ -408,7 +412,7 @@ export function ChatConfigContentPanel({
 					<HStack mt="1.5" gap="1">
 						<Input
 							size="xs"
-							placeholder="Preset name..."
+							placeholder={i18nextSingleton.t("common:ui.presetName")}
 							value={savePresetName}
 							onChange={(e) => setSavePresetName(e.target.value)}
 							onKeyDown={(e) => {
@@ -437,11 +441,11 @@ export function ChatConfigContentPanel({
 
 			{/* System Prompt */}
 			<Box>
-				<SectionHeader title="System Prompt" />
+				<SectionHeader title={i18nextSingleton.t("common:ui.systemPrompt")} />
 				<Textarea
 					value={systemPrompt}
 					onChange={(e) => onSystemPromptChange(e.target.value)}
-					placeholder="You are a helpful assistant..."
+					placeholder={i18nextSingleton.t("common:ui.youAreAHelpfulAssistant")}
 					fontSize="12px"
 					bg="var(--wc-bg-card)"
 					borderColor="var(--wc-border-default)"
@@ -455,13 +459,13 @@ export function ChatConfigContentPanel({
 
 			{/* Project Root */}
 			<Box>
-				<SectionHeader title="Project Root" />
+				<SectionHeader title={i18nextSingleton.t("chat:workspace.projectRoot")} />
 				<ProjectRootPicker />
 			</Box>
 
 			{/* Inference Params View Mode */}
 			<Box mt="4">
-				<SectionHeader title="Inference Params" />
+				<SectionHeader title={i18nextSingleton.t("common:ui.inferenceParams")} />
 				<Box mt="2">
 					<SegmentGroup.Root
 						value={showRawJSON ? "json" : "ui"}
@@ -491,7 +495,7 @@ export function ChatConfigContentPanel({
 											}
 										>
 											<LuLayoutGrid size={14} />
-											<Text fontSize="12px">Controls</Text>
+											<Text fontSize="12px">{i18nextSingleton.t("common:ui.controls")}</Text>
 										</HStack>
 									),
 								},
@@ -507,7 +511,7 @@ export function ChatConfigContentPanel({
 											}
 										>
 											<LuCode size={14} />
-											<Text fontSize="12px">Raw</Text>
+											<Text fontSize="12px">{i18nextSingleton.t("common:ui.raw")}</Text>
 										</HStack>
 									),
 								},
@@ -560,7 +564,8 @@ export function ChatConfigContentPanel({
 							</Text>
 						)}
 						<Text fontSize="10px" color="var(--wc-text-faint)" mt="1">
-							Edit JSON directly. Only non-default values are saved as overrides.
+
+							{i18nextSingleton.t("common:ui.editJsonDirectlyOnlyNonDefaultValuesAreSavedAsOverrides")}
 						</Text>
 					</Box>
 				)}
@@ -570,10 +575,10 @@ export function ChatConfigContentPanel({
 				<>
 					{/* Sampling */}
 					<Box>
-						<SectionHeader title="Sampling" />
+						<SectionHeader title={i18nextSingleton.t("common:ui.sampling")} />
 						<VStack gap="2.5" align="stretch">
 							<ParamSlider
-								label="Temperature"
+								label={i18nextSingleton.t("common:ui.temperature")}
 								value={displayParams.temperature}
 								min={0}
 								max={2}
@@ -581,7 +586,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("temperature", v)}
 							/>
 							<ParamSlider
-								label="Top P"
+								label={i18nextSingleton.t("common:ui.topP")}
 								value={displayParams.topP}
 								min={0}
 								max={1}
@@ -589,7 +594,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("topP", v)}
 							/>
 							<ParamSlider
-								label="Top K"
+								label={i18nextSingleton.t("common:ui.topK")}
 								value={displayParams.topK}
 								min={0}
 								max={200}
@@ -597,7 +602,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("topK", v)}
 							/>
 							<ParamSlider
-								label="Min P"
+								label={i18nextSingleton.t("common:ui.minP")}
 								value={displayParams.minP}
 								min={0}
 								max={1}
@@ -605,7 +610,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("minP", v)}
 							/>
 							<ParamSlider
-								label="Repeat Penalty"
+								label={i18nextSingleton.t("common:ui.repeatPenalty")}
 								value={displayParams.repeatPenalty}
 								min={1}
 								max={2}
@@ -613,7 +618,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("repeatPenalty", v)}
 							/>
 							<ParamSlider
-								label="Frequency Penalty"
+								label={i18nextSingleton.t("common:ui.frequencyPenalty")}
 								value={displayParams.frequencyPenalty}
 								min={0}
 								max={2}
@@ -621,7 +626,7 @@ export function ChatConfigContentPanel({
 								onChange={(v) => updateParam("frequencyPenalty", v)}
 							/>
 							<ParamSlider
-								label="Presence Penalty"
+								label={i18nextSingleton.t("common:ui.presencePenalty")}
 								value={displayParams.presencePenalty}
 								min={0}
 								max={2}
@@ -633,11 +638,12 @@ export function ChatConfigContentPanel({
 
 					{/* Generation */}
 					<Box>
-						<SectionHeader title="Generation" />
+						<SectionHeader title={i18nextSingleton.t("common:ui.generation")} />
 						<VStack gap="2.5" align="stretch">
 							<Box>
 								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
-									Max Tokens (-1 = unlimited)
+
+									{i18nextSingleton.t("common:ui.maxTokens1Unlimited")}
 								</Text>
 								<Input
 									size="xs"
@@ -656,7 +662,8 @@ export function ChatConfigContentPanel({
 							</Box>
 							<Box>
 								<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
-									Seed (-1 = random)
+
+									{i18nextSingleton.t("common:ui.seed1Random")}
 								</Text>
 								<Input
 									size="xs"
@@ -674,7 +681,7 @@ export function ChatConfigContentPanel({
 								/>
 							</Box>
 							<ParamSelect
-								label="Response Format"
+								label={i18nextSingleton.t("common:ui.responseFormat")}
 								value={displayParams.responseFormat}
 								options={[
 									{ value: EResponseFormat.TEXT, label: "Text" },
@@ -687,30 +694,64 @@ export function ChatConfigContentPanel({
 
 							<Box>
 								<ParamToggle
-									label="Enable Thinking"
+									label={i18nextSingleton.t("common:ui.enableThinking2")}
 									value={displayParams.enableThinking}
 									onChange={(v) => updateParam("enableThinking", v)}
 								/>
 								{displayParams.enableThinking && (
-									<ParamSelect
-										label="Reasoning Effort"
-										value={displayParams.reasoningEffort}
-										options={[
-											{ value: EReasoningEffort.NONE, label: "None" },
-											{ value: EReasoningEffort.LOW, label: "Low" },
-											{ value: EReasoningEffort.MEDIUM, label: "Medium" },
-											{ value: EReasoningEffort.HIGH, label: "High" },
-										]}
-										onChange={(v) =>
-											updateParam("reasoningEffort", v as EReasoningEffort)
-										}
-									/>
+									<VStack gap="2.5" align="stretch">
+										<ParamSelect
+											label={i18nextSingleton.t("common:ui.reasoningEffort2")}
+											value={displayParams.reasoningEffort}
+											options={[
+												{ value: EReasoningEffort.NONE, label: "None" },
+												{ value: EReasoningEffort.LOW, label: "Low" },
+												{ value: EReasoningEffort.MEDIUM, label: "Medium" },
+												{ value: EReasoningEffort.HIGH, label: "High" },
+											]}
+											onChange={(v) =>
+												updateParam("reasoningEffort", v as EReasoningEffort)
+											}
+										/>
+										<Box>
+											<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
+												{i18nextSingleton.t("common:ui.reasoningBudget")}
+											</Text>
+											<Input
+												size="xs"
+												type="number"
+												min={-1}
+												value={displayParams.reasoningBudgetTokens}
+												onChange={(event) => {
+													const value = parseInt(event.target.value, 10);
+													if (!Number.isNaN(value) && value >= -1) {
+														updateParam("reasoningBudgetTokens", value);
+													}
+												}}
+											/>
+											<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">
+												{i18nextSingleton.t("common:ui.reasoningBudgetHint")}
+											</Text>
+										</Box>
+										<Box>
+											<Text fontSize="12px" color="var(--wc-text-secondary)" mb="1">
+												{i18nextSingleton.t("common:ui.reasoningBudgetMessage")}
+											</Text>
+											<Input
+												size="xs"
+												value={displayParams.reasoningBudgetMessage}
+												onChange={(event) =>
+													updateParam("reasoningBudgetMessage", event.target.value)
+												}
+											/>
+										</Box>
+									</VStack>
 								)}
 							</Box>
 
 							<Box>
 								<ParamSelect
-									label="Reasoning Format"
+									label={i18nextSingleton.t("common:ui.reasoningFormat")}
 									value={displayParams.reasoningFormat}
 									options={[
 										{ value: EReasoningFormat.NONE, label: "None" },
@@ -728,14 +769,14 @@ export function ChatConfigContentPanel({
 					{/* Advanced */}
 					<Box>
 						<SectionHeader
-							title="Advanced"
+							title={i18nextSingleton.t("common:ui.advanced")}
 							collapsed={!advancedOpen}
 							onToggle={() => setAdvancedOpen(!advancedOpen)}
 						/>
 						{advancedOpen && (
 							<VStack gap="2.5" align="stretch">
 								<ParamSelect
-									label="Mirostat Mode"
+									label={i18nextSingleton.t("common:ui.mirostatMode")}
 									value={String(displayParams.mirostatMode)}
 									options={[
 										{ value: "0", label: "Disabled" },
@@ -747,7 +788,7 @@ export function ChatConfigContentPanel({
 								{displayParams.mirostatMode > 0 && (
 									<>
 										<ParamSlider
-											label="Mirostat Tau"
+											label={i18nextSingleton.t("common:ui.mirostatTau")}
 											value={displayParams.mirostatTau}
 											min={0}
 											max={10}
@@ -755,7 +796,7 @@ export function ChatConfigContentPanel({
 											onChange={(v) => updateParam("mirostatTau", v)}
 										/>
 										<ParamSlider
-											label="Mirostat Eta"
+											label={i18nextSingleton.t("common:ui.mirostatEta")}
 											value={displayParams.mirostatEta}
 											min={0}
 											max={1}
@@ -765,7 +806,7 @@ export function ChatConfigContentPanel({
 									</>
 								)}
 								<ParamToggle
-									label="Cache Prompt"
+									label={i18nextSingleton.t("common:ui.cachePrompt")}
 									value={displayParams.cachePrompt}
 									onChange={(v) => updateParam("cachePrompt", v)}
 								/>
@@ -788,7 +829,7 @@ export function ChatConfigContentPanel({
 				pb="2"
 			>
 				<RotateCcw size={12} />
-				<Text fontSize="11px">Reset to defaults</Text>
+				<Text fontSize="11px">{i18nextSingleton.t("common:ui.resetToDefaults")}</Text>
 			</HStack>
 		</VStack>
 	);

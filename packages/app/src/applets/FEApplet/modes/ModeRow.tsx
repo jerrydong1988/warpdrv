@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import {
 	Box,
 	Button,
@@ -145,7 +146,8 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Color
+
+								{i18nextSingleton.t("common:ui.color")}
 							</Text>
 							<ColorPicker.Root
 								defaultValue={parseColor(draftColor)}
@@ -178,7 +180,8 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Allowed tools
+
+								{i18nextSingleton.t("common:ui.allowedTools")}
 							</Text>
 							<GuardrailToolPicker
 								value={draftTools}
@@ -199,7 +202,8 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Active guardrails
+
+								{i18nextSingleton.t("common:ui.activeGuardrails")}
 							</Text>
 							<GuardrailPicker
 								value={mode.activeGuardrails || []}
@@ -217,7 +221,8 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Allowed agents
+
+								{i18nextSingleton.t("common:ui.allowedAgents")}
 							</Text>
 							<AgentPicker
 								value={mode.allowedAgents || []}
@@ -237,7 +242,8 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Saved Prompt
+
+								{i18nextSingleton.t("common:ui.savedPrompt")}
 							</Text>
 							<PromptPicker
 								value={mode.promptId || ""}
@@ -256,13 +262,14 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								letterSpacing="0.04em"
 								mb="1"
 							>
-								Tail prompt
+
+								{i18nextSingleton.t("common:ui.tailPrompt")}
 							</Text>
 							<Textarea
 								size="xs"
 								fontSize="xs"
 								rows={3}
-								placeholder="Optional tail prompt..."
+								placeholder={i18nextSingleton.t("common:ui.optionalTailPromptPlaceholder")}
 								value={draftPrompt}
 								onChange={(e) => setDraftPrompt(e.target.value)}
 								onBlur={handlePromptBlur}
@@ -279,13 +286,14 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 								fontSize="xs"
 								color="var(--wc-accent-red)"
 								bg="var(--wc-accent-red-bg-8)"
-								leftIcon={<Trash2 size={12} />}
 								onClick={(e) => {
 									e.stopPropagation();
 									setDeleteConfirmOpen(true);
 								}}
 							>
-								Delete
+								<Trash2 size={12} />
+
+								{i18nextSingleton.t("backends:actions.delete")}
 							</Button>
 						</Flex>
 					</VStack>
@@ -294,7 +302,7 @@ export const ModeRow = React.memo(({ mode }: { mode: IMode }) => {
 
 			{deleteConfirmOpen && (
 				<ConfirmDialog
-					title="Delete Mode"
+					title={i18nextSingleton.t("common:ui.deleteMode")}
 					message={`Are you sure you want to delete "${mode.name}"?`}
 					isOpen={true}
 					onConfirm={handleDelete}

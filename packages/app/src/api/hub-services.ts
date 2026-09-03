@@ -1,39 +1,27 @@
+import { api } from './client';
 import type {
-	IChatInferenceParams,
-	IDownload,
-	IDownloadRequestPayload,
-	IHubModel,
-	IHubModelDetail,
-} from "@warpcore/shared";
-import { api } from "./client";
+	IHubModel, IHubModelDetail, IDownload, IDownloadRequestPayload, IChatInferenceParams,
+} from '@warpcore/shared';
+import { EHubSource } from '@warpcore/shared';
 
-export async function searchHub(
-	q: string,
-	sortField: string,
-	sortOrder: string,
-	paramsMin: number,
-	paramsMax: number,
-) {
-	const params = new URLSearchParams({ q, sort: sortField, order: sortOrder });
-	if (paramsMin > 0) params.set("params_min", String(paramsMin));
-	if (paramsMax > 0) params.set("params_max", String(paramsMax));
+export async function searchHub(q: string, sortField: string, sortOrder: string, paramsMin: number, paramsMax: number, source: EHubSource = EHubSource.HUGGINGFACE) {
+	const params = new URLSearchParams({ q, sort: sortField, order: sortOrder, source });
+	if (paramsMin > 0) params.set('params_min', String(paramsMin));
+	if (paramsMax > 0) params.set('params_max', String(paramsMax));
 	return api.getList<IHubModel>(`/hub/search?${params}`);
 }
 
-export async function fetchHubModel(author: string, name: string) {
-	return api.get<IHubModelDetail>(`/hub/model/${author}/${name}`);
+export async function fetchHubModel(author: string, name: string, source: EHubSource = EHubSource.HUGGINGFACE) {
+	return api.get<IHubModelDetail>(`/hub/model/${author}/${name}?source=${source}`);
 }
 
 export async function startHubDownload(payload: IDownloadRequestPayload) {
 	// Response can be either a single download or multiple downloads for split files
-	return api.post<IDownload | { downloadIds: string[]; fileParts: string[] }>(
-		"/hub/download",
-		payload,
-	);
+	return api.post<IDownload | { downloadIds: string[]; fileParts: string[] }>('/hub/download', payload);
 }
 
 export async function fetchDownloads() {
-	return api.getList<IDownload>("/hub/downloads");
+	return api.getList<IDownload>('/hub/downloads');
 }
 
 export async function pauseHubDownload(id: string) {
@@ -49,11 +37,9 @@ export async function cancelHubDownload(id: string) {
 }
 
 export async function clearDownloadHistory() {
-	return api.del<null>("/hub/downloads/history");
+	return api.del<null>('/hub/downloads/history');
 }
 
 export async function fetchRecommendedParams(author: string, name: string) {
-	return api.get<Partial<IChatInferenceParams> | null>(
-		`/hub/model/${author}/${name}/recommended-params`,
-	);
+	return api.get<Partial<IChatInferenceParams> | null>(`/hub/model/${author}/${name}/recommended-params`);
 }

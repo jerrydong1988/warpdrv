@@ -46,13 +46,14 @@ export function useWorkspace() {
 		(async () => {
 			const res = await fetchWorkspaceState(activeWorkspaceId);
 			if (res.ok && res.data !== null && res.data !== undefined) {
-				useStore.getState().initWorkspaceState(activeWorkspaceId, res.data);
+				const workspaceData = res.data;
+				useStore.getState().initWorkspaceState(activeWorkspaceId, workspaceData);
 				const state = useStore.getState();
 				const thread = state.currentThreadId
 					? state.threads[state.currentThreadId]
 					: undefined;
 				if (!thread) {
-					setTimeout(() => applyDefaults(res.data), 1);
+					setTimeout(() => applyDefaults(workspaceData), 1);
 				}
 			}
 		})();

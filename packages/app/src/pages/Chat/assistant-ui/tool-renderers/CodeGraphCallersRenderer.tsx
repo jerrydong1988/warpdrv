@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { AlertTriangle, Check } from "lucide-react";
 import React, { useMemo, useState } from "react";
@@ -31,7 +32,7 @@ export const CodeGraphCallersRenderer = React.memo(
 			try {
 				const d = JSON.parse(text);
 				nodes = Array.isArray(d?.results) ? d.results : null;
-			} catch {}
+			} catch { /* fall back to the raw tool arguments */ }
 		}
 		const [expanded, setExpanded] = useState(false);
 		const target = symbolId ?? symbol ?? "(no symbol)";
@@ -129,12 +130,13 @@ export const CodeGraphCallersRendererMeta: IToolCallRenderer = {
 				const parsed = JSON.parse(text);
 				const c = parsed?.results?.length;
 				if (typeof c === "number" && c > 0) return ` (${c})`;
-			} catch {}
+			} catch { /* fall back to the raw tool result */ }
 			return "";
 		}, [result]);
 		return (
 			<Text whiteSpace="nowrap">
-				Code Callers of {truncated}
+
+				{i18nextSingleton.t("chat:tool.codeCallersOf")} {truncated}
 				{countLabel && (
 					<Text as="span" color="var(--wc-text-faint)">
 						{countLabel}

@@ -5,8 +5,7 @@ export function useEventSource() {
 	useEffect(() => {
 		console.log("[SSE] Creating EventSource connection to /api/events");
 		const port = (import.meta as any).env.DEV
-			? // @ts-expect-error
-				__CONTROL_API_PORT__
+			? __CONTROL_API_PORT__
 			: window.location.port || "4400";
 		const eventSource = new EventSource(`/api/events`);
 

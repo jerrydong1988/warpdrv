@@ -1,3 +1,4 @@
+import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { Check, Minus, Monitor, Send, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -22,7 +23,7 @@ export const MonitorBox = memo(() => {
 				ids.push(id as TThreadId);
 			}
 		}
-		ids.sort((a, b) => threads[a].createdAt - threads[b].createdAt);
+		ids.sort((a, b) => (threads[a]?.createdAt ?? 0) - (threads[b]?.createdAt ?? 0));
 		return ids;
 	}, [currentThreadId, threads]);
 
@@ -78,7 +79,7 @@ export const MonitorBox = memo(() => {
 		const ids: string[] = [];
 		for (const id of Object.keys(threadNotifs)) {
 			const n = threadNotifs[id];
-			if (n.senderType === "thread" && n.senderId !== currentThreadId) {
+			if (n?.senderType === "thread" && n.senderId !== currentThreadId) {
 				ids.push(id);
 			}
 		}
@@ -157,7 +158,7 @@ export const MonitorBox = memo(() => {
 		}
 	}, [currentThreadId, selectedIds, busy]);
 
-	if (!monitorBoxOpen) return null;
+	if (!monitorBoxOpen || !currentThreadId) return null;
 
 	return (
 		<Box
@@ -182,7 +183,8 @@ export const MonitorBox = memo(() => {
 					fontWeight="600"
 					color="var(--wc-text-primary)"
 				>
-					Agent Monitor
+
+					{i18nextSingleton.t("common:ui.agentMonitor")}
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -196,7 +198,7 @@ export const MonitorBox = memo(() => {
 					color="var(--wc-text-muted)"
 					_hover={{ bg: "var(--wc-bg-hover)", color: "var(--wc-accent-red)" }}
 					onClick={handleClose}
-					title="Close"
+					title={i18nextSingleton.t("chat:actions.close")}
 				>
 					<X size={12} />
 				</Box>
@@ -205,7 +207,8 @@ export const MonitorBox = memo(() => {
 			<Box maxH="500px" overflowY="auto" overflowX="hidden" p="3">
 				{childThreadIds.length === 0 ? (
 					<Text fontSize="sm" color="var(--wc-text-faint)" textAlign="center" py="4">
-						No child threads
+
+						{i18nextSingleton.t("common:ui.noChildThreads")}
 					</Text>
 				) : (
 					<VStack gap="3" align="stretch" w="full">
@@ -234,7 +237,6 @@ export const MonitorBox = memo(() => {
 			>
 				<Box
 					as="button"
-					type="button"
 					display="flex"
 					alignItems="center"
 					justifyContent="center"
@@ -261,7 +263,7 @@ export const MonitorBox = memo(() => {
 					)}
 				</Box>
 				<Text fontSize="xs" color="var(--wc-text-muted)">
-					{selectedIds.length} selected
+					{selectedIds.length}  {i18nextSingleton.t("common:ui.selectedLowercase")}
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -284,10 +286,11 @@ export const MonitorBox = memo(() => {
 							: { bg: "var(--wc-bg-hover)", color: "var(--wc-text-primary)" }
 					}
 					onClick={handleIgnoreSelected}
-					disabled={busy || selectedIds.length === 0}
-					title="Ignore the selected messages"
+					aria-disabled={busy || selectedIds.length === 0}
+					title={i18nextSingleton.t("common:ui.ignoreSelectedMessages")}
 				>
-					Ignore selected
+
+					{i18nextSingleton.t("common:ui.ignoreSelected")}
 				</Box>
 				<Box
 					as="button"
@@ -311,7 +314,7 @@ export const MonitorBox = memo(() => {
 							: { bg: "var(--wc-accent-green-hover)" }
 					}
 					onClick={handleSendSelected}
-					disabled={busy || selectedIds.length === 0 || isRunning}
+					aria-disabled={busy || selectedIds.length === 0 || isRunning}
 					title={
 						isRunning
 							? "Wait for inference to finish"
@@ -319,7 +322,8 @@ export const MonitorBox = memo(() => {
 					}
 				>
 					<Send size={11} />
-					Send through selected
+
+					{i18nextSingleton.t("common:ui.sendThroughSelected")}
 				</Box>
 			</HStack>
 		</Box>

@@ -29,6 +29,7 @@ export interface IWarpmcpDeps {
 	isRemote: (req: { ip: string; connection: { remoteAddress: string } }) => boolean;
 	validateBearerToken: (authHeader: string | undefined) => Promise<IAccessToken | null>;
 	getFsAllowedRoots: () => string[];
+	exposeExternal?: boolean;
 	embeddingSearch?: (
 		query: string,
 		topK: number,
@@ -44,7 +45,7 @@ export interface IWarpmcpDeps {
 	) => Promise<ITodoItem[]>;
 	todoClear?: (threadId: string) => Promise<ITodoItem[]>;
 	todoWrite?: (threadId: string, todos: ITodoItem[], etag?: string) => Promise<ITodoResult>;
-	// getProjectRoot?: (threadId: string) => Promise<string | null>;
+	getProjectRoot?: (threadId: string) => Promise<string | null>;
 	onFileWritten?: (path: string) => Promise<void>;
 	codeGraphIngest?: (projectRoot: string, force?: boolean) => Promise<ICodeGraphIngestResult>;
 	codeGraphSearch?: (
