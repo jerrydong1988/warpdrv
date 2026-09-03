@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ISettings, IHubModel, IDownload } from '@warpcore/shared';
+import { EDownloadStatus, EHubSource } from '@warpcore/shared';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { HubModelCard } from './HubModelCard';
@@ -18,7 +19,6 @@ import { DownloadManager } from './DownloadManager';
 
 import { useStore } from '../../store';
 import { searchHub } from '../../api/services';
-import { EDownloadStatus } from '@warpcore/shared';
 import { useToast } from '../../components/ToastProvider';
 
 enum EHubSortField {
@@ -57,6 +57,7 @@ export const HubPage = React.memo(() => {
 
 	// Search state
 	const [query, setQuery] = useState('');
+	const [source, setSource] = useState<EHubSource>(EHubSource.HUGGINGFACE);
 	const [sortField, setSortField] = useState<EHubSortField>(EHubSortField.DOWNLOADS);
 	const [sortOrder, setSortOrder] = useState<ESortOrder>(ESortOrder.DESC);
 	const [showSortMenu, setShowSortMenu] = useState(false);
@@ -67,11 +68,19 @@ export const HubPage = React.memo(() => {
 	const [searchExecuted, setSearchExecuted] = useState(false);
 	const [showDownloads, setShowDownloads] = useState(false);
 
+	const handleSourceChange = (newSource: EHubSource) => {
+		if (newSource === source) return;
+		setSource(newSource);
+		setResults([]);
+		setSelectedModelId(null);
+		setSearchExecuted(false);
+	};
+
 	const handleSearch = async () => {
 		if (!query.trim()) return;
 		setSearching(true);
 		setSearchExecuted(true);
-		const result = await searchHub(query.trim(), sortField, sortOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000);
+		const result = await searchHub(query.trim(), sortField, sortOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000, source);
 		if (result.ok) {
 			setResults(result.data);
 			setSelectedModelId(null);
@@ -88,7 +97,7 @@ export const HubPage = React.memo(() => {
 			const apiOrder = (newField === EHubSortField.DOWNLOADS || newField === EHubSortField.LIKES)
 				? 'desc'
 				: sortOrder;
-			const result = await searchHub(query.trim(), newField, apiOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000);
+			const result = await searchHub(query.trim(), newField, apiOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000, source);
 			if (result.ok) {
 				const needsReverse = sortOrder === 'asc'
 					&& (newField === EHubSortField.DOWNLOADS || newField === EHubSortField.LIKES);
@@ -109,7 +118,7 @@ export const HubPage = React.memo(() => {
 			const apiOrder = (sortField === EHubSortField.DOWNLOADS || sortField === EHubSortField.LIKES)
 				? 'desc'
 				: newOrder;
-			const result = await searchHub(query.trim(), sortField, apiOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000);
+			const result = await searchHub(query.trim(), sortField, apiOrder, PARAM_STEPS[paramsRange[0]] || 0, PARAM_STEPS[paramsRange[1]] || 1000, source);
 			if (result.ok) {
 				const needsReverse = newOrder === 'asc'
 					&& (sortField === EHubSortField.DOWNLOADS || sortField === EHubSortField.LIKES);
@@ -125,8 +134,7 @@ export const HubPage = React.memo(() => {
 	if (!hasModelDirs) {
 		return (
 			<Box>
-				<PageHeader title={t('title')} subtitle={t('common:ui.browseAndDownloadModelsFromHuggingface')} icon={<Globe size={20} />} />
-				<Flex h="calc(100vh - 89px)" alignItems="center" justifyContent="center">
+				<PageHeader title={t('title')} subtitle={t('common:ui.browseAndDownloadModelsFromHuggingface')} icon={<Globe size={20} />} />				<Flex h="calc(100vh - 89px)" alignItems="center" justifyContent="center">
 					<VStack gap="4" maxW="400px" textAlign="center">
 						<Flex w="14" h="14" borderRadius="xl" alignItems="center" justifyContent="center" bg="var(--wc-accent-yellow-bg-8)" borderWidth="1px" borderColor="var(--wc-accent-yellow-border)">
 							<AlertCircle size={28} color="var(--wc-accent-yellow)" />
@@ -151,6 +159,30 @@ export const HubPage = React.memo(() => {
 				icon={<Globe size={20} />}
 				actions={
 					<HStack gap="3">
+						<HStack gap="0.5" bg="var(--wc-bg-subtle)" borderWidth="1px" borderColor="var(--wc-border-default)" borderRadius="lg" p="0.5">
+							<Button
+								size="sm" h="26px" px="2.5" borderRadius="md" fontSize="11px" fontWeight="500"
+								bg={source === EHubSource.HUGGINGFACE ? 'var(--wc-bg-card)' : 'transparent'}
+								color={source === EHubSource.HUGGINGFACE ? 'var(--wc-text-primary)' : 'var(--wc-text-tertiary)'}
+								borderWidth={source === EHubSource.HUGGINGFACE ? '1px' : '0px'}
+								borderColor="var(--wc-border-default)"
+								_hover={{ color: 'var(--wc-text-primary)' }}
+								onClick={() => handleSourceChange(EHubSource.HUGGINGFACE)}
+							>
+								{t('source.huggingface')}
+							</Button>
+							<Button
+								size="sm" h="26px" px="2.5" borderRadius="md" fontSize="11px" fontWeight="500"
+								bg={source === EHubSource.MODELSCOPE ? 'var(--wc-bg-card)' : 'transparent'}
+								color={source === EHubSource.MODELSCOPE ? 'var(--wc-text-primary)' : 'var(--wc-text-tertiary)'}
+								borderWidth={source === EHubSource.MODELSCOPE ? '1px' : '0px'}
+								borderColor="var(--wc-border-default)"
+								_hover={{ color: 'var(--wc-text-primary)' }}
+								onClick={() => handleSourceChange(EHubSource.MODELSCOPE)}
+							>
+								{t('source.modelscope')}
+							</Button>
+						</HStack>
 						<Box position="relative">
 							<Input
 								placeholder={t('searchPlaceholder')}
@@ -225,7 +257,7 @@ export const HubPage = React.memo(() => {
 						<Flex flex="1" alignItems="center" justifyContent="center">
 							<VStack gap="3" color="var(--wc-text-disabled)">
 								<Globe size={40} />
-								<Text fontSize="13px">{t('common:ui.searchHuggingfaceForGgufModels')}</Text>
+								<Text fontSize="13px">{source === EHubSource.MODELSCOPE ? t('common:ui.searchModelscopeForGgufModels') : t('common:ui.searchHuggingfaceForGgufModels')}</Text>
 							</VStack>
 						</Flex>
 					) : searching ? (
@@ -297,7 +329,7 @@ export const HubPage = React.memo(() => {
 
 				<Box flex="1" overflowY="auto">
 					{selectedModelId ? (
-						<HubModelDetail modelId={selectedModelId} modelRoots={settings?.modelRoots ?? []} />
+						<HubModelDetail modelId={selectedModelId} modelRoots={settings?.modelRoots ?? []} source={source} />
 					) : (
 						<Flex h="100%" alignItems="center" justifyContent="center">
 							<VStack gap="3" color="var(--wc-text-disabled)">

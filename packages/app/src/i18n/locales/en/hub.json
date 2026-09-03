@@ -2,6 +2,10 @@
   "title": "Hub",
   "subtitle": "{{count}} models available",
   "searchPlaceholder": "Search models...",
+  "source": {
+    "huggingface": "HuggingFace",
+    "modelscope": "ModelScope"
+  },
   "actions": {
     "download": "Download",
     "downloading": "Downloading...",

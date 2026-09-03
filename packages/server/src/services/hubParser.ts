@@ -9,8 +9,9 @@ import type { IHubFile } from '@warpcore/shared';
 // Pattern for split GGUF files: model-00001-of-00002.gguf
 const SHARD_REGEX = /-(\d{5})-of-(\d{5})\.gguf$/i;
 
-// Pattern to extract quant type from filename
-const QUANT_REGEX = /[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|F16|F32|BF16)/i;
+// Pattern to extract quant type from filename (fp16 covers llama.cpp's
+// "-fp16-" naming, which the bare F16 alternative never matched)
+const QUANT_REGEX = /[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|FP16|F16|F32|BF16)/i;
 
 interface IHubRawFile {
 	path: string;

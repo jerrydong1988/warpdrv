@@ -24,8 +24,9 @@ export async function parseGgufMetadata(filePath: string): Promise<IGgufMetadata
 		const fileStat = await stat(filePath);
 
 		// Infer quant type from the file name (more reliable than the file_type
-		// enum, and keeps the K variant), then fall back to the enum value
-		const quantMatch = filePath.match(/[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|F16|F32|BF16)/i);
+		// enum, and keeps the K variant), then fall back to the enum value.
+		// FP16 precedes F16 so llama.cpp's "-fp16-" naming is recognized.
+		const quantMatch = filePath.match(/[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|FP16|F16|F32|BF16)/i);
 		const quantType = quantMatch ? quantMatch[1]!.toUpperCase() : quantTypeFromFtype(meta['general.file_type']);
 
 		// Parameter count sources, in order of reliability:

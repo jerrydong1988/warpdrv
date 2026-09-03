@@ -10,12 +10,17 @@ import {
 	clearDownloadHistory,
 } from '../services/downloadManager';
 import type { ISettings, IDownloadRequestPayload, IHubFile } from '@warpcore/shared';
-import { DEFAULT_SETTINGS } from '@warpcore/shared';
+import { DEFAULT_SETTINGS, EHubSource } from '@warpcore/shared';
 import {
 	fetchAllGgufFiles,
 	mapFilesToHubFiles,
 	processGgufFiles,
 } from '../services/hubParser';
+import {
+	searchModelscopeModels,
+	fetchModelscopeModelDetail,
+	filterModelsByParams,
+} from '../services/modelscopeParser';
 import { fetchAndParseModelRecommendations } from '../services/modelInferenceParser';
 
 const SETTINGS_KEY = 'settings:general';
@@ -23,7 +28,7 @@ const HF_API = 'https://huggingface.co/api';
 
 export const hubRouter = Router();
 
-// GET /api/hub/search?q=&sort=&order=&params_min=&params_max=&pipeline_tag=
+// GET /api/hub/search?q=&sort=&order=&params_min=&params_max=&pipeline_tag=&source=
 hubRouter.get('/search', async (req, res) => {
 	const q = (req.query.q as string) ?? '';
 	const sort = (req.query.sort as string) ?? 'downloads';
@@ -31,6 +36,9 @@ hubRouter.get('/search', async (req, res) => {
 	const paramsMin = parseInt(req.query.params_min as string) || 0;
 	const paramsMax = parseInt(req.query.params_max as string) || 0;
 	const pipelineTag = req.query.pipeline_tag as string | undefined;
+	const source = (req.query.source as string) === EHubSource.MODELSCOPE
+		? EHubSource.MODELSCOPE
+		: EHubSource.HUGGINGFACE;
 
 	if (!q.trim()) {
 		res.json({ ok: true, data: [], error: null });
@@ -38,6 +46,14 @@ hubRouter.get('/search', async (req, res) => {
 	}
 
 	try {
+		// ModelScope search
+		if (source === EHubSource.MODELSCOPE) {
+			const models = await searchModelscopeModels(q, sort, order, paramsMin, paramsMax);
+			res.json({ ok: true, data: models, error: null });
+			return;
+		}
+
+		// HuggingFace search
 		const direction = order === 'asc' ? '1' : '-1';
 
 		const searchParams: Record<string, string> = {
@@ -67,21 +83,12 @@ hubRouter.get('/search', async (req, res) => {
 			createdAt: String(m.createdAt ?? ''),
 			tags: (m.tags as string[]) ?? [],
 			pipelineTag: String(m.pipeline_tag ?? ''),
+			source: EHubSource.HUGGINGFACE,
 		}));
 
-		// Client-side param filtering (HF API doesn't support this directly)
-		// We filter by checking tags for param count hints
-		const filtered = models.filter(m => {
-			if (paramsMin <= 0 && paramsMax <= 0) return true;
-			// Try to extract param count from tags or model name
-			const allText = [...m.tags, m.modelId, m.id].join(' ');
-			const paramMatch = allText.match(/(\d+\.?\d*)[Bb]/);
-			if (!paramMatch) return true; // can't determine, include it
-			const paramB = parseFloat(paramMatch[1]!);
-			if (paramsMin > 0 && paramB < paramsMin) return false;
-			if (paramsMax > 0 && paramB > paramsMax) return false;
-			return true;
-		});
+		// Client-side param filtering (HF API doesn't support this directly);
+		// shared with the ModelScope branch
+		const filtered = filterModelsByParams(models, paramsMin, paramsMax);
 
 		res.json({ ok: true, data: filtered, error: null });
 	} catch (err) {
@@ -89,12 +96,48 @@ hubRouter.get('/search', async (req, res) => {
 	}
 });
 
-// GET /api/hub/model/:author/:name
+// GET /api/hub/model/:author/:name?source=
 hubRouter.get('/model/:author/:name', async (req, res) => {
 	const { author, name } = req.params;
 	const modelId = `${author}/${name}`;
+	const source = (req.query.source as string) === EHubSource.MODELSCOPE
+		? EHubSource.MODELSCOPE
+		: EHubSource.HUGGINGFACE;
+
+	// Get model roots to check downloaded status
+	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 	try {
+		// ModelScope detail: single openapi call carries metadata + readme
+		if (source === EHubSource.MODELSCOPE) {
+			const detail = await fetchModelscopeModelDetail(author!, name!, settings.modelRoots);
+			if (!detail) {
+				res.status(404).json({ ok: false, data: null, error: 'Model not found' });
+				return;
+			}
+			res.json({
+				ok: true,
+				data: {
+					id: modelId,
+					author: author!,
+					modelId: name!,
+					downloads: detail.model.downloads,
+					likes: detail.model.likes,
+					lastModified: detail.model.lastModified,
+					createdAt: detail.model.createdAt,
+					tags: detail.model.tags,
+					pipelineTag: detail.model.pipelineTag,
+					files: detail.files as IHubFile[],
+					readme: detail.readme,
+					source: EHubSource.MODELSCOPE,
+					params: detail.model.params,
+				},
+				error: null,
+			});
+			return;
+		}
+
+		// HuggingFace detail
 		// Fetch model info
 		const infoRes = await fetch(`${HF_API}/models/${modelId}`);
 		if (!infoRes.ok) {
@@ -102,9 +145,6 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 			return;
 		}
 		const info = await infoRes.json() as Record<string, unknown>;
-
-		// Get model roots to check downloaded status
-		const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 
 		// Fetch all GGUF files including from nested directories (one level deep)
 		const rawGgufFiles = await fetchAllGgufFiles(author!, name!, 'main');
@@ -136,6 +176,7 @@ hubRouter.get('/model/:author/:name', async (req, res) => {
 			pipelineTag: String(info.pipeline_tag ?? ''),
 			files,
 			readme,
+			source: EHubSource.HUGGINGFACE,
 		};
 
 		res.json({ ok: true, data: detail, error: null });
@@ -161,6 +202,10 @@ hubRouter.post('/download', async (req, res) => {
 		return;
 	}
 
+	const source = payload.source === EHubSource.MODELSCOPE
+		? EHubSource.MODELSCOPE
+		: EHubSource.HUGGINGFACE;
+
 	// Verify destRoot is a configured model root
 	const settings = await store.get<ISettings>(SETTINGS_KEY) ?? DEFAULT_SETTINGS;
 	if (!settings.modelRoots.includes(payload.destRoot)) {
@@ -176,6 +221,7 @@ hubRouter.post('/download', async (req, res) => {
 				payload.modelName,
 				payload.fileParts,
 				payload.destRoot,
+				source,
 			);
 			res.json({ ok: true, data: { downloadIds, fileParts: payload.fileParts }, error: null });
 		} else {
@@ -187,6 +233,8 @@ hubRouter.post('/download', async (req, res) => {
 				payload.destRoot,
 				payload.fileParts ?? [payload.filename],
 				0,
+				undefined,
+				source,
 			);
 			res.json({ ok: true, data: dl, error: null });
 		}

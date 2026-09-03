@@ -4,4 +4,5 @@ export const QUANT_COLORS: Record<string, string> = {
 	Q8_0: '#22d3ee', Q8_K_XL: '#22d3ee', Q6_K_L: '#34d399',
 	IQ3_XXS: '#fbbf24', IQ3_M: '#fbbf24', IQ3_XS: '#fbbf24', IQ2_XS: '#fbbf24',
 	IQ4_XS: '#fbbf24', MXFP4: '#a78bfa', NVFP4: '#4ade80',
+	FP16: '#94a3b8', F16: '#94a3b8', BF16: '#94a3b8', F32: '#94a3b8',
 };

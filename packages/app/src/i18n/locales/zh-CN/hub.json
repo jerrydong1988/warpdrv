@@ -2,6 +2,10 @@
   "title": "Hub",
   "subtitle": "可用模型 {{count}} 个",
   "searchPlaceholder": "搜索模型...",
+  "source": {
+    "huggingface": "HuggingFace",
+    "modelscope": "ModelScope（魔搭）"
+  },
   "actions": {
     "download": "下载",
     "downloading": "下载中...",

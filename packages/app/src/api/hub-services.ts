@@ -2,16 +2,17 @@ import { api } from './client';
 import type {
 	IHubModel, IHubModelDetail, IDownload, IDownloadRequestPayload, IChatInferenceParams,
 } from '@warpcore/shared';
+import { EHubSource } from '@warpcore/shared';
 
-export async function searchHub(q: string, sortField: string, sortOrder: string, paramsMin: number, paramsMax: number) {
-	const params = new URLSearchParams({ q, sort: sortField, order: sortOrder });
+export async function searchHub(q: string, sortField: string, sortOrder: string, paramsMin: number, paramsMax: number, source: EHubSource = EHubSource.HUGGINGFACE) {
+	const params = new URLSearchParams({ q, sort: sortField, order: sortOrder, source });
 	if (paramsMin > 0) params.set('params_min', String(paramsMin));
 	if (paramsMax > 0) params.set('params_max', String(paramsMax));
 	return api.getList<IHubModel>(`/hub/search?${params}`);
 }
 
-export async function fetchHubModel(author: string, name: string) {
-	return api.get<IHubModelDetail>(`/hub/model/${author}/${name}`);
+export async function fetchHubModel(author: string, name: string, source: EHubSource = EHubSource.HUGGINGFACE) {
+	return api.get<IHubModelDetail>(`/hub/model/${author}/${name}?source=${source}`);
 }
 
 export async function startHubDownload(payload: IDownloadRequestPayload) {

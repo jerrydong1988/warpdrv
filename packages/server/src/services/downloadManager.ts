@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { DownloaderHelper } from 'node-downloader-helper';
-import { EDownloadStatus, EDownloadType, type IDownload, type TDownloadId, type IResumeState, type IDownloadPostAction } from '@warpcore/shared';
+import { EDownloadStatus, EDownloadType, EHubSource, type IDownload, type TDownloadId, type IResumeState, type IDownloadPostAction } from '@warpcore/shared';
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { runPostActions } from './postActions';
@@ -51,11 +51,21 @@ export function sanitizeDownloadPaths(author: string, modelName: string, filenam
 }
 
 function quantFromFilename(filename: string): string {
-	const match = filename.match(/[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|F16|F32|BF16)/i);
+	const match = filename.match(/[-_](Q\d[\w_]*|IQ\d[\w_]*|MXFP\d+|NVFP\d+|FP16|F16|F32|BF16)/i);
 	return match ? match[1]!.toUpperCase() : '';
 }
 
-function hfDownloadUrl(author: string, modelName: string, filename: string): string {
+// Build the raw download URL for a hub file. HuggingFace resolves through
+// /resolve/main/, ModelScope streams from its /repo API endpoint.
+export function hubDownloadUrl(
+	source: EHubSource,
+	author: string,
+	modelName: string,
+	filename: string,
+): string {
+	if (source === EHubSource.MODELSCOPE) {
+		return `https://modelscope.cn/api/v1/models/${author}/${modelName}/repo?FilePath=${encodeURIComponent(filename)}`;
+	}
 	return `https://huggingface.co/${author}/${modelName}/resolve/main/${filename}`;
 }
 
@@ -154,6 +164,7 @@ export async function startDownload(
 	fileParts: string[] = [],
 	partIndex: number = 0,
 	groupKey?: string,
+	source: EHubSource = EHubSource.HUGGINGFACE,
 ): Promise<IDownload> {
 	sanitizeDownloadPaths(author, modelName, filename);
 	const id = makeDownloadId();
@@ -164,7 +175,7 @@ export async function startDownload(
 		? path.join(destRoot, author, modelName, fileDirname)
 		: path.join(destRoot, author, modelName);
 	const destPath = path.join(destRoot, author, modelName, filename);
-	const url = hfDownloadUrl(author, modelName, filename);
+	const url = hubDownloadUrl(source, author, modelName, filename);
 
 	// Create directory structure (including any nested dirs from the file path)
 	fs.mkdirSync(destDir, { recursive: true });
@@ -186,6 +197,7 @@ export async function startDownload(
 
 	const dl: IDownload = {
 		id,
+		source,
 		author,
 		modelName,
 		filename,
@@ -242,6 +254,7 @@ export async function startMultiPartDownload(
 	modelName: string,
 	fileParts: string[],
 	destRoot: string,
+	source: EHubSource = EHubSource.HUGGINGFACE,
 ): Promise<string[]> {
 	const downloadIds: string[] = [];
 
@@ -254,7 +267,7 @@ export async function startMultiPartDownload(
 			const index = nextIndex++;
 			const filename = fileParts[index];
 			if (!filename) continue;
-			const dl = await startDownload(author, modelName, filename, destRoot, fileParts, index);
+			const dl = await startDownload(author, modelName, filename, destRoot, fileParts, index, undefined, source);
 			downloadIds.push(dl.id);
 		}
 	});
@@ -274,7 +287,9 @@ export async function resumeDownload(id: TDownloadId): Promise<boolean> {
 	const dl = downloadState.get(id) ?? await store.get<IDownload>(DOWNLOADS_PREFIX + id);
 	if (!dl || dl.status !== EDownloadStatus.PAUSED) return false;
 
-	const url = hfDownloadUrl(dl.author, dl.modelName, dl.filename);
+	// Older persisted downloads predate the hub source field — treat them as
+	// HuggingFace entries, which is what they were.
+	const url = hubDownloadUrl(dl.source ?? EHubSource.HUGGINGFACE, dl.author, dl.modelName, dl.filename);
 	const destDir = path.dirname(dl.destPath);
 
 	// Check if we have saved resume state and the partial file exists

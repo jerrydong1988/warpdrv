@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { IHubModelDetail, IHubFile } from '@warpcore/shared';
+import { EHubSource } from '@warpcore/shared';
 import { Card } from '../../components/Card';
 import { DirPickerPopover } from './DirPickerPopover';
 import { fetchHubModel, startHubDownload } from '../../api/services';
@@ -96,15 +97,31 @@ import { QUANT_COLORS } from '@/lib/constants';
 interface IHubModelDetailProps {
 	modelId: string;
 	modelRoots: string[];
+	source: EHubSource;
 }
 
-const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, existsInRoot }: {
+// External web page for a repo on its hub
+function hubWebUrl(source: EHubSource, author: string, modelId: string): string {
+	if (source === EHubSource.MODELSCOPE) return `https://modelscope.cn/${author}/${modelId}`;
+	return `https://huggingface.co/${author}/${modelId}`;
+}
+
+// Compact "27.3B" style rendering of a raw parameter count
+function formatParams(params: number | undefined): string | null {
+	if (!params || !Number.isFinite(params) || params <= 0) return null;
+	const billions = params / 1e9;
+	const rounded = billions >= 10 ? Math.round(billions) : Number(billions.toFixed(1));
+	return `${rounded}B`;
+}
+
+const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, existsInRoot, source }: {
 	file: IHubFile;
 	modelRoots: string[];
 	author: string;
 	modelName: string;
 	allFiles: IHubFile[];
 	existsInRoot: string | null;
+	source: EHubSource;
 }) => {
 	const { t } = useTranslation('hub');
 	const { toast } = useToast();
@@ -129,6 +146,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 
 		setDownloading(true);
 		const result = await startHubDownload({
+			source,
 			author,
 			modelName,
 			filename: file.filename,
@@ -245,7 +263,7 @@ const FileRow = React.memo(({ file, modelRoots, author, modelName, allFiles, exi
 	);
 });
 
-export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDetailProps) => {
+export const HubModelDetail = React.memo(({ modelId, modelRoots, source }: IHubModelDetailProps) => {
 	const { t } = useTranslation('hub');
 	const [detail, setDetail] = useState<IHubModelDetail | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -254,11 +272,11 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 
 	useEffect(() => {
 		setLoading(true);
-		fetchHubModel(author!, name!).then(result => {
+		fetchHubModel(author!, name!, source).then(result => {
 			if (result.ok) setDetail(result.data);
 			setLoading(false);
 		});
-	}, [modelId]);
+	}, [modelId, source]);
 
 	if (loading) {
 		return (
@@ -317,16 +335,37 @@ export const HubModelDetail = React.memo(({ modelId, modelRoots }: IHubModelDeta
 			<VStack align="stretch" gap="6">
 				{/* Header */}
 				<Box>
-					<Link href={`https://huggingface.co/${detail.author}/${detail.modelId}`} display="block" color="var(--wc-text-faint)" fontSize="11px" mb="1"
+					<Link href={hubWebUrl(source, detail.author, detail.modelId)} display="block" color="var(--wc-text-faint)" fontSize="11px" mb="1"
 						_hover={{ color: 'var(--wc-text-muted)' }}
-						onClick={(e) => { e.preventDefault(); openExternal(`https://huggingface.co/${detail.author}/${detail.modelId}`); }}>
+						onClick={(e) => { e.preventDefault(); openExternal(hubWebUrl(source, detail.author, detail.modelId)); }}>
 						{detail.author}
 					</Link>
-					<Link href={`https://huggingface.co/${detail.author}/${detail.modelId}`} display="block" fontSize="22px" fontWeight="700" color="var(--wc-text-primary)" letterSpacing="-0.02em"
+					<Link href={hubWebUrl(source, detail.author, detail.modelId)} display="block" fontSize="22px" fontWeight="700" color="var(--wc-text-primary)" letterSpacing="-0.02em"
 						_hover={{ color: 'var(--wc-accent-blue)', textDecoration: 'underline', cursor: 'pointer' }}
-						onClick={(e) => { e.preventDefault(); openExternal(`https://huggingface.co/${detail.author}/${detail.modelId}`); }}>
+						onClick={(e) => { e.preventDefault(); openExternal(hubWebUrl(source, detail.author, detail.modelId)); }}>
 						{detail.modelId}
 					</Link>
+
+					<HStack gap="2" mt="2" flexWrap="wrap">
+						<Badge
+							px="2" py="0.5" borderRadius="md" fontSize="10px"
+							bg={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple-bg-8)' : 'var(--wc-accent-blue-bg-8)'}
+							color={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple)' : 'var(--wc-accent-blue)'}
+							borderWidth="1px"
+							borderColor={source === EHubSource.MODELSCOPE ? 'var(--wc-accent-purple-border)' : 'var(--wc-accent-blue-border)'}
+						>
+							{source === EHubSource.MODELSCOPE ? t('source.modelscope') : t('source.huggingface')}
+						</Badge>
+						{formatParams(detail.params) && (
+							<Badge
+								px="2" py="0.5" borderRadius="md" fontSize="10px"
+								bg="var(--wc-bg-card)" color="var(--wc-text-muted)"
+								borderWidth="1px" borderColor="var(--wc-border-subtle)"
+							>
+								{formatParams(detail.params)}
+							</Badge>
+						)}
+					</HStack>
 
 					<HStack gap="4" mt="3" flexWrap="wrap">
 						<HStack gap="1.5" color="var(--wc-text-muted)">
@@ -424,6 +463,7 @@ bg={`color-mix(in srgb, ${downloadedCount === totalGgufFiles ? 'var(--wc-accent-
 											author={detail.author}
 											modelName={detail.modelId}
 											existsInRoot={existsInRoot}
+											source={source}
 										/>
 									))}
 								</VStack>
