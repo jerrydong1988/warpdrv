@@ -150,6 +150,12 @@ function buildSpecDecodeArgsLegacy(sd: ISpecDecodeParams): string[] {
 	// MTP mode
 	if (isMtp) {
 		args.push('--spec-type', 'draft-mtp');
+		if (sd.draftModelPath) {
+			args.push('--model-draft', sd.draftModelPath);
+			if (sd.draftDevice) args.push('--device-draft', sd.draftDevice);
+			if (sd.draftGpuLayers > 0) args.push('--gpu-layers-draft', String(sd.draftGpuLayers));
+			if (sd.draftContextSize > 0) args.push('--ctx-size-draft', String(sd.draftContextSize));
+		}
 		if (sd.specDraftNMax) args.push('--spec-draft-n-max', String(sd.specDraftNMax));
 		if (sd.draftMin > 0) args.push('--draft-min', String(sd.draftMin));
 		if (sd.draftPMin > 0) args.push('--draft-p-min', String(sd.draftPMin));
@@ -201,6 +207,13 @@ function buildSpecDecodeArgsModern(sd: ISpecDecodeParams, capabilities?: ILlamaB
 		const specType = acceptedSpecType(capabilities, 'draft-mtp');
 		if (!specType) return args;
 		args.push('--spec-type', specType);
+		if (sd.draftModelPath) {
+			pushSupportedOption(args, capabilities, ['--spec-draft-model', '--model-draft'], sd.draftModelPath);
+			if (sd.draftDevice) pushSupportedOption(args, capabilities, ['--spec-draft-device', '--device-draft'], sd.draftDevice);
+			if (sd.draftGpuLayers > 0) pushSupportedOption(args, capabilities, ['--spec-draft-ngl', '--gpu-layers-draft', '--n-gpu-layers-draft'], String(sd.draftGpuLayers));
+			if (sd.draftContextSize > 0 && capabilities?.supportedFlags.includes('--ctx-size-draft')) args.push('--ctx-size-draft', String(sd.draftContextSize));
+			appendDraftModelControls(args, sd, capabilities);
+		}
 		if (sd.specDraftNMax) pushSupportedOption(args, capabilities, ['--spec-draft-n-max'], String(sd.specDraftNMax));
 		if (sd.draftMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-n-min'], String(sd.draftMin));
 		if (sd.draftPMin > 0) pushSupportedOption(args, capabilities, ['--spec-draft-p-min', '--draft-p-min'], String(sd.draftPMin));
@@ -235,10 +248,10 @@ function buildSpecDecodeArgsModern(sd: ISpecDecodeParams, capabilities?: ILlamaB
 	return args;
 }
 
-// Draft-model execution controls shared by the draft/dflash branches:
+// Draft-model execution controls shared by the draft/dflash/external-MTP branches:
 // KV cache quantization, threads, polling, priority and CPU placement
 // (--spec-draft-* family, each with legacy aliases for older builds).
-// Ngram and MTP modes have no separate draft model, so these do not apply.
+// Ngram and built-in MTP have no separate draft model, so these do not apply.
 function appendDraftModelControls(args: string[], sd: ISpecDecodeParams, capabilities?: ILlamaBackendCapabilities): void {
 	if (sd.draftKvQuantK && sd.draftKvQuantK !== EKvQuantType.F16) {
 		pushSupportedOption(args, capabilities, ['--cache-type-k-draft'], sd.draftKvQuantK);

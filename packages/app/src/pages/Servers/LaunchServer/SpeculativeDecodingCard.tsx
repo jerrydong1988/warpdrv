@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
 	Flex, Box, Text, HStack, VStack, Button, Input, Switch, Portal, Combobox, createListCollection,
 } from '@chakra-ui/react';
-import { Sparkles, Layers, Cpu, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Sparkles, Layers, Cpu, AlertTriangle, ChevronDown, FolderOpen } from 'lucide-react';
 import { ESpecType, EKvQuantType, type IModel, type ISpecDecodeParams } from '@warpcore/shared';
 import { Card } from '@/components/Card';
 import { NumberField, SelectField, ToggleChip } from './Helpers';
@@ -20,6 +20,10 @@ function formatSize(mb: number): string {
 	return mb + ' MB';
 }
 
+function fileNameFromPath(filePath: string): string {
+	return filePath.split(/[\\/]/).pop() || filePath;
+}
+
 const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder }: {
 	entries: TModelEntry[];
 	selectedPath: string | null;
@@ -33,17 +37,33 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 		const terms = inputValue.toLowerCase().split(/\s+/).filter(Boolean);
 		return entries.filter(e => terms.every(term => e.searchText.includes(term)));
 	}, [entries, inputValue]);
+	const collectionItems = useMemo(() => {
+		const items: Array<{ label: string; value: string; entry: TModelEntry | null }> = filteredItems.map(e => ({
+			label: e.file.fileName,
+			value: e.file.filePath,
+			entry: e,
+		}));
+		if (selectedPath && !items.some(item => item.value === selectedPath)) {
+			const selectedEntry = entries.find(entry => entry.file.filePath === selectedPath) ?? null;
+			items.unshift({
+				label: selectedEntry?.file.fileName ?? fileNameFromPath(selectedPath),
+				value: selectedPath,
+				entry: selectedEntry,
+			});
+		}
+		return items;
+	}, [entries, filteredItems, selectedPath]);
 	const collection = useMemo(() =>
 		createListCollection({
-			items: filteredItems.map(e => ({ label: e.file.fileName, value: e.file.filePath, entry: e })),
+			items: collectionItems,
 			itemToString: (item) => item.label,
 			itemToValue: (item) => item.value,
 		}),
-	[filteredItems]);
+	[collectionItems]);
 	return (
 		<Combobox.Root
 			collection={collection}
-			onValueChange={(details) => { const val = details.value?.[0]; if (val) onSelect(val); }}
+			onValueChange={(details) => onSelect(details.value?.[0] ?? '')}
 			onInputValueChange={(details) => setInputValue(details.inputValue)}
 			value={selectedPath ? [selectedPath] : []}
 			openOnClick
@@ -63,14 +83,14 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 						borderRadius="lg" shadow="0 8px 32px rgba(0, 0, 0, 0.5)" p="1">
 						<Combobox.Empty><Text fontSize="12px" color="var(--wc-text-disabled)" py="4" textAlign="center">{t('common:ui.noMatches')}</Text></Combobox.Empty>
 						{collection.items.map((item) => {
-							const entry = (item as { entry: TModelEntry }).entry;
+							const entry = item.entry;
 							return (
 								<Combobox.Item key={item.value} item={item} px="3" py="2" borderRadius="md" cursor="pointer"
 									_hover={{ bg: 'var(--wc-bg-hover)' }} _highlighted={{ bg: 'var(--wc-accent-purple-bg-8)' }}>
 									<HStack gap="3" w="100%">
 										<Box flex="1" minW="0">
-											<Text fontSize="12px" fontWeight="500" color="var(--wc-text-primary)" lineClamp={1}>{entry.file.fileName}</Text>
-											<Text fontSize="10px" color="var(--wc-text-tertiary)">{entry.model.user}</Text>
+											<Text fontSize="12px" fontWeight="500" color="var(--wc-text-primary)" lineClamp={1}>{item.label}</Text>
+											<Text fontSize="10px" color="var(--wc-text-tertiary)">{entry ? entry.model.user : t('common:ui.customDraftModelPath')}</Text>
 										</Box>
 										<Combobox.ItemIndicator />
 									</HStack>
@@ -84,7 +104,64 @@ const ModelCombobox = React.memo(({ entries, selectedPath, onSelect, placeholder
 	);
 });
 
-// Advanced draft-model controls shared by the draft and dflash modes:
+const DraftModelPicker = React.memo(({ entries, selectedPath, onSelect, placeholder, emptyMessage }: {
+	entries: TModelEntry[];
+	selectedPath: string | null;
+	onSelect: (path: string) => void;
+	placeholder: string;
+	emptyMessage: string;
+}) => {
+	const { t } = useTranslation();
+	const selectedIsIndexed = Boolean(selectedPath && entries.some(entry => entry.file.filePath === selectedPath));
+	const browseForDraftModel = async () => {
+		try {
+			const { open } = await import('@tauri-apps/plugin-dialog');
+			const selected = await open({
+				directory: false,
+				multiple: false,
+				filters: [{ name: 'GGUF', extensions: ['gguf'] }],
+			});
+			if (typeof selected === 'string') onSelect(selected);
+		} catch (error) {
+			console.error('[DraftModelPicker] Failed to open GGUF file picker:', error);
+		}
+	};
+
+	return (
+		<>
+			<HStack align="stretch" gap="2">
+				<Box flex="1" minW="0">
+					<ModelCombobox entries={entries} selectedPath={selectedPath} onSelect={onSelect} placeholder={placeholder} />
+				</Box>
+				<Button
+					size="sm"
+					variant="outline"
+					px="3"
+					flexShrink="0"
+					borderColor="var(--wc-border-default)"
+					color="var(--wc-text-secondary)"
+					_hover={{ borderColor: 'var(--wc-accent-purple-border)', color: 'var(--wc-accent-purple)' }}
+					onClick={browseForDraftModel}
+					aria-label={t('common:ui.browseFile')}
+					title={t('common:ui.browseFile')}
+				>
+					<FolderOpen size={14} />
+					<Text fontSize="11px">{t('common:ui.browseFile')}</Text>
+				</Button>
+			</HStack>
+			{entries.length === 0 && (
+				<Text fontSize="11px" color="var(--wc-text-muted)" mt="2">{emptyMessage}</Text>
+			)}
+			{selectedPath && !selectedIsIndexed && (
+				<Text fontSize="10px" color="var(--wc-text-muted)" mt="2" fontFamily='"Geist Mono", monospace' wordBreak="break-all">
+					{selectedPath}
+				</Text>
+			)}
+		</>
+	);
+});
+
+// Advanced draft-model controls shared by draft, dflash, and external MTP:
 // KV cache quantization, threads, polling, priority, CPU placement and
 // lookup decoding caches (llama.cpp v0.3.0 alignment). Collapsed by default.
 const SpecAdvancedSection = React.memo(({ specDecode, onSpecParamChange }: {
@@ -163,6 +240,7 @@ export const SpeculativeDecodingCard = React.memo(({
 	specDecode,
 	onSpecParamChange,
 	targetArchitecture,
+	targetModelPath,
 	draftModelEntries,
 	selectedDraftEntry,
 	deviceOptions,
@@ -173,6 +251,7 @@ export const SpeculativeDecodingCard = React.memo(({
 	specDecode: ISpecDecodeParams;
 	onSpecParamChange: <K extends keyof ISpecDecodeParams>(key: K, value: ISpecDecodeParams[K]) => void;
 	targetArchitecture: string | null;
+	targetModelPath: string | null;
 	draftModelEntries: TModelEntry[];
 	selectedDraftEntry: TModelEntry | null;
 	deviceOptions: string[];
@@ -252,14 +331,16 @@ export const SpeculativeDecodingCard = React.memo(({
 								onChange={v => onSpecParamChange('specType', v as ESpecType)} mono />
 							<Box>
 								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftModel')}</Text>
-								{!targetArchitecture ? (
+								{!targetModelPath ? (
 									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.selectATargetModelFirstToSeeCompatibleDraftModels')}</Text>
-								) : draftModelEntries.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.noCompatibleDraftModelsFoundDraftModelsMustShareTheSameArchitecture')}{targetArchitecture}).</Text>
 								) : (
-									<ModelCombobox entries={draftModelEntries} selectedPath={specDecode.draftModelPath || null}
+									<DraftModelPicker
+										entries={draftModelEntries}
+										selectedPath={specDecode.draftModelPath || null}
 										onSelect={(path) => onSpecParamChange('draftModelPath', path)}
-										placeholder={t('common:ui.searchCompatibleDraftModels')} />
+										placeholder={t('common:ui.searchCompatibleDraftModels')}
+										emptyMessage={t('common:ui.noCompatibleDraftModelsFoundDraftModelsMustShareTheSameArchitecture', { architecture: targetArchitecture ?? '-' })}
+									/>
 								)}
 								{selectedDraftEntry?.file.metadata && (
 									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">
@@ -310,7 +391,42 @@ export const SpeculativeDecodingCard = React.memo(({
 
 					{specDecode.mode === 'mtp' && (
 						<VStack align="stretch" gap="4">
-					<Box>
+							<Box>
+								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.externalMtpDraftModelOptional')}</Text>
+								{!targetModelPath ? (
+									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.selectATargetModelFirstToSeeCompatibleDraftModels')}</Text>
+								) : (
+									<DraftModelPicker
+										entries={draftModelEntries}
+										selectedPath={specDecode.draftModelPath || null}
+										onSelect={(path) => onSpecParamChange('draftModelPath', path)}
+										placeholder={t('common:ui.searchCompatibleDraftModels')}
+										emptyMessage={t('common:ui.noExternalMtpModelsFoundBrowse')}
+									/>
+								)}
+								<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">{t('common:ui.leaveEmptyToUseBuiltInMtp')}</Text>
+								{selectedDraftEntry?.file.metadata && (
+									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">
+										<HStack gap="1.5"><Layers size={12} color="var(--wc-accent-purple-icon)" /><Text fontSize="11px" color="var(--wc-accent-purple-text)">{t('common:ui.layersCount', { count: selectedDraftEntry.file.metadata.nLayers })}</Text></HStack>
+										<Text fontSize="11px" color="var(--wc-accent-purple-icon)" fontFamily='"Geist Mono", monospace'>{formatSize(selectedDraftEntry.model.totalSizeMb)}</Text>
+									</HStack>
+								)}
+							</Box>
+
+							{specDecode.draftModelPath && deviceOptions.length > 0 && (
+								<Box>
+									<SelectField label={t('common:ui.draftDevice')} value={specDecode.draftDevice} options={['', ...deviceOptions]}
+										onChange={v => onSpecParamChange('draftDevice', v)} mono
+										optionLabels={{ '': t('common:ui.sameAsTarget'), ...deviceIdToName }} />
+									<Text fontSize="10px" color="var(--wc-text-muted)" mt="1">{t('common:ui.leaveEmptyToUseTargetDevice')}</Text>
+								</Box>
+							)}
+
+							{specDecode.draftModelPath && (
+								<NumberField label={t('common:ui.gpuLayers')} value={specDecode.draftGpuLayers} onChange={v => onSpecParamChange('draftGpuLayers', v)} min={0} max={999} />
+							)}
+
+							<Box>
 							<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.acceptThreshold')}</Text>
 							<Input type="number" value={specDecode.draftPMin} onChange={e => onSpecParamChange('draftPMin', Number(e.target.value))} size="sm"
 								bg="var(--wc-bg-subtle)" borderColor="var(--wc-border-default)" color="var(--wc-text-primary)"
@@ -322,6 +438,9 @@ export const SpeculativeDecodingCard = React.memo(({
 							<NumberField label={t('common:ui.draftMin')} value={specDecode.draftMin} onChange={v => onSpecParamChange('draftMin', v)} min={0} max={64} />
 							<NumberField label={t('common:ui.draftNMax')} value={specDecode.specDraftNMax ?? 3} onChange={v => onSpecParamChange('specDraftNMax', v)} min={1} max={128} />
 						</Flex>
+						{specDecode.draftModelPath && (
+							<SpecAdvancedSection specDecode={specDecode} onSpecParamChange={onSpecParamChange} />
+						)}
 						</VStack>
 					)}
 
@@ -376,14 +495,16 @@ export const SpeculativeDecodingCard = React.memo(({
 							)}
 							<Box>
 								<Text fontSize="11px" color="var(--wc-accent-purple-text)" textTransform="uppercase" letterSpacing="0.05em" mb="2">{t('common:ui.draftModel')}</Text>
-								{!targetArchitecture ? (
+								{!targetModelPath ? (
 									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.selectATargetModelFirstToSeeCompatibleDraftModels')}</Text>
-								) : draftModelEntries.length === 0 ? (
-									<Text fontSize="12px" color="var(--wc-text-muted)">{t('common:ui.noCompatibleDraftModelsFoundDraftModelsMustShareTheSameArchitecture', { architecture: targetArchitecture })}</Text>
 								) : (
-									<ModelCombobox entries={draftModelEntries} selectedPath={specDecode.draftModelPath || null}
+									<DraftModelPicker
+										entries={draftModelEntries}
+										selectedPath={specDecode.draftModelPath || null}
 										onSelect={(path) => onSpecParamChange('draftModelPath', path)}
-										placeholder={t('common:ui.searchCompatibleDraftModels')} />
+										placeholder={t('common:ui.searchCompatibleDraftModels')}
+										emptyMessage={t('common:ui.noDflashDraftModelsFoundBrowse')}
+									/>
 								)}
 								{selectedDraftEntry?.file.metadata && (
 									<HStack mt="2" gap="4" px="3" py="2" bg="var(--wc-accent-purple-bg-8)" borderRadius="lg" borderWidth="1px" borderColor="var(--wc-accent-purple-border)">

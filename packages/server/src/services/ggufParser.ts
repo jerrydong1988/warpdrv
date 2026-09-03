@@ -49,6 +49,8 @@ export async function parseGgufMetadata(filePath: string): Promise<IGgufMetadata
 			contextLength,
 			fileSize: fileStat.size,
 			vocabSize: Number(meta['tokenizer.vocab_size'] ?? 0),
+			tensorCount: Number(ggufData.tensorInfos?.length ?? meta['general.tensor_count'] ?? 0),
+			nextnPredictLayers: Number(meta[`${architecture}.nextn_predict_layers`] ?? 0),
 		};
 	} catch (error) {
 		console.error(`Failed to parse GGUF metadata for ${filePath}:`, error);
