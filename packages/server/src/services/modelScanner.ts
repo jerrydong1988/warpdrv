@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import type { IModel, IGgufFile } from '@warpcore/shared';
-import { parseGgufMetadata } from './ggufParser';
+import { parseGgufMetadata, estimateParamCountFromSize } from './ggufParser';
 import { store } from '../util/store';
 import { Dirent } from 'fs';
 
@@ -125,6 +125,15 @@ async function scanDirRecursive(
 			totalSizeMb = modelFiles.filter(f => f.shardIndex !== null).reduce((sum, f) => sum + f.sizeMb, 0);
 		} else if (primaryFile) {
 			totalSizeMb = primaryFile.sizeMb;
+		}
+
+		// When the name carries no size token, fall back to a size-based
+		// estimate (total bytes / bits-per-weight of the quant type). The
+		// group total is used so multi-shard models estimate from the full
+		// size; the "≈" prefix marks the value as approximate.
+		if (primaryFile?.metadata && primaryFile.metadata.paramCount === 'unknown' && totalSizeMb > 0) {
+			const estimated = estimateParamCountFromSize(totalSizeMb * 1024 * 1024, primaryFile.metadata.quantType);
+			if (estimated !== 'unknown') primaryFile.metadata.paramCount = estimated;
 		}
 
 		const id = makeModelId(dirPath, parentModel);

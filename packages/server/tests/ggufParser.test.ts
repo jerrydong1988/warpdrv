@@ -3,7 +3,7 @@
 // "XB" token, so "31B Assistant" and "Gemma-4-E4B-It" fell through to
 // "unknown" even though the size is right there in the name.
 import { describe, it, expect } from 'vitest';
-import { extractParamCount, formatParamCount } from '../src/services/ggufParser';
+import { extractParamCount, formatParamCount, estimateParamCountFromSize, quantTypeFromFtype } from '../src/services/ggufParser';
 
 describe('extractParamCount', () => {
 	it('parses classic hyphenated names', () => {
@@ -73,5 +73,48 @@ describe('formatParamCount', () => {
 		expect(formatParamCount(-5)).toBe('unknown');
 		expect(formatParamCount('nope')).toBe('unknown');
 		expect(formatParamCount(undefined)).toBe('unknown');
+	});
+});
+
+describe('estimateParamCountFromSize', () => {
+	it('estimates a model at a known quant with the ≈ prefix', () => {
+		// 10B params at 4.5 bpw = 10e9 * 4.5 / 8 bytes
+		expect(estimateParamCountFromSize(10e9 * 4.5 / 8, 'Q4_0')).toBe('≈10B');
+		// 120B at IQ2_XXS (2.06 bpw)
+		expect(estimateParamCountFromSize(120e9 * 2.06 / 8, 'IQ2_XXS')).toBe('≈120B');
+	});
+
+	it('keeps one decimal below 10B', () => {
+		expect(estimateParamCountFromSize(0.6e9 * 16 / 8, 'F16')).toBe('≈0.6B');
+		expect(estimateParamCountFromSize(3.5e9 * 5.54 / 8, 'Q5_K_S')).toBe('≈3.5B');
+	});
+
+	it('falls back to the family average for unknown K variants', () => {
+		// Q4_K_XL is not in the table -> base Q4_K average at 4.8 bpw
+		expect(estimateParamCountFromSize(8e9 * 4.8 / 8, 'Q4_K_XL')).toBe('≈8B');
+	});
+
+	it('returns unknown when the quant type is unknown', () => {
+		expect(estimateParamCountFromSize(10e9, 'unknown')).toBe('unknown');
+		expect(estimateParamCountFromSize(10e9, '')).toBe('unknown');
+	});
+
+	it('rejects invalid or too-small sizes', () => {
+		expect(estimateParamCountFromSize(0, 'Q8_0')).toBe('unknown');
+		expect(estimateParamCountFromSize(-1, 'Q8_0')).toBe('unknown');
+		expect(estimateParamCountFromSize(1024, 'Q8_0')).toBe('unknown');
+	});
+});
+
+describe('quantTypeFromFtype', () => {
+	it('maps known GGUF file_type enum values', () => {
+		expect(quantTypeFromFtype(8)).toBe('Q8_0');
+		expect(quantTypeFromFtype(35)).toBe('MXFP4');
+		expect(quantTypeFromFtype(25)).toBe('BF16');
+	});
+
+	it('returns unknown for unmapped values', () => {
+		expect(quantTypeFromFtype(99)).toBe('unknown');
+		expect(quantTypeFromFtype(undefined)).toBe('unknown');
 	});
 });
