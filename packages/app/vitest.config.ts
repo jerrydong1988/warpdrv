@@ -8,7 +8,14 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'html'],
 			include: ['src/**'],
+			exclude: ['src/**/*.old'],
 			reportsDirectory: './coverage',
+			thresholds: {
+				statements: 0.1,
+				branches: 0.1,
+				functions: 0.1,
+				lines: 0.1,
+			},
 		},
 	},
 });

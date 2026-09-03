@@ -436,23 +436,36 @@ export function buildArgs(
 		if (sd.lookupCacheDynamic) pushSupportedOption(args, capabilities, ['--lookup-cache-dynamic'], sd.lookupCacheDynamic);
 	}
 	// Experimental llama-sampling backend
-	if (params.backendSampling && !argsSet.has('--backend-sampling')) args.push('--backend-sampling');
+	if (params.backendSampling && !argsSet.has('--backend-sampling')) {
+		pushSupportedFlag(args, capabilities, ['--backend-sampling']);
+	}
 	// Reasoning-trace handling (tristate; omit = template default)
-	if (params.reasoningPreserve === true && !argsSet.has('--reasoning-preserve')) args.push('--reasoning-preserve');
-	else if (params.reasoningPreserve === false && !argsSet.has('--no-reasoning-preserve')) args.push('--no-reasoning-preserve');
+	if (params.reasoningPreserve === true && !argsSet.has('--reasoning-preserve')) {
+		pushSupportedFlag(args, capabilities, ['--reasoning-preserve']);
+	} else if (params.reasoningPreserve === false && !argsSet.has('--no-reasoning-preserve')) {
+		pushSupportedFlag(args, capabilities, ['--no-reasoning-preserve']);
+	}
 	// Prompt-similarity threshold for slot reuse (0 = disabled; llama.cpp default 0.10)
-	if (params.slotPromptSimilarity !== undefined) args.push('--slot-prompt-similarity', String(params.slotPromptSimilarity));
+	if (params.slotPromptSimilarity !== undefined) {
+		pushSupportedOption(args, capabilities, ['--slot-prompt-similarity'], String(params.slotPromptSimilarity));
+	}
 	// LoRA adapters (comma-separated) and per-adapter scales
 	if (params.loraAdapters?.trim()) pushSupportedOption(args, capabilities, ['--lora'], params.loraAdapters.trim());
 	if (params.loraScaled?.trim()) pushSupportedOption(args, capabilities, ['--lora-scaled'], params.loraScaled.trim());
 	if (params.loraInitWithoutApply) pushSupportedFlag(args, capabilities, ['--lora-init-without-apply']);
 	// Multimodal projector loading controls
 	if (params.mmprojUrl?.trim()) pushSupportedOption(args, capabilities, ['--mmproj-url'], params.mmprojUrl.trim());
-	if (params.mmprojAuto === true && !argsSet.has('--mmproj-auto')) args.push('--mmproj-auto');
-	else if (params.mmprojAuto === false && !argsSet.has('--no-mmproj-auto')) args.push('--no-mmproj-auto');
+	if (params.mmprojAuto === true && !argsSet.has('--mmproj-auto')) {
+		pushSupportedFlag(args, capabilities, ['--mmproj-auto']);
+	} else if (params.mmprojAuto === false && !argsSet.has('--no-mmproj-auto')) {
+		pushSupportedFlag(args, capabilities, ['--no-mmproj-auto']);
+	}
 	if (params.mmprojDevice?.trim()) pushSupportedOption(args, capabilities, ['--mmproj-device'], params.mmprojDevice.trim());
-	if (params.mmprojOffload === true && !argsSet.has('--mmproj-offload')) args.push('--mmproj-offload');
-	else if (params.mmprojOffload === false && !argsSet.has('--no-mmproj-offload')) args.push('--no-mmproj-offload');
+	if (params.mmprojOffload === true && !argsSet.has('--mmproj-offload')) {
+		pushSupportedFlag(args, capabilities, ['--mmproj-offload']);
+	} else if (params.mmprojOffload === false && !argsSet.has('--no-mmproj-offload')) {
+		pushSupportedFlag(args, capabilities, ['--no-mmproj-offload']);
+	}
 	// User extra args — placed BEFORE the server-controlled flags below so a
 	// user value can never override --host/--port/--slot-save-path (previously
 	// a crafted extraArgs could redirect checkpoint writes to any directory).

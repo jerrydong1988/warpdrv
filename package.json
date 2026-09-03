@@ -12,7 +12,7 @@
 		"dev:desktop": "concurrently -n app,tauri -c green,blue \"cd packages/app && npm run dev -- --port 3000\" \"cd packages/desktop && npx @tauri-apps/cli dev\"",
 		"build": "npm run build -w @warpcore/app",
 		"build:desktop": "npm run build -w @warpcore/desktop",
-		"lint": "eslint packages/shared/src packages/realmcore/src packages/bridge/src packages/server/src packages/app/src",
+		"lint": "eslint packages/shared/src packages/realmcore/src packages/bridge/src packages/server/src packages/app/src --max-warnings 321",
 		"test:coverage": "npm run test:coverage -w @warpcore/realmcore -w @warpcore/server -w @warpcore/warpmcp -w @warpcore/bridge -w @warpcore/app",
 		"release": "bash release.sh",
 		"postinstall": "patch-package"

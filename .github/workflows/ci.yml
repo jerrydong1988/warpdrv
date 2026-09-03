@@ -30,20 +30,8 @@ jobs:
       - name: Lint core packages
         run: npm run lint
 
-      - name: Run core tests
-        run: npm test -w @warpcore/realmcore
-
-      - name: Run server tests
-        run: npm test -w @warpcore/server
-
-      - name: Run warpmcp tests
-        run: npm test -w @warpcore/warpmcp
-
-      - name: Run app tests
-        run: npm test -w @warpcore/app
-
-      - name: Run bridge tests
-        run: npm test -w @warpcore/bridge
+      - name: Run tests with coverage gates
+        run: npm run test:coverage
 
       # Composite packages (shared/realmcore) must emit fresh declarations
       # first — the server and app projects resolve them via their dist outputs.

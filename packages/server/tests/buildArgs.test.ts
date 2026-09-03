@@ -501,4 +501,27 @@ describe('v0.3.0 parameter alignment', () => {
 		expect(defaults).not.toContain('--mmproj-auto');
 		expect(defaults).not.toContain('--no-mmproj-auto');
 	});
+
+	it('omits every v0.3.0 option that a probed backend does not support', () => {
+		const args = buildArgs('/models/m.gguf', null, makeParams({
+			backendSampling: true,
+			reasoningPreserve: true,
+			slotPromptSimilarity: 0.5,
+			loraAdapters: '/loras/a.gguf',
+			loraScaled: '/loras/a.gguf:0.8',
+			loraInitWithoutApply: true,
+			mmprojUrl: 'https://example.com/mmproj.gguf',
+			mmprojAuto: true,
+			mmprojDevice: 'CUDA0',
+			mmprojOffload: true,
+		}), [], 10453, B10453_CAPABILITIES);
+
+		for (const flag of [
+			'--backend-sampling', '--reasoning-preserve', '--slot-prompt-similarity',
+			'--lora', '--lora-scaled', '--lora-init-without-apply',
+			'--mmproj-url', '--mmproj-auto', '--mmproj-device', '--mmproj-offload',
+		]) {
+			expect(args).not.toContain(flag);
+		}
+	});
 });
