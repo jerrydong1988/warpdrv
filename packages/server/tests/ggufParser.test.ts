@@ -3,7 +3,14 @@
 // "XB" token, so "31B Assistant" and "Gemma-4-E4B-It" fell through to
 // "unknown" even though the size is right there in the name.
 import { describe, it, expect } from 'vitest';
-import { extractParamCount, formatParamCount, estimateParamCountFromSize, quantTypeFromFtype } from '../src/services/ggufParser';
+import {
+	estimateParamCountFromSize,
+	extractParamCount,
+	formatParamCount,
+	inferQuantTypeFromFileName,
+	quantTypeFromFtype,
+	resolveParamCount,
+} from '../src/services/ggufParser';
 
 describe('extractParamCount', () => {
 	it('parses classic hyphenated names', () => {
@@ -76,6 +83,49 @@ describe('formatParamCount', () => {
 	});
 });
 
+describe('resolveParamCount', () => {
+	it('prefers the exact tensor-shape count over inaccurate publisher metadata and names', () => {
+		expect(resolveParamCount({
+			computedParameterCount: 196_956_130_432,
+			metadataParameterCount: 7_400_000_000,
+			generalName: 'Step-3.7 7.4B',
+			filePath: 'C:/models/Step-3.7-Flash-APEX-I-Compact.gguf',
+		})).toBe('196.96B');
+	});
+
+	it('uses declared metadata, then names, only when no exact count is available', () => {
+		expect(resolveParamCount({ metadataParameterCount: 27_000_000_000, generalName: 'Wrong 7B' })).toBe('27B');
+		expect(resolveParamCount({ generalName: 'Qwen 122B A10B' })).toBe('122B');
+		expect(resolveParamCount({ generalBasename: 'Model-35B-A3B' })).toBe('35B');
+	});
+});
+
+describe('inferQuantTypeFromFileName', () => {
+	it('recognizes APEX mixed-precision profiles', () => {
+		expect(inferQuantTypeFromFileName('C:/models/Step-3.7-Flash-APEX-I-Compact.gguf')).toBe('APEX-I-Compact');
+		expect(inferQuantTypeFromFileName('C:/models/Nemotron-120B-APEX-I-Balanced.gguf')).toBe('APEX-I-Balanced');
+		expect(inferQuantTypeFromFileName('C:/models/Qwen-APEX-Quality.gguf')).toBe('APEX-Quality');
+		expect(inferQuantTypeFromFileName('C:/models/Future-APEX-I-Ultra.gguf')).toBe('APEX-I-Ultra');
+		expect(inferQuantTypeFromFileName('C:/models/Legacy-APEX.gguf')).toBe('APEX');
+	});
+
+	it('preserves modern and extended llama.cpp quantization names', () => {
+		expect(inferQuantTypeFromFileName('C:/models/Qwen-27B-UD-Q4_K_XL.gguf')).toBe('Q4_K_XL');
+		expect(inferQuantTypeFromFileName('C:/models/MoE-MXFP4_MOE.gguf')).toBe('MXFP4_MOE');
+		expect(inferQuantTypeFromFileName('C:/models/Model-NVFP4.gguf')).toBe('NVFP4');
+		expect(inferQuantTypeFromFileName('C:/models/Model-TQ1_0.gguf')).toBe('TQ1_0');
+		expect(inferQuantTypeFromFileName('C:/models/Model-FP16.gguf')).toBe('F16');
+	});
+
+	it('ignores quant-looking parent directory names', () => {
+		expect(inferQuantTypeFromFileName('C:/models/Q4_K_M/model.gguf')).toBe('unknown');
+	});
+
+	it('strips split suffixes without losing the quantization token', () => {
+		expect(inferQuantTypeFromFileName('C:/models/Model-IQ3_XXS-00002-of-00003.gguf')).toBe('IQ3_XXS');
+	});
+});
+
 describe('estimateParamCountFromSize', () => {
 	it('estimates a model at a known quant with the ≈ prefix', () => {
 		// 10B params at 4.5 bpw = 10e9 * 4.5 / 8 bytes
@@ -97,6 +147,7 @@ describe('estimateParamCountFromSize', () => {
 	it('returns unknown when the quant type is unknown', () => {
 		expect(estimateParamCountFromSize(10e9, 'unknown')).toBe('unknown');
 		expect(estimateParamCountFromSize(10e9, '')).toBe('unknown');
+		expect(estimateParamCountFromSize(10e9, 'APEX-I-Balanced')).toBe('unknown');
 	});
 
 	it('rejects invalid or too-small sizes', () => {
@@ -107,13 +158,21 @@ describe('estimateParamCountFromSize', () => {
 });
 
 describe('quantTypeFromFtype', () => {
-	it('maps known GGUF file_type enum values', () => {
-		expect(quantTypeFromFtype(8)).toBe('Q8_0');
-		expect(quantTypeFromFtype(35)).toBe('MXFP4');
-		expect(quantTypeFromFtype(25)).toBe('BF16');
+	it('maps current llama_ftype enum values', () => {
+		expect(quantTypeFromFtype(7)).toBe('Q8_0');
+		expect(quantTypeFromFtype(8)).toBe('Q5_0');
+		expect(quantTypeFromFtype(15)).toBe('Q4_K_M');
+		expect(quantTypeFromFtype(32)).toBe('BF16');
+		expect(quantTypeFromFtype(38)).toBe('MXFP4_MOE');
+		expect(quantTypeFromFtype(41)).toBe('Q2_0');
+	});
+
+	it('masks llama.cpp guessed-file-type flag', () => {
+		expect(quantTypeFromFtype(1024 + 15)).toBe('Q4_K_M');
 	});
 
 	it('returns unknown for unmapped values', () => {
+		expect(quantTypeFromFtype(35)).toBe('unknown');
 		expect(quantTypeFromFtype(99)).toBe('unknown');
 		expect(quantTypeFromFtype(undefined)).toBe('unknown');
 	});

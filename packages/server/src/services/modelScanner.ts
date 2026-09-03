@@ -1,8 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import type { IModel, IGgufFile } from '@warpcore/shared';
-import { parseGgufMetadata, estimateParamCountFromSize } from './ggufParser';
+import type { IModel, IGgufFile, IGgufMetadata } from '@warpcore/shared';
+import {
+	GGUF_METADATA_PARSER_VERSION,
+	estimateParamCountFromSize,
+	extractParamCount,
+	formatParamCount,
+	inferQuantTypeFromFileName,
+	parseGgufMetadata,
+} from './ggufParser';
 import { store } from '../util/store';
 import type { Dirent } from 'node:fs';
 
@@ -34,6 +41,7 @@ async function buildGgufFile(
 	dirPath: string,
 	fileName: string,
 	cachedFilesByPath: Map<string, IGgufFile>,
+	forceFilePaths: ReadonlySet<string>,
 ): Promise<IGgufFile> {
 	const filePath = path.join(dirPath, fileName);
 	const stat = await fs.stat(filePath);
@@ -47,20 +55,50 @@ async function buildGgufFile(
 	const isMmproj = MMPROJ_REGEX.test(fileName);
 
 	const cachedFile = cachedFilesByPath.get(filePath);
-	let metadata = cachedFile?.metadata ?? null;
+	const cacheIsCurrent = !forceFilePaths.has(filePath)
+		&& cachedFile?.metadata?.parserVersion === GGUF_METADATA_PARSER_VERSION
+		&& cachedFile.sizeBytes === stat.size
+		&& cachedFile.modifiedAtMs === stat.mtimeMs;
+	let metadata = cacheIsCurrent ? cachedFile.metadata : null;
 
-	const shouldParse = !isMmproj && (shardIndex === null || shardIndex === 1);
-	if (shouldParse && !metadata) metadata = await parseGgufMetadata(filePath);
+	// Every shard owns a disjoint tensor directory. Parse all of them so the
+	// model's exact parameter count can be reconstructed instead of estimating
+	// it from the combined byte size.
+	if (!isMmproj && !metadata) {
+		metadata = await parseGgufMetadata(filePath);
+		if (!metadata) metadata = fallbackMetadata(filePath, stat.size);
+	}
 
 	return {
 		fileName,
 		filePath,
 		sizeMb,
+		sizeBytes: stat.size,
+		modifiedAtMs: stat.mtimeMs,
 		metadata,
 		shardIndex,
 		shardTotal,
 		isMmproj,
 		parentModel,
+	};
+}
+
+// Keep filename-derived information visible even when a corrupt/incomplete
+// file cannot be parsed. parserVersion is deliberately omitted so a later scan
+// retries the header rather than making a transient failure sticky in cache.
+function fallbackMetadata(filePath: string, fileSize: number): IGgufMetadata {
+	return {
+		architecture: 'unknown',
+		paramCount: extractParamCount('', filePath),
+		quantType: inferQuantTypeFromFileName(filePath),
+		nLayers: 0,
+		nKvHeads: 0,
+		embeddingDim: 0,
+		feedForwardDim: 0,
+		contextLength: 0,
+		fileSize,
+		vocabSize: 0,
+		tensorCount: 0,
 	};
 }
 
@@ -73,6 +111,7 @@ async function scanDirRecursive(
 	userSegment: string | null,
 	cachedModels: IModel[],
 	visitedPaths: Set<string>,
+	forceFilePaths: ReadonlySet<string>,
 ): Promise<IModel[]> {
 	let entries: Dirent[];
 	try {
@@ -102,7 +141,7 @@ async function scanDirRecursive(
 		// (previously one bad file killed the root scan and overwrote the
 		// model cache with a partial result).
 		try {
-			const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath);
+			const ggufFile = await buildGgufFile(dirPath, entry.name, cachedFilesByPath, forceFilePaths);
 			// if (ggufFile.metadata?.architecture === 'whisper') continue;
 			dirFiles.push(ggufFile);
 		} catch (err) {
@@ -134,22 +173,49 @@ async function scanDirRecursive(
 		const firstShards = modelFiles.filter(f => f.shardIndex === 1);
 
 		let primaryFile: IGgufFile | null = null;
-		if (nonShardFiles.length > 0) primaryFile = nonShardFiles.sort((a, b) => b.sizeMb - a.sizeMb)[0] ?? null;
+		if (nonShardFiles.length > 0) primaryFile = nonShardFiles.sort((a, b) => (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0))[0] ?? null;
 		else if (firstShards.length > 0) primaryFile = firstShards[0] ?? null;
 
+		let totalSizeBytes = 0;
 		let totalSizeMb = 0;
 		if (primaryFile && primaryFile.shardTotal) {
-			totalSizeMb = modelFiles.filter(f => f.shardIndex !== null).reduce((sum, f) => sum + f.sizeMb, 0);
+			totalSizeBytes = modelFiles
+				.filter(f => f.shardIndex !== null)
+				.reduce((sum, f) => sum + (f.sizeBytes ?? f.sizeMb * 1024 * 1024), 0);
 		} else if (primaryFile) {
-			totalSizeMb = primaryFile.sizeMb;
+			totalSizeBytes = primaryFile.sizeBytes ?? primaryFile.sizeMb * 1024 * 1024;
+		}
+		totalSizeMb = Math.round(totalSizeBytes / (1024 * 1024));
+
+		// Exact per-file tensor counts are additive. Only aggregate a shard bundle
+		// when every declared shard is present; a partial download must not be
+		// presented as the full model size.
+		const parameterFiles = primaryFile?.shardTotal
+			? modelFiles.filter(file => file.shardIndex !== null)
+			: primaryFile ? [primaryFile] : [];
+		const expectedFileCount = primaryFile?.shardTotal ?? (primaryFile ? 1 : 0);
+		const uniqueShardIndexes = new Set(parameterFiles.map(file => file.shardIndex));
+		const completeFileSet = parameterFiles.length === expectedFileCount
+			&& (primaryFile?.shardTotal
+				? uniqueShardIndexes.size === expectedFileCount
+					&& parameterFiles.every(file => (file.shardIndex ?? 0) >= 1 && (file.shardIndex ?? 0) <= expectedFileCount)
+				: true);
+		const hasExactCounts = completeFileSet && parameterFiles.every(file => {
+			const count = file.metadata?.parameterCount;
+			return Number.isSafeInteger(count) && (count ?? 0) > 0;
+		});
+
+		if (primaryFile?.metadata && hasExactCounts) {
+			const exactTotal = parameterFiles.reduce((sum, file) => sum + (file.metadata!.parameterCount ?? 0), 0);
+			primaryFile.metadata.paramCount = formatParamCount(exactTotal);
 		}
 
 		// When the name carries no size token, fall back to a size-based
 		// estimate (total bytes / bits-per-weight of the quant type). The
 		// group total is used so multi-shard models estimate from the full
 		// size; the "≈" prefix marks the value as approximate.
-		if (primaryFile?.metadata && primaryFile.metadata.paramCount === 'unknown' && totalSizeMb > 0) {
-			const estimated = estimateParamCountFromSize(totalSizeMb * 1024 * 1024, primaryFile.metadata.quantType);
+		if (primaryFile?.metadata && primaryFile.metadata.paramCount === 'unknown' && totalSizeBytes > 0) {
+			const estimated = estimateParamCountFromSize(totalSizeBytes, primaryFile.metadata.quantType);
 			if (estimated !== 'unknown') primaryFile.metadata.paramCount = estimated;
 		}
 
@@ -180,7 +246,14 @@ async function scanDirRecursive(
 		if (visitedPaths.has(resolvedChildPath)) continue; // Skip symlink cycle / already-visited dir
 		visitedPaths.add(resolvedChildPath);
 		const childUserSegment = userSegment ?? subDir.name;
-		const childModels = await scanDirRecursive(childPath, childMmprojFiles, childUserSegment, cachedModels, visitedPaths);
+		const childModels = await scanDirRecursive(
+			childPath,
+			childMmprojFiles,
+			childUserSegment,
+			cachedModels,
+			visitedPaths,
+			forceFilePaths,
+		);
 		results.push(...childModels);
 	}
 
@@ -188,7 +261,10 @@ async function scanDirRecursive(
 }
 
 // Scan all configured model roots with caching
-export async function scanAllModelRoots(roots: string[]): Promise<IModel[]> {
+export async function scanAllModelRoots(
+	roots: string[],
+	forceFilePaths: ReadonlySet<string> = new Set(),
+): Promise<IModel[]> {
 	let cachedModels: IModel[] = [];
 	try {
 		cachedModels = await store.get<IModel[]>(MODELS_CACHE_KEY) ?? [];
@@ -202,7 +278,7 @@ export async function scanAllModelRoots(roots: string[]): Promise<IModel[]> {
 	for (const root of roots) {
 		const visited = new Set<string>();
 		try { visited.add(await fs.realpath(root)); } catch { visited.add(path.resolve(root)); }
-		const models = await scanDirRecursive(root, [], null, cachedModels, visited);
+		const models = await scanDirRecursive(root, [], null, cachedModels, visited, forceFilePaths);
 		scanned.push(...models);
 	}
 
