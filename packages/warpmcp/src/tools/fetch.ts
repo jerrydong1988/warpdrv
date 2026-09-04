@@ -1,8 +1,9 @@
-import dns from 'node:dns/promises';
-import net from 'node:net';
-import type { LookupFunction } from 'node:net';
-import http from 'node:http';
-import https from 'node:https';
+import { extractContent } from "../util/extractText";
+import dns from "node:dns/promises";
+import net from "node:net";
+import type { LookupFunction } from "node:net";
+import http from "node:http";
+import https from "node:https";
 
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAX_REDIRECTS = 5;
@@ -22,7 +23,7 @@ const TOTAL_DEADLINE_MS = 45000;
 // ============================================================
 
 function ipv4ToBytes(ip: string): number[] | null {
-	const parts = ip.split('.');
+	const parts = ip.split(".");
 	if (parts.length !== 4) return null;
 	const out: number[] = [];
 	for (const part of parts) {
@@ -36,7 +37,7 @@ function ipv4ToBytes(ip: string): number[] | null {
 
 function ipv6ToBytes(ip: string): number[] | null {
 	let s = ip.toLowerCase();
-	const zone = s.indexOf('%'); // fe80::1%eth0 — zone id is not part of the address
+	const zone = s.indexOf("%"); // fe80::1%eth0 — zone id is not part of the address
 	if (zone !== -1) s = s.slice(0, zone);
 
 	// Normalize an embedded IPv4 tail (::ffff:1.2.3.4) into two hex words.
@@ -49,15 +50,15 @@ function ipv6ToBytes(ip: string): number[] | null {
 		s = s.slice(0, s.length - v4tail[1]!.length) + `${hi}:${lo}`;
 	}
 
-	const dc = s.indexOf('::');
-	if (dc !== -1 && s.indexOf('::', dc + 1) !== -1) return null; // only one "::" allowed
+	const dc = s.indexOf("::");
+	if (dc !== -1 && s.indexOf("::", dc + 1) !== -1) return null; // only one "::" allowed
 	const headStr = dc === -1 ? s : s.slice(0, dc);
-	const tailStr = dc === -1 ? '' : s.slice(dc + 2);
+	const tailStr = dc === -1 ? "" : s.slice(dc + 2);
 
 	const toWords = (chunk: string): number[] | null => {
-		if (chunk === '') return [];
+		if (chunk === "") return [];
 		const words: number[] = [];
-		for (const g of chunk.split(':')) {
+		for (const g of chunk.split(":")) {
 			if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
 			words.push(parseInt(g, 16));
 		}
@@ -137,13 +138,13 @@ const BLOCKED_V4: Array<{ net: number[]; bits: number }> = [
 const V6_ZEROS = new Array<number>(16).fill(0);
 const BLOCKED_V6: Array<{ net: number[]; bits: number }> = [
 	{ net: V6_ZEROS, bits: 128 }, // :: unspecified
-	{ net: ipv6ToBytes('::1')!, bits: 128 }, // loopback
-	{ net: ipv6ToBytes('100::')!, bits: 64 }, // discard-only
-	{ net: ipv6ToBytes('2001::')!, bits: 32 }, // Teredo (tunnels to arbitrary v4)
-	{ net: ipv6ToBytes('2001:db8::')!, bits: 32 }, // documentation
-	{ net: ipv6ToBytes('fc00::')!, bits: 7 }, // unique-local
-	{ net: ipv6ToBytes('fe80::')!, bits: 10 }, // link-local
-	{ net: ipv6ToBytes('ff00::')!, bits: 8 }, // multicast
+	{ net: ipv6ToBytes("::1")!, bits: 128 }, // loopback
+	{ net: ipv6ToBytes("100::")!, bits: 64 }, // discard-only
+	{ net: ipv6ToBytes("2001::")!, bits: 32 }, // Teredo (tunnels to arbitrary v4)
+	{ net: ipv6ToBytes("2001:db8::")!, bits: 32 }, // documentation
+	{ net: ipv6ToBytes("fc00::")!, bits: 7 }, // unique-local
+	{ net: ipv6ToBytes("fe80::")!, bits: 10 }, // link-local
+	{ net: ipv6ToBytes("ff00::")!, bits: 8 }, // multicast
 ];
 
 function isBlockedV4(bytes: number[]): boolean {
@@ -162,10 +163,10 @@ function isPrivateAddress(address: string): boolean {
 	if (matchesCidr(bytes, V6_ZEROS, 80) && bytes[10] === 0xff && bytes[11] === 0xff) {
 		return isBlockedV4(bytes.slice(12));
 	}
-	if (matchesCidr(bytes, ipv6ToBytes('64:ff9b::')!, 96)) {
+	if (matchesCidr(bytes, ipv6ToBytes("64:ff9b::")!, 96)) {
 		return isBlockedV4(bytes.slice(12)); // NAT64 well-known prefix
 	}
-	if (matchesCidr(bytes, ipv6ToBytes('64:ff9b:1::')!, 48)) {
+	if (matchesCidr(bytes, ipv6ToBytes("64:ff9b:1::")!, 48)) {
 		return isBlockedV4(bytes.slice(6, 10)); // NAT64 local-use prefix
 	}
 
@@ -178,10 +179,12 @@ function isPrivateAddress(address: string): boolean {
 
 function hasUncPath(u: URL): boolean {
 	// A pathname starting with "//" is parsed as an authority by some clients.
-	return u.pathname.startsWith('//');
+	return u.pathname.startsWith("//");
 }
 
-async function resolveSafeAddress(host: string): Promise<{ address: string; family: 4 | 6 } | null> {
+async function resolveSafeAddress(
+	host: string,
+): Promise<{ address: string; family: 4 | 6 } | null> {
 	const literal = parseIpBytes(host);
 	if (literal) {
 		if (isPrivateAddress(host)) return null;
@@ -211,33 +214,50 @@ export async function isSafeUrl(url: string): Promise<boolean> {
 	} catch {
 		return false;
 	}
-	if (!['http:', 'https:'].includes(u.protocol)) return false;
+	if (!["http:", "https:"].includes(u.protocol)) return false;
 	const host = u.hostname.toLowerCase();
-	if (host === 'localhost') return false;
+	if (host === "localhost") return false;
 	if (hasUncPath(u)) return false;
 	return (await resolveSafeAddress(host)) !== null;
 }
 
 export const fetchDefinition = {
-	name: 'fetch',
-	description: 'Perform an HTTP request and return the response.',
+	name: "fetch",
+	description: "Perform an HTTP request and return the response.",
 	inputSchema: {
-		type: 'object',
+		type: "object",
 		properties: {
-			url: { type: 'string' },
-			method: { type: 'string', default: 'GET' },
-			headers: { type: 'object', additionalProperties: { type: 'string' } },
-			body: { type: 'string' },
+			url: { type: "string" },
+			method: { type: "string", default: "GET" },
+			headers: { type: "object", additionalProperties: { type: "string" } },
+			body: { type: "string" },
+			extractText: {
+				type: "boolean",
+				default: true,
+				description:
+					"Extract readable text from HTML responses to return a smaller result and preserve context tokens.",
+			},
 		},
-		required: ['url'],
+		required: ["url"],
 	},
 	resultLimit: 200000,
 };
-
 // Headers that must never follow a redirect to a different origin.
-const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'cookie2', 'proxy-authorization', 'x-api-key', 'x-auth-token', 'private-token']);
+const SENSITIVE_HEADERS = new Set([
+	"authorization",
+	"cookie",
+	"cookie2",
+	"proxy-authorization",
+	"x-api-key",
+	"x-auth-token",
+	"private-token",
+]);
 
-function scrubHeadersForTarget(headers: Record<string, string> | undefined, from: URL, to: URL): Record<string, string> | undefined {
+function scrubHeadersForTarget(
+	headers: Record<string, string> | undefined,
+	from: URL,
+	to: URL,
+): Record<string, string> | undefined {
 	if (!headers) return undefined;
 	if (from.hostname.toLowerCase() === to.hostname.toLowerCase()) return headers;
 	const out: Record<string, string> = {};
@@ -268,7 +288,7 @@ function requestPinned(
 	timeoutMs: number,
 ): Promise<IHopResult> {
 	return new Promise((resolve, reject) => {
-		const isHttps = u.protocol === 'https:';
+		const isHttps = u.protocol === "https:";
 		const transport = isHttps ? https : http;
 		const port = u.port ? Number(u.port) : isHttps ? 443 : 80;
 
@@ -276,10 +296,10 @@ function requestPinned(
 		// hostname that was actually validated.
 		const reqHeaders: Record<string, string> = {};
 		for (const [name, value] of Object.entries(headers ?? {})) {
-			if (name.toLowerCase() === 'host') continue;
+			if (name.toLowerCase() === "host") continue;
 			reqHeaders[name] = value;
 		}
-		reqHeaders['host'] = u.host;
+		reqHeaders["host"] = u.host;
 
 		// Pin DNS: this address is the exact one we validated, so no second
 		// resolution can swap in a private address between check and connect.
@@ -302,28 +322,36 @@ function requestPinned(
 			(res) => {
 				const chunks: Buffer[] = [];
 				let totalBytes = 0;
-				res.on('data', (chunk: Buffer) => {
+				res.on("data", (chunk: Buffer) => {
 					totalBytes += chunk.length;
 					if (totalBytes > MAX_RESPONSE_BYTES) {
-						req.destroy(new Error(`Response exceeded ${MAX_RESPONSE_BYTES} bytes limit`));
+						req.destroy(
+							new Error(`Response exceeded ${MAX_RESPONSE_BYTES} bytes limit`),
+						);
 						return;
 					}
 					chunks.push(chunk);
 				});
-				res.on('error', reject);
-				res.on('aborted', () => reject(new Error('Response stream aborted')));
-				res.on('end', () => {
+				res.on("error", reject);
+				res.on("aborted", () => reject(new Error("Response stream aborted")));
+				res.on("end", () => {
 					const headersOut: Record<string, string> = {};
 					for (const [name, value] of Object.entries(res.headers)) {
-						headersOut[name] = Array.isArray(value) ? value.join(', ') : String(value ?? '');
+						headersOut[name] = Array.isArray(value)
+							? value.join(", ")
+							: String(value ?? "");
 					}
-					resolve({ status: res.statusCode ?? 0, headers: headersOut, body: Buffer.concat(chunks).toString('utf8') });
+					resolve({
+						status: res.statusCode ?? 0,
+						headers: headersOut,
+						body: Buffer.concat(chunks).toString("utf8"),
+					});
 				});
 			},
 		);
 
-		req.on('timeout', () => req.destroy(new Error(`Request timed out after ${timeoutMs}ms`)));
-		req.on('error', reject);
+		req.on("timeout", () => req.destroy(new Error(`Request timed out after ${timeoutMs}ms`)));
+		req.on("error", reject);
 		if (body) req.write(body);
 		req.end();
 	});
@@ -338,51 +366,90 @@ async function doFetch(
 	deadlineAt: number,
 ): Promise<IHopResult> {
 	if (redirectCount > MAX_REDIRECTS) {
-		throw new Error('Too many redirects');
+		throw new Error("Too many redirects");
 	}
 
 	let u: URL;
 	try {
 		u = new URL(url);
 	} catch {
-		throw new Error('Invalid URL');
+		throw new Error("Invalid URL");
 	}
-	if (!['http:', 'https:'].includes(u.protocol)) {
-		throw new Error('Only http/https URLs are permitted');
+	if (!["http:", "https:"].includes(u.protocol)) {
+		throw new Error("Only http/https URLs are permitted");
 	}
 	if (hasUncPath(u)) {
-		throw new Error('URL is not allowed');
+		throw new Error("URL is not allowed");
 	}
 
 	const resolved = await resolveSafeAddress(u.hostname.toLowerCase());
 	if (!resolved) {
-		throw new Error('URL is not allowed: host resolves to a private or reserved address');
+		throw new Error("URL is not allowed: host resolves to a private or reserved address");
 	}
 
 	const remaining = deadlineAt - Date.now();
-	if (remaining <= 0) throw new Error('Request exceeded its total time budget');
+	if (remaining <= 0) throw new Error("Request exceeded its total time budget");
 	const hopTimeout = Math.min(REQUEST_TIMEOUT_MS, remaining);
 
-	const res = await requestPinned(u, resolved.address, resolved.family, method, headers, body, hopTimeout);
+	const res = await requestPinned(
+		u,
+		resolved.address,
+		resolved.family,
+		method,
+		headers,
+		body,
+		hopTimeout,
+	);
 
 	// Redirects are followed manually so every hop is re-validated before a
 	// connection is made; cross-origin hops drop credential headers.
-	if (res.status >= 300 && res.status < 400 && res.headers['location']) {
+	if (res.status >= 300 && res.status < 400 && res.headers["location"]) {
 		let nextUrl: URL;
 		try {
-			nextUrl = new URL(res.headers['location'], u);
+			nextUrl = new URL(res.headers["location"], u);
 		} catch {
-			throw new Error('Invalid redirect target');
+			throw new Error("Invalid redirect target");
 		}
-		return doFetch(nextUrl.toString(), method, scrubHeadersForTarget(headers, u, nextUrl), body, redirectCount + 1, deadlineAt);
+		return doFetch(
+			nextUrl.toString(),
+			method,
+			scrubHeadersForTarget(headers, u, nextUrl),
+			body,
+			redirectCount + 1,
+			deadlineAt,
+		);
 	}
 
 	return res;
 }
 
-export async function fetchHandler(args: { url: string; method?: string; headers?: Record<string, string>; body?: string }): Promise<{ status: number; headers: Record<string, string>; body: string }> {
-	if (!await isSafeUrl(args.url)) {
-		throw new Error('URL is not allowed: only public http/https URLs are permitted (no localhost, private IPs, or file://)');
+export async function fetchHandler(args: {
+	url: string;
+	method?: string;
+	headers?: Record<string, string>;
+	body?: string;
+	extractText?: boolean;
+}): Promise<{ status: number; headers: Record<string, string>; body: string }> {
+	if (!(await isSafeUrl(args.url))) {
+		throw new Error(
+			"URL is not allowed: only public http/https URLs are permitted (no localhost, private IPs, or file://)",
+		);
 	}
-	return doFetch(args.url, args.method ?? 'GET', args.headers, args.body, 0, Date.now() + TOTAL_DEADLINE_MS);
+	const response = await doFetch(
+		args.url,
+		args.method ?? "GET",
+		args.headers,
+		args.body,
+		0,
+		Date.now() + TOTAL_DEADLINE_MS,
+	);
+	const contentType = response.headers["content-type"] ?? "";
+	if (args.extractText !== false && contentType.includes("html")) {
+		try {
+			return { ...response, body: extractContent(response.body, args.url).markdown };
+		} catch {
+			// Preserve the raw response if readable-text extraction fails.
+		}
+	}
+	return response;
 }

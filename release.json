@@ -1,5 +1,5 @@
 {
-	"version": "0.6.17",
+	"version": "0.6.19",
 	"updateCheckUrl": "https://raw.githubusercontent.com/jerrydong1988/warpdrv/master/release.json",
 	"downloadUrl": "https://github.com/jerrydong1988/warpdrv/releases/latest",
 	"notes": ""

@@ -1,9 +1,10 @@
 import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Bot, Check, Loader, Minus, Square } from "lucide-react";
+import { ArrowUpRight, Bot, Check, Loader, Minus, Square } from "lucide-react";
 import React, { useCallback } from "react";
 import { useStore } from "@/store";
 import { useShallow } from "zustand/shallow";
+import { useThreadLiveStatus } from "@/hooks/useThreadLiveStatus";
 import { NotificationMessageRow } from "./NotificationMessageRow";
 
 interface SubthreadRowProps {
@@ -26,7 +27,9 @@ export const SubthreadRow = React.memo(
 		const currentStatus = useStore(
 			(s) => s.threadStates[childThreadId]?.currentStatus as string | undefined,
 		);
+		const liveStatus = useThreadLiveStatus(childThreadId);
 		const isRunning = useStore((s) => s.isRunningByThread[childThreadId] ?? false);
+		const setCurrentThreadId = useStore((s) => s.setCurrentThreadId);
 		const notificationIds = useStore(
 			useShallow((s): string[] => {
 				const threadNotifs = s.notificationsByThread[parentThreadId] ?? {};
@@ -106,7 +109,6 @@ export const SubthreadRow = React.memo(
 								</>
 							) : (
 								<Text fontSize="xs" fontWeight="600" color="var(--wc-text-faint)">
-
 									{i18nextSingleton.t("common:ui.loadingEllipsis")}
 								</Text>
 							)}
@@ -119,6 +121,27 @@ export const SubthreadRow = React.memo(
 							>
 								{threadTitle}
 							</Text>
+							<Box
+								as="button"
+								ml="auto"
+								flexShrink="0"
+								display="flex"
+								alignItems="center"
+								justifyContent="center"
+								width="16px"
+								height="16px"
+								borderRadius="sm"
+								color="var(--wc-text-muted)"
+								cursor="pointer"
+								_hover={{ color: "var(--wc-accent-blue)" }}
+								onClick={(e: React.MouseEvent) => {
+									e.stopPropagation();
+									setCurrentThreadId(childThreadId);
+								}}
+								title={i18nextSingleton.t("common:ui.goToSubthread")}
+							>
+								<ArrowUpRight size={12} />
+							</Box>
 						</HStack>
 
 						{isRunning && (
@@ -135,7 +158,7 @@ export const SubthreadRow = React.memo(
 									textOverflow="ellipsis"
 									whiteSpace="nowrap"
 								>
-									{currentStatus ?? "Running…"}
+									{currentStatus ?? liveStatus ?? "Running…"}
 								</Text>
 								<Box
 									as="button"

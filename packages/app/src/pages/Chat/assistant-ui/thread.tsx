@@ -67,6 +67,7 @@ import { ThreadServerSelector } from "@/pages/Chat/assistant-ui/ServerSelector";
 import { VoiceInput } from "@/pages/Chat/assistant-ui/VoiceInput";
 import { ThreadWhisperServerSelector } from "@/pages/Chat/assistant-ui/WhisperServerSelector";
 import { BranchTokensContext, ChatConfigContext } from "@/pages/Chat/ChatPage";
+import { useEffectiveContextSize } from "@/hooks/useEffectiveContextSize";
 import { useStore } from "@/store";
 import { ComposerUiSpace } from "../ui-space/ComposerUiSpace";
 import { MessageFooterUiSpace } from "../ui-space/MessageFooterUiSpace";
@@ -354,7 +355,8 @@ const ThreadSuggestionItem: FC = () => {
 };
 
 const ContextUsageBar: FC = React.memo(() => {
-	const { contextSize } = useContext(ChatConfigContext);
+	const { currentServerId } = useContext(ServerStatusContext);
+	const effectiveContextSize = useEffectiveContextSize(currentServerId);
 	const branchTokensCount = useContext(BranchTokensContext);
 	const composerText = useAuiState((s) => s.composer.text);
 
@@ -366,12 +368,13 @@ const ContextUsageBar: FC = React.memo(() => {
 
 	const { ctxLabel, color, pct, textColor } = useMemo(() => {
 		const ctxLabel =
-			contextSize > 0
-				? contextSize > 1000
-					? `${(contextSize / 1000).toFixed(0)}k`
-					: String(contextSize)
+			effectiveContextSize > 0
+				? effectiveContextSize > 1000
+					? `${(effectiveContextSize / 1000).toFixed(0)}k`
+					: String(effectiveContextSize)
 				: "?";
-		const pct = contextSize > 0 ? Math.min((total / contextSize) * 100, 100) : 0;
+		const pct =
+			effectiveContextSize > 0 ? Math.min((total / effectiveContextSize) * 100, 100) : 0;
 		const color =
 			pct > 90
 				? "var(--wc-accent-red)"
@@ -387,12 +390,12 @@ const ContextUsageBar: FC = React.memo(() => {
 					: undefined;
 
 		return { ctxLabel, color, pct, textColor };
-	}, [contextSize, total]);
+	}, [effectiveContextSize, total]);
 
 	return (
 		<div
 			className="flex items-center gap-2 px-1 pt-1"
-			title={`Context: ${total.toLocaleString()} / ${contextSize > 0 ? contextSize.toLocaleString() : "?"} tokens`}
+			title={`Context: ${total.toLocaleString()} / ${effectiveContextSize > 0 ? effectiveContextSize.toLocaleString() : "?"} tokens`}
 		>
 			<div className="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden">
 				<div

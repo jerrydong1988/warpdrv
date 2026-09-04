@@ -72,7 +72,7 @@ function getVersion(): string {
 			// Keep walking through packaged and development locations.
 		}
 	}
-	return "0.6.17";
+	return "0.6.19";
 }
 
 export interface IToolEntry<TDef = { name?: string; resultLimit?: number }> {
