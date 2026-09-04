@@ -225,7 +225,9 @@ export interface ILaunchParams {
 	swaFull: boolean;
 	kvQuantK: EKvQuantType;
 	kvQuantV: EKvQuantType;
-	chatTemplate: string; // empty = auto-detect from model
+	chatTemplate: string; // inline template (effective when chatTemplateMode === "inline"); empty = auto-detect from model
+	chatTemplateFile: string; // path to .jinja chat template file (effective when chatTemplateMode === "file")
+	chatTemplateMode: "inline" | "file"; // which chat template field is effective
 	port: number; // 0 = auto-assign
 	device: string; // empty = default, e.g. "CUDA0", "Vulkan1"
 	extraArgs: string; // free-form additional flags
@@ -273,6 +275,8 @@ export const DEFAULT_LAUNCH_PARAMS: ILaunchParams = {
 	kvQuantK: EKvQuantType.F16,
 	kvQuantV: EKvQuantType.F16,
 	chatTemplate: "",
+	chatTemplateFile: "",
+	chatTemplateMode: "inline",
 	port: 0,
 	device: "",
 	extraArgs: "",

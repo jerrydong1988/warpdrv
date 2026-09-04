@@ -11,6 +11,7 @@ interface AnnotationsSlice {
 	annotatorVisible: boolean;
 	addAnnotation: (selectedText: string, comment: string) => void;
 	removeAnnotation: (id: string) => void;
+	updateAnnotation: (id: string, comment: string) => void;
 	clearAnnotations: () => void;
 	setAnnotatorVisible: (v: boolean) => void;
 }
@@ -33,6 +34,12 @@ export const annotationsSlice = (
 	removeAnnotation: (id) => {
 		setState((draft) => {
 			draft.annotations = draft.annotations.filter((a) => a.id !== id);
+		});
+	},
+	updateAnnotation: (id, comment) => {
+		setState((draft) => {
+			const ann = draft.annotations.find((a) => a.id === id);
+			if (ann) ann.comment = comment;
 		});
 	},
 	clearAnnotations: () => {

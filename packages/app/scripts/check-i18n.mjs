@@ -33,8 +33,19 @@ function placeholders(value) {
   return [...value.matchAll(/{{\s*([^},\s]+)[^}]*}}/g)].map((match) => match[1]).sort();
 }
 
-const resources = { en: {}, 'zh-CN': {} };
-for (const locale of Object.keys(resources)) {
+const sourceLocale = 'en';
+const localeNames = fs
+  .readdirSync(localesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort();
+const resources = Object.fromEntries(localeNames.map((locale) => [locale, {}]));
+
+if (!localeNames.includes(sourceLocale)) {
+  errors.push(`source locale directory "${sourceLocale}" is missing`);
+}
+
+for (const locale of localeNames) {
   const localeDirectory = path.join(localesRoot, locale);
   for (const fileName of fs.readdirSync(localeDirectory).filter((name) => name.endsWith('.json')).sort()) {
     const namespace = fileName.replace(/\.json$/, '');
@@ -52,32 +63,38 @@ for (const locale of Object.keys(resources)) {
   }
 }
 
-const enNamespaces = Object.keys(resources.en).sort();
-const zhNamespaces = Object.keys(resources['zh-CN']).sort();
-if (enNamespaces.join('|') !== zhNamespaces.join('|')) {
-  errors.push(`namespace mismatch: en=[${enNamespaces.join(', ')}], zh-CN=[${zhNamespaces.join(', ')}]`);
-}
+const sourceResources = resources[sourceLocale] ?? {};
+const sourceNamespaces = Object.keys(sourceResources).sort();
 
-for (const namespace of enNamespaces) {
-  const en = resources.en[namespace] ?? {};
-  const zh = resources['zh-CN'][namespace] ?? {};
-  const enKeys = Object.keys(en).sort();
-  const zhKeys = Object.keys(zh).sort();
-  for (const key of enKeys) {
-    if (!(key in zh)) {
-      errors.push(`zh-CN/${namespace}.json: missing key "${key}"`);
-      continue;
-    }
-    const enPlaceholders = placeholders(en[key]);
-    const zhPlaceholders = placeholders(zh[key]);
-    if (enPlaceholders.join('|') !== zhPlaceholders.join('|')) {
-      errors.push(
-        `${namespace}:${key}: placeholder mismatch en=[${enPlaceholders.join(', ')}] zh-CN=[${zhPlaceholders.join(', ')}]`,
-      );
-    }
+for (const locale of localeNames.filter((name) => name !== sourceLocale)) {
+  const targetNamespaces = Object.keys(resources[locale] ?? {}).sort();
+  if (sourceNamespaces.join('|') !== targetNamespaces.join('|')) {
+    errors.push(
+      `namespace mismatch: ${sourceLocale}=[${sourceNamespaces.join(', ')}], ${locale}=[${targetNamespaces.join(', ')}]`,
+    );
   }
-  for (const key of zhKeys) {
-    if (!(key in en)) errors.push(`zh-CN/${namespace}.json: extra key "${key}"`);
+
+  for (const namespace of sourceNamespaces) {
+    const source = sourceResources[namespace] ?? {};
+    const target = resources[locale]?.[namespace] ?? {};
+    const sourceKeys = Object.keys(source).sort();
+    const targetKeys = Object.keys(target).sort();
+    for (const key of sourceKeys) {
+      if (!(key in target)) {
+        errors.push(`${locale}/${namespace}.json: missing key "${key}"`);
+        continue;
+      }
+      const sourcePlaceholders = placeholders(source[key]);
+      const targetPlaceholders = placeholders(target[key]);
+      if (sourcePlaceholders.join('|') !== targetPlaceholders.join('|')) {
+        errors.push(
+          `${namespace}:${key}: placeholder mismatch ${sourceLocale}=[${sourcePlaceholders.join(', ')}] ${locale}=[${targetPlaceholders.join(', ')}]`,
+        );
+      }
+    }
+    for (const key of targetKeys) {
+      if (!(key in source)) errors.push(`${locale}/${namespace}.json: extra key "${key}"`);
+    }
   }
 }
 
@@ -115,9 +132,9 @@ function validateReference(filePath, sourceFile, call, rawKey) {
   }
   if (!namespace) return;
   const line = sourceFile.getLineAndCharacterOfPosition(call.getStart(sourceFile)).line + 1;
-  if (!resources.en[namespace]) {
+  if (!sourceResources[namespace]) {
     errors.push(`${path.relative(appRoot, filePath)}:${line}: unknown namespace "${namespace}"`);
-  } else if (!(key in resources.en[namespace])) {
+  } else if (!(key in sourceResources[namespace])) {
     errors.push(`${path.relative(appRoot, filePath)}:${line}: missing translation key "${namespace}:${key}"`);
   }
 }
@@ -241,20 +258,24 @@ for (const filePath of walk(sourceRoot).filter((file) => file.endsWith('.tsx')))
   visit(sourceFile);
 }
 
-const identicalValues = [];
-for (const namespace of enNamespaces) {
-  for (const [key, value] of Object.entries(resources.en[namespace] ?? {})) {
-    if (
-      typeof value === 'string' &&
-      value === resources['zh-CN'][namespace]?.[key] &&
-      /[A-Za-z]{3}/.test(value)
-    ) {
-      identicalValues.push(`${namespace}:${key}`);
+for (const locale of localeNames.filter((name) => name !== sourceLocale)) {
+  const identicalValues = [];
+  for (const namespace of sourceNamespaces) {
+    for (const [key, value] of Object.entries(sourceResources[namespace] ?? {})) {
+      if (
+        typeof value === 'string' &&
+        value === resources[locale]?.[namespace]?.[key] &&
+        /[A-Za-z]{3}/.test(value)
+      ) {
+        identicalValues.push(`${namespace}:${key}`);
+      }
     }
   }
-}
-if (identicalValues.length > 0) {
-  warnings.push(`${identicalValues.length} values are identical in en and zh-CN (usually product names or technical terms)`);
+  if (identicalValues.length > 0) {
+    warnings.push(
+      `${identicalValues.length} values are identical in ${sourceLocale} and ${locale} (usually product names or technical terms)`,
+    );
+  }
 }
 
 if (warnings.length > 0) {
@@ -266,5 +287,10 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-const keyCount = enNamespaces.reduce((count, namespace) => count + Object.keys(resources.en[namespace]).length, 0);
-console.log(`i18n validation passed: ${enNamespaces.length} namespaces, ${keyCount} keys per locale.`);
+const keyCount = sourceNamespaces.reduce(
+  (count, namespace) => count + Object.keys(sourceResources[namespace]).length,
+  0,
+);
+console.log(
+  `i18n validation passed: ${localeNames.length} locales, ${sourceNamespaces.length} namespaces, ${keyCount} keys per locale.`,
+);

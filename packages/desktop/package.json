@@ -1,7 +1,7 @@
 {
   "name": "@warpcore/desktop",
   "private": true,
-  "version": "0.6.17",
+  "version": "0.6.19",
   "scripts": {
     "dev": "cargo tauri dev",
     "prepare:binaries": "node scripts/prepare.mjs",

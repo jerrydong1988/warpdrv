@@ -2,7 +2,7 @@ import { Box, Text, HStack, VStack, Flex, Input, Button, Spinner, Switch, Combob
 import { Settings, FolderOpen, Plus, Trash2, Save, ChevronDown, FolderInput, BookOpen, Mic } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { setLocale as setI18nLocale } from '../../i18n';
+import { DEFAULT_LOCALE, LOCALE_OPTIONS, resolveSupportedLocale, setLocale as setI18nLocale } from '../../i18n';
 import { useDependantState } from '../../hooks/useDependantState';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/Card';
@@ -35,7 +35,7 @@ export function SettingsPage() {
 	const { t, i18n } = useTranslation('settings');
 	const { toast } = useToast();
 	const settings = useStore(s => s.settings);
-	const locale = i18n.resolvedLanguage?.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+	const locale = resolveSupportedLocale(i18n.resolvedLanguage) ?? DEFAULT_LOCALE;
 
 	const [modelRoots, setModelRoots] = useDependantState(settings.modelRoots);
 	const [portStart, setPortStart] = useDependantState(settings.portRangeStart);
@@ -153,10 +153,7 @@ export function SettingsPage() {
 		itemToValue: (item) => item.value,
 	});
 	const languageCollection = createListCollection({
-		items: [
-			{ label: 'English', value: 'en' },
-			{ label: '简体中文', value: 'zh-CN' },
-		],
+		items: [...LOCALE_OPTIONS],
 		itemToString: (item) => item.label,
 		itemToValue: (item) => item.value,
 	});
@@ -427,10 +424,10 @@ dictationPTTKey,
 							</Box>
 							<Combobox.Root
 								collection={languageCollection}
-								value={[locale ?? 'en']}
+								value={[locale]}
 								onValueChange={(details) => {
-									const val = (details.value?.[0] ?? 'en') as 'en' | 'zh-CN';
-									void setI18nLocale(val);
+									const nextLocale = resolveSupportedLocale(details.value?.[0]) ?? DEFAULT_LOCALE;
+									void setI18nLocale(nextLocale);
 								}}
 							>
 								<Combobox.Control>

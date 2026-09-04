@@ -1,6 +1,6 @@
 import i18nextSingleton from "i18next";
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { Check, Minus, Monitor, Send, Square, X } from "lucide-react";
+import { Check, CornerUpLeft, Minus, Monitor, Send, Square, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import type { TThreadId } from "@warpcore/bridge";
@@ -14,6 +14,10 @@ export const MonitorBox = memo(() => {
 	const setMonitorBoxOpen = useStore((s) => s.setMonitorBoxOpen);
 	const currentThreadId = useStore((s) => s.currentThreadId);
 	const threads = useStore((s) => s.threads);
+	const parentThreadId = useStore((s) =>
+		s.currentThreadId ? (s.threads[s.currentThreadId]?.parentId ?? null) : null,
+	);
+	const setCurrentThreadId = useStore((s) => s.setCurrentThreadId);
 
 	const childThreadIds = useMemo(() => {
 		if (!currentThreadId) return [] as TThreadId[];
@@ -183,10 +187,30 @@ export const MonitorBox = memo(() => {
 					fontWeight="600"
 					color="var(--wc-text-primary)"
 				>
-
 					{i18nextSingleton.t("common:ui.agentMonitor")}
 				</Text>
 				<Box flex="1" />
+				{parentThreadId && (
+					<Box
+						as="button"
+						display="flex"
+						alignItems="center"
+						gap="1"
+						py="0.5"
+						px="1.5"
+						borderRadius="sm"
+						fontSize="xs"
+						fontWeight="500"
+						color="var(--wc-text-muted)"
+						cursor="pointer"
+						_hover={{ bg: "var(--wc-bg-hover)", color: "var(--wc-accent-blue)" }}
+						onClick={() => setCurrentThreadId(parentThreadId)}
+						title={i18nextSingleton.t("common:ui.goToMainThread")}
+					>
+						<CornerUpLeft size={11} />
+						{i18nextSingleton.t("common:ui.goToMainThread")}
+					</Box>
+				)}
 				<Box
 					as="button"
 					display="flex"
@@ -207,7 +231,6 @@ export const MonitorBox = memo(() => {
 			<Box maxH="500px" overflowY="auto" overflowX="hidden" p="3">
 				{childThreadIds.length === 0 ? (
 					<Text fontSize="sm" color="var(--wc-text-faint)" textAlign="center" py="4">
-
 						{i18nextSingleton.t("common:ui.noChildThreads")}
 					</Text>
 				) : (
@@ -263,7 +286,7 @@ export const MonitorBox = memo(() => {
 					)}
 				</Box>
 				<Text fontSize="xs" color="var(--wc-text-muted)">
-					{selectedIds.length}  {i18nextSingleton.t("common:ui.selectedLowercase")}
+					{selectedIds.length} {i18nextSingleton.t("common:ui.selectedLowercase")}
 				</Text>
 				<Box flex="1" />
 				<Box
@@ -289,7 +312,6 @@ export const MonitorBox = memo(() => {
 					aria-disabled={busy || selectedIds.length === 0}
 					title={i18nextSingleton.t("common:ui.ignoreSelectedMessages")}
 				>
-
 					{i18nextSingleton.t("common:ui.ignoreSelected")}
 				</Box>
 				<Box

@@ -80,7 +80,7 @@ export const NotificationMessageRow = React.memo(
 					overflow="hidden"
 					mb="1"
 				>
-					<Box px="2" py="1.5" cursor="pointer" onClick={onToggle}>
+					<Box px="2" py="1.5" cursor="pointer" onClick={() => setExpanded(!expanded)}>
 						<HStack gap="1.5" align="flex-start">
 							<Box
 								as="button"
