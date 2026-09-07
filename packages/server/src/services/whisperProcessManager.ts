@@ -74,7 +74,10 @@ export function buildWhisperArgs(
 	if (params.processors > 0) args.push('-p', String(params.processors));
 	if (params.noGpu) args.push('--no-gpu');
 	if (params.flashAttn) args.push('--flash-attn');
-	if (params.language) args.push('-l', params.language);
+	// whisper-server defaults to English when -l is omitted, so an empty value
+	// from older saved configurations must be translated to explicit auto-detect.
+	const language = params.language?.trim() || 'auto';
+	args.push('-l', language);
 	if (params.translate) args.push('--translate');
 	if (params.beamSize > 0) args.push('-bs', String(params.beamSize));
 	if (params.temperature > 0) args.push('-tp', String(params.temperature));

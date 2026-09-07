@@ -48,7 +48,7 @@ export interface IWhisperLaunchParams {
 	processors: number;       // -p, 0 = auto
 	noGpu: boolean;           // --no-gpu (force CPU)
 	flashAttn: boolean;       // --flash-attn
-	language: string;         // -l, empty = auto-detect
+	language: string;         // -l, empty is accepted as legacy auto-detect
 	translate: boolean;       // --translate (output English)
 	beamSize: number;         // -bs, 0 = default
 	temperature: number;      // -tp, 0 = default
@@ -66,7 +66,7 @@ export const DEFAULT_WHISPER_LAUNCH_PARAMS: IWhisperLaunchParams = {
 	processors: 0,
 	noGpu: false,
 	flashAttn: false,
-	language: '',
+	language: 'auto',
 	translate: false,
 	beamSize: 0,
 	temperature: 0,
