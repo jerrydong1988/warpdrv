@@ -56,6 +56,21 @@ describe('parseArgTokens', () => {
 });
 
 describe('buildWhisperArgs', () => {
+	it('passes explicit auto-detection for the default language', () => {
+		const args = buildWhisperArgs('/models/model.bin', makeParams(), []);
+		expect(valuesFor(args, '-l')).toEqual(['auto']);
+	});
+
+	it.each(['', '   '])('normalizes legacy blank language %j to auto', language => {
+		const args = buildWhisperArgs('/models/model.bin', makeParams({ language }), []);
+		expect(valuesFor(args, '-l')).toEqual(['auto']);
+	});
+
+	it('preserves an explicitly selected language', () => {
+		const args = buildWhisperArgs('/models/model.bin', makeParams({ language: 'zh' }), []);
+		expect(valuesFor(args, '-l')).toEqual(['zh']);
+	});
+
 	it('binds loopback by default', () => {
 		const args = buildWhisperArgs('/models/model.bin', makeParams({ port: 9100 }), []);
 		expect(valuesFor(args, '--host')).toEqual(['127.0.0.1']);
