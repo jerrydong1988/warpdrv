@@ -1,0 +1,468 @@
+{
+	"version": 1,
+	"total": 415,
+	"byRule": {
+		"@typescript-eslint/no-explicit-any": 214,
+		"@typescript-eslint/no-unused-vars": 132,
+		"react-hooks/exhaustive-deps": 69
+	},
+	"byFile": {
+		"packages/app/src/api/services.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/App.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/applets/FEApplet/agents/AgentPicker.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/applets/FEApplet/constants.ts": {
+			"@typescript-eslint/no-explicit-any": 3
+		},
+		"packages/app/src/applets/FEApplet/FEApplet.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/applets/FEApplet/guardrails/GuardrailResults.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/applets/FEApplet/indicators/CompactIndicator.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/applets/FEApplet/modes/ModeChangeIndicator.tsx": {
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 2
+		},
+		"packages/app/src/applets/FEApplet/modes/ModeToolViolationIndicator.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/applets/FEApplet/todos/TodoPanel.tsx": {
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/applets/lib/AppletHostFE.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/applets/lib/types.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/app/src/applets/ui/SenderBadge.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/components/PageHeader.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/components/Shell.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/components/WithErrorBoundary.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/hooks/useChatEventsStream.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/hooks/useChatSelectors.ts": {
+			"@typescript-eslint/no-explicit-any": 13
+		},
+		"packages/app/src/hooks/useEventSource.ts": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/hooks/useFileReader.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/app/src/hooks/useJsonValidator.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/hooks/useQuery.ts": {
+			"react-hooks/exhaustive-deps": 4
+		},
+		"packages/app/src/hooks/useRealm.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/hooks/useTauriWindow.ts": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"react-hooks/exhaustive-deps": 5
+		},
+		"packages/app/src/hooks/useThreadConfig.ts": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"react-hooks/exhaustive-deps": 3
+		},
+		"packages/app/src/hooks/useThreadsAndFolders.ts": {
+			"react-hooks/exhaustive-deps": 6
+		},
+		"packages/app/src/pages/Backends/ActivateBackendDialog.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Backends/BackendDialog.tsx": {
+			"@typescript-eslint/no-explicit-any": 7,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Backends/BackendGroupDialog.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Backends/BackendsPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"react-hooks/exhaustive-deps": 2
+		},
+		"packages/app/src/pages/Backends/WhisperBackendDialog.tsx": {
+			"@typescript-eslint/no-explicit-any": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/DictationContext.tsx": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/Elicitation.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/KokoroTTS.tsx": {
+			"@typescript-eslint/no-explicit-any": 3,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/markdown-text.tsx": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/PendingToolCallsBox.tsx": {
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/SelectionPopover.tsx": {
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/ServerSelector.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/slash-command/CmdList.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/slash-command/CmdSuggestion.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/slash-command/SlashCmdDirectoryPicker.tsx": {
+			"@typescript-eslint/no-explicit-any": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/slash-command/SlashCmdDropdown.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/slash-command/SlashCmdNode.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/thread-list.tsx": {
+			"@typescript-eslint/no-explicit-any": 4,
+			"@typescript-eslint/no-unused-vars": 3,
+			"react-hooks/exhaustive-deps": 9
+		},
+		"packages/app/src/pages/Chat/assistant-ui/thread.tsx": {
+			"@typescript-eslint/no-explicit-any": 14,
+			"@typescript-eslint/no-unused-vars": 2,
+			"react-hooks/exhaustive-deps": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/BashRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphCalleesRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphCallersRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphClearRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphIngestRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphListRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphSearchRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/CodeGraphSymbolRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/DiffRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/EmbeddingSearchRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/FetchRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 3
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/ListRenderer.tsx": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/ReadFileRenderer.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"@typescript-eslint/no-unused-vars": 4
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/resolver.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/RgRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 5
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/SearchRenderer.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/tool-renderers/TodoRenderer.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/VADManager.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/pages/Chat/assistant-ui/VoiceInput.tsx": {
+			"@typescript-eslint/no-explicit-any": 3,
+			"@typescript-eslint/no-unused-vars": 2,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/ChatConfigSidebar.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/ChatPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 15,
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 3
+		},
+		"packages/app/src/pages/Chat/ChatSearchDialog.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Chat/ChatToolsSidebar.tsx": {
+			"@typescript-eslint/no-unused-vars": 2,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Chat/ProjectRootPicker.tsx": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/app/src/pages/Chat/ThreadTitleDisplay.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/pages/Chat/WorkspaceView.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Checkpoints/CheckpointsPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Home/Tiles/DownloadsTile.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/pages/Hub/HubModelDetail.tsx": {
+			"@typescript-eslint/no-explicit-any": 3,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Hub/HubPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/pages/MCP/McpPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Models/ModelsPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 8
+		},
+		"packages/app/src/pages/Onboarding/OnboardingPage.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Onboarding/steps/StepDone.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Onboarding/steps/StepGuide.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Onboarding/steps/StepModelFolders.tsx": {
+			"@typescript-eslint/no-explicit-any": 2,
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Onboarding/steps/StepWelcome.tsx": {
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/pages/Recipes/RecipesPage.tsx": {
+			"@typescript-eslint/no-unused-vars": 1,
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Servers/Checkpoints/LoadCheckpointDialog.tsx": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Servers/Checkpoints/SaveCheckpointDialog.tsx": {
+			"react-hooks/exhaustive-deps": 2
+		},
+		"packages/app/src/pages/Servers/LaunchServer/BackendPickerCard.tsx": {
+			"react-hooks/exhaustive-deps": 3
+		},
+		"packages/app/src/pages/Servers/LaunchServer/LaunchServerDialog.tsx": {
+			"react-hooks/exhaustive-deps": 3
+		},
+		"packages/app/src/pages/Servers/ServerCard.tsx": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/pages/Servers/ServerLogs.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Servers/ServersPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"react-hooks/exhaustive-deps": 2
+		},
+		"packages/app/src/pages/Servers/WhisperServerLogs.tsx": {
+			"react-hooks/exhaustive-deps": 1
+		},
+		"packages/app/src/pages/Settings/SettingsPage.tsx": {
+			"@typescript-eslint/no-explicit-any": 8,
+			"@typescript-eslint/no-unused-vars": 5
+		},
+		"packages/app/src/store/slices/annotations.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/backends.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/chatPresets.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/chatSidebar.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/checkpoints.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/devices.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/downloads.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/embedding.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/hardware.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/kokoro.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/models.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/modes.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/monitorBox.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/app/src/store/slices/notifications.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/prompts.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/proxy.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/recipes.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/releases.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/servers.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/settings.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/sseConnection.ts": {
+			"@typescript-eslint/no-explicit-any": 1,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/sseHandlers.ts": {
+			"@typescript-eslint/no-explicit-any": 5,
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/app/src/store/slices/tts.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/uiSpaces.ts": {
+			"@typescript-eslint/no-explicit-any": 3,
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/whisperBackends.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/slices/whisperServers.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/app/src/store/types.ts": {
+			"@typescript-eslint/no-explicit-any": 4
+		},
+		"packages/app/src/utils/openExternal.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/bridge/src/messageConverter.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/bridge/src/orchestrator/index.ts": {
+			"@typescript-eslint/no-explicit-any": 8,
+			"@typescript-eslint/no-unused-vars": 2
+		},
+		"packages/bridge/src/persistence/betterSqlite.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/bridge/src/store/index.ts": {
+			"@typescript-eslint/no-explicit-any": 6
+		},
+		"packages/realmcore/src/applet/AppletManager.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/server/src/applets/BEApplet/BEApplet.ts": {
+			"@typescript-eslint/no-explicit-any": 9,
+			"@typescript-eslint/no-unused-vars": 5
+		},
+		"packages/server/src/index.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/server/src/middleware/auth.ts": {
+			"@typescript-eslint/no-explicit-any": 4
+		},
+		"packages/server/src/routes/chat.ts": {
+			"@typescript-eslint/no-explicit-any": 5
+		},
+		"packages/server/src/routes/kokoro.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/server/src/routes/mcp.ts": {
+			"@typescript-eslint/no-unused-vars": 1
+		},
+		"packages/server/src/services/chatSearchToolService.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/server/src/services/codeGraphService.ts": {
+			"@typescript-eslint/no-explicit-any": 24
+		},
+		"packages/server/src/services/kokoroService.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/server/src/services/modelProxy.ts": {
+			"@typescript-eslint/no-explicit-any": 3
+		},
+		"packages/server/src/services/sseManager.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/server/src/services/todoManager.ts": {
+			"@typescript-eslint/no-explicit-any": 1
+		},
+		"packages/warpmcp/src/index.ts": {
+			"@typescript-eslint/no-explicit-any": 2
+		},
+		"packages/warpmcp/src/tools/rg.ts": {
+			"@typescript-eslint/no-unused-vars": 2
+		}
+	}
+}

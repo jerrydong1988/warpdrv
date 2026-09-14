@@ -21,7 +21,7 @@
     "@warpcore/realmcore": "*",
     "@warpcore/shared": "*",
     "@warpcore/warpmcp": "*",
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "ai": "^6.0.141",
     "bcryptjs": "^2.4.3",
     "better-sse": "^0.16.1",
@@ -58,6 +58,6 @@
     "esbuild": "^0.28.2",
     "tsx": "^4.23.12",
     "typescript": "^5.8.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }

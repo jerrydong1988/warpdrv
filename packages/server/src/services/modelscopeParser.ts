@@ -5,6 +5,7 @@
 import { EHubSource } from '@warpcore/shared';
 import type { IHubModel, IHubFile } from '@warpcore/shared';
 import { mapFilesToHubFiles, processGgufFiles } from './hubParser';
+import { encodeHubPathSegment } from './hubUrls';
 
 export const MODELSCOPE_API = 'https://modelscope.cn';
 
@@ -115,7 +116,7 @@ export async function searchModelscopeModels(
 // List all .gguf/.bin files in a ModelScope repo. Recursive=true returns a
 // flat list with full paths, so no manual directory walking is needed.
 export async function fetchModelscopeGgufFiles(author: string, modelName: string): Promise<{ path: string; size: number; type: string }[]> {
-	const url = `${MODELSCOPE_API}/api/v1/models/${author}/${modelName}/repo/files?Recursive=true`;
+	const url = `${MODELSCOPE_API}/api/v1/models/${encodeHubPathSegment(author)}/${encodeHubPathSegment(modelName)}/repo/files?Recursive=true`;
 	const response = await fetch(url);
 	if (!response.ok) return [];
 	const payload = await response.json() as { Data?: { Files?: IModelscopeRawFile[] } };
@@ -136,7 +137,7 @@ export async function fetchModelscopeModelDetail(
 	files: IHubFile[];
 	readme: string;
 } | null> {
-	const detailUrl = `${MODELSCOPE_API}/openapi/v1/models/${author}/${modelName}`;
+	const detailUrl = `${MODELSCOPE_API}/openapi/v1/models/${encodeHubPathSegment(author)}/${encodeHubPathSegment(modelName)}`;
 	const response = await fetch(detailUrl);
 	if (!response.ok) return null;
 

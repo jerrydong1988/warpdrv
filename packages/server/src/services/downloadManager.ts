@@ -6,6 +6,7 @@ import { EDownloadStatus, EDownloadType, EHubSource, type IDownload, type TDownl
 import { store } from '../util/store';
 import { sseManager } from './sseManagerInstance';
 import { runPostActions } from './postActions';
+import { encodeHubFilePath, encodeHubPathSegment } from './hubUrls';
 
 const DOWNLOADS_PREFIX = 'downloads:';
 
@@ -63,10 +64,12 @@ export function hubDownloadUrl(
 	modelName: string,
 	filename: string,
 ): string {
+	const encodedAuthor = encodeHubPathSegment(author);
+	const encodedModel = encodeHubPathSegment(modelName);
 	if (source === EHubSource.MODELSCOPE) {
-		return `https://modelscope.cn/api/v1/models/${author}/${modelName}/repo?FilePath=${encodeURIComponent(filename)}`;
+		return `https://modelscope.cn/api/v1/models/${encodedAuthor}/${encodedModel}/repo?FilePath=${encodeURIComponent(filename)}`;
 	}
-	return `https://huggingface.co/${author}/${modelName}/resolve/main/${filename}`;
+	return `https://huggingface.co/${encodedAuthor}/${encodedModel}/resolve/main/${encodeHubFilePath(filename)}`;
 }
 
 function emitDownloadUpdate(dl: IDownload): void {

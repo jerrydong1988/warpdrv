@@ -23,6 +23,22 @@ function isPathWithin(base: string, target: string): boolean {
 	return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 }
 
+/**
+ * Reject archive entries whose destination already traverses a symbolic link.
+ * Path-string containment alone is insufficient because a link inside the
+ * extraction root can redirect writes outside it.
+ */
+export function assertNoSymlinkComponents(base: string, entryName: string): void {
+	let current = path.resolve(base);
+	for (const segment of entryName.split('/').filter(Boolean)) {
+		current = path.join(current, segment);
+		if (!fs.existsSync(current)) return;
+		if (fs.lstatSync(current).isSymbolicLink()) {
+			throw new Error(`extractArchive: blocked symbolic-link destination '${entryName}'`);
+		}
+	}
+}
+
 async function extractArchive(dl: IDownload, payload: Record<string, unknown>): Promise<void> {
 	const destDir = payload.destDir as string;
 	const archivePath = dl.destPath;
@@ -45,6 +61,7 @@ async function extractArchive(dl: IDownload, payload: Record<string, unknown>): 
 			if (!isPathWithin(absDest, extractedPath)) {
 				throw new Error(`extractArchive: blocked path traversal in zip entry '${entry.entryName}'`);
 			}
+			assertNoSymlinkComponents(absDest, entry.entryName);
 		}
 		zip.extractAllTo(destDir, true);
 	} else if (archivePath.endsWith('.tar.gz') || archivePath.endsWith('.tgz')) {

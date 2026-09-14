@@ -104,10 +104,26 @@ jobs:
         run: npx tauri build --bundles msi
         working-directory: packages/desktop
 
+      - name: Generate MSI checksums
+        shell: pwsh
+        run: |
+          $msiFiles = @(Get-ChildItem -LiteralPath packages\desktop\target\release\bundle\msi -Filter *.msi -File)
+          if ($msiFiles.Count -eq 0) {
+            throw 'No MSI artifacts were produced.'
+          }
+          $checksumPath = 'packages\desktop\target\release\bundle\msi\SHA256SUMS'
+          $lines = $msiFiles | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          [System.IO.File]::WriteAllLines($checksumPath, $lines, [System.Text.Encoding]::ASCII)
+
       - name: Upload MSI
         uses: actions/upload-artifact@v5
         with:
           name: warpdrv-windows-msi
-          path: packages/desktop/target/release/bundle/msi/*.msi
+          path: |
+            packages/desktop/target/release/bundle/msi/*.msi
+            packages/desktop/target/release/bundle/msi/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
