@@ -10,10 +10,10 @@ export default defineConfig({
 			include: ['src/**'],
 			reportsDirectory: './coverage',
 			thresholds: {
-				statements: 11,
+				statements: 11.5,
 				branches: 14,
-				functions: 9,
-				lines: 10,
+				functions: 10,
+				lines: 11,
 			},
 		},
 	},

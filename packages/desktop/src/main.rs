@@ -17,6 +17,24 @@ use tauri::{
 struct ServerProcess(Mutex<Option<Child>>);
 struct ServerPort(u16);
 
+fn parse_nonzero_port(value: &str) -> Option<u16> {
+    value.parse::<u16>().ok().filter(|port| *port != 0)
+}
+
+fn parse_general_settings(content: &str) -> Option<serde_json::Value> {
+    let root = serde_json::from_str::<serde_json::Value>(content).ok()?;
+    let settings = root.get("settings:general")?.as_str()?;
+    serde_json::from_str(settings).ok()
+}
+
+fn parse_settings_port(content: &str) -> Option<u16> {
+    parse_general_settings(content)?
+        .get("apiPort")
+        .and_then(|value| value.as_u64())
+        .and_then(|port| u16::try_from(port).ok())
+        .filter(|port| *port != 0)
+}
+
 fn is_server_running(port: u16) -> bool {
     std::net::TcpStream::connect_timeout(
         &format!("127.0.0.1:{}", port).parse().unwrap(),
@@ -68,10 +86,8 @@ fn find_server_binary() -> Option<(String, Vec<String>)> {
 fn get_server_port() -> u16 {
     // Check env var first (for dev/override), then read from settings, default to 4400
     if let Ok(env_port) = std::env::var("CONTROL_API_PORT") {
-        if let Ok(port) = env_port.parse::<u16>() {
-            if port != 0 {
-                return port;
-            }
+        if let Some(port) = parse_nonzero_port(&env_port) {
+            return port;
         }
     }
 
@@ -90,22 +106,8 @@ fn get_server_port() -> u16 {
     }
 
     if let Ok(content) = std::fs::read_to_string(&data_path) {
-        // The store persists values as JSON-encoded strings, so the settings
-        // live at "settings:general" -> "<json string>".
-        if let Ok(root) = serde_json::from_str::<serde_json::Value>(&content) {
-            if let Some(settings_json) = root.get("settings:general").and_then(|v| v.as_str()) {
-                if let Ok(settings) = serde_json::from_str::<serde_json::Value>(settings_json) {
-                    if let Some(port) = settings
-                        .get("apiPort")
-                        .and_then(|v| v.as_u64())
-                        .and_then(|p| u16::try_from(p).ok())
-                    {
-                        if port != 0 {
-                            return port;
-                        }
-                    }
-                }
-            }
+        if let Some(port) = parse_settings_port(&content) {
+            return port;
         }
     }
 
@@ -277,11 +279,9 @@ fn read_start_minimized_setting() -> bool {
     }
 
     match std::fs::read_to_string(&data_path) {
-        Ok(content) => {
-            // Simple JSON parsing without external deps - look for "startMinimized":true pattern
-            content.contains("\"startMinimized\":true")
-                || content.contains("\"startMinimized\": true")
-        }
+        Ok(content) => parse_general_settings(&content)
+            .and_then(|settings| settings.get("startMinimized")?.as_bool())
+            .unwrap_or(false),
         Err(_) => false,
     }
 }
@@ -303,51 +303,25 @@ fn read_window_size_settings() -> Option<(u32, u32)> {
     }
 
     match std::fs::read_to_string(&data_path) {
-        Ok(content) => {
-            // Parse the outer JSON file
-            let json: serde_json::Value = match serde_json::from_str(&content) {
-                Ok(v) => v,
-                Err(e) => {
-                    eprintln!("[WarpCore] Failed to parse warpcore-data.json: {}", e);
-                    return None;
-                }
-            };
-
-            // settings:general is stored as a stringified JSON string (per store.ts convention)
-            let settings_str = match json.get("settings:general") {
-                Some(serde_json::Value::String(s)) => s,
-                _ => return None,
-            };
-
-            // Parse the nested settings object
-            let settings: serde_json::Value = match serde_json::from_str(settings_str) {
-                Ok(v) => v,
-                Err(e) => {
-                    eprintln!("[WarpCore] Failed to parse nested settings JSON: {}", e);
-                    return None;
-                }
-            };
-
-            let width = settings
-                .get("windowWidth")
-                .and_then(|v| v.as_u64())
-                .map(|w| w as u32)?;
-            let height = settings
-                .get("windowHeight")
-                .and_then(|v| v.as_u64())
-                .map(|h| h as u32)?;
-
-            // Validate reasonable bounds (min window size is 800x600 per tauri.conf.json)
-            if width >= 800 && height >= 600 {
-                return Some((width, height));
-            }
-            None
-        }
+        Ok(content) => parse_window_size_settings(&content),
         Err(e) => {
             eprintln!("[WarpCore] Failed to read settings file: {}", e);
             None
         }
     }
+}
+
+fn parse_window_size_settings(content: &str) -> Option<(u32, u32)> {
+    let settings = parse_general_settings(content)?;
+    let width = settings
+        .get("windowWidth")?
+        .as_u64()
+        .and_then(|value| u32::try_from(value).ok())?;
+    let height = settings
+        .get("windowHeight")?
+        .as_u64()
+        .and_then(|value| u32::try_from(value).ok())?;
+    (width >= 800 && height >= 600).then_some((width, height))
 }
 
 // Save window size to warpcore-data.json
@@ -490,16 +464,15 @@ fn read_ptt_settings() -> (Option<String>, bool, Option<String>) {
         return (None, false, None);
     }
 
-    let settings = match std::fs::read_to_string(&data_path)
+    std::fs::read_to_string(&data_path)
         .ok()
-        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
-        .and_then(|json| {
-            json.get("settings:general")
-                .and_then(|v| v.as_str())
-                .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
-        }) {
-        Some(settings) => settings,
-        None => return (None, false, None),
+        .map(|content| parse_ptt_settings(&content))
+        .unwrap_or((None, false, None))
+}
+
+fn parse_ptt_settings(content: &str) -> (Option<String>, bool, Option<String>) {
+    let Some(settings) = parse_general_settings(content) else {
+        return (None, false, None);
     };
 
     let dictation_mode_hold = settings
@@ -600,7 +573,6 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        // .plugin(tauri_plugin_devtools::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
@@ -925,4 +897,80 @@ fn main() {
         .invoke_handler(tauri::generate_handler![type_text])
         .run(tauri::generate_context!())
         .expect("error while running WarpCore Desktop");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn persisted_settings(settings: serde_json::Value) -> String {
+        serde_json::json!({ "settings:general": settings.to_string() }).to_string()
+    }
+
+    #[test]
+    fn nonzero_port_parser_rejects_invalid_values() {
+        assert_eq!(parse_nonzero_port("4400"), Some(4400));
+        assert_eq!(parse_nonzero_port("0"), None);
+        assert_eq!(parse_nonzero_port("65536"), None);
+        assert_eq!(parse_nonzero_port("not-a-port"), None);
+    }
+
+    #[test]
+    fn settings_port_uses_the_nested_store_format() {
+        let content = persisted_settings(serde_json::json!({ "apiPort": 8123 }));
+        assert_eq!(parse_settings_port(&content), Some(8123));
+        assert_eq!(parse_settings_port("{}"), None);
+        assert_eq!(parse_settings_port("not-json"), None);
+    }
+
+    #[test]
+    fn window_size_parser_enforces_minimums_and_integer_bounds() {
+        let valid = persisted_settings(serde_json::json!({
+            "windowWidth": 1440,
+            "windowHeight": 900
+        }));
+        assert_eq!(parse_window_size_settings(&valid), Some((1440, 900)));
+
+        let too_small = persisted_settings(serde_json::json!({
+            "windowWidth": 799,
+            "windowHeight": 600
+        }));
+        assert_eq!(parse_window_size_settings(&too_small), None);
+
+        let overflow = persisted_settings(serde_json::json!({
+            "windowWidth": u64::MAX,
+            "windowHeight": 900
+        }));
+        assert_eq!(parse_window_size_settings(&overflow), None);
+    }
+
+    #[test]
+    fn ptt_parser_honors_mode_flags_and_trims_keys() {
+        let content = persisted_settings(serde_json::json!({
+            "dictationPTTModeHold": true,
+            "dictationPTTKey": " Insert ",
+            "globalPTTModeHold": false,
+            "globalPTTKey": "ControlLeft|KeyK"
+        }));
+        assert_eq!(
+            parse_ptt_settings(&content),
+            (Some("Insert".to_string()), false, None)
+        );
+        assert_eq!(parse_ptt_settings("not-json"), (None, false, None));
+    }
+
+    #[test]
+    fn ptt_key_matching_is_case_insensitive_and_segmented() {
+        assert!(ptt_key_matches("KeyK", "ControlLeft|k"));
+        assert!(ptt_key_matches("Insert", "insert"));
+        assert!(!ptt_key_matches("KeyK", "ControlLeft|KeyJ"));
+    }
+
+    #[test]
+    fn base64_encoder_handles_padding() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+    }
 }

@@ -8,11 +8,13 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
@@ -93,16 +95,35 @@ jobs:
 
       - name: Collect artifacts
         run: |
+          shopt -s nullglob
+          artifacts=(
+            packages/desktop/target/release/bundle/deb/*.deb
+            packages/desktop/target/release/bundle/appimage/*.AppImage
+          )
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "No release artifacts were produced." >&2
+            exit 1
+          fi
           mkdir -p release-artifacts
-          cp packages/desktop/target/release/bundle/deb/*.deb release-artifacts/ 2>/dev/null || true
-          cp packages/desktop/target/release/bundle/appimage/*.AppImage release-artifacts/ 2>/dev/null || true
+          cp "${artifacts[@]}" release-artifacts/
+          (
+            cd release-artifacts
+            sha256sum -- *.deb *.AppImage > SHA256SUMS
+          )
           ls -lh release-artifacts/
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+
+      - name: Sign checksum manifest
+        run: cosign sign-blob release-artifacts/SHA256SUMS --bundle release-artifacts/SHA256SUMS.sigstore.json --yes
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v5
         with:
           name: warpdrv-linux-${{ steps.version.outputs.tag }}
           path: release-artifacts/*
+          if-no-files-found: error
           retention-days: 30
 
       - name: Create GitHub Release

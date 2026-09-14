@@ -10,6 +10,7 @@ import {
 	filterModelsByParams,
 } from '../src/services/modelscopeParser';
 import type { IModelscopeRawModel } from '../src/services/modelscopeParser';
+import { encodeHubFilePath, huggingFaceModelUrl } from '../src/services/hubUrls';
 
 // downloadManager pulls in the store, which resolves its paths at import
 // time — isolate it behind a temp data dir, same as storePersistence tests.
@@ -120,7 +121,16 @@ describe('hubDownloadUrl', () => {
 	});
 
 	it('builds ModelScope repo URLs with encoded paths', () => {
-		expect(hubDownloadUrl(EHubSource.MODELSCOPE, 'author', 'model', 'sub dir/file.gguf'))
-			.toBe('https://modelscope.cn/api/v1/models/author/model/repo?FilePath=sub%20dir%2Ffile.gguf');
+		expect(hubDownloadUrl(EHubSource.MODELSCOPE, 'author name', 'model#1', 'sub dir/file.gguf'))
+			.toBe('https://modelscope.cn/api/v1/models/author%20name/model%231/repo?FilePath=sub%20dir%2Ffile.gguf');
+	});
+
+	it('encodes Hugging Face path segments without flattening nested file paths', () => {
+		expect(hubDownloadUrl(EHubSource.HUGGINGFACE, 'author name', 'model#1', 'sub dir/file?.gguf'))
+			.toBe('https://huggingface.co/author%20name/model%231/resolve/main/sub%20dir/file%3F.gguf');
+		expect(encodeHubFilePath('dir one/dir#two/model.gguf'))
+			.toBe('dir%20one/dir%23two/model.gguf');
+		expect(huggingFaceModelUrl('owner/name', 'model name'))
+			.toBe('https://huggingface.co/owner%2Fname/model%20name');
 	});
 });

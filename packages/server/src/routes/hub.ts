@@ -21,6 +21,7 @@ import {
 	fetchModelscopeModelDetail,
 	filterModelsByParams,
 } from '../services/modelscopeParser';
+import { huggingFaceModelUrl } from '../services/hubUrls';
 import { fetchAndParseModelRecommendations } from '../services/modelInferenceParser';
 
 const SETTINGS_KEY = 'settings:general';
@@ -276,7 +277,7 @@ hubRouter.delete('/downloads/history', async (_req, res) => {
 // GET /api/hub/model/:author/:name/recommended-params
 hubRouter.get('/model/:author/:name/recommended-params', async (req, res) => {
 	const { author, name } = req.params;
-	const hfUrl = `https://huggingface.co/${author}/${name}`;
+	const hfUrl = huggingFaceModelUrl(author!, name!);
 
 	try {
 		const params = await fetchAndParseModelRecommendations(hfUrl);
