@@ -3,12 +3,17 @@
 // ============================================================
 
 import type { EToolApprovalMode, IElicitationResponse } from "@warpcore/bridge";
+import { McpConfigValidationError } from "@warpcore/bridge/mcp/config";
 import type { IMcpConfigFile, IMcpServerEntry } from "@warpcore/shared";
 import { Router } from "express";
 import { broadcaster, mcpClient, persistence } from "../index";
 import { sseManager } from "../services/sseManagerInstance";
 
 export const mcpRouter = Router();
+
+function mcpConfigErrorStatus(err: unknown): 400 | 500 {
+	return err instanceof McpConfigValidationError ? 400 : 500;
+}
 
 // ============================================================
 // Config — keep using file-based config
@@ -26,7 +31,7 @@ mcpRouter.get("/config", (_req, res) => {
 	try {
 		res.json({ ok: true, data: readMcpConfig(), error: null });
 	} catch (err) {
-		res.status(500).json({ ok: false, data: null, error: String(err) });
+		res.status(mcpConfigErrorStatus(err)).json({ ok: false, data: null, error: String(err) });
 	}
 });
 
@@ -51,7 +56,7 @@ mcpRouter.put("/config", async (req, res) => {
 		}
 		res.json({ ok: true, data: config, error: null });
 	} catch (err) {
-		res.status(500).json({ ok: false, data: null, error: String(err) });
+		res.status(mcpConfigErrorStatus(err)).json({ ok: false, data: null, error: String(err) });
 	}
 });
 
@@ -62,6 +67,10 @@ mcpRouter.get("/config/path", (_req, res) => {
 // Server CRUD
 mcpRouter.post("/servers", async (req, res) => {
 	try {
+		if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+			res.status(400).json({ ok: false, data: null, error: "Invalid server entry" });
+			return;
+		}
 		const { name, ...entry } = req.body as IMcpServerEntry & { name: string };
 		if (!name) {
 			res.status(400).json({ ok: false, data: null, error: "Missing server name" });
@@ -71,7 +80,7 @@ mcpRouter.post("/servers", async (req, res) => {
 		await mcpClient.connect(name, entry);
 		res.json({ ok: true, data: config, error: null });
 	} catch (err) {
-		res.status(500).json({ ok: false, data: null, error: String(err) });
+		res.status(mcpConfigErrorStatus(err)).json({ ok: false, data: null, error: String(err) });
 	}
 });
 
@@ -81,7 +90,7 @@ mcpRouter.put("/servers/:name", async (req, res) => {
 		await mcpClient.reconnect(req.params.name);
 		res.json({ ok: true, data: config, error: null });
 	} catch (err) {
-		res.status(500).json({ ok: false, data: null, error: String(err) });
+		res.status(mcpConfigErrorStatus(err)).json({ ok: false, data: null, error: String(err) });
 	}
 });
 
@@ -91,7 +100,7 @@ mcpRouter.delete("/servers/:name", async (req, res) => {
 		await mcpClient.disconnect(req.params.name);
 		res.json({ ok: true, data: config, error: null });
 	} catch (err) {
-		res.status(500).json({ ok: false, data: null, error: String(err) });
+		res.status(mcpConfigErrorStatus(err)).json({ ok: false, data: null, error: String(err) });
 	}
 });
 
@@ -268,7 +277,11 @@ mcpRouter.post("/elicitation/:id/respond", async (req, res) => {
 	const response = req.body as IElicitationResponse;
 	const ok = mcpClient.elicitationRegistry.resolve(id, response);
 	if (!ok) {
-		res.status(404).json({ ok: false, data: null, error: "Elicitation not found or already resolved" });
+		res.status(404).json({
+			ok: false,
+			data: null,
+			error: "Elicitation not found or already resolved",
+		});
 		return;
 	}
 	broadcaster.emit({ type: "elicitation_resolved", id });

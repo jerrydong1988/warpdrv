@@ -3,8 +3,8 @@
 // Reads and writes ~/.config/warpcore/mcp.json
 // ============================================================
 
+import { McpConfig } from "@warpcore/bridge/server";
 import type { IMcpConfigFile, IMcpServerEntry } from "@warpcore/shared";
-import fs from "fs";
 import os from "os";
 import path from "path";
 
@@ -19,32 +19,16 @@ export function getDataDir(): string {
 }
 
 const MCP_CONFIG_PATH = path.join(getDataDir(), "mcp.json");
-
-const DEFAULT_CONFIG: IMcpConfigFile = {
-	mcpServers: {},
-};
+const configStore = new McpConfig(MCP_CONFIG_PATH);
+type BridgeMcpConfigFile = Parameters<McpConfig["write"]>[0];
+type BridgeMcpServerEntry = Parameters<McpConfig["addServer"]>[1];
 
 export function readMcpConfig(): IMcpConfigFile {
-	try {
-		if (fs.existsSync(MCP_CONFIG_PATH)) {
-			const raw = fs.readFileSync(MCP_CONFIG_PATH, "utf8");
-			const parsed = JSON.parse(raw);
-			// Ensure shape is correct
-			if (!parsed.mcpServers || typeof parsed.mcpServers !== "object") {
-				return { ...DEFAULT_CONFIG, ...parsed, mcpServers: parsed.mcpServers ?? {} };
-			}
-			return parsed as IMcpConfigFile;
-		}
-	} catch (err) {
-		console.error("[MCP Config] Failed to read mcp.json:", err);
-	}
-	return { ...DEFAULT_CONFIG };
+	return configStore.read() as unknown as IMcpConfigFile;
 }
 
 export function writeMcpConfig(config: IMcpConfigFile): void {
-	const dir = getDataDir();
-	if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-	fs.writeFileSync(MCP_CONFIG_PATH, JSON.stringify(config, null, "\t"), "utf8");
+	configStore.write(config as unknown as BridgeMcpConfigFile);
 }
 
 export function getMcpConfigPath(): string {
@@ -52,22 +36,19 @@ export function getMcpConfigPath(): string {
 }
 
 export function addMcpServer(name: string, entry: IMcpServerEntry): IMcpConfigFile {
-	const config = readMcpConfig();
-	config.mcpServers[name] = entry;
-	writeMcpConfig(config);
-	return config;
+	return configStore.addServer(
+		name,
+		entry as unknown as BridgeMcpServerEntry,
+	) as unknown as IMcpConfigFile;
 }
 
 export function removeMcpServer(name: string): IMcpConfigFile {
-	const config = readMcpConfig();
-	delete config.mcpServers[name];
-	writeMcpConfig(config);
-	return config;
+	return configStore.removeServer(name) as unknown as IMcpConfigFile;
 }
 
 export function updateMcpServer(name: string, entry: IMcpServerEntry): IMcpConfigFile {
-	const config = readMcpConfig();
-	config.mcpServers[name] = entry;
-	writeMcpConfig(config);
-	return config;
+	return configStore.updateServer(
+		name,
+		entry as unknown as BridgeMcpServerEntry,
+	) as unknown as IMcpConfigFile;
 }
