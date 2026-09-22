@@ -29,15 +29,14 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import path from "path";
-import { authMiddleware } from "./middleware/auth";
+import { adminMiddleware, authMiddleware } from "./middleware/auth";
 import { rateLimiter } from "./middleware/rateLimiter";
 import { serveStaticApp } from "./middleware/serveStatic";
-import { authRouter } from "./routes/auth";
 import { agentsRouter } from "./routes/agents";
+import { authRouter } from "./routes/auth";
 import { backendGroupsRouter } from "./routes/backendGroups";
 import { backendsRouter } from "./routes/backends";
 import { chatRouter } from "./routes/chat";
-import { notificationsRouter } from "./routes/notifications";
 import { checkpointsRouter } from "./routes/checkpoints";
 import { clientLogsBodyParser, clientLogsRouter } from "./routes/clientLogs";
 import { guardrailsRouter } from "./routes/guardrails";
@@ -52,6 +51,7 @@ import {
 	startPendingModelRefresh,
 } from "./routes/models";
 import { modesRouter } from "./routes/modes";
+import { notificationsRouter } from "./routes/notifications";
 import { presetsRouter } from "./routes/presets";
 import { promptsRouter } from "./routes/prompts";
 import { proxyRouter } from "./routes/proxy";
@@ -82,13 +82,13 @@ import { getProxyStatus, startModelProxy } from "./services/modelProxy";
 import { listModes } from "./services/modeStore";
 import { getActiveRun, setRecipeRunnerSSE } from "./services/recipeRunner";
 import { listRecipes } from "./services/recipeStore";
+import { stopAllInferenceServers } from "./services/shutdown";
 import { getAllServerSlots } from "./services/slotStateTracker";
 import { sseManager } from "./services/sseManagerInstance";
 import { getServerStats } from "./services/statsPoller";
-import { TodoManager } from "./services/todoManager";
 import { SubthreadService } from "./services/subthreadService";
 import { ThreadStatusLineManager } from "./services/threadStatusLineManager";
-import { stopAllInferenceServers } from "./services/shutdown";
+import { TodoManager } from "./services/todoManager";
 import { isLoopbackHost } from "./util/access";
 import { listChatPresets } from "./util/chatPresets";
 import { isLocalOrShellOrigin } from "./util/localOrigin";
@@ -112,8 +112,8 @@ export let chatSearchToolService: ChatSearchToolService;
 export let subthreadService: SubthreadService;
 export let threadStatusLineManager: ThreadStatusLineManager;
 
-import { execSync } from "child_process";
 import { createServer } from "node:http";
+import { execSync } from "child_process";
 import { launchAutoStartServers, reconcileServers } from "./services/processManager";
 import {
 	launchAutoStartWhisperServers,
@@ -258,55 +258,57 @@ async function main() {
 	app.use("/api/auth", authRouter);
 	// Client log route (no auth — server may not be up when errors occur)
 	app.use("/api/client-log", clientLogsRouter);
-	// Token routes (require admin auth)
-	app.use("/api/tokens", authMiddleware, tokensRouter);
-	// API routes with auth middleware
-	app.use("/api/agents", authMiddleware, agentsRouter);
-	app.use("/api/settings", authMiddleware, settingsRouter);
-	app.use("/api/backends", authMiddleware, backendsRouter);
-	app.use("/api/hardware", authMiddleware, hardwareRouter);
-	app.use("/api/releases", authMiddleware, releasesRouter);
-	app.use("/api/kokoro", authMiddleware, kokoroRouter);
-	app.use("/api/backend-groups", authMiddleware, backendGroupsRouter);
-	app.use("/api/models", authMiddleware, modelsRouter);
-	app.use("/api/servers", authMiddleware, serversRouter);
-	app.use("/api/presets", authMiddleware, presetsRouter);
-	app.use("/api/prompts", authMiddleware, promptsRouter);
-	app.use("/api/hub", authMiddleware, hubRouter);
-	app.use("/api/update", authMiddleware, updateRouter);
-	app.use("/api/proxy", authMiddleware, proxyRouter);
-	app.use("/api/chat", authMiddleware, chatRouter);
-	app.use("/api/chat/notifications", authMiddleware, notificationsRouter);
-	app.use("/api/mcp", authMiddleware, mcpRouter);
-	app.use("/api/summary", authMiddleware, summaryRouter);
-	app.use("/api/recipes", authMiddleware, recipesRouter);
-	app.use("/api/modes", authMiddleware, modesRouter);
-	app.use("/api/guardrails", authMiddleware, guardrailsRouter);
-	app.use("/api/checkpoints", authMiddleware, checkpointsRouter);
-	app.use("/api/whisper-backends", authMiddleware, whisperBackendsRouter);
-	app.use("/api/whisper-servers", authMiddleware, whisperServersRouter);
-	app.use("/api/whisper-models", authMiddleware, whisperModelsRouter);
-	// SSE endpoint (protected by auth)
-	app.get("/api/events", authMiddleware, async (req, res) => {
+	// The desktop splash screen probes this endpoint before it has credentials.
+	app.get("/api/health", (_req, res) => {
+		res.json({ ok: true, version: getLocalVersion() });
+	});
+
+	// Everything else under /api is the administrative control plane. A single
+	// shared boundary prevents inference-only tokens from reaching current or
+	// future routes that can mutate settings, launch processes, or edit tokens.
+	app.use("/api", authMiddleware, adminMiddleware);
+	app.use("/api/tokens", tokensRouter);
+	app.use("/api/agents", agentsRouter);
+	app.use("/api/settings", settingsRouter);
+	app.use("/api/backends", backendsRouter);
+	app.use("/api/hardware", hardwareRouter);
+	app.use("/api/releases", releasesRouter);
+	app.use("/api/kokoro", kokoroRouter);
+	app.use("/api/backend-groups", backendGroupsRouter);
+	app.use("/api/models", modelsRouter);
+	app.use("/api/servers", serversRouter);
+	app.use("/api/presets", presetsRouter);
+	app.use("/api/prompts", promptsRouter);
+	app.use("/api/hub", hubRouter);
+	app.use("/api/update", updateRouter);
+	app.use("/api/proxy", proxyRouter);
+	app.use("/api/chat", chatRouter);
+	app.use("/api/chat/notifications", notificationsRouter);
+	app.use("/api/mcp", mcpRouter);
+	app.use("/api/summary", summaryRouter);
+	app.use("/api/recipes", recipesRouter);
+	app.use("/api/modes", modesRouter);
+	app.use("/api/guardrails", guardrailsRouter);
+	app.use("/api/checkpoints", checkpointsRouter);
+	app.use("/api/whisper-backends", whisperBackendsRouter);
+	app.use("/api/whisper-servers", whisperServersRouter);
+	app.use("/api/whisper-models", whisperModelsRouter);
+	// SSE endpoint (protected by the shared control-plane boundary)
+	app.get("/api/events", async (req, res) => {
 		console.log("[SSE] New client");
 		await sseManager.handleConnection(req, res, () => {
 			console.log("[SSE] Client disconnected");
 		});
 	});
 
-	// Stats endpoint — returns live stats for a running server (protected by auth)
-	app.get("/api/servers/:id/stats", authMiddleware, (req, res) => {
+	// Stats endpoint — returns live stats for a running server.
+	app.get("/api/servers/:id/stats", (req, res) => {
 		const stats = getServerStats(req.params.id);
 		res.json({ ok: true, data: stats, error: null });
 	});
 
 	// Static frontend serving (production only)
 	serveStaticApp(app);
-
-	// Health check
-	app.get("/api/health", (_req, res) => {
-		res.json({ ok: true, version: getLocalVersion() });
-	});
 
 	const currentSettings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 

@@ -1,8 +1,8 @@
 import type { IAccessToken, IAccessTokenInfo, ISettings } from "@warpcore/shared";
 import { DEFAULT_SETTINGS } from "@warpcore/shared";
 import { Router } from "express";
-import { isRemote } from "../middleware/auth";
 import { rateLimiter } from "../middleware/rateLimiter";
+import { shouldRequireAuthForRequest } from "../util/access";
 import { store } from "../util/store";
 import { validateBearerToken } from "./tokens";
 
@@ -61,7 +61,7 @@ authRouter.post("/login", rateLimiter({ windowMs: 60_000, max: 10 }), async (req
 authRouter.get("/check", async (req, res) => {
 	// Check if auth is actually required
 	const settings = await getSettings();
-	const authRequired = isRemote(req) && settings.apiAuthEnabled;
+	const authRequired = shouldRequireAuthForRequest(req, settings) && settings.apiAuthEnabled;
 
 	// If auth not required, always return authenticated
 	if (!authRequired) {

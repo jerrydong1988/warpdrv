@@ -9,15 +9,8 @@ import {
 } from "@warpcore/realmcore";
 import { Server as IOServer } from "socket.io";
 import { AppletHostBE, beApplets } from "../applets";
-import { shouldRequireAuth } from "../middleware/auth";
-import { validateBearerToken } from "../routes/tokens";
+import { hasAdminAccess } from "../middleware/auth";
 import { isLocalOrShellOrigin } from "../util/localOrigin";
-import { store } from "../util/store";
-import type { IAccessToken, ISettings } from "@warpcore/shared";
-import { DEFAULT_SETTINGS } from "@warpcore/shared";
-
-const SETTINGS_KEY = "settings:general";
-const COOKIE_NAME = "warpcore_auth";
 
 let warpcoreNode: EventNode | null = null;
 let io: IOServer | null = null;
@@ -66,30 +59,27 @@ export async function initRealm(
 
 	io.use(async (socket, next) => {
 		try {
-			const settings = (await store.get<ISettings>(SETTINGS_KEY)) ?? DEFAULT_SETTINGS;
 			const request = socket.request as {
 				ip?: string;
 				connection?: { remoteAddress?: string };
 			};
-			if (!(await shouldRequireAuth(request)) || !settings.apiAuthEnabled) {
+			const authorization = socket.handshake.headers.authorization;
+			if (
+				await hasAdminAccess({
+					ip: request.ip,
+					connection: request.connection?.remoteAddress
+						? { remoteAddress: request.connection.remoteAddress }
+						: undefined,
+					cookies: parseCookies(socket.handshake.headers.cookie),
+					headers: authorization ? { authorization } : {},
+				})
+			) {
 				next();
 				return;
 			}
-			const tokenId = parseCookies(socket.handshake.headers.cookie)[COOKIE_NAME];
-			if (tokenId) {
-				const tokens = await store.list<IAccessToken>("tokens:");
-				if (tokens.some((token) => token.id === tokenId)) {
-					next();
-					return;
-				}
-			}
-			if (await validateBearerToken(socket.handshake.headers.authorization)) {
-				next();
-				return;
-			}
-			next(new Error("Unauthorized"));
+			next(new Error("Admin access required"));
 		} catch {
-			next(new Error("Unauthorized"));
+			next(new Error("Admin access required"));
 		}
 	});
 
