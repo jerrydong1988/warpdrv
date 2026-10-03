@@ -5,8 +5,8 @@
 // Uses Immer pattern for mutable-like state updates.
 // ============================================================
 
-import type { WritableDraft } from "immer";
 import { genThreadId } from "@warpcore/shared";
+import type { WritableDraft } from "immer";
 import type {
 	IChatMessage,
 	IChatThread,
@@ -33,6 +33,12 @@ import { EMessagePartType } from "../types";
 export type ImmerSet<T> = (fn: (state: WritableDraft<T>) => void) => void;
 export type ImmerGet<T> = () => T;
 
+interface IMessageChunkBuffer {
+	partId: TMessagePartId;
+	chunk: string;
+	threadId: TThreadId;
+}
+
 // ============================================================
 // Store state shape
 // ============================================================
@@ -42,14 +48,6 @@ export interface IChatStoreState {
 
 	// Messages - nested map: threadId -> messageId -> IChatMessage
 	messagesByThread: Record<TThreadId, Record<TMessageId, IChatMessage>>;
-	chunksByMessageId: Record<
-		string,
-		{
-			partId: string;
-			chunk: string;
-			lastUpdate: number;
-		}
-	>;
 
 	// In-memory head tracking (NOT persisted to DB)
 	// Updated automatically on message.created
@@ -115,6 +113,7 @@ export interface IChatStoreState {
 		partId: TMessagePartId,
 		deltaText: string,
 	) => void;
+	getBufferedMessageChunk: (messageId: TMessageId) => string;
 	applyToolCallStarting: (messageId: TMessageId, name: string) => void;
 	applyToolCallCreated: (toolCall: IToolCall) => void;
 	applyToolCallUpdated: (toolCall: IToolCall) => void;
@@ -171,13 +170,93 @@ export interface IChatStoreState {
 // ============================================================
 export function createChatStoreSlice<TState extends IChatStoreState>(
 	set: ImmerSet<TState>,
-	_get: ImmerGet<TState>,
+	get: ImmerGet<TState>,
 ): IChatStoreState {
+	// Streaming deltas are intentionally kept outside Zustand state until the
+	// next animation frame. This avoids cloning and notifying the full chat
+	// store for every token while keeping each slice instance isolated.
+	const chunkBuffers: Record<TMessageId, IMessageChunkBuffer> = {};
+	let scheduledFlush: { kind: "animation-frame" | "timeout"; handle: number } | null = null;
+
+	const appendChunkToMessage = (message: IChatMessage, buffer: IMessageChunkBuffer) => {
+		if (!buffer.chunk) return;
+		const part = message.content.find((candidate) => candidate.id === buffer.partId);
+		if (
+			part &&
+			(part.type === EMessagePartType.TEXT || part.type === EMessagePartType.REASONING)
+		) {
+			part.text += buffer.chunk;
+			return;
+		}
+		message.content.push({
+			id: buffer.partId,
+			type: EMessagePartType.TEXT,
+			orderIndex: message.content.length,
+			text: buffer.chunk,
+		} as any);
+	};
+
+	const flushPendingChunks = () => {
+		scheduledFlush = null;
+		const pending = Object.entries(chunkBuffers)
+			.filter(([, buffer]) => buffer.chunk.length > 0)
+			.map(([messageId, buffer]) => ({
+				messageId,
+				buffer,
+				chunk: buffer.chunk,
+			}));
+		if (pending.length === 0) return;
+
+		// Clear the captured text before publishing it. JavaScript execution is
+		// synchronous here, so later deltas will be queued for the next frame.
+		for (const item of pending) item.buffer.chunk = "";
+		set((draft) => {
+			for (const item of pending) {
+				const message = draft.messagesByThread[item.buffer.threadId]?.[item.messageId];
+				if (!message) {
+					delete chunkBuffers[item.messageId];
+					continue;
+				}
+				appendChunkToMessage(message, { ...item.buffer, chunk: item.chunk });
+			}
+		});
+	};
+
+	const scheduleChunkFlush = () => {
+		if (scheduledFlush) return;
+		const frameApi = globalThis as typeof globalThis & {
+			requestAnimationFrame?: (callback: () => void) => number;
+		};
+		if (typeof frameApi.requestAnimationFrame === "function") {
+			scheduledFlush = {
+				kind: "animation-frame",
+				handle: frameApi.requestAnimationFrame(flushPendingChunks),
+			};
+			return;
+		}
+		scheduledFlush = {
+			kind: "timeout",
+			handle: globalThis.setTimeout(flushPendingChunks, 16) as unknown as number,
+		};
+	};
+
+	const cancelChunkFlush = () => {
+		if (!scheduledFlush) return;
+		if (scheduledFlush.kind === "animation-frame") {
+			const frameApi = globalThis as typeof globalThis & {
+				cancelAnimationFrame?: (handle: number) => void;
+			};
+			frameApi.cancelAnimationFrame?.(scheduledFlush.handle);
+		} else {
+			globalThis.clearTimeout(scheduledFlush.handle);
+		}
+		scheduledFlush = null;
+	};
+
 	const initialState = {
 		threads: {} as Record<TThreadId, IChatThread>,
 		startingToolsByMessage: {} as Record<TMessageId, string[]>,
 		messagesByThread: {} as Record<TThreadId, Record<TMessageId, IChatMessage>>,
-		chunksByMessageId: {},
 		headMessageIdByThread: {} as Record<TThreadId, TMessageId>,
 		toolCallsById: {} as Record<TToolCallId, IToolCall>,
 		isRunningByThread: {} as Record<TThreadId, boolean>,
@@ -279,6 +358,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			set((draft) => {
 				const msg = draft.messagesByThread[threadId]?.[messageId];
 				if (!msg) {
+					delete chunkBuffers[messageId];
 					console.error(
 						"[applyMessagePatched] Message to be patched not found! Aborting patch..",
 					);
@@ -286,18 +366,9 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				}
 
 				// Flush and remove chunks
-				const buffer = draft.chunksByMessageId[msg.id];
-				if (buffer && buffer.chunk.length > 0) {
-					const part = msg.content.find((p) => p.id === buffer.partId);
-					if (
-						part &&
-						(part.type === EMessagePartType.TEXT ||
-							part.type === EMessagePartType.REASONING)
-					) {
-						part.text += buffer.chunk;
-					}
-				}
-				delete draft.chunksByMessageId[msg.id];
+				const buffer = chunkBuffers[msg.id];
+				if (buffer) appendChunkToMessage(msg, buffer);
+				delete chunkBuffers[msg.id];
 
 				// Update stats if provided
 				if (updates.stats !== undefined) {
@@ -371,7 +442,8 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 				}
 			}),
 
-		applyMessageDeleted: (messageId: TMessageId, threadId: TThreadId) =>
+		applyMessageDeleted: (messageId: TMessageId, threadId: TThreadId) => {
+			delete chunkBuffers[messageId];
 			set((draft) => {
 				const msg = draft.messagesByThread[threadId]?.[messageId];
 				if (!msg) return;
@@ -410,98 +482,34 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 
 				delete draft.messagesByThread[threadId]?.[messageId];
 				delete draft.messageStates[messageId];
-			}),
+			});
+		},
 
 		applyMessageChunk: (
 			messageId: TMessageId,
 			threadId: TThreadId,
 			partId: TMessagePartId,
 			deltaText: string,
-		) =>
-			set((draft) => {
-				const msg = draft.messagesByThread[threadId]?.[messageId];
-				if (!msg) return;
+		) => {
+			if (!get().messagesByThread[threadId]?.[messageId]) return;
 
-				const buffer = draft.chunksByMessageId[messageId];
-				const now = Date.now();
-				const part = msg.content.find((p) => p.id === partId);
+			const buffer = chunkBuffers[messageId];
+			if (!buffer || buffer.partId !== partId || buffer.threadId !== threadId) {
+				set((draft) => {
+					const message = draft.messagesByThread[threadId]?.[messageId];
+					if (!message) return;
+					if (buffer) appendChunkToMessage(message, buffer);
+					appendChunkToMessage(message, { partId, chunk: deltaText, threadId });
+				});
+				chunkBuffers[messageId] = { partId, chunk: "", threadId };
+				return;
+			}
 
-				// Helper to flush buffer to part (creates part if needed)
-				const flushBuffer = (buf: { partId: string; chunk: string }) => {
-					const existingPart = msg.content.find((p) => p.id === buf.partId);
-					if (
-						existingPart &&
-						(existingPart.type === EMessagePartType.TEXT ||
-							existingPart.type === EMessagePartType.REASONING)
-					) {
-						existingPart.text += buf.chunk;
-					} else {
-						const newPart = {
-							id: buf.partId,
-							type: EMessagePartType.TEXT,
-							orderIndex: msg.content.length,
-							text: buf.chunk,
-						} as any;
-						msg.content.push(newPart);
-					}
-				};
+			buffer.chunk += deltaText;
+			scheduleChunkFlush();
+		},
 
-				// Helper to create part if it doesn't exist
-				const ensurePartExists = () => {
-					if (!part) {
-						const newPart = {
-							id: partId,
-							type: EMessagePartType.TEXT,
-							orderIndex: msg.content.length,
-							text: deltaText,
-						} as any;
-						msg.content.push(newPart);
-					} else {
-						if (
-							part.type === EMessagePartType.TEXT ||
-							part.type === EMessagePartType.REASONING
-						) {
-							part.text += deltaText;
-						}
-					}
-				};
-
-				// No existing buffer - first chunk for this message
-				if (!buffer) {
-					ensurePartExists();
-					// Create empty buffer for future chunks
-					draft.chunksByMessageId[messageId] = {
-						partId,
-						chunk: "",
-						lastUpdate: now,
-					};
-					return;
-				}
-
-				// Buffer exists - check if partId changed
-				if (buffer.partId !== partId) {
-					// Flush old buffer to its part
-					flushBuffer(buffer);
-					// Handle new part
-					ensurePartExists();
-					// Create empty buffer for new part
-					draft.chunksByMessageId[messageId] = {
-						partId,
-						chunk: "",
-						lastUpdate: now,
-					};
-					return;
-				}
-
-				// Same partId - check time delta
-				const timeDelta = now - buffer.lastUpdate;
-				buffer.chunk += deltaText;
-				if (timeDelta > 150) {
-					flushBuffer(buffer);
-					buffer.chunk = "";
-					buffer.lastUpdate = now;
-				}
-			}),
+		getBufferedMessageChunk: (messageId: TMessageId) => chunkBuffers[messageId]?.chunk ?? "",
 
 		// Tool call actions
 		applyToolCallStarting: (messageId: TMessageId, name: string) =>
@@ -686,7 +694,7 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			});
 		},
 		getCurrentThreadState: (s) => {
-			s = s || _get();
+			s = s || get();
 			const t = s.currentThreadId;
 			const haveThread = !!t && s.threads[t];
 			return haveThread ? s.threadStates[t] : s.tempThreadState;
@@ -746,6 +754,10 @@ export function createChatStoreSlice<TState extends IChatStoreState>(
 			}),
 
 		// Reset
-		reset: () => set(() => ({ ...initialState })),
+		reset: () => {
+			cancelChunkFlush();
+			for (const messageId of Object.keys(chunkBuffers)) delete chunkBuffers[messageId];
+			set(() => ({ ...initialState }));
+		},
 	};
 }

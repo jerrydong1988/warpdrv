@@ -112,7 +112,7 @@ export function useChatEventsStream() {
 						const msg = state.messagesByThread[event.threadId]?.[event.messageId];
 						if (msg) {
 							const part = msg.content.find((p: any) => p.id === event.partId);
-							const buffered = state.chunksByMessageId[event.messageId]?.chunk || "";
+							const buffered = state.getBufferedMessageChunk(event.messageId);
 							const fullText = (part && "text" in part ? part.text : "") + buffered;
 							const spoken = state.ttsSpokenByMessage[event.messageId] || 0;
 							const remaining = fullText.slice(spoken);

@@ -153,7 +153,6 @@ export const useStore = create<AppState>()(
 				// Bridge Chat State
 				threads: bridge.threads,
 				messagesByThread: bridge.messagesByThread,
-				chunksByMessageId: bridge.chunksByMessageId,
 
 				headMessageIdByThread: bridge.headMessageIdByThread,
 				toolCallsById: bridge.toolCallsById,
@@ -208,6 +207,7 @@ export const useStore = create<AppState>()(
 				applyMessagePatched: bridge.applyMessagePatched,
 				applyMessageDeleted: bridge.applyMessageDeleted,
 				applyMessageChunk: bridge.applyMessageChunk,
+				getBufferedMessageChunk: bridge.getBufferedMessageChunk,
 				applyToolCallStarting: bridge.applyToolCallStarting,
 				applyToolCallCreated: bridge.applyToolCallCreated,
 				applyToolCallUpdated: bridge.applyToolCallUpdated,
