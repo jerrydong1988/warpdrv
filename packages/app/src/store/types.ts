@@ -192,14 +192,6 @@ export interface AppState extends IChatStoreState {
 
 	// Bridge Chat State
 	threads: Record<TThreadId, IChatThread>;
-	chunksByMessageId: Record<
-		string,
-		{
-			partId: string;
-			chunk: string;
-			lastUpdate: number;
-		}
-	>;
 	messagesByThread: Record<TThreadId, Record<TMessageId, IChatMessage>>;
 	headMessageIdByThread: Record<TThreadId, TMessageId>;
 	toolCallsById: Record<TToolCallId, IToolCall>;
@@ -236,6 +228,7 @@ export interface AppState extends IChatStoreState {
 		partId: TMessagePartId,
 		deltaText: string,
 	) => void;
+	getBufferedMessageChunk: (messageId: TMessageId) => string;
 	applyToolCallStarting: (messageId: TMessageId, name: string) => void;
 	applyToolCallCreated: (toolCall: IToolCall) => void;
 	applyToolCallUpdated: (toolCall: IToolCall) => void;

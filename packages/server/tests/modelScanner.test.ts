@@ -122,10 +122,20 @@ describe('model scanner metadata accuracy', () => {
 			fs.writeFile(path.join(modelDir, 'Exact-Model-Q4_K_M-00002-of-00003.gguf'), 'two'),
 			fs.writeFile(path.join(modelDir, 'Exact-Model-Q4_K_M-00003-of-00003.gguf'), 'three'),
 		]);
-		mocks.parseGgufMetadata
-			.mockResolvedValueOnce({ ...mocks.defaultMetadata(), parameterCount: 40_000_000_000, paramCount: '40B' })
-			.mockResolvedValueOnce({ ...mocks.defaultMetadata(), parameterCount: 41_000_000_000, paramCount: '41B' })
-			.mockResolvedValueOnce({ ...mocks.defaultMetadata(), parameterCount: 39_500_000_000, paramCount: '39.5B' });
+		const countsByShard = new Map([
+			['Exact-Model-Q4_K_M-00001-of-00003.gguf', 40_000_000_000],
+			['Exact-Model-Q4_K_M-00002-of-00003.gguf', 41_000_000_000],
+			['Exact-Model-Q4_K_M-00003-of-00003.gguf', 39_500_000_000],
+		]);
+		mocks.parseGgufMetadata.mockImplementation(async filePath => {
+			const parameterCount = countsByShard.get(path.basename(filePath));
+			if (!parameterCount) throw new Error(`Unexpected shard: ${filePath}`);
+			return {
+				...mocks.defaultMetadata(),
+				parameterCount,
+				paramCount: `${parameterCount / 1_000_000_000}B`,
+			};
+		});
 
 		const models = await scanAllModelRoots([root]);
 
